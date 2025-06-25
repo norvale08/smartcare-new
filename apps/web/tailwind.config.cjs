@@ -5,8 +5,9 @@ module.exports = {
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
-    // Add this line to include your UI package
-    './node_modules/@repo/ui/**/*.{js,ts,jsx,tsx}',
+    
+    
+    '../../packages/ui/src/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
   	extend: {
