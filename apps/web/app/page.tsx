@@ -1,11 +1,13 @@
 import React from 'react'
 import Image from 'next/image';
+import {HeartPulse, Stethoscope,MapPin  } from 'lucide-react';
 
 const page = () => {
   return (
-    <div>
+    <div className="p-2 min-h-screen min-w-screen">
       <header className="flex items-center justify-between px-8 py-2 mb-2">
-            <h1 className="text-xl font-bold">SmartCare</h1>
+        
+            <h1 className="text-xl font-bold flex flex-row"> <HeartPulse color="#21a136" />SmartCare</h1>
 
             <div className="flex gap-6">
               <button>Features</button>
@@ -41,6 +43,39 @@ const page = () => {
           </div>
           
         </section>
+               <div className='flex flex-col items-center justify-center mt-6'>
+                <h2 className='font-bold'>Comprehensive Health Monitoring</h2>
+              <p>Everything you need to manage your chronic illnesses</p>
+              </div>
+            <section className="flex items-center justify-center flex-row mt-6 gap-6">
+              
+              
+              <div className="shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-emerald-200 rounded-md p-4 flex items-center flex-col w-1/4 h-full min-h-[150px]">
+                <HeartPulse color="#21a136" />
+                <h2 className='font-bold'>Vital Signs Tracking</h2>
+                <p>Monitor blood pressure,glucose levels,
+                  and heart rate with voice or text input
+                </p>
+              </div>
+              <div className="shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-emerald-200 rounded-md p-4 flex items-center flex-col w-1/4 h-full min-h-[150px]">
+                <Stethoscope color="#21a136" />
+                <h2 className='font-bold'>Doctor Consultations</h2>
+                <p>Connect with healthcare professionals
+                  for vitual consultations and advice
+
+                </p>
+
+              </div>
+              <div className="shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-emerald-200 rounded-md p-4 flex items-center flex-col w-1/4 h-full min-h-[150px] ">
+                <MapPin color="#21a136" />
+                <h2 className='font-bold'>Emergency Services</h2>
+                <p>Quick access to nearby clinics and
+                  ambulance services based on your
+                  location
+                </p>
+              </div>
+              
+            </section>
 
       
          
