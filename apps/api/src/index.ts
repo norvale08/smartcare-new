@@ -1,4 +1,4 @@
-/*import express from 'express';
+import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -129,4 +129,4 @@ app.listen(PORT, () => {
   console.log(`🧪 Test endpoint: http://localhost:${PORT}/api/v1/test`);
 });
 
-export default app;*/
+export default app;
