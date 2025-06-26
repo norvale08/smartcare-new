@@ -1,6 +1,6 @@
 import React from 'react'
 import Image from 'next/image';
-import {HeartPulse, Stethoscope,MapPin  } from 'lucide-react';
+import {HeartPulse, Stethoscope,MapPin, ChartLine, Video , Ambulance } from 'lucide-react';
 
 const page = () => {
   return (
@@ -112,6 +112,56 @@ const page = () => {
                 <p>Access doctors, clinics or emergency
                   services when needed
                 </p>
+
+              </div>
+
+            </section>
+            
+            <div className='flex flex-col items-center justify-center mt-6'>
+              <h1 className='font-bold'>Our Services</h1>
+            <p>Comprehensive health care solutions at your fingertips</p>
+            </div>
+            <section className="flex items-center justify-center flex-row mt-6 gap-6">
+              <div>
+                   <div className="flex items-start gap-4">
+                        <span className="bg-emerald-400 w-10 h-10 rounded-md flex items-center justify-center">
+                          <ChartLine color="#ffffff" />
+                        </span>
+                        <div>
+                          <h2 className="font-bold">24/7 Health Monitoring</h2>
+                          <p>
+                            Continuous tracking of your vital signs with real-time alerts
+                            and trend analysis.
+                          </p>
+                        </div>
+                    </div>
+
+                     <div className="flex items-start gap-4">
+                        <span className="bg-emerald-400 w-10 h-10 rounded-md flex items-center justify-center">
+                          <Video color="#ffffff" />
+                        </span>
+                        <div>
+                          <h2 className="font-bold">Telemedicine Consultations</h2>
+                          <p>
+                            Calls with certified doctors and
+                            specialists from the comfort of your
+                            home
+                          </p>
+                        </div>
+                    </div>
+
+                     <div className="flex items-start gap-4">
+                        <span className="bg-emerald-400 w-10 h-10 rounded-md flex items-center justify-center">
+                          <Ambulance color="#ffffff" />
+                        </span>
+                        <div>
+                          <h2 className="font-bold">Emergency Responses</h2>
+                          <p>
+                            Instant access to emergency services
+                            and nearest medical facilities
+                          </p>
+                        </div>
+                    </div>
 
               </div>
 
