@@ -4,7 +4,7 @@ import {HeartPulse, Stethoscope,MapPin  } from 'lucide-react';
 
 const page = () => {
   return (
-    <div className="p-2 min-h-screen min-w-screen">
+    <div className="p-2  min-w-screen">
       <header className="flex items-center justify-between px-8 py-2 mb-2">
         
             <h1 className="text-xl font-bold flex flex-row"> <HeartPulse color="#21a136" />SmartCare</h1>
@@ -75,6 +75,46 @@ const page = () => {
                 </p>
               </div>
               
+            </section>
+
+            <div className='flex flex-col items-center justify-center mt-6'>
+              <h1 className='font-bold'>How Smart Care works</h1>
+            <p>Simple Steps to better health management</p>
+            </div>
+            
+            <section className="flex items-center justify-center flex-row mt-6 gap-6">
+              <div className='p-4 flex items-center flex-col w-1/4 h-full min-h-[150px] '>
+                <span className='bg-emerald-400 w-12 h-6 min-h-[45px] rounded-full text-center text-white'>1</span>
+                <h2 className='font-bold'>Input Vitals</h2>
+                <p>Record your blood pressure,glucose
+                  and heart rate using voice or typing
+                </p>
+              </div>
+              <div className='p-4 flex items-center flex-col w-1/4 h-full min-h-[150px] '>
+                <span className='bg-emerald-400 w-12 h-6 min-h-[45px] rounded-full text-center text-white'>2</span>
+                <h2 className='font-bold'>AI Analysis</h2>
+                <p>Our Ai analyzes your data
+                  and provides personalized insights
+                </p>
+
+              </div>
+              <div className='p-4 flex items-center flex-col w-1/4 h-full min-h-[150px] '>
+                <span className='bg-emerald-400 w-12 h-6 min-h-[45px] rounded-full text-center text-white'>3</span>
+                <h2 className='font-bold'>Get Alerts</h2>
+                <p>Receive Notifications for irregular
+                  readings or medication reminders
+                </p>
+
+              </div>
+               <div className='p-4 flex items-center flex-col w-1/4 h-full min-h-[150px] '>
+                <span className='bg-emerald-400 w-12 h-6 min-h-[45px] rounded-full text-center text-white'>4</span>
+                <h2 className='font-bold'>Connect Care</h2>
+                <p>Access doctors, clinics or emergency
+                  services when needed
+                </p>
+
+              </div>
+
             </section>
 
       
