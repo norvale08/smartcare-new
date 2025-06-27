@@ -164,6 +164,16 @@ const page = () => {
                     </div>
 
               </div>
+              <div>
+                <Image
+                src="/assets/oldwoman.png"
+                alt="An old woman"
+                width={300}
+                height={300}
+                className='rounded-md'
+                />
+
+              </div>
 
             </section>
 
