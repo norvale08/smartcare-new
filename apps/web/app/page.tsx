@@ -176,6 +176,47 @@ const page = () => {
               </div>
 
             </section>
+            <section className="flex items-center justify-center flex-col mt-6 gap-6 bg-emerald-400 p-6">
+              <h1 className='text-white text-lg'>Ready to take control of your health?</h1>
+              <p className='text-white'>Join thousands of patients who trust Smart Care
+                for their chronic illness management
+              </p>
+              <button className="bg-white text-emerald-400 rounded-md px-4 py-2">Start Monitoring</button>
+            </section>
+            <footer className="flex items-center justify-center flex-col gap-6 bg-cyan-950">
+              <div className='flex flex-row gap-4'>
+                <div>
+                  <h1 className="text-xl text-white font-bold flex flex-row"> <HeartPulse color="#ffffff" />SmartCare</h1>
+                  <p className='text-cyan-700'>Empowering patients to manage<br /> chronic illnesses with smart<br />
+                    technology and compassionate care
+                  </p>
+
+                </div>
+                <div>
+                  <h1 className='text-white font-bold'>Product</h1>
+                  <p className='text-cyan-700'>Features</p>
+                  <p className='text-cyan-700'>Pricing</p>
+                  <p className='text-cyan-700'>Security</p>
+                </div>
+                <div>
+                  <h1 className='text-white font-bold'>Support</h1>
+                  <p className='text-cyan-700 '>Help Center</p>
+                  <p className='text-cyan-700'>Contact Us</p>
+                  <p className='text-cyan-700'>Privacy policy</p>
+                </div>
+                <div>
+                  <h1 className='text-white font-bold'>Contact</h1>
+                  <p className='text-cyan-700'>1-800-SMART-CARE</p>
+                  <p className='text-cyan-700'>support@smartcare.com</p>
+                </div>
+
+              </div>
+              
+              <div>
+                <hr />
+                <p className='text-cyan-700'>2025 Smart Care. All rights reserved.</p>
+              </div>
+            </footer>
 
       
          
