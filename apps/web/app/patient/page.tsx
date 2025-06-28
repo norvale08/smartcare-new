@@ -1,5 +1,5 @@
 import React from 'react'
-import {HeartPulse, Globe, TriangleAlert } from 'lucide-react';
+import {HeartPulse, Globe, TriangleAlert, MicVocal } from 'lucide-react';
 import Image from 'next/image';
 function page() {
   return (
@@ -47,7 +47,7 @@ function page() {
                                 
                             </div>
                             {/* right side */}
-                            <div className='flex  bg-emerald-400 rounded-lg items-center justify-center px-3 py-1'>
+                            <div className='flex  bg-emerald-400 rounded-lg items-center justify-center px-2 py-1'>
                                 <p>Stable</p>
                             </div>
                             
@@ -58,6 +58,30 @@ function page() {
                             past three days.Consider consulting with your doctor
                         </p>
                         <button className='bg-red-700 text-white px-3 py-2 rounded-md w-1/4'>Find Doctor Nearby</button>
+
+                        </div>
+                        <div className='shadow-[4px 0 4px 0 rgba(0,0,0,0.2)] bg-white flex flex-row w-3/4 rounded-md mt-4 px-8 py-4 gap-4'>
+                             <div className='flex flex-col'>
+                               <h1 >Enter Your Vitals</h1>
+                             </div>
+                            
+                            <div></div>
+                            <div className='flex flex-col'>
+                                <p>Blood Pressure(mmHg)</p>
+                                <input type='number' placeholder='80' className='border-2 border-gray-400 rounded-md mb-2 mt-2'/>
+                                <button className='bg-emerald-400 text-white rounded-md px-3 py-1 flex items-center justify-center'><MicVocal color="#3ca716" /> Voice Input</button>
+                            </div>
+                            <div className='flex flex-col'>
+                                <p>Blood Glucose(mg/dl)</p>
+                                <input type='text' placeholder='80/90' className='border-2 border-gray-400 rounded-md mb-2 mt-2'/>
+                                <button className='bg-emerald-400 text-white rounded-md px-3 py-1 flex items-center justify-center'><MicVocal color="#3ca716" /> Voice Input</button>
+                            </div>
+                            <div className='flex flex-col'>
+                                <p>Heart Rate(BPM)</p>
+                                <input type='number' placeholder='72' className='border-2 border-gray-400 rounded-md mb-2 mt-2'/>
+                                <button className='bg-emerald-400 text-white rounded-md px-3 py-1 flex items-center justify-center'><MicVocal color="#3ca716" /> Voice Input</button>
+                            </div>
+                            <button className='bg-emerald-400 text-white px-2 py-1 rounded-md'>Save Vitals</button>
 
                         </div>
 
