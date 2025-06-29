@@ -84,6 +84,51 @@ function page() {
                             <button className='bg-emerald-400 text-white px-2 py-1 rounded-md'>Save Vitals</button>
 
                         </div>
+                         <div className='shadow-[4px 0 4px 0 rgba(0,0,0,0.2)] bg-white flex flex-row w-3/4 rounded-md mt-4 px-8 py-4 gap-4'>
+                            <div>
+                                <Image 
+                                src="/assets/graph.png"
+                                alt="graph for blood pressure"
+                                height={250}
+                                width={250}
+                                />
+
+                            </div>
+                            <div>
+                              <Image 
+                                src="/assets/graph.png"
+                                alt="graph for blood pressure"
+                                height={250}
+                                width={250}
+                                />
+                            </div>
+                            <div>
+                                <Image 
+                                src="/assets/graph.png"
+                                alt="graph for blood pressure"
+                                height={250}
+                                width={250}
+                                />
+
+                            </div>
+                         </div>
+                         <div className='shadow-[4px 0 4px 0 rgba(0,0,0,0.2)] bg-white flex flex-row w-3/4 rounded-md mt-4 px-8 py-4 gap-4'>
+                            <div className='w-1/2'>
+                                <div>
+                                    <input type='text' placeholder='Search for doctors or specialties' className='border-2 border-gray-400 rounded-md mb-2 mt-2' />
+                                </div>
+                                <div className='shadow-[4px 0 4px 0 rgba(0,0,0,0.2)] rounded-md border-2 border-gray-300  '>
+                                    <h1>Dr Michael</h1>
+                                    <p>Cardiologist. 2.3 Miles away</p>
+                                    <button className='bg-emerald-400 text-white rounded-md px-3 py-1 flex place-items-end'>Book</button>
+                                </div>
+                             
+                            </div>
+                            <div className='shadow-[4px 0 4px 0 rgba(0,0,0,0.2)] flex flex-col rounded-md items-center justify-center bg-gray-400 w-1/2'>
+                                <p>Interactive Image of a Map will load here</p>
+                                <p>Showing Healthcare providers</p>
+                            </div>
+                         </div>
 
                     </div>
 
