@@ -1,132 +1,44 @@
 import express from 'express';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import helmet from 'helmet';
-import * as fs from 'fs';
-import * as path from 'path';
-import winston from 'winston';
-import 'dotenv/config';
+import { connectMongoDB } from './lib/mongodb';
+import dotenv from "dotenv"
+import authRoute from "./routes/auth"
+
+dotenv.config();
 
 const app = express();
 
-// Winston Logger Configuration
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-    new winston.transports.Console({
-      format: winston.format.simple()
-    })
-  ]
-});
 
-// CORS Configuration
-const CORS_APPS = [
-  'http://localhost:3000',  // Next.js dev server
-  'http://localhost:3001',  // Alternative port
-  ...(process.env.WEB_APP_URL ? [process.env.WEB_APP_URL] : [])
-].filter(Boolean);
-
-// Middleware
-app.use(helmet());
-app.use(cors({
-  origin: CORS_APPS,
-  credentials: true
-}));
-app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Request logging middleware
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.path}`, {
-    ip: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-  next();
-});
+    
+    res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
 
-// Health check endpoint (excluded from global prefix)
-app.get('/status', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    message: 'API is running successfully'
-  });
-});
-
-// Test endpoint for API connection
-app.get('/', (req, res) => {
-    res.json({ 
-    message: 'Welcome to SmartCare API',
-    version: '1.0.0',
-    endpoints: {
-      health: '/status',
-      api: '/api/v1/*'
+    
+    if (req.method === 'OPTIONS') {
+        console.log('Handling OPTIONS request');
+        res.sendStatus(200);
+        return;
     }
-  });
-
+    
+    console.log(`${req.method} ${req.path} from origin: ${req.headers.origin}`);
+    next();
 });
 
-// Global prefix for API routes
-app.use('/api/v1', (req, res, next) => {
-  // Your future API routes will go here
-  res.status(404).json({ message: 'API endpoint not found' });
+app.use(express.json());
+const PORT = 3001;
+connectMongoDB();
+
+app.get('/', (_req, res) => {
+  res.send('backend is running');
 });
 
-// Error handling middleware
-app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('Application Error', {
-    error: error.message,
-    stack: error.stack,
-    path: req.path,
-    method: req.method
-  });
-  
-  res.status(500).json({
-    message: 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { error: error.message })
-  });
-});
+app.use('/api/auth', authRoute)
 
-// Create logs directory
-const logsDir = path.join(process.cwd(), 'logs');
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir);
-}
-
-// Global error handlers
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception', {
-    error: error.message,
-    stack: error.stack
-  });
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection', {
-    reason,
-    promise
-  });
-});
-
-// Start server
-const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
-  logger.info('Application started successfully', {
-    port: PORT,
-    environment: process.env.NODE_ENV || 'development'
-  });
-  console.log(`🚀 API Server running on http://localhost:${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/status`);
-  console.log(`🧪 Test endpoint: http://localhost:${PORT}/api/v1/test`);
+  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`CORS enabled for http://localhost:3000`);
 });
 
 export default app;
