@@ -58,7 +58,7 @@ const Registration = () => {
         <div className='flex flex-col items-center justify-center h-screen min-h-screen'>
            <div className='w-full max-w-md'>
             <div className='text-center mb-8'>
-                <h1 className='text-xl text-blue-500'>Registration</h1>
+                <h1 className='text-xl text-blue-500'>Registration Page</h1>
             </div>
             
             {success && (
