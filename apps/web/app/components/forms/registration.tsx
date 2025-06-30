@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form"
 import { Button, Input, Label } from '@repo/ui'
 import { authValidationRules, getConfirmPasswordRule } from '@repo/ui' 
 import Link from 'next/link'
-import { toast } from "react-hot-toast"
+import { toast, Toaster } from "react-hot-toast"
+import CustomToaster from '../ui/CustomToaster'
 
 const Registration = () => {
     const { register, handleSubmit, formState, reset, watch } = useForm<UserRegisterType>();
@@ -61,17 +62,7 @@ const Registration = () => {
                 <h1 className='text-xl text-blue-500'>Registration Page</h1>
             </div>
             
-            {success && (
-                <div className='mb-4 p-4 text-green-700 bg-green-100 border border-green-300 rounded-md'>
-                    Registration successful! You can now login to your account.
-                </div>
-            )}
-            
-            {error && (
-                <div className='mb-4 p-4 text-red-700 bg-red-100 border border-red-300 rounded-md'>
-                    {error}
-                </div>
-            )}
+
             
             <form onSubmit={handleSubmit(handleFormSubmit)} className='border border-gray-200 shadow-md rounded-md p-6 space-y-2'>
                 <div className='grid grid-cols-2 gap-4'>
@@ -172,6 +163,8 @@ const Registration = () => {
                     Already have an account? <span className='underline text-blue-500'>Login</span>
                 </Link>
             </form>
+            
+            <CustomToaster/>
         </div>
         </div>
     )
