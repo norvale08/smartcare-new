@@ -9,7 +9,8 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "jsx": "preserve"
   },
   "include": [
     "**/*.ts",
