@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { Patient } from './types/dashboard';
-import { Heart, Thermometer, Activity, Droplets, MapPin, AlertTriangle } from 'lucide-react';
+'use client';
 
-/* Component Interface */
+import React, { useState } from 'react';
+import { Heart, Thermometer, Activity, Droplets, MapPin, AlertTriangle } from 'lucide-react';
+import { Patient } from '../../types/doctors';
+
 interface PatientListProps {
     patients: Patient[];
     onPatientSelect: (patient: Patient) => void;
 }
 
-export const PatientList: React.FC<PatientListProps> = ({ patients, onPatientSelect }) => {
+const PatientList: React.FC<PatientListProps> = ({ patients, onPatientSelect }) => {
     const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
 
     const getRiskColor = (riskLevel: string) => {
@@ -30,11 +31,6 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onPatientSel
         if (type === 'oxygenSaturation') {
             if (vital < 95) return 'text-red-600';
             if (vital < 97) return 'text-orange-600';
-            return 'text-green-600';
-        }
-        if (type === 'bloodPressure') {
-            if (vital > 140 || vital > 90) return 'text-red-600';
-            if (vital > 130 || vital > 85) return 'text-orange-600';
             return 'text-green-600';
         }
         return 'text-gray-600';
@@ -62,7 +58,9 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onPatientSel
                             <div className="flex-1">
                                 <div className="flex items-center space-x-2 mb-2">
                                     <h3 className="font-semibold text-gray-800">{patient.name}</h3>
-                                    <span className="text-sm text-gray-500">({patient.age}y, {patient.gender})</span>
+                                    <span className="text-sm text-gray-500">
+                                        ({patient.age}y, {patient.gender})
+                                    </span>
                                     {patient.alerts.length > 0 && (
                                         <AlertTriangle className="h-4 w-4 text-red-500" />
                                     )}
@@ -115,3 +113,4 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onPatientSel
         </div>
     );
 };
+export default PatientList;
