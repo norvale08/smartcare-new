@@ -8,6 +8,7 @@ const router = express.Router();
 router.post('/',async (req, res) => {
   try{
     const {firstName,lastName,email,phoneNumber,password}=req.body;
+    await connectMongoDB();
 
    const existingUser = await User.findOne({email});
     if(existingUser){
