@@ -1,15 +1,10 @@
 "use client";
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { Button, Input, Label } from '@repo/ui';
+import { authValidationRules, Button, Input, Label, profileValidationRules } from '@repo/ui';
 import axios from 'axios';
 
-type Emergency = {
-  firstname: string;
-  lastname: string;
-  phonenumber: string;
-  relationship: string;
-};
+import { EmergencyTypes } from '@/types/profile';
 
 const Emergency = () => {
   const {
@@ -17,9 +12,9 @@ const Emergency = () => {
     handleSubmit,
     formState: { errors },
     reset
-  } = useForm<Emergency>();
+  } = useForm<EmergencyTypes>();
 
-  const handleFormSubmit = async (data: Emergency) => {
+  const handleFormSubmit = async (data: EmergencyTypes) => {
     try {
       await axios.post('http://localhost:3001/api/emergency', data);
       alert('Contact saved!');
@@ -41,13 +36,7 @@ const Emergency = () => {
             <Input
               type="text"
               id="firstname"
-              {...register('firstname', {
-                required: 'First Name is required',
-                pattern: {
-                  value: /^[A-Za-z\s]+$/,
-                  message: 'First Name should contain only letters'
-                }
-              })}
+              {...register('firstname',authValidationRules.firstName)}
             />
             {errors.firstname && (
               <p className="text-red-400">{errors.firstname.message}</p>
@@ -59,13 +48,7 @@ const Emergency = () => {
             <Input
               type="text"
               id="lastname"
-              {...register('lastname', {
-                required: 'Last Name is required',
-                pattern: {
-                  value: /^[A-Za-z\s]+$/,
-                  message: 'Last Name should contain only letters'
-                }
-              })}
+              {...register('lastname', authValidationRules.lastName)}
             />
             {errors.lastname && (
               <p className="text-red-400">{errors.lastname.message}</p>
@@ -77,16 +60,10 @@ const Emergency = () => {
             <Input
               type="text"
               id="phonenumber"
-              {...register('phonenumber', {
-                required: 'Phone Number is required',
-                pattern: {
-                  value: /^[0-9]+$/,
-                  message: 'Phone Number should contain only numbers'
-                }
-              })}
+              {...register('phoneNumber', authValidationRules.phoneNumber)}
             />
-            {errors.phonenumber && (
-              <p className="text-red-400">{errors.phonenumber.message}</p>
+            {errors.phoneNumber && (
+              <p className="text-red-400">{errors.phoneNumber.message}</p>
             )}
           </div>
 
@@ -94,9 +71,7 @@ const Emergency = () => {
             <Label htmlFor="relationship">Relationship</Label>
             <select
               id="relationship"
-              {...register('relationship', {
-                required: 'Relationship is required'
-              })}
+              {...register('relationship', profileValidationRules.relationship)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
             >
               <option value="">Select relationship</option>
