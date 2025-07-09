@@ -65,7 +65,21 @@ export const profileValidationRules = {
     },
    relationship:{
     required:" the relationship is required"
-   }
+   },
+   
+   surgeries: {
+    maxLength: {
+      value: 300,
+      message: "Surgeries description must be less than 300 characters"
+    }
+  },
+
+  allergies: {
+    maxLength: {
+      value: 300,
+      message: "Allergies description must be less than 300 characters"
+    }
+  }
 
     
 }

@@ -18,3 +18,12 @@ export type EmergencyTypes={
   relationship: Relationship;
 
 }
+
+ export type MedicalHistoryTypes = {
+  hypertension: boolean;
+  diabetes: boolean;
+  asthma: boolean;
+  stroke: boolean;
+  surgeries?: string;
+  allergies?: string;
+};

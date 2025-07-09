@@ -1,10 +1,10 @@
-import Medicalhistory from '@/app/components/forms/medicalhistory'
 import React from 'react'
+import MultiStepForm from '../components/forms/multistepForm'
 
 const page = () => {
   return (
     <div>
-        <Medicalhistory/>
+        <MultiStepForm/>
     </div>
   )
 }
