@@ -1,6 +1,7 @@
 "use client"
 import Image from "next/image"
 import type React from "react"
+import Link from "next/link"
 
 import { HeartPulse, Stethoscope, MapPin, LineChartIcon as ChartLine, Video, Ambulance } from "lucide-react"
 
@@ -52,10 +53,12 @@ const page: React.FC = () => {
         </nav>
 
         <div className="flex gap-4">
-          <button className="text-emerald-400 hover:text-emerald-500 transition-colors duration-200">Login</button>
-          <button className="bg-emerald-400 text-white rounded-md px-4 py-2 hover:bg-emerald-500 transition-colors duration-200">
+          <Link href="/login"className="text-blue-900 hover:text-emerald-500 transition-colors duration-200 mt-2 font-semibold ">Login</Link>
+          <Link href="/registration">
+          <button className="bg-blue-900 text-white rounded-md px-4 py-2 hover:bg-emerald-400 transition-colors duration-200">
             Get Started
           </button>
+          </Link>
         </div>
       </header>
 
