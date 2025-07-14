@@ -50,7 +50,7 @@ const Registration = () => {
         className='absolute inset-0 bg-cover bg-center z-0'
         style={{ backgroundImage: "url('/doc2.jpg')" }}
     ></div>
-    <div className='absolute inset-0 bg-blue-600 opacity-70 z-0'></div>
+    <div className='absolute inset-0 bg-gradient-to-r from-blue-800  to-blue-500 opacity-70 z-0'></div>
     <div className='relative z-10 space-y-6'>
         <h1 className='text-4xl font-bold text-white mb-4'>Smartcare</h1>
         <p className='text-white mb-6 text-lg'>An AI-Powered Health Monitoring</p>
@@ -160,7 +160,7 @@ const Registration = () => {
 
                         <Button
                             type='submit'
-                            className='w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300'
+                            className='w-full bg-blue-700 hover:bg-emerald-700 disabled:bg-blue-300'
                             disabled={isLoading}
                         >
                             {isLoading ? 'Registering...' : 'Register'}

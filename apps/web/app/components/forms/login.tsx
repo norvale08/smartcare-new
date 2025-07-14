@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 import CustomToaster from "../ui/CustomToaster";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const Login = () => {
   const { register, handleSubmit, formState, reset } = useForm<UserLoginType>();
@@ -48,7 +49,7 @@ const Login = () => {
         className='absolute inset-0 bg-cover bg-center z-0'
         style={{ backgroundImage: "url('/doc1.jpg')" }}
     ></div>
-    <div className='absolute inset-0 bg-blue-600 opacity-70 z-0'></div>
+    <div className='absolute inset-0 bg-gradient-to-r from-blue-800 to-blue-500  opacity-70 z-0'></div>
     <div className='relative z-10 space-y-6'>
         <h1 className='text-4xl font-bold text-white mb-4'>Smartcare</h1>
         <p className='text-white mb-6 text-lg'>An AI-Powered Health Monitoring</p>
@@ -109,11 +110,13 @@ const Login = () => {
 
             <Button
               type='submit'
-              className='w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300'
+              className='w-full bg-blue-700 hover:bg-emerald-700 disabled:bg-blue-300'
               disabled={isLoading}
             >
               {isLoading ? 'Logging in...' : 'Login'}
             </Button>
+            <Link href="/registration" className='block text-center text-sm mt-2'>
+                            Don't have an account? <span className='text-blue-500 underline'>Register</span></Link>
           </form>
         </div>
       </div>
