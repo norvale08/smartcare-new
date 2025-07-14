@@ -4,10 +4,12 @@ import dotenv from "dotenv"
 import authRoute from "./routes/auth"
 import loginRoute from './routes/login'
 import emergencyRoutes from './routes/emergency';
+import medicalRoutes from './routes/medical';
 
 import profileRoutes from './routes/patient';
 
 import uploadRoute from "./routes/upload";
+
 
 
 
@@ -48,6 +50,7 @@ app.use('/api/login',loginRoute)
 app.use('/api/emergency', emergencyRoutes);
 app.use('/api/profile', profileRoutes);
 app.use("/api/upload", uploadRoute);
+
 
 
 

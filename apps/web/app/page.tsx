@@ -64,12 +64,12 @@ const page: React.FC = () => {
 
       
       <section className="p-2">
-        <div className="bg-gradient-to-r from-emerald-200 to-white px-5 py-5 flex flex-row">
+        <div className="bg-gradient-to-r from-blue-800 to-white px-5 py-5 flex flex-row">
           <div className="w-1/2">
             <p className="text-3xl mb-6 animate-fade-in-up">
               Monitor Your
               <br /> Health
-              <span className="text-emerald-400 font-bold">
+              <span className="text-blue-800 font-bold">
                 {" "}
                 Anywhere,
                 <br />
@@ -81,11 +81,11 @@ const page: React.FC = () => {
               <br /> with voice or text-input. Connect with doctors, Find nearby
               <br /> clinics, and access emergency services instantly
             </p>
-            <button className="bg-emerald-400 text-white rounded-md px-4 py-2 hover:bg-emerald-500 transition-all duration-200 hover:scale-105 animate-fade-in-up animation-delay-400">
+            <button className="bg-blue-900 text-white rounded-md px-4 py-2 hover:bg-emerald-500 transition-all duration-200 hover:scale-105 animate-fade-in-up animation-delay-400">
               Start Monitoring
             </button>
           </div>
-          <div className="flex items-center justify-center shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] rounded-md p-4 bg-emerald-400 w-1/3 h-64 animate-fade-in-right">
+          <div className="flex items-center justify-center shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] rounded-md p-4 bg-blue-900 w-1/3 h-64 animate-fade-in-right">
             <Image src="/assets/doctor.png" alt="A lady Nurse" width={150} height={150} />
           </div>
         </div>
@@ -99,7 +99,7 @@ const page: React.FC = () => {
         </div>
 
         <div className="flex items-center justify-center flex-row mt-6 gap-6 px-4">
-          <div className="feature-card shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-emerald-200 rounded-md p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:shadow-lg transition-all duration-300 hover:-translate-y-2">
+          <div className="feature-card shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-blue-800 rounded-md p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:shadow-lg transition-all duration-300 hover:-translate-y-2">
             <HeartPulse color="#21a136" size={48} className="mb-4" />
             <h2 className="font-bold text-lg mb-3 text-center">Vital Signs Tracking</h2>
             <p className="text-center text-sm">
@@ -107,7 +107,7 @@ const page: React.FC = () => {
             </p>
           </div>
 
-          <div className="feature-card shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-emerald-200 rounded-md p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:shadow-lg transition-all duration-300 hover:-translate-y-2 animation-delay-200">
+          <div className="feature-card shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-blue-800 rounded-md p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:shadow-lg transition-all duration-300 hover:-translate-y-2 animation-delay-200">
             <Stethoscope color="#21a136" size={48} className="mb-4" />
             <h2 className="font-bold text-lg mb-3 text-center">Doctor Consultations</h2>
             <p className="text-center text-sm">
@@ -115,7 +115,7 @@ const page: React.FC = () => {
             </p>
           </div>
 
-          <div className="feature-card shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-emerald-200 rounded-md p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:shadow-lg transition-all duration-300 hover:-translate-y-2 animation-delay-400">
+          <div className="feature-card shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-blue-800 rounded-md p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:shadow-lg transition-all duration-300 hover:-translate-y-2 animation-delay-400">
             <MapPin color="#21a136" size={48} className="mb-4" />
             <h2 className="font-bold text-lg mb-3 text-center">Emergency Services</h2>
             <p className="text-center text-sm">
@@ -134,7 +134,7 @@ const page: React.FC = () => {
 
         <div className="flex items-center justify-center flex-row mt-6 gap-6 px-4">
           <div className="step-card p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:scale-105 transition-all duration-300">
-            <span className="bg-emerald-400 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4 animate-bounce-slow">
+            <span className="bg-blue-800 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4 animate-bounce-slow">
               1
             </span>
             <h2 className="font-bold text-lg mb-3 text-center">Input Vitals</h2>
@@ -144,7 +144,7 @@ const page: React.FC = () => {
           </div>
 
           <div className="step-card p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:scale-105 transition-all duration-300 animation-delay-200">
-            <span className="bg-emerald-400 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4 animate-bounce-slow animation-delay-200">
+            <span className="bg-blue-800 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4 animate-bounce-slow animation-delay-200">
               2
             </span>
             <h2 className="font-bold text-lg mb-3 text-center">AI Analysis</h2>
@@ -152,7 +152,7 @@ const page: React.FC = () => {
           </div>
 
           <div className="step-card p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:scale-105 transition-all duration-300 animation-delay-400">
-            <span className="bg-emerald-400 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4 animate-bounce-slow animation-delay-400">
+            <span className="bg-blue-800 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4 animate-bounce-slow animation-delay-400">
               3
             </span>
             <h2 className="font-bold text-lg mb-3 text-center">Get Alerts</h2>
@@ -160,7 +160,7 @@ const page: React.FC = () => {
           </div>
 
           <div className="step-card p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:scale-105 transition-all duration-300 animation-delay-600">
-            <span className="bg-emerald-400 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4 animate-bounce-slow animation-delay-600">
+            <span className="bg-blue-800 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4 animate-bounce-slow animation-delay-600">
               4
             </span>
             <h2 className="font-bold text-lg mb-3 text-center">Connect Care</h2>
@@ -178,7 +178,7 @@ const page: React.FC = () => {
         <div className="flex items-center justify-center flex-row mt-6 gap-8 px-8">
           <div className="flex-1">
             <div className="service-item flex items-start gap-4 mb-8 hover:translate-x-2 transition-transform duration-300">
-              <span className="bg-emerald-400 w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0">
+              <span className="bg-blue-800 w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0">
                 <ChartLine color="#ffffff" />
               </span>
               <div>
@@ -190,7 +190,7 @@ const page: React.FC = () => {
             </div>
 
             <div className="service-item flex items-start gap-4 mb-8 hover:translate-x-2 transition-transform duration-300 animation-delay-200">
-              <span className="bg-emerald-400 w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0">
+              <span className="bg-blue-800 w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0">
                 <Video color="#ffffff" />
               </span>
               <div>
@@ -202,7 +202,7 @@ const page: React.FC = () => {
             </div>
 
             <div className="service-item flex items-start gap-4 mb-8 hover:translate-x-2 transition-transform duration-300 animation-delay-400">
-              <span className="bg-emerald-400 w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0">
+              <span className="bg-blue-800 w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0">
                 <Ambulance color="#ffffff" />
               </span>
               <div>
@@ -225,12 +225,12 @@ const page: React.FC = () => {
       </section>
 
       
-      <section className="flex items-center justify-center flex-col mt-12 gap-6 bg-emerald-400 p-8 mx-2 rounded-lg">
+      <section className="flex items-center justify-center flex-col mt-12 gap-6 bg-blue-800 p-8 mx-2 rounded-lg">
         <h1 className="text-white text-2xl font-bold text-center">Ready to take control of your health?</h1>
         <p className="text-white text-center max-w-2xl">
           Join thousands of patients who trust Smart Care for their chronic illness management
         </p>
-        <button className="bg-white text-emerald-400 rounded-md px-6 py-3 font-semibold hover:bg-gray-100 transition-all duration-200 hover:scale-105">
+        <button className="bg-white text-blue-800 rounded-md px-6 py-3 font-semibold hover:bg-gray-100 transition-all duration-200 hover:scale-105">
           Start Monitoring
         </button>
       </section>
