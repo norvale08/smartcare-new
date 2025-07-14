@@ -4,7 +4,7 @@ import type React from "react"
 import Link from "next/link"
 
 import { HeartPulse, Stethoscope, MapPin, LineChartIcon as ChartLine, Video, Ambulance } from "lucide-react"
-
+// New colors added
 const page: React.FC = () => {
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId)
