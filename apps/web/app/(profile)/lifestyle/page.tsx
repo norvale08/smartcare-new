@@ -1,10 +1,10 @@
-import Emergency from '@/app/components/forms/emergency'
+import LifestyleForm from '@/app/components/forms/lifestyle'
 import React from 'react'
 
 const page = () => {
   return (
     <div>
-        <Emergency/>
+        <LifestyleForm/>
     </div>
   )
 }

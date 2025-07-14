@@ -6,6 +6,14 @@ import loginRoute from './routes/login'
 import emergencyRoutes from './routes/emergency';
 import medicalRoutes from './routes/medical';
 
+import profileRoutes from './routes/patient';
+
+import uploadRoute from "./routes/upload";
+
+
+
+
+
 dotenv.config();
 
 const app = express();
@@ -40,7 +48,11 @@ app.get('/', (_req, res) => {
 app.use('/api/auth', authRoute)
 app.use('/api/login',loginRoute)
 app.use('/api/emergency', emergencyRoutes);
-app.use('/api/medical', medicalRoutes);
+app.use('/api/profile', profileRoutes);
+app.use("/api/upload", uploadRoute);
+
+
+
 
 
 app.listen(PORT, () => {

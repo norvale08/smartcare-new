@@ -10,3 +10,4 @@ export { Input } from "./components/ui/input";
 export { cn } from "./lib/utils";
 
 export * from './validation/auth';
+export { profileValidationRules } from './validation/profile';

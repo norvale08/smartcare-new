@@ -1,10 +1,10 @@
-import Medicalhistory from '@/app/components/forms/medicalhistory'
+import CareGoals from '@/app/components/forms/caregoals'
 import React from 'react'
 
 const page = () => {
   return (
     <div>
-        <Medicalhistory/>
+        <CareGoals/>
     </div>
   )
 }
