@@ -4,7 +4,7 @@ import dotenv from "dotenv"
 import authRoute from "./routes/auth"
 import loginRoute from './routes/login'
 import emergencyRoutes from './routes/emergency';
-import medicalRoutes from './routes/medical';
+
 
 import profileRoutes from './routes/patient';
 

@@ -1,7 +1,7 @@
-// apps/api/src/routes/login.ts
+
 import express,{Request,Response} from 'express';
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken"; // Add this import
+import jwt from "jsonwebtoken"; 
 import User from '../models/user';
 import { connectMongoDB } from '../lib/mongodb';
 
@@ -25,7 +25,7 @@ router.post('/',async (req, res) => {
       return;
     }
 
-    // Generate JWT token
+    
     const token = jwt.sign(
       { 
         userId: user._id,
@@ -42,7 +42,7 @@ router.post('/',async (req, res) => {
       name: `${user.firstName} ${user.lastName}`,
     };
     
-    // Return both user data and token
+    
     res.status(200).json({
       user: safeUser,
       token: token
