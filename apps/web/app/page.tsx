@@ -4,7 +4,7 @@ import type React from "react"
 import Link from "next/link"
 
 import { HeartPulse, Stethoscope, MapPin, LineChartIcon as ChartLine, Video, Ambulance } from "lucide-react"
-
+// New colors added
 const page: React.FC = () => {
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId)
@@ -18,7 +18,7 @@ const page: React.FC = () => {
     
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 flex items-center justify-between px-8 py-4 mb-2">
         <h1 className="text-xl font-bold flex flex-row items-center gap-2">
-          <HeartPulse color="#21a136" />
+          <HeartPulse color="#1e3a8a" />
           SmartCare
         </h1>
 
@@ -27,25 +27,25 @@ const page: React.FC = () => {
           <div className="flex gap-8">
             <button
               onClick={() => scrollToSection("features")}
-              className="hover:text-emerald-400 transition-colors duration-200"
+              className="hover:text-blue-400 transition-colors duration-200"
             >
               Features
             </button>
             <button
               onClick={() => scrollToSection("how-it-works")}
-              className="hover:text-emerald-400 transition-colors duration-200"
+              className="hover:text-blue-400 transition-colors duration-200"
             >
               How it works
             </button>
             <button
               onClick={() => scrollToSection("services")}
-              className="hover:text-emerald-400 transition-colors duration-200"
+              className="hover:text-blue-400 transition-colors duration-200"
             >
               Services
             </button>
             <button
               onClick={() => scrollToSection("contact")}
-              className="hover:text-emerald-400 transition-colors duration-200"
+              className="hover:text-blue-400 transition-colors duration-200"
             >
               Contact
             </button>
@@ -66,22 +66,22 @@ const page: React.FC = () => {
       <section className="p-2">
         <div className="bg-gradient-to-r from-blue-800 to-white px-5 py-5 flex flex-row">
           <div className="w-1/2">
-            <p className="text-3xl mb-6 animate-fade-in-up">
+            <p className="text-3xl mb-6 animate-fade-in-up text-white">
               Monitor Your
               <br /> Health
-              <span className="text-blue-800 font-bold">
+              <span className="text-blue-400 font-bold">
                 {" "}
                 Anywhere,
                 <br />
                 Anytime
               </span>
             </p>
-            <p className="mb-6 animate-fade-in-up animation-delay-200">
+            <p className="mb-6 animate-fade-in-up animation-delay-200 text-white">
               Smart Care helps you track Chronic illnesses like diabetes
               <br /> with voice or text-input. Connect with doctors, Find nearby
               <br /> clinics, and access emergency services instantly
             </p>
-            <button className="bg-blue-900 text-white rounded-md px-4 py-2 hover:bg-emerald-500 transition-all duration-200 hover:scale-105 animate-fade-in-up animation-delay-400">
+            <button className="bg-blue-500 text-white rounded-md px-4 py-2 hover:bg-emerald-500 transition-all duration-200 hover:scale-105 animate-fade-in-up animation-delay-400">
               Start Monitoring
             </button>
           </div>
@@ -100,25 +100,25 @@ const page: React.FC = () => {
 
         <div className="flex items-center justify-center flex-row mt-6 gap-6 px-4">
           <div className="feature-card shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-blue-800 rounded-md p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:shadow-lg transition-all duration-300 hover:-translate-y-2">
-            <HeartPulse color="#21a136" size={48} className="mb-4" />
-            <h2 className="font-bold text-lg mb-3 text-center">Vital Signs Tracking</h2>
-            <p className="text-center text-sm">
+            <HeartPulse color="#ffffff" size={48} className="mb-4" />
+            <h2 className="font-bold text-lg mb-3 text-center text-white">Vital Signs Tracking</h2>
+            <p className="text-center text-sm text-white">
               Monitor blood pressure, glucose levels, and heart rate with voice or text input
             </p>
           </div>
 
           <div className="feature-card shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-blue-800 rounded-md p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:shadow-lg transition-all duration-300 hover:-translate-y-2 animation-delay-200">
-            <Stethoscope color="#21a136" size={48} className="mb-4" />
-            <h2 className="font-bold text-lg mb-3 text-center">Doctor Consultations</h2>
-            <p className="text-center text-sm">
+            <Stethoscope color="#ffffff" size={48} className="mb-4" />
+            <h2 className="font-bold text-lg mb-3 text-center text-white">Doctor Consultations</h2>
+            <p className="text-center text-sm text-white">
               Connect with healthcare professionals for virtual consultations and advice
             </p>
           </div>
 
           <div className="feature-card shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-blue-800 rounded-md p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:shadow-lg transition-all duration-300 hover:-translate-y-2 animation-delay-400">
-            <MapPin color="#21a136" size={48} className="mb-4" />
-            <h2 className="font-bold text-lg mb-3 text-center">Emergency Services</h2>
-            <p className="text-center text-sm">
+            <MapPin color="#ffffff" size={48} className="mb-4" />
+            <h2 className="font-bold text-lg mb-3 text-center text-white">Emergency Services</h2>
+            <p className="text-center text-sm text-white">
               Quick access to nearby clinics and ambulance services based on your location
             </p>
           </div>
