@@ -158,7 +158,7 @@ const Provider: FC = () => {
   );
 
   return (
-    <div className="p-4 space-y-6 max-w-4xl mx-auto">
+    <div className="p-4 space-y-6 max-w-4xl mx-auto bg-white rounded-md">
       <div className="relative flex gap-2">
         <input
           type="text"
