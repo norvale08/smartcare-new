@@ -4,6 +4,7 @@ import dotenv from "dotenv"
 import authRoute from "./routes/auth"
 import loginRoute from './routes/login'
 import emergencyRoutes from './routes/emergency';
+import diabetesRoutes from "./routes/diabetesVitals"
 
 
 import profileRoutes from './routes/patient';
@@ -50,6 +51,7 @@ app.use('/api/login',loginRoute)
 app.use('/api/emergency', emergencyRoutes);
 app.use('/api/profile', profileRoutes);
 app.use("/api/upload", uploadRoute);
+app.use('/api/diabetesVitals',diabetesRoutes)
 
 
 

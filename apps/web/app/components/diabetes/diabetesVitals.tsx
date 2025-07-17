@@ -4,17 +4,41 @@ import { Input, Label, Button } from '@repo/ui';
 import { useForm } from "react-hook-form";
 import { diabetesValidationRules } from '@repo/ui';
 import { diabetesType } from '@/types/diabetes';
+import {toast } from "react-hot-toast"
+import CustomToaster from '../ui/CustomToaster';
 
 const DiabetesVitals = () => {
   const { register, handleSubmit, formState, reset } = useForm<diabetesType>();
-  const [isLoading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleFormSubmit = () => {
-    reset();
+  const API_URL= process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+  const handleFormSubmit =async (data:diabetesType) => {
+    setIsLoading(true)
+    try{
+      const response= await fetch(`${API_URL}/api/diabetesVitals`,{
+        method:"POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),        
+
+      });
+      const result = await response.json();
+      if(!response.ok) throw new Error (result.message || "Failed to add glucose level")
+        toast.success("Data added successfully")
+      reset()
+
+    }catch(error:any){
+      toast.error(error.message || "an error occured")
+
+    }finally{
+      setIsLoading(false)
+    }
+    ;
   };
 
   return (
     <div className="max-w-md mx-auto mt-10 bg-white shadow-lg rounded-lg p-6">
+      <CustomToaster/>
       <h2 className="text-xl font-semibold text-center mb-4 text-blue-600">Enter Glucose Data</h2>
 
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
