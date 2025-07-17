@@ -11,3 +11,4 @@ export { cn } from "./lib/utils";
 
 export * from './validation/auth';
 export { profileValidationRules } from './validation/profile';
+export {diabetesValidationRules} from "./validation/diabetes"
