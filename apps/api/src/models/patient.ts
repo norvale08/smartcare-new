@@ -13,7 +13,7 @@ const PatientSchema = new Schema({
   height: { type: Number, required: true },
   picture: { type: String }, // Store base64 or URL
 
-  // Emergency Contact
+  
   firstname: { type: String, required: true },
   lastname: { type: String, required: true },
   phoneNumber: { type: String, required: true },
@@ -23,12 +23,12 @@ const PatientSchema = new Schema({
     required: true,
   },
 
-  // Conditions
+  
   diabetes: { type: Boolean, default: false },
   hypertension: { type: Boolean, default: false },
   cardiovascular: { type: Boolean, default: false },
 
-  // Medical History
+  
   allergies: { type: String, default: "" },
   surgeries: { type: String, default: "" },
 
