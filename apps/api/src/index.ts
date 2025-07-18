@@ -10,6 +10,8 @@ import diabetesRoutes from "./routes/diabetesVitals"
 import profileRoutes from './routes/patient';
 
 import uploadRoute from "./routes/upload";
+import hypertensionRoutes from './routes/hypertensionVitals';
+
 
 
 
@@ -52,6 +54,8 @@ app.use('/api/emergency', emergencyRoutes);
 app.use('/api/profile', profileRoutes);
 app.use("/api/upload", uploadRoute);
 app.use('/api/diabetesVitals',diabetesRoutes)
+app.use('/api/hypertensionVitals', hypertensionRoutes);
+
 
 
 
