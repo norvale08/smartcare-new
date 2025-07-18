@@ -1,4 +1,5 @@
 export type diabetesType = {
   glucose:number,
-  context:string
+  context:string,
+  language:string
 };

@@ -33,6 +33,9 @@ importers:
       '@types/jsonwebtoken':
         specifier: ^9.0.10
         version: 9.0.10
+      ai-service:
+        specifier: workspace:*
+        version: link:../../packages/ai-service
       bcryptjs:
         specifier: ^3.0.2
         version: 3.0.2
