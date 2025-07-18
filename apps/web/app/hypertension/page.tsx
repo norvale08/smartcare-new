@@ -16,6 +16,8 @@ import {
   Activity,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import axios from 'axios';
+//Connection to the database
 
 // Mock data for demonstration
 const mockDrugInteractions = [
@@ -31,11 +33,40 @@ const mockDietRecommendations = {
 };
 
 function DashboardPage() {
+  //Connection to database
+  const [systolic, setSystolic] = useState('');
+  const [diastolic, setDiastolic] = useState('');
+  const [heartRate, setHeartRate] = useState('');
+  const [message, setMessage] = useState('');
+
+  const handleSubmit = async () => {
+    if (!systolic || !diastolic || !heartRate) {
+      setMessage('Please enter all vitals.');
+      return;
+    }
+
+    try {
+      const response = await axios.post('http://localhost:3001/api/hypertensionVitals', {
+        systolic: Number(systolic),
+        diastolic: Number(diastolic),
+        heartRate: Number(heartRate),
+      });
+
+      setMessage('✅ Vitals saved successfully');
+      setSystolic('');
+      setDiastolic('');
+      setHeartRate('');
+    } catch (error: any) {
+      setMessage('❌ Failed to save vitals');
+      console.error(error);
+    }
+  };
+
   const [medications, setMedications] = useState<string[]>([]);
   const [newMedication, setNewMedication] = useState("");
-  const [systolic, setSystolic] = useState("");
-  const [diastolic, setDiastolic] = useState("");
-  const [heartRate, setHeartRate] = useState("");
+  // const [systolic, setSystolic] = useState("");
+  // const [diastolic, setDiastolic] = useState("");
+  // const [heartRate, setHeartRate] = useState("");
   const [lifestyle, setLifestyle] = useState({
     alcohol: false,
     smoking: false,
@@ -184,9 +215,14 @@ function DashboardPage() {
               </button>
             </div>
           </div>
+          {message && (
+        <p className="text-sm mb-4 text-gray-700 font-medium">{message}</p>
+      )}
 
           <div className="flex justify-end">
-            <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+            <button 
+            onClick={handleSubmit}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
               Save Vitals
             </button>
           </div>
