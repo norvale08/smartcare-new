@@ -4,7 +4,7 @@ import { Input, Label, Button } from '@repo/ui';
 import { useForm } from "react-hook-form";
 import { diabetesValidationRules } from '@repo/ui';
 import { diabetesType } from '@/types/diabetes';
-import { toast } from "react-hot-toast"
+import { toast } from "react-hot-toast";
 import CustomToaster from '../ui/CustomToaster';
 
 const DiabetesVitals = () => {
@@ -17,25 +17,28 @@ const DiabetesVitals = () => {
 
   const handleFormSubmit = async (data: diabetesType) => {
     setIsLoading(true);
-    setAiFeedback(null); // Clear previous feedback
-    
+    setAiFeedback(null);
+
+    // ✅ Ensure glucose is sent as a number
+    const glucoseNumber = Number(data.glucose);
+
     try {
       const response = await fetch(`${API_URL}/api/diabetesVitals`, {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...data,
-          requestAI // Include AI request flag
+          glucose: glucoseNumber,  // 👈 FIXED HERE
+          requestAI,
         }),
       });
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.message || "Failed to add glucose level");
       }
-      
-      // Show appropriate success message
+
       if (result.aiFeedback) {
         toast.success("Data saved with AI feedback!");
         setAiFeedback(result.aiFeedback);
@@ -44,10 +47,10 @@ const DiabetesVitals = () => {
       } else {
         toast.success("Data saved successfully");
       }
-      
+
       reset();
       setRequestAI(false);
-      
+
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
     } finally {
@@ -110,7 +113,7 @@ const DiabetesVitals = () => {
             </select>
           </div>
 
-          {/* NEW: AI Feedback Option */}
+          {/* AI Feedback Checkbox */}
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -134,7 +137,7 @@ const DiabetesVitals = () => {
           <h3 className="text-lg font-semibold mb-3 text-gray-700">
             🤖 AI Health Assistant
           </h3>
-          
+
           {aiFeedback ? (
             <div className="bg-white p-3 rounded border-l-4 border-blue-500">
               <div className="whitespace-pre-wrap text-gray-800">
