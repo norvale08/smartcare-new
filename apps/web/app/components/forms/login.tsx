@@ -27,7 +27,7 @@ const Login = () => {
       if (res?.ok) {
         toast.success("Login successful!");
         reset();
-        router.replace("/"); 
+        router.replace("/patient"); 
       } else {
         toast.error(res?.error || "Login failed");
       }

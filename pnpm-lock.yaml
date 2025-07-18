@@ -283,6 +283,19 @@ importers:
         specifier: 5.8.2
         version: 5.8.2
 
+  packages/ai-service:
+    dependencies:
+      ollama:
+        specifier: ^0.5.16
+        version: 0.5.16
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.3
+        version: 22.15.32
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+
   packages/eslint-config:
     devDependencies:
       '@eslint/js':
@@ -4824,6 +4837,9 @@ packages:
   oidc-token-hash@5.1.0:
     resolution: {integrity: sha512-y0W+X7Ppo7oZX6eovsRkuzcSM40Bicg2JEJkDJ4irIt1wsYAP5MLSNv+QAogO8xivMffw/9OvV3um1pxXgt1uA==}
     engines: {node: ^10.13.0 || >=12.0.0}
+
+  ollama@0.5.16:
+    resolution: {integrity: sha512-OEbxxOIUZtdZgOaTPAULo051F5y+Z1vosxEYOoABPnQKeW7i4O8tJNlxCB+xioyoorVqgjkdj+TA1f1Hy2ug/w==}
 
   on-finished@2.3.0:
     resolution: {integrity: sha512-ikqdkGAAyf/X/gPhXGvfgAytDZtDbr+bkNUJ0N9h5MI/dmdgCs3l6hoHrcUv41sRKew3jIwrp4qQDXiK99Utww==}
@@ -11558,6 +11574,10 @@ snapshots:
       es-object-atoms: 1.1.1
 
   oidc-token-hash@5.1.0: {}
+
+  ollama@0.5.16:
+    dependencies:
+      whatwg-fetch: 3.6.20
 
   on-finished@2.3.0:
     dependencies:
