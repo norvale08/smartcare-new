@@ -1,25 +1,14 @@
 {
-  "name": "ai-service",  
+  "name": "ai-service",
   "version": "1.0.0",
-  "description": "",
-  "main": "dist/index.js",     
-  "types": "dist/index.d.ts",  
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "test-smartcare": "pnpm build && node dist/test-smartcare.js",
     "test": "node dist/test.js",
     "test-ai": "tsc && node dist/test.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
-  "exports": {  
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
   },
   "dependencies": {
     "ollama": "^0.5.16"
