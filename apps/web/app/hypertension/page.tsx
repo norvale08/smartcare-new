@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import axios from 'axios';
+import MedicationAnalysisPage from "../components/hypertension/medicationAnalysis";
 
 
 //Connection to the database
@@ -46,9 +47,15 @@ function DashboardPage() {
       setMessage('Please enter all vitals.');
       return;
     }
+    
+    
+    
+
+ 
 
     try {
       const response = await axios.post('http://localhost:3001/api/hypertensionVitals', {
+     
         systolic: Number(systolic),
         diastolic: Number(diastolic),
         heartRate: Number(heartRate),
@@ -157,6 +164,7 @@ function DashboardPage() {
             ● Stable
           </div>
         </div>
+        
 
         {/* AI Alert */}
         <div className="bg-red-50 border-l-4 border-red-600 w-full max-w-4xl p-6 rounded-lg shadow-lg">
@@ -232,7 +240,7 @@ function DashboardPage() {
         </div>
 
         {/* Medication Management */}
-        <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
+        {/* <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
           <div className="flex items-center gap-2 mb-6">
             <Pill className="text-blue-600" size={20} />
             <h3 className="text-lg font-semibold text-gray-800">Medication Management</h3>
@@ -309,7 +317,8 @@ function DashboardPage() {
               </div>
             </div>
           )}
-        </div>
+        </div> */}
+        <MedicationAnalysisPage />
 
         {/* Lifestyle Assessment */}
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">

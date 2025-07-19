@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IHypertensionVital extends Document {
+
   systolic: number;
   diastolic: number;
   heartRate: number;
@@ -8,6 +9,7 @@ export interface IHypertensionVital extends Document {
 }
 
 const HypertensionVitalSchema: Schema = new Schema({
+  
   systolic: { type: Number, required: true },
   diastolic: { type: Number, required: true },
   heartRate: { type: Number, required: true },
