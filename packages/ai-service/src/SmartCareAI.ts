@@ -44,4 +44,24 @@ export class SmartCareAI {
 
     return message.content;
   }
+  // ✅ New AI method to detect interactions
+  async checkDrugInteractions(medications: string[]): Promise<string> {
+    const prompt = [
+      `You are a medical AI assistant.`,
+      `Analyze the following list of medications for any drug-drug interactions.`,
+      `List the drugs that should not be taken together, indicate the level of severity (Low, Medium, High), and explain the reason for the interaction.`,
+      `If no issues are found, say "No known interactions found."`,
+      '',
+      `Medications: ${medications.join(', ')}`,
+    ].join('\n');
+
+    const { message } = await this.ollama.chat({
+      model: this.model,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    return message.content;
+  }
+  
 }
+

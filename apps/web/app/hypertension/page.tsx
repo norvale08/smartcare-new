@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import axios from 'axios';
+
+
 //Connection to the database
 
 // Mock data for demonstration
@@ -103,6 +105,7 @@ function DashboardPage() {
   const Provider = dynamic(() => import("../components/maps/ProviderMap"), {
     ssr: false,
   });
+  
 
   return (
     <div className="min-h-screen bg-gray-100">
