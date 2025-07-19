@@ -9,7 +9,20 @@ const DiabetesSchema= new Schema({
        type:String,
        enum:["Fasting","Post-meal", "Random"] ,
        required:true
+    },
+    language:{
+        type:String,
+        enum:["en","sw"],
+        default:"en"
+    },
+    
+    aiRequested:{
+        type:Boolean
+    },
+    aiFeedback:{
+        type:String,
     }
+
 },{timestamps:true});
 
 const Diabetes= models.Diabetes || model("Diabetes",DiabetesSchema);
