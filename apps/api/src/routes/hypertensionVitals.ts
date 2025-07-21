@@ -6,15 +6,16 @@ import HypertensionVital from '../models/hypertensionVitals';
 const router = express.Router();
 
 router.post('/', async (req: Request, res: Response): Promise<void> => {
-  const { systolic, diastolic, heartRate } = req.body;
+  const { userId,systolic, diastolic, heartRate } = req.body;
 
-  if ( !systolic || !diastolic || !heartRate) {
+  if ( !userId || !systolic || !diastolic || !heartRate) {
     res.status(400).json({ message: 'All vitals are required.' });
     return;
   }
 
   try {
     const vital = new HypertensionVital({
+      userId,
       systolic,
       diastolic,
       heartRate,

@@ -12,6 +12,7 @@ import profileRoutes from './routes/patient';
 
 import uploadRoute from "./routes/upload";
 import hypertensionRoutes from './routes/hypertensionVitals';
+import hypertensionStatusRoutes from './routes/hypertensionStatus';
 
 
 
@@ -57,6 +58,8 @@ app.use("/api/upload", uploadRoute);
 app.use('/api/diabetesVitals',diabetesRoutes)
 app.use('/api/hypertensionVitals', hypertensionRoutes);
 app.use('/api/medications', medicationRoutes);
+app.use('/api/hypertensionStatus', hypertensionStatusRoutes);
+
 
 
 

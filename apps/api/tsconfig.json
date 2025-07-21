@@ -8,5 +8,8 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": ["src",
+  "../web/types/next-auth.d.ts"
+
+]
 }

@@ -123,33 +123,56 @@ const page: React.FC = () => {
 
       
       <section className="p-2 sm:p-4">
-        <div className="bg-gradient-to-r from-blue-800 to-white px-4 sm:px-6 lg:px-8 py-6 lg:py-8 flex flex-col lg:flex-row items-center lg:items-start gap-6 lg:gap-8">
-          <div className="w-full lg:w-1/2 text-center lg:text-left">
-            <p className="text-2xl sm:text-3xl lg:text-4xl mb-4 lg:mb-6 animate-fade-in-up text-white leading-tight">
-              Monitor Your
-              <br /> Health
-              <span className="text-blue-400 font-bold">
-                {" "}
-                Anywhere,
-                <br />
-                Anytime
-              </span>
-            </p>
-            <p className="mb-4 lg:mb-6 animate-fade-in-up animation-delay-200 text-white text-sm sm:text-base">
-              Smart Care helps you track Chronic illnesses like diabetes
-              with voice or text-input. Connect with doctors, Find nearby
-              clinics, and access emergency services instantly
-            </p>
-            <button className="bg-blue-500 text-white rounded-md px-6 py-3 hover:bg-emerald-500 transition-all duration-200 hover:scale-105 animate-fade-in-up animation-delay-400 text-sm sm:text-base">
-              Start Monitoring
-            </button>
-          </div>
-          <div className="flex items-center justify-center shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] rounded-md p-4 bg-blue-900 w-full max-w-xs lg:w-1/3 lg:max-w-none h-48 sm:h-56 lg:h-64 animate-fade-in-right">
-            <Image src="/assets/doctor.png" alt="A lady Nurse" width={120} height={120} className="sm:w-[140px] sm:h-[140px] lg:w-[150px] lg:h-[150px]" />
-          </div>
+  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 px-4 sm:px-6 lg:px-8 py-12 lg:py-16 min-h-[400px] lg:min-h-[500px]">
+    {/* Background Image */}
+    <div 
+      className="absolute inset-0 opacity-20 bg-cover bg-center bg-no-repeat"
+      style={{
+        backgroundImage: "url('/assets/doctor.png')",
+        backgroundPosition: "right center",
+        backgroundSize: "auto 80%"
+      }}
+    />
+    
+    {/* Overlay for better text readability */}
+    <div className="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-blue-800/60 to-transparent" />
+    
+    {/* Content */}
+    <div className="relative z-10 flex flex-col justify-center h-full max-w-4xl">
+      <div className="w-full lg:w-2/3 text-center lg:text-left">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl mb-6 lg:mb-8 animate-fade-in-up text-white leading-tight font-bold">
+          Monitor Your
+          <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-cyan-300">
+            Health
+          </span>
+          <br />
+          <span className="text-blue-300 font-bold text-2xl sm:text-3xl lg:text-4xl xl:text-5xl">
+            Anywhere, Anytime
+          </span>
+        </h1>
+        
+        <p className="mb-8 lg:mb-10 animate-fade-in-up animation-delay-200 text-blue-100 text-base sm:text-lg lg:text-xl max-w-2xl leading-relaxed">
+          Smart Care helps you track chronic illnesses like diabetes
+          with voice or text input. Connect with doctors, find nearby
+          clinics, and access emergency services instantly.
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-4 animate-fade-in-up animation-delay-400">
+          <button className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg px-8 py-4 hover:from-emerald-500 hover:to-teal-500 transition-all duration-300 hover:scale-105 hover:shadow-xl text-base sm:text-lg font-semibold transform hover:-translate-y-1">
+            Start Monitoring
+          </button>
+          
         </div>
-      </section>
-
+      </div>
+    </div>
+    
+    {/* Decorative elements */}
+    <div className="absolute top-10 right-10 w-20 h-20 bg-blue-400/20 rounded-full animate-pulse" />
+    <div className="absolute bottom-20 right-20 w-16 h-16 bg-cyan-400/20 rounded-full animate-pulse animation-delay-1000" />
+    <div className="absolute top-1/2 right-1/4 w-12 h-12 bg-blue-300/20 rounded-full animate-pulse animation-delay-500" />
+  </div>
+</section>
     
       <section id="features" className="p-2 sm:p-4">
         <div className="flex flex-col items-center justify-center mt-6 lg:mt-8 px-4">
