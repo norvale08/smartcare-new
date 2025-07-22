@@ -1,5 +1,6 @@
-// app/diabetes/layout.tsx
+
 import React from 'react';
+import Header from '../components/diabetesPages/header';
 
 export default function DiabetesLayout({
   children,
@@ -7,10 +8,8 @@ export default function DiabetesLayout({
   children: React.ReactNode;
 }) {
   return (
-    <section className="p-6 max-w-3xl mx-auto">
-      
-      
-
+    <section >
+      <Header />
       <main>{children}</main>
     </section>
   );
