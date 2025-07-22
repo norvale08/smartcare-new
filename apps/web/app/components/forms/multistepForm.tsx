@@ -7,6 +7,7 @@ import EmergencyStep from "./emergency";
 import MedicalHistoryStep from "./MedicalHistoryStep";
 import ConditionsSelectionStep from "./ConditionSelection";
 import ReviewStep from "./Review";
+import { useRouter } from "next/navigation";
 
 const steps = [
   { number: 1, title: "Basic Info" },
@@ -18,6 +19,7 @@ const steps = [
 
 const MultiStepForm = () => {
   const [step, setStep] = useState(1);
+  const router = useRouter();
 
   const methods = useForm({
     mode: "onChange",
@@ -63,6 +65,18 @@ const MultiStepForm = () => {
       const result = await res.json();
       console.log("Success:", result);
       alert("Profile saved successfully!");
+
+      
+      if (data.diabetes) {
+        router.push("/diabetes");
+      } else if (data.hypertension) {
+        router.push("/hypertension");
+      } else if (data.cardiovascular) {
+        router.push("/cardiovascular"); 
+      } else {
+        router.push("/general"); 
+      }
+
     } catch (error) {
       console.error("Error submitting form:", error);
       alert("Server error. Try again later.");
@@ -101,9 +115,8 @@ const MultiStepForm = () => {
       <div className="container max-w-4xl mx-auto">
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)}>
-            {/* Card layout */}
             <div className="bg-white shadow-sm rounded-xl p-8 md:flex">
-              
+              {/* Sidebar Step Navigation */}
               <nav className="md:w-1/4 md:border-r md:pr-8 mb-8 md:mb-0">
                 <ul role="list" className="space-y-6">
                   {steps.map((s) => (
@@ -132,7 +145,7 @@ const MultiStepForm = () => {
                 </ul>
               </nav>
 
-              
+              {/* Step Content */}
               <div className="flex-1 md:pl-8">
                 {step === 1 && <BasicInfoStep />}
                 {step === 2 && <EmergencyStep />}
@@ -140,7 +153,7 @@ const MultiStepForm = () => {
                 {step === 4 && <MedicalHistoryStep />}
                 {step === 5 && <ReviewStep />}
 
-                
+                {/* Navigation Buttons */}
                 <div className="flex justify-between mt-8">
                   {step > 1 && (
                     <Button

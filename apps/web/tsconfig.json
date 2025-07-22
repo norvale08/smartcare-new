@@ -18,7 +18,7 @@
     "next-env.d.ts",
     "next.config.js",
     ".next/types/**/*.ts"
-, "../../packages/ui/src/components/ui/label.tsx", "../../packages/ui/src/components/ui/input.tsx"  ],
+, "../../packages/ui/src/components/ui/label.tsx", "../../packages/ui/src/components/ui/input.tsx", "../../packages/ui/src/components/ui/card.tsx"  ],
   "exclude": [
     "node_modules"
   ]

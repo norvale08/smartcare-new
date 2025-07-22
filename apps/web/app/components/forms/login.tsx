@@ -1,11 +1,10 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { UserLoginType } from "@/types/auth";
 import { authValidationRules, Button, Input, Label } from "@repo/ui";
 import { useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
 import CustomToaster from "../ui/CustomToaster";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -18,58 +17,66 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const res = await signIn("credentials", {
-        email: data.email,
-        password: data.password,
-        redirect: false,
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+      const loginRes = await fetch(`${API_URL}/api/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
       });
 
-      if (res?.ok) {
-        toast.success("Login successful!");
-        reset();
-        router.replace("/patient"); 
-      } else {
-        toast.error(res?.error || "Login failed");
+      if (!loginRes.ok) {
+        const errorData = await loginRes.json();
+        toast.error(errorData.message || "Login failed");
+        return;
       }
+
+      const { token, user, redirectTo } = await loginRes.json();
+
+      // ✅ Store token and user in localStorage
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      toast.success("Login successful!");
+      reset();
+
+      // ✅ Redirect directly based on backend logic
+      router.replace(redirectTo);
     } catch (error) {
       console.error("Login error:", error);
-      toast.error(error instanceof Error ? error.message : "Login failed. Please try again.");
+      toast.error("Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-   <div className='h-screen w-screen grid grid-cols-1 md:grid-cols-2'>
+    <div className='h-screen w-screen grid grid-cols-1 md:grid-cols-2'>
       <CustomToaster />
 
-      
-<div className='hidden md:flex relative flex-col justify-center items-start p-12 text-white overflow-hidden'>
-    <div  
-        className='absolute inset-0 bg-cover bg-center z-0'
-        style={{ backgroundImage: "url('/doc1.jpg')" }}
-    ></div>
-    <div className='absolute inset-0 bg-gradient-to-r from-blue-800 to-blue-500  opacity-70 z-0'></div>
-    <div className='relative z-10 space-y-6'>
-        <h1 className='text-4xl font-bold text-white mb-4'>Smartcare</h1>
-        <p className='text-white mb-6 text-lg'>An AI-Powered Health Monitoring</p>
-        <div className='space-y-4'>
+      {/* Left: Visual Info */}
+      <div className='hidden md:flex relative flex-col justify-center items-start p-12 text-white overflow-hidden'>
+        <div className='absolute inset-0 bg-cover bg-center z-0' style={{ backgroundImage: "url('/doc1.jpg')" }}></div>
+        <div className='absolute inset-0 bg-gradient-to-r from-blue-800 to-blue-500 opacity-70 z-0'></div>
+        <div className='relative z-10 space-y-6'>
+          <h1 className='text-4xl font-bold text-white mb-4'>Smartcare</h1>
+          <p className='text-white mb-6 text-lg'>An AI-Powered Health Monitoring</p>
+          <div className='space-y-4'>
             <div>
-                <h3 className='font-semibold'>24/7 Health Monitoring</h3>
-                <p>Advanced AI continuously monitors your health</p>
+              <h3 className='font-semibold'>24/7 Health Monitoring</h3>
+              <p>Advanced AI continuously monitors your health</p>
             </div>
             <div>
-                <h3 className='font-semibold'>Emergency Response</h3>
-                <p>Instant alerts to hospitals and EMTs</p>
+              <h3 className='font-semibold'>Emergency Response</h3>
+              <p>Instant alerts to hospitals and EMTs</p>
             </div>
             <div>
-                <h3 className='font-semibold'>AI Anomaly Detection</h3>
-                <p>Smart detection of health irregularities</p>
+              <h3 className='font-semibold'>AI Anomaly Detection</h3>
+              <p>Smart detection of health irregularities</p>
             </div>
+          </div>
         </div>
-    </div>
-</div>
-
+      </div>
 
       {/* Right: Login Form */}
       <div className='flex flex-col items-center justify-center h-full p-12 bg-white'>
@@ -116,7 +123,8 @@ const Login = () => {
               {isLoading ? 'Logging in...' : 'Login'}
             </Button>
             <Link href="/registration" className='block text-center text-sm mt-2'>
-                            Don't have an account? <span className='text-blue-500 underline'>Register</span></Link>
+              Don't have an account? <span className='text-blue-500 underline'>Register</span>
+            </Link>
           </form>
         </div>
       </div>
