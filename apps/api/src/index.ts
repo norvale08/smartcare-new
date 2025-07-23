@@ -1,27 +1,21 @@
 import express from 'express';
-import session from "express-session"
+import session from "express-session" // ✅ ADD THIS
 import { connectMongoDB } from './lib/mongodb';
 import dotenv from "dotenv";
 import authRoute from "./routes/auth";
 import loginRoute from './routes/login';
 import emergencyRoutes from './routes/emergency';
-
-import diabetesRoutes from "./routes/diabetesVitals"
-import medicationRoutes from './routes/medications';
-
-
+import diabetesRoutes from "./routes/diabetesVitals";
 import userStatusRouter from './routes/userStatus';
-
 import profileRoutes from './routes/patient';
 import uploadRoute from "./routes/upload";
 import hypertensionRoutes from './routes/hypertensionVitals';
-import hypertensionStatusRoutes from './routes/hypertensionStatus';
 
 dotenv.config();
 
 const app = express();
 
-// SESSION SETUP
+// ✅ SESSION SETUP
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your-session-secret",
@@ -35,9 +29,9 @@ app.use(
   })
 );
 
-// CORS HEADERS
+// ✅ CORS HEADERS
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', process.env.WEB_APP_URL || 'http://localhost:3000');
+  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -53,14 +47,14 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
-const PORT = process.env.PORT || 3001; // 🔥 FIXED: Use Render's PORT
+const PORT = 3001;
 connectMongoDB();
 
 app.get('/', (_req, res) => {
   res.send('backend is running');
 });
 
-// ROUTES
+// ✅ ROUTES
 app.use('/api/auth', authRoute);
 app.use('/api/login', loginRoute);
 app.use('/api/emergency', emergencyRoutes);
@@ -68,21 +62,11 @@ app.use('/api/profile', profileRoutes);
 app.use("/api/upload", uploadRoute);
 app.use('/api/diabetesVitals', diabetesRoutes);
 app.use('/api/hypertensionVitals', hypertensionRoutes);
-
-app.use('/api/medications', medicationRoutes);
-app.use('/api/hypertensionStatus', hypertensionStatusRoutes);
-
-
-
-
-
-
 app.use('/api/userStatus', userStatusRouter);
 
-
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`CORS enabled for ${process.env.WEB_APP_URL || 'http://localhost:3000'}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`CORS enabled for http://localhost:3000`);
 });
 
 export default app;
