@@ -21,7 +21,7 @@
 
 , "../../packages/ui/src/components/ui/label.tsx", "../../packages/ui/src/components/ui/input.tsx", "../api/src/routes/next_auth.ts"  ],
 
-, "../../packages/ui/src/components/ui/label.tsx", "../../packages/ui/src/components/ui/input.tsx", "../../packages/ui/src/components/ui/card.tsx"  ],
+
 
   "exclude": [
     "node_modules"

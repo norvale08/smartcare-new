@@ -25,31 +25,22 @@ const Login = () => {
         body: JSON.stringify(data),
       });
 
-
-      if (res?.ok) {
-        toast.success("Login successful!");
-        reset();
-        router.replace("/hypertension"); 
-      } else {
-        toast.error(res?.error || "Login failed");
-
       if (!loginRes.ok) {
         const errorData = await loginRes.json();
         toast.error(errorData.message || "Login failed");
         return;
-
       }
 
       const { token, user, redirectTo } = await loginRes.json();
 
-      // ✅ Store token and user in localStorage
+      // Store token and user in localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
       toast.success("Login successful!");
       reset();
 
-      // ✅ Redirect directly based on backend logic
+      // Redirect based on backend logic
       router.replace(redirectTo);
     } catch (error) {
       console.error("Login error:", error);
