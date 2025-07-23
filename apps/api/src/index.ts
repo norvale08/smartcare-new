@@ -5,11 +5,17 @@ import dotenv from "dotenv";
 import authRoute from "./routes/auth";
 import loginRoute from './routes/login';
 import emergencyRoutes from './routes/emergency';
-import diabetesRoutes from "./routes/diabetesVitals";
+
+import diabetesRoutes from "./routes/diabetesVitals"
+import medicationRoutes from './routes/medications';
+
+
 import userStatusRouter from './routes/userStatus';
+
 import profileRoutes from './routes/patient';
 import uploadRoute from "./routes/upload";
 import hypertensionRoutes from './routes/hypertensionVitals';
+import hypertensionStatusRoutes from './routes/hypertensionStatus';
 
 dotenv.config();
 
@@ -62,7 +68,17 @@ app.use('/api/profile', profileRoutes);
 app.use("/api/upload", uploadRoute);
 app.use('/api/diabetesVitals', diabetesRoutes);
 app.use('/api/hypertensionVitals', hypertensionRoutes);
+
+app.use('/api/medications', medicationRoutes);
+app.use('/api/hypertensionStatus', hypertensionStatusRoutes);
+
+
+
+
+
+
 app.use('/api/userStatus', userStatusRouter);
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

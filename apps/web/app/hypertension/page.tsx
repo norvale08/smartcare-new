@@ -17,6 +17,12 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import axios from 'axios';
+import MedicationAnalysisPage from "../components/hypertension/medicationAnalysis";
+import { useSession } from "next-auth/react";
+import HypertensionAlert from "../components/hypertension/alert";
+
+
+
 //Connection to the database
 
 // Mock data for demonstration
@@ -34,6 +40,10 @@ const mockDietRecommendations = {
 
 function DashboardPage() {
   //Connection to database
+  
+  const { data: session, status } = useSession();
+  console.log("Submitting vitals with userId:", session?.user?.id);
+
   const [systolic, setSystolic] = useState('');
   const [diastolic, setDiastolic] = useState('');
   const [heartRate, setHeartRate] = useState('');
@@ -44,14 +54,17 @@ function DashboardPage() {
       setMessage('Please enter all vitals.');
       return;
     }
-
+    if (status !== 'authenticated' || !session?.user?.id) {
+      setMessage('User not logged in.');
+      return;
+    }
     try {
       const response = await axios.post('http://localhost:3001/api/hypertensionVitals', {
+        userId: session.user.id,
         systolic: Number(systolic),
         diastolic: Number(diastolic),
         heartRate: Number(heartRate),
       });
-
       setMessage('✅ Vitals saved successfully');
       setSystolic('');
       setDiastolic('');
@@ -103,6 +116,7 @@ function DashboardPage() {
   const Provider = dynamic(() => import("../components/maps/ProviderMap"), {
     ssr: false,
   });
+  
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -133,6 +147,7 @@ function DashboardPage() {
 
       {/* Main Content */}
       <main className="flex flex-col items-center px-4 py-6 gap-6">
+        
         {/* Patient Info Card */}
         <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-4xl flex justify-between items-center">
           <div className="flex gap-4 items-center">
@@ -154,21 +169,10 @@ function DashboardPage() {
             ● Stable
           </div>
         </div>
+        
 
-        {/* AI Alert */}
-        <div className="bg-red-50 border-l-4 border-red-600 w-full max-w-4xl p-6 rounded-lg shadow-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <TriangleAlert color="#dc2626" size={20} />
-            <h3 className="text-lg font-bold text-red-600">Health Alert</h3>
-          </div>
-          <p className="text-sm text-red-700 mb-4">
-            Your blood pressure readings have been consistently high for the
-            past 3 days. Consider consulting with your doctor.
-          </p>
-          <button className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition">
-            Find Doctor Nearby
-          </button>
-        </div>
+        {/* Health Alert */}
+        <HypertensionAlert />
 
         {/* Enter Your Vitals */}
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
@@ -221,15 +225,20 @@ function DashboardPage() {
 
           <div className="flex justify-end">
             <button 
-            onClick={handleSubmit}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-              Save Vitals
+              onClick={handleSubmit}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+              disabled={status !== 'authenticated' || !systolic || !diastolic || !heartRate}
+            >
+              {status === 'loading' ? 'Checking login...' : 'Save Vitals'}
             </button>
           </div>
+          {status === 'unauthenticated' && (
+            <p className="text-red-600 text-sm mt-2">You must be logged in to save vitals.</p>
+          )}
         </div>
 
         {/* Medication Management */}
-        <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
+        {/* <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
           <div className="flex items-center gap-2 mb-6">
             <Pill className="text-blue-600" size={20} />
             <h3 className="text-lg font-semibold text-gray-800">Medication Management</h3>
@@ -306,7 +315,8 @@ function DashboardPage() {
               </div>
             </div>
           )}
-        </div>
+        </div> */}
+        <MedicationAnalysisPage />
 
         {/* Lifestyle Assessment */}
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
@@ -487,6 +497,7 @@ function DashboardPage() {
             </div>
           </div> */}
           <Provider />
+          
         </div>
       </main>
     </div>

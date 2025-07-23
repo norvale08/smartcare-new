@@ -25,10 +25,19 @@ const Login = () => {
         body: JSON.stringify(data),
       });
 
+
+      if (res?.ok) {
+        toast.success("Login successful!");
+        reset();
+        router.replace("/hypertension"); 
+      } else {
+        toast.error(res?.error || "Login failed");
+
       if (!loginRes.ok) {
         const errorData = await loginRes.json();
         toast.error(errorData.message || "Login failed");
         return;
+
       }
 
       const { token, user, redirectTo } = await loginRes.json();
