@@ -26,16 +26,12 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    // 🔍 DEBUG: Log user data before redirect logic
+    // Debug logs
     console.log("=== LOGIN DEBUG INFO ===");
     console.log("User email:", user.email);
+    console.log("Is first login:", user.isFirstLogin);
     console.log("Profile completed:", user.profileCompleted);
     console.log("Selected diseases:", user.selectedDiseases);
-    console.log("Selected diseases type:", typeof user.selectedDiseases);
-    console.log("Selected diseases length:", user.selectedDiseases ? user.selectedDiseases.length : "null/undefined");
-    if (user.selectedDiseases && user.selectedDiseases.length > 0) {
-      console.log("First disease:", user.selectedDiseases[0]);
-    }
 
     const token = jwt.sign(
       {
@@ -44,46 +40,72 @@ router.post('/', async (req, res) => {
         name: `${user.firstName} ${user.lastName}`,
         status: user.profileCompleted ? 'complete' : 'incomplete',
         disease: user.selectedDiseases || [],
+        isFirstLogin: user.isFirstLogin
       },
       process.env.JWT_SECRET || 'your-default-secret',
       { expiresIn: '24h' }
     );
 
-    let redirectTo = "/profile"; // default for incomplete profiles
+    let redirectTo = "/dashboard"; // default
+    let message = "";
 
+    // 🔥 Profile incomplete → force profile setup
     if (!user.profileCompleted) {
       redirectTo = "/profile";
-      console.log("🔄 Redirect reason: Profile not completed");
-    } else if (user.selectedDiseases && user.selectedDiseases.length > 0) {
-      const disease = user.selectedDiseases[0];
-      console.log("🔄 Checking disease for redirect:", disease);
-      
-      if (disease === "diabetes") {
-        redirectTo = "/diabetes";
-        console.log("✅ Redirecting to diabetes dashboard");
-      } else if (disease === "hypertension") {
-        redirectTo = "/hypertension";
-        console.log("✅ Redirecting to hypertension dashboard");
-      } else if (disease === "cardiovascular") {
-        redirectTo = "/cardiovascular";
-        console.log("✅ Redirecting to cardiovascular dashboard");
-      } else {
-        console.log("❌ Disease not matched, staying at profile. Disease value:", `"${disease}"`);
+      message = "Please complete your profile.";
+      if (user.isFirstLogin) {
+        await User.findByIdAndUpdate(user._id, { isFirstLogin: false });
+        console.log("✅ Updated isFirstLogin to false");
       }
-    } else {
-      // Profile completed but no diseases selected - maybe a fallback route?
+    } 
+    // ✅ Profile complete + diseases selected
+    else if (user.selectedDiseases?.length > 0) {
+      if (user.selectedDiseases.length === 1) {
+        // Single disease → go straight to dashboard
+        const primaryDisease = user.selectedDiseases[0];
+        console.log("🔄 Redirecting based on disease:", primaryDisease);
+
+        switch (primaryDisease) {
+          case "diabetes":
+            redirectTo = "/diabetes";
+            message = "Welcome to your diabetes management dashboard.";
+            break;
+          case "hypertension":
+            redirectTo = "/hypertension";
+            message = "Welcome to your hypertension management dashboard.";
+            break;
+          case "cardiovascular":
+            redirectTo = "/cardiovascular";
+            message = "Welcome to your cardiovascular health dashboard.";
+            break;
+          default:
+            redirectTo = "/dashboard";
+            message = "Welcome to your health dashboard.";
+            console.log("❌ Disease not matched, using general dashboard. Disease:", `"${primaryDisease}"`);
+        }
+      } else {
+        // Multiple diseases → show selector page
+        redirectTo = "/select-disease";
+        message = "Please select a disease dashboard.";
+        console.log("🔄 Multiple diseases, redirecting to selector.");
+      }
+    } 
+    // ✅ Profile complete but no disease
+    else {
       redirectTo = "/dashboard";
+      message = "Welcome to your health dashboard.";
       console.log("🔄 Redirect reason: Profile completed but no diseases selected");
     }
 
     console.log("Final redirect destination:", redirectTo);
+    console.log("Message:", message);
     console.log("========================");
 
     const safeUser = {
       id: user._id,
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
-      isFirstLogin: user.isFirstLogin,
+      isFirstLogin: false, // Always false after first login
       profileCompleted: user.profileCompleted,
       selectedDiseases: user.selectedDiseases || []
     };
@@ -91,7 +113,8 @@ router.post('/', async (req, res) => {
     res.status(200).json({
       user: safeUser,
       token: token,
-      redirectTo: redirectTo
+      redirectTo: redirectTo,
+      message: message
     });
 
   } catch (error) {
