@@ -1,5 +1,5 @@
 import React from 'react'
-import { HeartPulse, Facebook, Twitter, Linkedin, Instagram } from "lucide-react"
+import { HeartPulse,  Twitter, Linkedin, Instagram } from "lucide-react"
 
 const Footer = () => {
   return (
@@ -58,9 +58,7 @@ const Footer = () => {
 
           {/* Social Icons */}
           <div className="flex gap-4">
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-white transition">
-              <Facebook size={20} />
-            </a>
+            
             <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-white transition">
               <Twitter size={20} />
             </a>
