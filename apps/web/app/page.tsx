@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { ChevronLeft, ChevronRight,} from 'lucide-react'
 import Header from './components/ui/header'
 import Link from 'next/link'
-import { title } from 'process'
+
+import Footer from './components/ui/footer'
 const Home = () => {
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0)
   const features = [
@@ -219,6 +220,7 @@ const Home = () => {
           ))}
         </div>
       </div>
+      <Footer></Footer>
     </div>
   )
 }

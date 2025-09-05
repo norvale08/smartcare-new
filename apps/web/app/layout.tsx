@@ -2,8 +2,6 @@ import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 import './globals.css'
 import {AuthProvider} from "./Providers"
-import Header from './components/ui/header'
-import Footer from './components/ui/footer'
 
 export const metadata: Metadata = {
   title: 'Your App Title',
@@ -21,7 +19,7 @@ export default function RootLayout({
         <AuthProvider>
           
         {children}
-<Footer></Footer>
+
         </AuthProvider>
 
       </body>
