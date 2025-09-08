@@ -2,33 +2,84 @@
 
 import { useEffect, useState } from "react";
 import { TriangleAlert, CheckCircle } from "lucide-react";
-import { useSession } from "next-auth/react";
 
 type StatusData = {
   systolic: number;
   diastolic: number;
   heartRate: number;
-  age: number;
   status: "alert" | "stable";
 };
 
-export default function HypertensionAlert() {
-  const { data: session } = useSession();
+export default function HypertensionAlert({ refreshToken }: { refreshToken?: number }) {
   const [statusData, setStatusData] = useState<StatusData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchStatus = async () => {
-      if (!session?.user?.id) return;
+    const fetchTodayVitals = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        if (!token) {
+          setError('You must be logged in to view alerts.');
+          setLoading(false);
+          return;
+        }
 
-      const res = await fetch(`http://localhost:3001/api/hypertensionStatus/${session.user.id}`);
-      const data = await res.json();
-      setStatusData(data);
+        const res = await fetch('http://localhost:3001/api/hypertensionVitals/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          const msg = (await res.json().catch(() => null))?.message || `Failed to load vitals (${res.status})`;
+          throw new Error(msg);
+        }
+
+        const json = await res.json();
+        const vitals = Array.isArray(json?.data) ? json.data : [];
+
+        // Pick latest entry from today
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const todayVitals = vitals
+          .filter((v: any) => {
+            const t = new Date(v.timestamp || v.createdAt);
+            return !isNaN(t.getTime()) && t >= startOfDay;
+          })
+          .sort((a: any, b: any) => new Date(b.timestamp || b.createdAt).getTime() - new Date(a.timestamp || a.createdAt).getTime());
+
+        if (todayVitals.length === 0) {
+          setStatusData(null);
+          setLoading(false);
+          return;
+        }
+
+        const latest = todayVitals[0];
+        const systolic = Number(latest.systolic);
+        const diastolic = Number(latest.diastolic);
+        const heartRate = Number(latest.heartRate);
+
+        const isHigh = systolic > 140 || diastolic > 90;
+        const isLow = systolic < 90 || diastolic < 60;
+        const heartRateAlert = heartRate < 60 || heartRate > 100;
+        const status: "alert" | "stable" = (isHigh || isLow || heartRateAlert) ? "alert" : "stable";
+
+        setStatusData({ systolic, diastolic, heartRate, status });
+      } catch (e: any) {
+        setError(e?.message || 'Failed to load alerts');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    fetchStatus();
-  }, [session]);
+    fetchTodayVitals();
+  }, [refreshToken]);
 
-  if (!statusData) {
+  if (loading) {
     return (
       <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">
         <span className="text-gray-500 text-sm">Loading health alert...</span>
@@ -36,18 +87,18 @@ export default function HypertensionAlert() {
     );
   }
 
-  // If any vital is missing or not a number, show a friendly message
-  if (
-    typeof statusData.systolic !== 'number' ||
-    typeof statusData.diastolic !== 'number' ||
-    typeof statusData.heartRate !== 'number' ||
-    isNaN(statusData.systolic) ||
-    isNaN(statusData.diastolic) ||
-    isNaN(statusData.heartRate)
-  ) {
+  if (error) {
     return (
       <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">
-        <span className="text-gray-500 text-sm">No blood pressure data available. Please enter your vitals.</span>
+        <span className="text-gray-500 text-sm">{error}</span>
+      </div>
+    );
+  }
+
+  if (!statusData) {
+    return (
+      <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">
+        <span className="text-gray-500 text-sm">No blood pressure data for today. Please enter your vitals.</span>
       </div>
     );
   }
@@ -117,7 +168,6 @@ export default function HypertensionAlert() {
         <p><strong>Systolic:</strong> {statusData.systolic} mmHg</p>
         <p><strong>Diastolic:</strong> {statusData.diastolic} mmHg</p>
         <p><strong>Heart Rate:</strong> {statusData.heartRate} bpm</p>
-        <p><strong>Age:</strong> {statusData.age} years</p>
       </div>
       {bpCategory.button && (
         <button className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition">
