@@ -21,6 +21,8 @@ const HypertensionVitalSchema: Schema = new Schema({
   timestamp: { type: Date, default: Date.now },
 });
 
+HypertensionVitalSchema.index({ userId: 1, timestamp: -1 });
+
 const HypertensionVital = mongoose.model<IHypertensionVital>(
   'HypertensionVital',
   HypertensionVitalSchema,

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   HeartPulse,
   Globe,
@@ -48,29 +48,53 @@ function DashboardPage() {
   const [diastolic, setDiastolic] = useState('');
   const [heartRate, setHeartRate] = useState('');
   const [message, setMessage] = useState('');
+  const [hasToken, setHasToken] = useState(false);
+  const [alertRefreshToken, setAlertRefreshToken] = useState(0);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      setHasToken(!!token);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!message) return;
+    const t = setTimeout(() => setMessage(''), 3000);
+    return () => clearTimeout(t);
+  }, [message]);
 
   const handleSubmit = async () => {
     if (!systolic || !diastolic || !heartRate) {
       setMessage('Please enter all vitals.');
       return;
     }
-    if (status !== 'authenticated' || !session?.user?.id) {
-      setMessage('User not logged in.');
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      setMessage('You must be logged in to save vitals.');
       return;
     }
+
     try {
       const response = await axios.post('http://localhost:3001/api/hypertensionVitals', {
-        userId: session.user.id,
         systolic: Number(systolic),
         diastolic: Number(diastolic),
         heartRate: Number(heartRate),
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
       });
       setMessage('✅ Vitals saved successfully');
       setSystolic('');
       setDiastolic('');
       setHeartRate('');
+      setAlertRefreshToken(Date.now());
     } catch (error: any) {
-      setMessage('❌ Failed to save vitals');
+      setMessage(error?.response?.data?.message || '❌ Failed to save vitals');
       console.error(error);
     }
   };
@@ -172,7 +196,7 @@ function DashboardPage() {
         
 
         {/* Health Alert */}
-        <HypertensionAlert />
+        <HypertensionAlert refreshToken={alertRefreshToken} />
 
         {/* Enter Your Vitals */}
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
@@ -227,12 +251,12 @@ function DashboardPage() {
             <button 
               onClick={handleSubmit}
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-              disabled={status !== 'authenticated' || !systolic || !diastolic || !heartRate}
+              disabled={!hasToken || !systolic || !diastolic || !heartRate}
             >
               {status === 'loading' ? 'Checking login...' : 'Save Vitals'}
             </button>
           </div>
-          {status === 'unauthenticated' && (
+          {!hasToken && (
             <p className="text-red-600 text-sm mt-2">You must be logged in to save vitals.</p>
           )}
         </div>
