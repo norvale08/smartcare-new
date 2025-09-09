@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
+    userId: string;
     isFirstLogin: boolean;
     profileCompleted: boolean;
     selectedDiseases: string[];

@@ -47,10 +47,14 @@ const MultiStepForm = () => {
 
   const onSubmit = async (data: any) => {
     try {
+      // Get stored token
+      const token = localStorage.getItem("token");
+
       const res = await fetch("http://localhost:3001/api/profile", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(data),
       });
@@ -63,22 +67,18 @@ const MultiStepForm = () => {
       }
 
       const result = await res.json();
-      console.log("Success:", result);
-      alert("Profile saved successfully!");
+      console.log("✅ Success:", result);
 
-      
-      if (data.diabetes) {
-        router.push("/diabetes");
-      } else if (data.hypertension) {
-        router.push("/hypertension");
-      } else if (data.cardiovascular) {
-        router.push("/cardiovascular"); 
-      } else {
-        router.push("/general"); 
+      // Save new token from backend
+      if (result.token) {
+        localStorage.setItem("token", result.token);
       }
 
+      alert("Profile saved successfully!");
+      router.push(result.redirectTo || "/dashboard");
+
     } catch (error) {
-      console.error("Error submitting form:", error);
+      console.error("❌ Error submitting form:", error);
       alert("Server error. Try again later.");
     }
   };
