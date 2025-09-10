@@ -20,7 +20,8 @@ import axios from 'axios';
 import MedicationAnalysisPage from "../components/hypertension/medicationAnalysis";
 import { useSession } from "next-auth/react";
 import HypertensionAlert from "../components/hypertension/alert";
-
+import { useVoiceInput } from "../components/hypertension/useVoiceInput";
+import { wordsToNumbers } from "../components/hypertension/words-to-numbers"
 
 
 //Connection to the database
@@ -140,7 +141,47 @@ function DashboardPage() {
   const Provider = dynamic(() => import("../components/maps/ProviderMap"), {
     ssr: false,
   });
+  //Voice input
+   
+
+  // Handle parsing transcript into numbers
   
+   const { listening, transcript, startListening, stopListening, setTranscript, error } =
+    useVoiceInput();
+
+  const [language, setLanguage] = useState<string>("en-US");
+  const [listeningField, setListeningField] = useState<
+    "systolic" | "diastolic" | "heartRate" | null
+  >(null);
+
+  // Populate the right field when speech ends
+  useEffect(() => {
+    if (!transcript || !listeningField) return;
+
+    const cleaned = transcript.trim().toLowerCase();
+    // 1) Try to extract explicit digits first (e.g., "120")
+    const digitMatch = cleaned.match(/\d{1,3}(?:\.\d+)?/);
+    let numericValue: number | null = null;
+    if (digitMatch) {
+      const parsed = parseFloat(digitMatch[0]);
+      if (!Number.isNaN(parsed)) numericValue = Math.round(parsed);
+    }
+    // 2) Fallback to words parsing (e.g., "one hundred twenty", "mia ishirini")
+    if (numericValue === null) {
+      numericValue = wordsToNumbers(cleaned);
+    }
+
+    if (numericValue !== null) {
+      if (listeningField === "systolic") setSystolic(String(numericValue));
+      if (listeningField === "diastolic") setDiastolic(String(numericValue));
+      if (listeningField === "heartRate") setHeartRate(String(numericValue));
+    }
+
+    setListeningField(null);
+    setTranscript("");
+    stopListening();
+  }, [transcript, listeningField, setTranscript, stopListening]);
+
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -154,9 +195,12 @@ function DashboardPage() {
         </div>
 
         <div className="flex flex-row items-center gap-6">
-          <button className="flex flex-row bg-neutral-200 items-center justify-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-300 transition-colors">
+          <button
+            onClick={() => setLanguage((prev) => (prev === "en-US" ? "sw-TZ" : "en-US"))}
+            className="flex flex-row bg-neutral-200 items-center justify-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-300 transition-colors"
+          >
             <Globe color="#27b049" size={16} />
-            <span className="text-sm font-medium">EN</span>
+            <span className="text-sm font-medium">{language === "en-US" ? "EN" : "SW"}</span>
           </button>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
@@ -200,6 +244,122 @@ function DashboardPage() {
 
         {/* Enter Your Vitals */}
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6">
+            Enter Your Vitals
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* BP */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-2">
+                Blood Pressure (mmHg)
+              </label>
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="number"
+                  placeholder="Systolic (120)"
+                  value={systolic}
+                  onChange={(e) => setSystolic(e.target.value)}
+                  className="border-2 border-gray-300 rounded-lg px-3 py-2 focus:border-emerald-400 focus:outline-none flex-1 w-1/2"
+                />
+                <span className="flex items-center text-gray-500 px-2">/</span>
+                <input
+                  type="number"
+                  placeholder="Diastolic (80)"
+                  value={diastolic}
+                  onChange={(e) => setDiastolic(e.target.value)}
+                  className="border-2 border-gray-300 rounded-lg px-3 py-2 focus:border-emerald-400 focus:outline-none flex-1 w-1/2"
+                />
+              </div>
+              <div className="flex gap-2 items-center">
+                <button
+                  onClick={() => {
+                    setListeningField("systolic");
+                    startListening(language);
+                  }}
+                  disabled={listening}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-3 py-2 flex items-center justify-center gap-2 text-sm transition-colors disabled:opacity-50"
+                >
+                  <MicVocal size={16} />
+                  Voice Systolic
+                </button>
+                <button
+                  onClick={() => {
+                    setListeningField("diastolic");
+                    startListening(language);
+                  }}
+                  disabled={listening}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-3 py-2 flex items-center justify-center gap-2 text-sm transition-colors disabled:opacity-50"
+                >
+                  <MicVocal size={16} />
+                  Voice Diastolic
+                </button>
+                {listening && (
+                  <span className="text-xs text-emerald-700">Listening…</span>
+                )}
+                {transcript && (
+                  <span className="text-xs text-gray-600">“{transcript}”</span>
+                )}
+                {error && (
+                  <span className="text-xs text-red-600">{error}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Heart Rate */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-2">
+                Heart Rate (BPM)
+              </label>
+              <input
+                type="number"
+                placeholder="72"
+                value={heartRate}
+                onChange={(e) => setHeartRate(e.target.value)}
+                className="border-2 border-gray-300 rounded-lg px-3 py-2 mb-3 focus:border-emerald-400 focus:outline-none"
+              />
+              <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setListeningField("heartRate");
+                  startListening(language);
+                }}
+                disabled={listening}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-3 py-2 flex items-center justify-center gap-2 text-sm transition-colors disabled:opacity-50"
+              >
+                <MicVocal size={16} />
+                Voice Heart Rate
+              </button>
+              {listening && (
+                <span className="text-xs text-emerald-700">Listening…</span>
+              )}
+              {transcript && (
+                <span className="text-xs text-gray-600">“{transcript}”</span>
+              )}
+              {error && (
+                <span className="text-xs text-red-600">{error}</span>
+              )}
+              </div>
+            </div>
+          </div>
+
+          {message && (
+            <p className="text-sm mb-4 text-gray-700 font-medium">{message}</p>
+          )}
+
+          <div className="flex justify-end">
+            <button
+              onClick={handleSubmit}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+              disabled={!hasToken || !systolic || !diastolic || !heartRate}
+            >
+              {status === "loading" ? "Checking login..." : "Save Vitals"}
+            </button>
+          </div>
+        </div>
+
+        
+        {/* <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-6">Enter Your Vitals</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -259,7 +419,7 @@ function DashboardPage() {
           {!hasToken && (
             <p className="text-red-600 text-sm mt-2">You must be logged in to save vitals.</p>
           )}
-        </div>
+        </div> */}
 
         {/* Medication Management */}
         {/* <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
