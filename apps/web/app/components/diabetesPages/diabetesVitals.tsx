@@ -1,34 +1,53 @@
-"use client"
-import React, { useState } from 'react';
-import { Input, Label, Button } from '@repo/ui';
+"use client";
+import React, { useState } from "react";
+import { Input, Label, Button } from "@repo/ui";
 import { useForm } from "react-hook-form";
-import { diabetesValidationRules } from '@repo/ui';
-import { diabetesType } from '@/types/diabetes';
+import { diabetesValidationRules } from "@repo/ui";
+import { diabetesType } from "@/types/diabetes";
 import { toast } from "react-hot-toast";
-import CustomToaster from '../ui/CustomToaster';
+import CustomToaster from "../ui/CustomToaster";
+import VoiceInput from "../ui/VoiceInput";
+import { wordsToNumbers } from "words-to-numbers";
+import { swahiliToNumber } from "../utils/swahiliParser";  // ✅ import here
 
+// ----------------- Normalizer -----------------
+function normalizeNumber(text: string): number | null {
+  text = text.toLowerCase().trim();
+
+  if (!isNaN(Number(text))) return Number(text);
+
+  const eng = wordsToNumbers(text);
+  if (typeof eng === "number" && !isNaN(eng)) return eng;
+
+  const swa = swahiliToNumber(text);
+  if (swa !== null) return swa;
+
+  return null;
+}
+
+// ----------------- Main Component -----------------
 const DiabetesVitals = () => {
-  const { register, handleSubmit, formState, reset } = useForm<diabetesType>();
+  const { register, handleSubmit, formState, reset, setValue } =
+    useForm<diabetesType>();
   const [isLoading, setIsLoading] = useState(false);
   const [requestAI, setRequestAI] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
   const handleFormSubmit = async (data: diabetesType) => {
     setIsLoading(true);
     setAiFeedback(null);
 
-    // ✅ Ensure glucose is sent as a number
     const glucoseNumber = Number(data.glucose);
 
     try {
       const response = await fetch(`${API_URL}/api/diabetesVitals`, {
         method: "POST",
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
-          glucose: glucoseNumber,  // 👈 FIXED HERE
+          glucose: glucoseNumber,
           requestAI,
         }),
       });
@@ -50,7 +69,6 @@ const DiabetesVitals = () => {
 
       reset();
       setRequestAI(false);
-
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
     } finally {
@@ -76,10 +94,24 @@ const DiabetesVitals = () => {
               {...register("glucose", diabetesValidationRules.glucose)}
             />
             {formState.errors.glucose && (
-              <p className="text-red-600">
-                {formState.errors.glucose.message}
-              </p>
+              <p className="text-red-600">{formState.errors.glucose.message}</p>
             )}
+
+            {/* Voice Input */}
+            <div className="mt-2">
+              <VoiceInput
+                lang="sw-KE"
+                placeholder="Say your glucose value in English or Swahili..."
+                onResult={(text) => {
+                  const numericValue = normalizeNumber(text);
+                  if (numericValue !== null) {
+                    setValue("glucose", numericValue);
+                  } else {
+                    toast.error("Please provide a valid number");
+                  }
+                }}
+              />
+            </div>
           </div>
 
           <div>
@@ -95,16 +127,14 @@ const DiabetesVitals = () => {
               <option value="Random">Random</option>
             </select>
             {formState.errors.context && (
-              <p className="text-red-600">
-                {formState.errors.context.message}
-              </p>
+              <p className="text-red-600">{formState.errors.context.message}</p>
             )}
           </div>
 
           <div>
             <Label htmlFor="language">Preferred Language</Label>
-            <select 
-              id="language" 
+            <select
+              id="language"
               className="w-full p-2 border border-gray-300 rounded-md"
               {...register("language")}
             >
