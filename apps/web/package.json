@@ -16,10 +16,7 @@
     "axios": "^1.10.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-
-    
     "date-fns": "^4.1.0",
-
     "lucide-react": "^0.522.0",
     "next": "^15.3.0",
     "next-auth": "^4.24.11",
@@ -27,12 +24,14 @@
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.58.1",
     "react-hot-toast": "^2.5.2",
+    "recharts": "^3.0.2",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@types/mongoose": "^5.11.97",
     "@types/node": "^22.15.3",
     "@types/react": "19.1.0",
     "@types/react-dom": "19.1.1",
