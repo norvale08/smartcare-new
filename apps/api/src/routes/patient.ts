@@ -172,4 +172,84 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
   }
 });
 
+// Get the authenticated user's patient profile
+router.get("/me", authenticateUser, async (req: any, res: any) => {
+  try {
+    await connectMongoDB();
+
+    const patient = await Patient.findOne({ userId: req.userId }).sort({ createdAt: -1 });
+    if (!patient) {
+      return res.status(404).json({ message: "Patient profile not found" });
+    }
+
+    res.status(200).json({ data: patient });
+  } catch (error) {
+    console.error("❌ Fetch patient error:", error);
+    res.status(500).json({ message: "Failed to fetch patient profile" });
+  }
+});
+
+// Update the authenticated user's patient profile
+router.put("/", authenticateUser, async (req: any, res: any) => {
+  try {
+    await connectMongoDB();
+
+    const updatableFields = [
+      "fullName",
+      "dob",
+      "gender",
+      "weight",
+      "height",
+      "picture",
+      "firstname",
+      "lastname",
+      "phoneNumber",
+      "relationship",
+      "diabetes",
+      "hypertension",
+      "cardiovascular",
+      "allergies",
+      "surgeries",
+    ];
+
+    const update: any = {};
+    for (const key of updatableFields) {
+      if (key in req.body && req.body[key] !== undefined) {
+        update[key] = req.body[key];
+      }
+    }
+
+    if (update.dob) {
+      update.dob = new Date(update.dob);
+    }
+
+    const patient = await Patient.findOneAndUpdate(
+      { userId: req.userId },
+      { $set: update, $setOnInsert: { userId: req.userId } },
+      { new: true, upsert: true }
+    );
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient profile not found" });
+    }
+
+    // Optionally mirror some fields to User
+    try {
+      const userUpdate: any = {};
+      if (update.weight !== undefined) userUpdate.weight = parseInt(update.weight);
+      if (update.height !== undefined) userUpdate.height = parseInt(update.height);
+      if (Object.keys(userUpdate).length > 0) {
+        await User.findByIdAndUpdate(req.userId, userUpdate, { new: true });
+      }
+    } catch (e) {
+      console.warn("Non-critical: failed to mirror fields to User", e);
+    }
+
+    res.status(200).json({ message: "Patient profile updated", data: patient });
+  } catch (error) {
+    console.error("❌ Update patient error:", error);
+    res.status(500).json({ message: "Failed to update patient profile" });
+  }
+});
+
 export default router;

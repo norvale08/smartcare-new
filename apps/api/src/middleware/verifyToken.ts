@@ -27,7 +27,8 @@ export const verifyToken = (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as AuthenticatedRequest['user'];
+    const secret = process.env.JWT_SECRET || 'your-default-secret';
+    const decoded = jwt.verify(token, secret) as AuthenticatedRequest['user'];
     req.user = decoded;
     next();
   } catch (error) {

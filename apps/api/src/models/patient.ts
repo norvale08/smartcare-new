@@ -1,6 +1,7 @@
 import mongoose,{Schema,model,models} from "mongoose";
 
 const PatientSchema = new Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   // Basic Info
   fullName: { type: String, required: true },
   dob: { type: Date, required: true },
