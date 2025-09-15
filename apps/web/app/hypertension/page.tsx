@@ -25,7 +25,7 @@ import { wordsToNumbers } from "../components/hypertension/words-to-numbers"
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
-
+//Mock drug data
 const mockDrugInteractions = [
   { drug1: "Aspirin", drug2: "Warfarin", severity: "High", warning: "Increased bleeding risk" },
   { drug1: "Ibuprofen", drug2: "Lisinopril", severity: "Medium", warning: "Reduced effectiveness of blood pressure medication" },
