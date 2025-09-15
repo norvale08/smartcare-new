@@ -31,6 +31,7 @@
     "react-hot-toast": "^2.5.2",
     "react-icons": "^5.5.0",
     "react-leaflet": "^5.0.0",
+    "recharts": "^3.2.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "words-to-numbers": "^1.5.1"
