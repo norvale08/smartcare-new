@@ -1,6 +1,7 @@
 import express from 'express';
 import session from "express-session" // ✅ ADD THIS
 import { connectMongoDB } from './lib/mongodb';
+
 import dotenv from "dotenv";
 import authRoute from "./routes/auth";
 import loginRoute from './routes/login';
@@ -12,9 +13,20 @@ import uploadRoute from "./routes/upload";
 import hypertensionRoutes from './routes/hypertensionVitals';
 import medicationsRoutes from './routes/medications';
 
+import cors from 'cors';
+import dotenv from "dotenv"
+import authRoute from "./routes/auth"
+import loginRoute from './routes/login'
+import emergencyRoutes from './routes/emergency';
+import medicalRoutes from './routes/medical';
+import analyzeRoute from './routes/analyze';
+import vitalsRoute from './routes/vitals';
+
+
 dotenv.config();
 
 const app = express();
+
 
 // ✅ SESSION SETUP
 app.use(
@@ -29,6 +41,9 @@ app.use(
     },
   })
 );
+app.get('/favicon.ico', (_req, res) => res.status(204).end());
+
+
 
 // ✅ CORS HEADERS
 app.use((req, res, next) => {
@@ -47,6 +62,7 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(cors());
 app.use(express.json());
 const PORT = 3001;
 connectMongoDB();
@@ -59,12 +75,21 @@ app.get('/', (_req, res) => {
 app.use('/api/auth', authRoute);
 app.use('/api/login', loginRoute);
 app.use('/api/emergency', emergencyRoutes);
+
 app.use('/api/profile', profileRoutes);
 app.use("/api/upload", uploadRoute);
 app.use('/api/diabetesVitals', diabetesRoutes);
 app.use('/api/hypertensionVitals', hypertensionRoutes);
 app.use('/api/medications', medicationsRoutes);
 app.use('/api/userStatus', userStatusRouter);
+
+app.use('/api/medical', medicalRoutes);
+app.use('/api/analyze', analyzeRoute);
+app.use('/api/vitals', vitalsRoute);
+
+
+
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
