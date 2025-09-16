@@ -1,14 +1,30 @@
-import React from 'react'
-import {HeartPulse, Globe, TriangleAlert, MicVocal, MapPin, Star, Search } from 'lucide-react';
-import Image from 'next/image';
-function page() {
+"use client";
+
+import React, { useState } from "react";
+import {
+  HeartPulse,
+  Globe,
+  TriangleAlert,
+  MicVocal,
+} from "lucide-react";
+import Image from "next/image";
+import dynamic from "next/dynamic";
+
+// Dynamically import Provider component with Leaflet map
+const Provider = dynamic(() => import("../components/maps/ProviderMap"), {
+  ssr: false,
+});
+
+function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <header className="flex justify-between items-center px-8 py-4 bg-white shadow-sm">
         <div className="flex flex-row items-center gap-2">
           <HeartPulse color="#21a136" size={24} />
-          <h1 className="text-xl font-semibold text-gray-800">SmartCare Dashboard</h1>
+          <h1 className="text-xl font-semibold text-gray-800">
+            SmartCare Dashboard
+          </h1>
         </div>
 
         <div className="flex flex-row items-center gap-6">
@@ -24,15 +40,18 @@ function page() {
               height={40}
               className="rounded-full"
             />
-            <span className="text-sm font-medium text-gray-700">Sarah Johnson</span>
+            <span className="text-sm font-medium text-gray-700">
+              Sarah Johnson
+            </span>
           </div>
         </div>
       </header>
 
-      <div className="flex flex-col items-center justify-center px-4 py-6">
+      {/* Main Content */}
+      <main className="flex flex-col items-center px-4 py-6 gap-6">
         {/* Patient Info Card */}
-        <div className="shadow-lg bg-white flex flex-row justify-between items-center w-full max-w-4xl rounded-lg px-6 py-4 mb-6">
-          <div className="flex flex-row gap-4 items-center">
+        <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-4xl flex justify-between items-center">
+          <div className="flex gap-4 items-center">
             <Image
               src="/assets/avatar1.jpg"
               alt="Sarah Johnson"
@@ -40,8 +59,10 @@ function page() {
               height={80}
               className="rounded-full"
             />
-            <div className="flex flex-col">
-              <h2 className="text-xl font-semibold text-gray-800">Sarah Johnson</h2>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-800">
+                Sarah Johnson
+              </h2>
               <p className="text-sm text-gray-600">
                 Age: 34 | Patient ID: #12345
                 <br />
@@ -49,28 +70,26 @@ function page() {
               </p>
             </div>
           </div>
-
-          <div className="flex bg-emerald-400 rounded-full items-center justify-center px-4 py-2">
-            <span className="text-white font-medium text-sm">● Stable</span>
+          <div className="bg-emerald-400 text-white rounded-full px-4 py-2 text-sm font-medium">
+            ● Stable
           </div>
         </div>
 
-        {/* AI Health Alert */}
-        <div className="shadow-lg bg-red-50 border-l-4 border-red-500 flex flex-col gap-4 w-full max-w-4xl rounded-lg px-6 py-4 mb-6">
-          <div className="flex items-center gap-2">
+        {/* AI Alert */}
+        <div className="bg-red-50 border-l-4 border-red-600 w-full max-w-4xl p-6 rounded-lg shadow-lg">
+          <div className="flex items-center gap-2 mb-2">
             <TriangleAlert color="#dc2626" size={20} />
-            <h3 className="text-red-600 font-bold text-lg">AI Health Alert</h3>
+            <h3 className="text-lg font-bold text-red-600">AI Health Alert</h3>
           </div>
-          <p className="text-red-700 text-sm leading-relaxed">
-            Your blood pressure readings have been consistently high for the past 3 days. Consider consulting with your
-            doctor.
+          <p className="text-sm text-red-700 mb-4">
+            Your blood pressure readings have been consistently high for the
+            past 3 days. Consider consulting with your doctor.
           </p>
-          <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg w-fit text-sm font-medium transition-colors">
+          <button className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition">
             Find Doctor Nearby
           </button>
         </div>
-
-        {/* Enter Your Vitals */}
+         {/* Enter Your Vitals */}
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-6">Enter Your Vitals</h3>
 
@@ -181,70 +200,17 @@ function page() {
           </div>
         </div>
 
-        {/* Find Healthcare Providers */}
-        <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-6">Find Healthcare Providers</h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Search for doctors or specialties..."
-                  className="w-full border-2 border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:border-emerald-400 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-semibold text-gray-800">Dr. Michael Chen</h4>
-                      <p className="text-sm text-gray-600">Cardiologist • 2.3 miles away</p>
-                    </div>
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-1 text-sm font-medium transition-colors">
-                      Book
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={14} className={i < 4 ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} />
-                    ))}
-                    <span className="text-xs text-gray-500 ml-1">4.8 (127 reviews)</span>
-                  </div>
-                </div>
-
-                <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-semibold text-gray-800">St. Mary's Medical Center</h4>
-                      <p className="text-sm text-gray-600">Emergency Care • 1.8 miles away</p>
-                    </div>
-                    <button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-1 text-sm font-medium transition-colors">
-                      Directions
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={14} className={i < 4 ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} />
-                    ))}
-                    <span className="text-xs text-gray-500 ml-1">4.2 (89 reviews)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-100 rounded-lg p-6 flex flex-col items-center justify-center text-center min-h-[300px]">
-              <MapPin size={48} className="text-gray-400 mb-4" />
-              <p className="text-gray-600 font-medium mb-2">Interactive map will load here</p>
-              <p className="text-gray-500 text-sm">Showing nearby healthcare providers</p>
-            </div>
-          </div>
+        {/* Nearby Clinics and Directions Map */}
+        <div className="w-full max-w-4xl">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Nearby Clinics
+          </h3>
+          <Provider />
         </div>
-      </div>
+      </main>
     </div>
-  )
+  );
 }
 
-export default page
+export default DashboardPage;

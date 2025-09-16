@@ -1,284 +1,228 @@
 "use client"
-import Image from "next/image"
-import type React from "react"
+import React, { useState } from 'react'
+import { Button } from '@repo/ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui"
+import { ChevronLeft, ChevronRight,} from 'lucide-react'
+import Header from './components/ui/header'
+import Link from 'next/link'
 
-import { HeartPulse, Stethoscope, MapPin, LineChartIcon as ChartLine, Video, Ambulance } from "lucide-react"
-
-const page: React.FC = () => {
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId)
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" })
+import Footer from './components/ui/footer'
+const Home = () => {
+  const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0)
+  const features = [
+    {
+      id: 1,
+      title: "Easy Vital Tracking",
+      description: "Utilize our user-friendly interface to effortlessly log your vital signs. Whether through manual input or voice commands, tracking your health has never been simpler.",
+      image: "/assets/laptop.png",
+      alt: "Diabetes management system"
+    },
+    {
+      id: 2,
+      title: "Google Maps Integration",
+      description: "Quickly locate nearby healthcare providers with our integrated Google Maps feature. Find the support you need, right when you need it, ensuring you are never far from care.",
+      image: "/assets/laptop.png",
+      alt: "Diabetes management system"
+    },
+    {
+      id: 3,
+      title: "Timely Alerts",
+      description: "Receive immediate notifications for abnormal readings and risky health patterns. Stay informed and proactive about your health with our timely alerts.",
+      image: "/assets/laptop.png",
+      alt: "Diabetes management system"
     }
-  }
+  ]
+
+  const testimonials = [
+    {
+      id: 1,
+      title: "Life-Changing Support",
+      content: "SmartCare has transformed how I manage my diabetes. The timely alerts and easy tracking have made a significant difference in my daily life."
+    },
+    {
+      id: 2,
+      title: "Accessibility Matters", 
+      content: "Being able to use the app in Kiswahili has made it so much easier for my family to engage with their health, especially in our rural area."
+    },
+    {
+      id: 3,
+      title: "User-Friendly and Effective",
+      content: "The interface is so intuitive! Logging my vitals is easy, and I appreciate the insights it provides to help me improve my health."
+    }
+  ]
+  const steps =[
+    { step: 1, title: "Input Vitals", desc: "Record blood pressure, glucose & heart rate manually or by voice." },
+            { step: 2, title: "AI Analysis", desc: "AI analyzes your health patterns and provides personalized insights." },
+            { step: 3, title: "Get Alerts", desc: "Notifications for abnormal readings or medication reminders." },
+            { step: 4, title: "Connect Care", desc: "Access doctors, clinics, or emergency services when needed." },
+  ]
 
   return (
-    <div className="min-w-screen">
-    
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 flex items-center justify-between px-8 py-4 mb-2">
-        <h1 className="text-xl font-bold flex flex-row items-center gap-2">
-          <HeartPulse color="#21a136" />
-          SmartCare
-        </h1>
+    <div className='bg-slate-400 min-h-screen'>
+      <Header></Header>
+      {/* Hero Section */}
+      <div className="relative bg-cover bg-center text-white p-10 h-[400px] bg-[url('/assets/laptop.png')]">
+  {/* Semi-transparent gradient overlay */}
+  <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-emerald-400 opacity-60 z-0"></div>
 
+  <div className="relative z-10 flex flex-col items-center justify-center h-full text-center">
+    <p className="text-lg mb-4 max-w-xl">
+      Empower yourself with our advanced health management system designed to help you track your vitals and receive timely alerts for chronic conditions like diabetes and hypertension
+    </p>
+    <h2 className="text-2xl font-bold mb-6">
+      Welcome to the future of Chronic Disease Management
+    </h2>
+    <Link href="/registration">
+      <button className="bg-emerald-400 text-black rounded-md px-3 lg:px-4 py-2 hover:bg-emerald-400 transition-colors duration-200 text-sm lg:text-base">
+        Get Started
+      </button>
+    </Link>
+  </div>
+</div>
+
+
+      {/* Features Section */}
+      <div className="p-8">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold mb-4">Health Management Features</h2>
+          <p className="text-lg max-w-2xl mx-auto mb-8">
+            Comprehensive tools to help you manage your health effectively
+          </p>
+        </div>
         
-        <nav className="flex-1 flex justify-center">
-          <div className="flex gap-8">
-            <button
-              onClick={() => scrollToSection("features")}
-              className="hover:text-emerald-400 transition-colors duration-200"
-            >
-              Features
-            </button>
-            <button
-              onClick={() => scrollToSection("how-it-works")}
-              className="hover:text-emerald-400 transition-colors duration-200"
-            >
-              How it works
-            </button>
-            <button
-              onClick={() => scrollToSection("services")}
-              className="hover:text-emerald-400 transition-colors duration-200"
-            >
-              Services
-            </button>
-            <button
-              onClick={() => scrollToSection("contact")}
-              className="hover:text-emerald-400 transition-colors duration-200"
-            >
-              Contact
-            </button>
-          </div>
-        </nav>
-
-        <div className="flex gap-4">
-          <button className="text-emerald-400 hover:text-emerald-500 transition-colors duration-200">Login</button>
-          <button className="bg-emerald-400 text-white rounded-md px-4 py-2 hover:bg-emerald-500 transition-colors duration-200">
-            Get Started
-          </button>
-        </div>
-      </header>
-
-      
-      <section className="p-2">
-        <div className="bg-gradient-to-r from-emerald-200 to-white px-5 py-5 flex flex-row">
-          <div className="w-1/2">
-            <p className="text-3xl mb-6 animate-fade-in-up">
-              Monitor Your
-              <br /> Health
-              <span className="text-emerald-400 font-bold">
-                {" "}
-                Anywhere,
-                <br />
-                Anytime
-              </span>
-            </p>
-            <p className="mb-6 animate-fade-in-up animation-delay-200">
-              Smart Care helps you track Chronic illnesses like diabetes
-              <br /> with voice or text-input. Connect with doctors, Find nearby
-              <br /> clinics, and access emergency services instantly
-            </p>
-            <button className="bg-emerald-400 text-white rounded-md px-4 py-2 hover:bg-emerald-500 transition-all duration-200 hover:scale-105 animate-fade-in-up animation-delay-400">
-              Start Monitoring
-            </button>
-          </div>
-          <div className="flex items-center justify-center shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] rounded-md p-4 bg-emerald-400 w-1/3 h-64 animate-fade-in-right">
-            <Image src="/assets/doctor.png" alt="A lady Nurse" width={150} height={150} />
-          </div>
-        </div>
-      </section>
-
-    
-      <section id="features" className="p-2">
-        <div className="flex flex-col items-center justify-center mt-6">
-          <h2 className="font-bold text-2xl mb-2">Comprehensive Health Monitoring</h2>
-          <p className="text-gray-600">Everything you need to manage your chronic illnesses</p>
-        </div>
-
-        <div className="flex items-center justify-center flex-row mt-6 gap-6 px-4">
-          <div className="feature-card shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-emerald-200 rounded-md p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:shadow-lg transition-all duration-300 hover:-translate-y-2">
-            <HeartPulse color="#21a136" size={48} className="mb-4" />
-            <h2 className="font-bold text-lg mb-3 text-center">Vital Signs Tracking</h2>
-            <p className="text-center text-sm">
-              Monitor blood pressure, glucose levels, and heart rate with voice or text input
-            </p>
-          </div>
-
-          <div className="feature-card shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-emerald-200 rounded-md p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:shadow-lg transition-all duration-300 hover:-translate-y-2 animation-delay-200">
-            <Stethoscope color="#21a136" size={48} className="mb-4" />
-            <h2 className="font-bold text-lg mb-3 text-center">Doctor Consultations</h2>
-            <p className="text-center text-sm">
-              Connect with healthcare professionals for virtual consultations and advice
-            </p>
-          </div>
-
-          <div className="feature-card shadow-[4px_0_4px_0_rgba(0,0,0,0.2)] bg-emerald-200 rounded-md p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:shadow-lg transition-all duration-300 hover:-translate-y-2 animation-delay-400">
-            <MapPin color="#21a136" size={48} className="mb-4" />
-            <h2 className="font-bold text-lg mb-3 text-center">Emergency Services</h2>
-            <p className="text-center text-sm">
-              Quick access to nearby clinics and ambulance services based on your location
-            </p>
-          </div>
-        </div>
-      </section>
-
-    
-      <section id="how-it-works" className="p-2">
-        <div className="flex flex-col items-center justify-center mt-12">
-          <h1 className="font-bold text-2xl mb-2">How Smart Care Works</h1>
-          <p className="text-gray-600">Simple Steps to better health management</p>
-        </div>
-
-        <div className="flex items-center justify-center flex-row mt-6 gap-6 px-4">
-          <div className="step-card p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:scale-105 transition-all duration-300">
-            <span className="bg-emerald-400 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4 animate-bounce-slow">
-              1
-            </span>
-            <h2 className="font-bold text-lg mb-3 text-center">Input Vitals</h2>
-            <p className="text-center text-sm">
-              Record your blood pressure, glucose and heart rate using voice or typing
-            </p>
-          </div>
-
-          <div className="step-card p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:scale-105 transition-all duration-300 animation-delay-200">
-            <span className="bg-emerald-400 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4 animate-bounce-slow animation-delay-200">
-              2
-            </span>
-            <h2 className="font-bold text-lg mb-3 text-center">AI Analysis</h2>
-            <p className="text-center text-sm">Our AI analyzes your data and provides personalized insights</p>
-          </div>
-
-          <div className="step-card p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:scale-105 transition-all duration-300 animation-delay-400">
-            <span className="bg-emerald-400 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4 animate-bounce-slow animation-delay-400">
-              3
-            </span>
-            <h2 className="font-bold text-lg mb-3 text-center">Get Alerts</h2>
-            <p className="text-center text-sm">Receive notifications for irregular readings or medication reminders</p>
-          </div>
-
-          <div className="step-card p-6 flex items-center flex-col w-1/4 h-full min-h-[200px] hover:scale-105 transition-all duration-300 animation-delay-600">
-            <span className="bg-emerald-400 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mb-4 animate-bounce-slow animation-delay-600">
-              4
-            </span>
-            <h2 className="font-bold text-lg mb-3 text-center">Connect Care</h2>
-            <p className="text-center text-sm">Access doctors, clinics or emergency services when needed</p>
-          </div>
-        </div>
-      </section>
-
-      <section id="services" className="p-2">
-        <div className="flex flex-col items-center justify-center mt-12">
-          <h1 className="font-bold text-2xl mb-2">Our Services</h1>
-          <p className="text-gray-600">Comprehensive health care solutions at your fingertips</p>
-        </div>
-
-        <div className="flex items-center justify-center flex-row mt-6 gap-8 px-8">
-          <div className="flex-1">
-            <div className="service-item flex items-start gap-4 mb-8 hover:translate-x-2 transition-transform duration-300">
-              <span className="bg-emerald-400 w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0">
-                <ChartLine color="#ffffff" />
-              </span>
-              <div>
-                <h2 className="font-bold text-lg mb-2">24/7 Health Monitoring</h2>
-                <p className="text-gray-600">
-                  Continuous tracking of your vital signs with real-time alerts and trend analysis.
-                </p>
+        <div className="max-w-6xl mx-auto relative">
+          {features[currentFeatureIndex] && (
+            <Card className="h-full overflow-hidden">
+              <CardContent className="p-0 h-full">
+                <div className="flex flex-col md:flex-row h-full min-h-[300px] bg-pink-100">
+                  <div className="flex-1 p-6 md:p-8 flex flex-col justify-center">
+                    <CardTitle className="text-xl md:text-2xl mb-3">{features[currentFeatureIndex].title}</CardTitle>
+                    <p className="text-muted-foreground leading-relaxed text-sm md:text-base">{features[currentFeatureIndex].description}</p>
+                  </div>
+                  <div className="flex-1 relative min-h-[200px] md:min-h-[300px]">
+                    <img 
+                      src={features[currentFeatureIndex].image} 
+                      alt={features[currentFeatureIndex].alt}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Navigation buttons - Outside the card */}
+          {features.length > 1 && (
+            <>
+              <div className="absolute top-1/2 -translate-y-1/2 -left-16 hidden lg:block">
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => setCurrentFeatureIndex((prev) => prev === 0 ? features.length - 1 : prev - 1)}
+                  className="rounded-full bg-white shadow-lg hover:bg-gray-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
               </div>
-            </div>
-
-            <div className="service-item flex items-start gap-4 mb-8 hover:translate-x-2 transition-transform duration-300 animation-delay-200">
-              <span className="bg-emerald-400 w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0">
-                <Video color="#ffffff" />
-              </span>
-              <div>
-                <h2 className="font-bold text-lg mb-2">Telemedicine Consultations</h2>
-                <p className="text-gray-600">
-                  Video calls with certified doctors and specialists from the comfort of your home
-                </p>
+              
+              <div className="absolute top-1/2 -translate-y-1/2 -right-16 hidden lg:block">
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => setCurrentFeatureIndex((prev) => prev === features.length - 1 ? 0 : prev + 1)}
+                  className="rounded-full bg-white shadow-lg hover:bg-gray-50"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
+            </>
+          )}
+          
+          {/* Mobile Navigation */}
+          {features.length > 1 && (
+            <div className="flex justify-center gap-4 mt-4 lg:hidden">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setCurrentFeatureIndex((prev) => prev === 0 ? features.length - 1 : prev - 1)}
+                className="rounded-full bg-white shadow-lg"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setCurrentFeatureIndex((prev) => prev === features.length - 1 ? 0 : prev + 1)}
+                className="rounded-full bg-white shadow-lg"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-
-            <div className="service-item flex items-start gap-4 mb-8 hover:translate-x-2 transition-transform duration-300 animation-delay-400">
-              <span className="bg-emerald-400 w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0">
-                <Ambulance color="#ffffff" />
-              </span>
-              <div>
-                <h2 className="font-bold text-lg mb-2">Emergency Response</h2>
-                <p className="text-gray-600">Instant access to emergency services and nearest medical facilities</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-shrink-0 animate-fade-in-left">
-            <Image
-              src="/assets/oldwoman.png"
-              alt="An old woman"
-              width={300}
-              height={300}
-              className="rounded-md shadow-lg"
-            />
+          )}
+          
+          {/* Dots indicator */}
+          <div className="flex justify-center gap-2 mt-6">
+            {features.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentFeatureIndex(index)}
+                className={`w-3 h-3 rounded-full transition-colors ${
+                  index === currentFeatureIndex ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              />
+            ))}
           </div>
         </div>
-      </section>
-
-      
-      <section className="flex items-center justify-center flex-col mt-12 gap-6 bg-emerald-400 p-8 mx-2 rounded-lg">
-        <h1 className="text-white text-2xl font-bold text-center">Ready to take control of your health?</h1>
-        <p className="text-white text-center max-w-2xl">
-          Join thousands of patients who trust Smart Care for their chronic illness management
+      </div>
+        
+      {/* Understanding Section */}
+      <div className='py-16 px-6 md:px-12 bg-gradient-to-r from-blue-950 to-emerald-700 text-white'>
+      <div className="mb-8 text-center">
+        <h1 className="text-3xl font-bold mb-4">How SmartCare Works</h1>
+        <p className="text-lg max-w-2xl mx-auto">
+          Simple Steps to better health management
         </p>
-        <button className="bg-white text-emerald-400 rounded-md px-6 py-3 font-semibold hover:bg-gray-100 transition-all duration-200 hover:scale-105">
-          Start Monitoring
-        </button>
-      </section>
-
+      </div>
+      <div className='grid gap-8 md:grid-cols-4'>
+        {steps.map((item)=>(
+          <div key={item.step} className="bg-white text-gray-800 p-6 rounded-xl shadow-lg hover:scale-105 transition">
+              <div className="bg-emerald-500 w-12 h-12 flex items-center justify-center text-white font-bold text-xl rounded-full mb-4">
+                {item.step}
+              </div>
+              <h3 className="font-bold text-lg mb-2">{item.title}</h3>
+              <p className="text-gray-600">{item.desc}</p>
+            </div>
+          
+        ))}
       
-      <footer id="contact" className="flex items-center justify-center flex-col gap-8 bg-cyan-950 p-8 mt-8">
-        <div className="flex flex-row gap-12 w-full max-w-6xl">
-          <div className="flex-1">
-            <h1 className="text-xl text-white font-bold flex flex-row items-center gap-2 mb-4">
-              <HeartPulse color="#ffffff" />
-              SmartCare
-            </h1>
-            <p className="text-cyan-300 leading-relaxed">
-              Empowering patients to manage chronic illnesses with smart technology and compassionate care
-            </p>
-          </div>
+      </div>
+      </div>
 
-          <div className="flex-1">
-            <h1 className="text-white font-bold mb-4">Product</h1>
-            <div className="space-y-2">
-              <p className="text-cyan-300 hover:text-white cursor-pointer transition-colors">Features</p>
-              <p className="text-cyan-300 hover:text-white cursor-pointer transition-colors">Pricing</p>
-              <p className="text-cyan-300 hover:text-white cursor-pointer transition-colors">Security</p>
-            </div>
-          </div>
-
-          <div className="flex-1">
-            <h1 className="text-white font-bold mb-4">Support</h1>
-            <div className="space-y-2">
-              <p className="text-cyan-300 hover:text-white cursor-pointer transition-colors">Help Center</p>
-              <p className="text-cyan-300 hover:text-white cursor-pointer transition-colors">Contact Us</p>
-              <p className="text-cyan-300 hover:text-white cursor-pointer transition-colors">Privacy Policy</p>
-            </div>
-          </div>
-
-          <div className="flex-1">
-            <h1 className="text-white font-bold mb-4">Contact</h1>
-            <div className="space-y-2">
-              <p className="text-cyan-300">1-800-SMART-CARE</p>
-              <p className="text-cyan-300">support@smartcare.com</p>
-            </div>
-          </div>
+      {/* Testimonials Section */}
+      <div className="p-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-4">What Our Users Say</h1>
+          <p className="text-lg max-w-2xl mx-auto">
+            Real experiences from individuals who have transformed their diabetes management with our system.
+          </p>
         </div>
-
-        <div className="w-full max-w-6xl">
-          <hr className="border-cyan-800 mb-4" />
-          <p className="text-cyan-300 text-center">© 2025 Smart Care. All rights reserved.</p>
+        
+        <div className="grid gap-6 md:grid-cols-3 max-w-6xl mx-auto">
+          {testimonials.map((testimonial) => (
+            <Card key={testimonial.id} className="h-full">
+              <CardHeader>
+                <CardTitle className="text-lg">{testimonial.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">{testimonial.content}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      </footer>
+      </div>
+      <Footer></Footer>
     </div>
   )
 }
 
-export default page
+export default Home
