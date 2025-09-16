@@ -1,16 +1,30 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Bar, BarChart, CartesianGrid, YAxis, XAxis } from "recharts";
+"use client";
+import React from "react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  YAxis,
+  XAxis,
+} from "recharts";
 import { AnomalyData } from "@/types/doctor";
 
 const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e"];
 
 interface AnomalyProps {
-  anomalyDistributionPie?: AnomalyData[]; // For pie chart, expects risk + riskValue
-  anomalyDistributionBar?: AnomalyData[]; // For bar chart, expects vital + vitalValue
+  anomalyDistributionPie?: AnomalyData[]; // expects { risk: string; riskValue: number }
+  anomalyDistributionBar?: AnomalyData[]; // expects { vital: string; normal: number; abnormal: number }
 }
 
 const AnomalyDistributionChart: React.FC<AnomalyProps> = ({
   anomalyDistributionPie = [],
-  anomalyDistributionBar = [], }) => {
+  anomalyDistributionBar = [],
+}) => {
   return (
     <div className="space-y-6">
       {/* Pie Chart */}
@@ -23,7 +37,8 @@ const AnomalyDistributionChart: React.FC<AnomalyProps> = ({
               dataKey="riskValue"
               nameKey="risk"
               outerRadius={100}
-              label={({ risk }) => risk}
+              label={({ name }) => name || ""} // <-- safely handle undefined
+              labelLine={false} // optional, makes it cleaner
             >
               {anomalyDistributionPie.map((entry, idx) => (
                 <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
@@ -50,6 +65,6 @@ const AnomalyDistributionChart: React.FC<AnomalyProps> = ({
       </div>
     </div>
   );
-}
+};
 
 export default AnomalyDistributionChart;
