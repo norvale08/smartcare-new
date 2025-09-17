@@ -1,17 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
-    "rootDir": "src",
+    "composite": true,
+    "declaration": true,
     "outDir": "dist",
+    "rootDir": "src",
+    "module": "CommonJS",
+    "target": "ES2020",
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "ai-service": ["src/index.ts"]
-    },
-    "composite": true    // 👈 Add this line
+    "baseUrl": "."
   },
   "include": ["src"]
 }
