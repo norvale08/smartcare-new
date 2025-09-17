@@ -1,0 +1,7 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/ai-service" },
+    { "path": "apps/api" }
+  ]
+}
