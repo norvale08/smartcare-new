@@ -3,6 +3,8 @@ import Diabetes from "../models/diabetesModel";
 import { connectMongoDB } from "../lib/mongodb";
 import { SmartCareAI } from "ai-service";
 
+
+
 const router = express.Router();
 const smartCareAI = new SmartCareAI();
 
