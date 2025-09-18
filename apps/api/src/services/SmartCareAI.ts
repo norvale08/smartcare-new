@@ -1,83 +1,198 @@
+// apps/api/src/services/SmartCareAi.ts
 import ollama from "ollama";
 
-// Define the shape of glucose data
-export type GlucoseData = {
+export interface PatientData {
+  name: string;
+  age: number;
+  bloodPressure: string;
+  heartRate: number;
+  temperature: number;
+  symptoms: string[];
+  conditions: string[];
+  language: "en" | "sw";
+}
+
+export interface GlucoseData {
   glucose: number;
   context: "Fasting" | "Post-meal" | "Random";
-  language: "en" | "sw"; // English or Swahili
-};
+  language: "en" | "sw";
+}
+
+export interface MedicationData {
+  medications: string[];
+  patientAge?: number;
+  conditions?: string[];
+  language?: "en" | "sw";
+}
+
+export interface DrugInteraction {
+  drug1: string;
+  drug2: string;
+  severity: "Low" | "Medium" | "High";
+  warning: string;
+  recommendation: string;
+}
+
+export interface MedicationAnalysis {
+  interactions: DrugInteraction[];
+  generalRecommendations: string;
+  safetyNotes: string;
+}
 
 export class SmartCareAI {
   private model: string;
 
-  constructor(model: string = "llama3.2") {
+  constructor(model = "llama3.2:3b") {
     this.model = model;
   }
 
-  /**
-   * Generate feedback for glucose readings.
-   */
   async generateGlucoseFeedback(data: GlucoseData): Promise<string> {
     try {
       const { glucose, context, language } = data;
+      const ranges = {
+        Fasting: { normal: "70-100", prediabetic: "100-125", diabetic: "≥126" },
+        "Post-meal": { normal: "<140", prediabetic: "140-199", diabetic: "≥200" },
+        Random: { normal: "<140", prediabetic: "140-199", diabetic: "≥200" },
+      } as const;
 
-      const prompt =
-        language === "en"
-          ? `You are a medical assistant. Provide clear, empathetic, and simple feedback for a diabetes patient.
-Glucose level: ${glucose} mg/dL
-Context: ${context}
+      const currentRange = ranges[context];
 
-- If glucose is normal, reassure the patient.
-- If glucose is high or low, warn them and give basic guidance (e.g., drink water, check diet, consult doctor).
-- Keep the response short, simple, and encouraging.`
-          : `Wewe ni msaidizi wa matibabu. Toa ushauri kwa lugha rahisi na yenye heshima kwa mgonjwa wa kisukari.
-Kiwango cha sukari: ${glucose} mg/dL
-Muktadha: ${context}
+      const prompt = [
+        `You are a friendly healthcare AI assistant specializing in diabetes management.`,
+        language === "sw"
+          ? `Please answer in Swahili. Use plain language suitable for Kenya.`
+          : `Please answer in English.`,
+        "",
+        `Blood glucose reading: ${glucose} mg/dL`,
+        `Context: ${context}`,
+        `Normal range for ${context}: ${currentRange.normal} mg/dL`,
+        `Pre-diabetic range: ${currentRange.prediabetic} mg/dL`,
+        `Diabetic range: ${currentRange.diabetic} mg/dL`,
+        "",
+        `Please provide:`,
+        `1. Assessment (normal, elevated, concerning)`,
+        `2. What it means`,
+        `3. Practical, plain-language recommendations (food, activity, monitoring)`,
+        `4. When to seek medical attention`,
+        `Keep it short, supportive, and avoid medical jargon.`,
+      ].join("\n");
 
-- Ikiwa sukari iko kawaida, mtie moyo mgonjwa.
-- Ikiwa sukari iko juu au chini, toa onyo na mwongoze (mfano: kunywa maji, angalia chakula, wasiliana na daktari).
-- Jibu liwe fupi na lenye kutia moyo.`;
-
-      const response = await ollama.chat({
+      const resp = await ollama.chat({
         model: this.model,
-        messages: [
-          {
-            role: "system",
-            content: "You are SmartCareAI, a medical assistant for diabetes patients.",
-          },
-          { role: "user", content: prompt },
-        ],
+        messages: [{ role: "user", content: prompt }],
       });
 
-      return response.message.content.trim();
-    } catch (error: any) {
-      console.error("❌ Error generating AI feedback:", error.message);
-      return "Sorry, I could not generate feedback at the moment. Please consult your doctor if necessary.";
+      return (resp.message?.content ?? "").trim();
+    } catch (err: any) {
+      console.error("generateGlucoseFeedback error:", err?.message ?? err);
+      return "Unable to generate glucose feedback at the moment.";
     }
   }
 
   /**
-   * Check if Ollama is running and reachable.
+   * Analyze medications using Ollama and return structured JSON.
+   * This asks the model to output JSON and then attempts to parse it.
    */
+  async analyzeMedications(input: MedicationData): Promise<MedicationAnalysis> {
+    const { medications, patientAge, conditions, language = "en" } = input;
+
+    const medsList = medications.join(", ");
+    const prompt = [
+      `You are a clinical pharmacist assistant. Analyze the following medications for clinically significant interactions and safety notes.`,
+      language === "sw"
+        ? `Tafadhali jibu kwa Kiswahili kwa maneno rahisi yaliyotumika Kenya.`
+        : `Please answer in English.`,
+      "",
+      `PATIENT MEDICATIONS: ${medsList}`,
+      patientAge ? `Patient age: ${patientAge} years` : "",
+      conditions && conditions.length ? `Medical conditions: ${conditions.join(", ")}` : "",
+      "",
+      `Return ONLY valid JSON with this exact structure:`,
+      `{"interactions":[{"drug1":"...","drug2":"...","severity":"Low|Medium|High","warning":"...","recommendation":"..."}],"generalRecommendations":"...","safetyNotes":"..."}`,
+      "",
+      `If no interactions found, return an empty array for interactions.`,
+      `Be conservative and always recommend consulting the patient's healthcare provider for confirmation.`,
+    ].join("\n");
+
+    try {
+      const resp = await ollama.chat({
+        model: this.model,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const text = resp.message?.content ?? "";
+      // extract the first JSON object in the output
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          // Basic validation / fallback
+          return {
+            interactions: Array.isArray(parsed.interactions) ? parsed.interactions : [],
+            generalRecommendations: parsed.generalRecommendations ?? text,
+            safetyNotes: parsed.safetyNotes ?? "",
+          } as MedicationAnalysis;
+        } catch (parseErr) {
+          console.warn("analyzeMedications: JSON parse failed:", parseErr);
+          return {
+            interactions: [],
+            generalRecommendations: text,
+            safetyNotes: "Parsing failed — consult a pharmacist.",
+          };
+        }
+      } else {
+        // No JSON found — return the raw text as generalRecommendations
+        return {
+          interactions: [],
+          generalRecommendations: text,
+          safetyNotes: "No structured JSON returned by model.",
+        };
+      }
+    } catch (err: any) {
+      console.error("analyzeMedications error:", err?.message ?? err);
+      return {
+        interactions: [],
+        generalRecommendations: "Unable to analyze medications at this time.",
+        safetyNotes: "Please consult your healthcare provider.",
+      };
+    }
+  }
+
+  async generateMedicationReminders(medications: string[], language: "en" | "sw" = "en"): Promise<string> {
+    try {
+      const prompt = [
+        language === "sw" ? "Toa mwongozo mfupi kwa Kiswahili." : "Give short medication reminders in English.",
+        `Medications: ${medications.join(", ")}`,
+        "Include best times, with/without food, and simple adherence tips.",
+      ].join("\n");
+
+      const resp = await ollama.chat({
+        model: this.model,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      return (resp.message?.content ?? "").trim();
+    } catch (err: any) {
+      console.error("generateMedicationReminders error:", err?.message ?? err);
+      return "Unable to generate reminders at the moment.";
+    }
+  }
+
   async checkConnection(): Promise<boolean> {
     try {
-      const response = await ollama.list();
-      return Array.isArray(response.models);
-    } catch (error) {
-      console.error("❌ Ollama connection failed:", (error as Error).message);
+      const resp = await ollama.list();
+      return Array.isArray((resp as any).models);
+    } catch (err) {
+      console.warn("Ollama connection check failed:", err);
       return false;
     }
   }
 
-  /**
-   * Get list of available Ollama models.
-   */
   async getAvailableModels(): Promise<string[]> {
     try {
-      const response = await ollama.list();
-      return response.models.map((m: any) => m.name);
-    } catch (error) {
-      console.error("❌ Failed to fetch models:", (error as Error).message);
+      const resp = await ollama.list();
+      return ((resp as any).models ?? []).map((m: any) => m.name);
+    } catch (err) {
       return [];
     }
   }

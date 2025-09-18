@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors'; // ✅ ADD THIS IMPORT
 import session from "express-session";
 import { connectMongoDB } from './lib/mongodb';
 import dotenv from "dotenv";
@@ -19,6 +20,28 @@ const app = express();
 // ✅ CRITICAL: Convert PORT to number for app.listen()
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
+// ✅ CORS CONFIGURATION - MUST BE BEFORE OTHER MIDDLEWARE
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://smartcare-new-web.vercel.app', // ✅ Your Vercel URL
+];
+
+// Add FRONTEND_URL from environment if it exists
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// Handle preflight requests
+app.options('*', cors());
+
 // ✅ SESSION SETUP
 app.use(
   session({
@@ -33,35 +56,8 @@ app.use(
   })
 );
 
-// ✅ CORS HEADERS - Updated for production
-app.use((req, res, next) => {
-  // Allow multiple origins for development and production
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'https://your-frontend-domain.com', // Replace with your actual frontend domain
-    process.env.FRONTEND_URL // Set this in Render environment variables
-  ].filter(Boolean); // Remove undefined values
-  
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-
-  if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS request');
-    res.sendStatus(200);
-    return;
-  }
-
-  console.log(`${req.method} ${req.path} from origin: ${req.headers.origin}`);
-  next();
-});
-
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Connect to MongoDB
 connectMongoDB();

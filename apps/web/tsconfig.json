@@ -3,14 +3,13 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*", "./*"],
+      "@repo/ui": ["../../packages/ui/src"],
+      "@repo/ui/*": ["../../packages/ui/src/*"]
     },
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "jsx": "preserve"
+    "plugins": [{ "name": "next" }],
+    "jsx": "preserve",
+    "moduleResolution": "bundler"
   },
   "include": [
     "**/*.ts",
@@ -18,12 +17,6 @@
     "next-env.d.ts",
     "next.config.js",
     ".next/types/**/*.ts"
-
-, "../../packages/ui/src/components/ui/label.tsx", "../../packages/ui/src/components/ui/input.tsx", "../api/src/routes/next_auth.ts"  ],
-
-
-
-  "exclude": [
-    "node_modules"
-  ]
+  ],
+  "exclude": ["node_modules"]
 }
