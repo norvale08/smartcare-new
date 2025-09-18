@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: smartcare-api
+    env: node
+    repo: https://github.com/894risper/smartcare-new 
+    rootDir: apps/api
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8000
+      - key: MONGODB_URI
+        sync: false 
+      - key: NEXTAUTH_SECRET
+        sync: false
+      - key: NEXTAUTH_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLOUD_NAME
+        sync: false
+      - key: CLOUD_API_KEY
+        sync: false
+      - key: API_SECRET
+        sync: false
+      - key: WEB_APP_URL
+        sync: false

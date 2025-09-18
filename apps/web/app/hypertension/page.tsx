@@ -11,12 +11,9 @@ import HypertensionAlert from "../components/hypertension/alert";
 import { useVoiceInput } from "../components/hypertension/useVoiceInput";
 import { wordsToNumbers } from "../components/hypertension/words-to-numbers"
 
-import Charts from "../components/hypertension/charts"
-import ProfileCard from "../components/hypertension/ProfileCard"
-import VitalsEntry from "../components/hypertension/VitalsEntry"
-import Lifestyle from "../components/hypertension/Lifestyle"
-import Diet from "../components/hypertension/Diet"
 //Mock drug data
+
+
 const mockDrugInteractions = [
   { drug1: "Aspirin", drug2: "Warfarin", severity: "High", warning: "Increased bleeding risk" },
   { drug1: "Ibuprofen", drug2: "Lisinopril", severity: "Medium", warning: "Reduced effectiveness of blood pressure medication" },

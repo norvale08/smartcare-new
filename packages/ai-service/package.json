@@ -4,7 +4,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -b",
     "dev": "tsc --watch",
     "test-smartcare": "pnpm build && node dist/test-smartcare.js",
     "test": "node dist/test.js",
@@ -16,5 +16,8 @@
   "devDependencies": {
     "@types/node": "^22.15.3",
     "typescript": "^5.8.3"
-  }
+  },
+   "files": [
+    "dist"
+  ]
 }

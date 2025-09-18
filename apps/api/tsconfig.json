@@ -6,10 +6,12 @@
     "outDir": "dist",
     "esModuleInterop": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": "."
   },
-  "include": ["src",
-  "../web/types/next-auth.d.ts"
-
-]
+  "include": [
+    "src",
+    "../../web/types/next-auth.d.ts"
+  ],
+ 
 }
