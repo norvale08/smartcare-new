@@ -3,12 +3,13 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@repo/ui": ["../../packages/ui/src/index.ts"],
+      "@/*": ["./src/*", "./*"],
+      "@repo/ui": ["../../packages/ui/src"],
       "@repo/ui/*": ["../../packages/ui/src/*"]
     },
     "plugins": [{ "name": "next" }],
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "moduleResolution": "bundler"
   },
   "include": [
     "**/*.ts",
