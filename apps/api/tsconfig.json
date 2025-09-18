@@ -7,19 +7,12 @@
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "ai-service": ["../../packages/ai-service/src"],
-      "ai-service/*": ["../../packages/ai-service/src/*"]
-    }
+    "baseUrl": "."
   },
   "include": [
-  "src",
-  "../../web/types/next-auth.d.ts",
- 
-],
-
-  
+    "src",
+    "../../web/types/next-auth.d.ts"
+  ],
   "references": [
     { "path": "../../packages/ai-service" }
   ]
