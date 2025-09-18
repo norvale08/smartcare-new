@@ -27,6 +27,9 @@ const Login = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        credentials: 'include' // Add credentials for cookies
+      }).catch((err) => {
+        throw new Error(`Network error: ${err.message}`);
       });
 
       if (!loginRes.ok) {

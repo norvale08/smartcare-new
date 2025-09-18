@@ -10,6 +10,11 @@ import { useSession } from "next-auth/react";
 import HypertensionAlert from "../components/hypertension/alert";
 import { useVoiceInput } from "../components/hypertension/useVoiceInput";
 import { wordsToNumbers } from "../components/hypertension/words-to-numbers"
+import Lifestyle from "../components/hypertension/Lifestyle";
+import ProfileCard from "../components/hypertension/ProfileCard";
+import VitalsEntry from "../components/hypertension/VitalsEntry";
+import Diet from "../components/hypertension/Diet";
+import Charts from "../components/hypertension/charts";
 
 //Mock drug data
 
