@@ -9,12 +9,11 @@ const smartCareAI = new SmartCareAI();
 // Connect to MongoDB once when this module is loaded
 connectMongoDB();
 
-/**
- * POST: Save vitals and generate AI feedback
- */
+
 router.post("/", async (req, res) => {
   try {
     // 1. Save vitals to database
+
     const newVitals = new Diabetes(req.body);
     const saved = await newVitals.save();
 
