@@ -13,7 +13,5 @@
     "src",
     "../../web/types/next-auth.d.ts"
   ],
-  "references": [
-    { "path": "../../packages/ai-service" }
-  ]
+ 
 }
