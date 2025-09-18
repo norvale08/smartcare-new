@@ -1,19 +1,19 @@
 import express, { Request, Response } from "express";
-import { SmartCareAI } from "ai-service";
 import { connectMongoDB } from "../lib/mongodb";
+import { SmartCareAI } from "../services/SmartCareAI";
 
 const router = express.Router();
 const smartCareAI = new SmartCareAI();
 
 connectMongoDB();
 
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+router.post("/", async (req: Request, res: Response): Promise<void> => {
   try {
     const {
       medications = [],
       patientAge,
       conditions = [],
-      language = 'en'
+      language = "en",
     } = req.body;
 
     // Validate medications
@@ -29,24 +29,23 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
         medications,
         patientAge,
         conditions,
-        language
+        language,
       });
       console.log("✅ Medication analysis completed.");
     } catch (aiError: any) {
       console.error("❌ Medication analysis failed:", aiError.message);
     }
 
-    // Send successful response
     res.status(200).json({
       message: "Medication analysis complete",
-      aiAnalysis
+      aiAnalysis,
     });
-
   } catch (error: any) {
     console.error("❌ Server error:", error.message);
     res.status(500).json({
       message: "Server error during medication analysis",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 });
