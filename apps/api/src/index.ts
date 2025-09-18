@@ -66,7 +66,7 @@ app.use('/api/hypertensionVitals', hypertensionRoutes);
 app.use('/api/medications', medicationsRoutes);
 app.use('/api/userStatus', userStatusRouter);
 
-app.listen(PORT, () => {
+app.listen(PORT,"0.0.0.0" ,() => {
   console.log(`Server is running on http://localhost:${PORT}`);
   console.log(`CORS enabled for http://localhost:3000`);
 });
