@@ -50,7 +50,7 @@ const MultiStepForm = () => {
       // Get stored token
       const token = localStorage.getItem("token");
 
-      const res = await fetch("http://localhost:3001/api/profile", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
