@@ -151,6 +151,7 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
+      
       express-session:
         specifier: ^1.18.2
         version: 1.18.2
@@ -206,6 +207,9 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
+      '@types/express':
+        specifier: '4'
+        version: 4.17.23
       '@types/leaflet':
         specifier: ^1.9.20
         version: 1.9.20
