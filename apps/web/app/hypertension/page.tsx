@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {HeartPulse,Globe,TriangleAlert,MicVocal,Pill,Utensils,AlertCircle,CheckCircle,Wine,Cigarette,Coffee,Activity,
+import {HeartPulse,Globe,TriangleAlert,MicVocal,Pill,Utensils,AlertCircle,CheckCircle,Wine,Cigarette,Coffee,Activity, Stethoscope
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import axios from 'axios';
 import MedicationAnalysisPage from "../components/hypertension/medicationAnalysis";
 import { useSession } from "next-auth/react";
 import HypertensionAlert from "../components/hypertension/alert";
+import Assign from "../components/hypertension/assign";
 import { useVoiceInput } from "../components/hypertension/useVoiceInput";
 import { wordsToNumbers } from "../components/hypertension/words-to-numbers"
 import Lifestyle from "../components/hypertension/Lifestyle";
@@ -34,6 +35,8 @@ const mockDietRecommendations = {
 function DashboardPage() {
   const { data: session, status } = useSession();
   console.log("Submitting vitals with userId:", session?.user?.id);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 
   const [systolic, setSystolic] = useState('');
   const [diastolic, setDiastolic] = useState('');
@@ -41,6 +44,7 @@ function DashboardPage() {
   const [message, setMessage] = useState('');
   const [hasToken, setHasToken] = useState(false);
   const [alertRefreshToken, setAlertRefreshToken] = useState(0);
+  const [showAssignModal, setShowAssignModal] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -68,7 +72,7 @@ function DashboardPage() {
     }
 
     try {
-      const response = await axios.post('http://localhost:3001/api/hypertensionVitals', {
+      const response = await axios.post(`${API_URL}/api/hypertensionVitals`, {
         systolic: Number(systolic),
         diastolic: Number(diastolic),
         heartRate: Number(heartRate),
@@ -178,7 +182,7 @@ useEffect(() => {
 
   const fetchVitals = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/api/hypertensionVitals/me", {
+      const res = await axios.get(`${API_URL}/api/hypertensionVitals/me`, {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true,
       });
@@ -247,7 +251,7 @@ useEffect(() => {
     };
     const fetchPatient = async () => {
       try {
-        const res = await axios.get("http://localhost:3001/api/profile/me", {
+        const res = await axios.get("http://localhost:8000/api/profile/me", {
           headers: { Authorization: `Bearer ${tokenStr}` },
           withCredentials: true,
         });
@@ -301,11 +305,11 @@ useEffect(() => {
         height: editForm.height ? Number(editForm.height) : undefined,
         phoneNumber: editForm.phoneNumber,
       };
-      await axios.put("http://localhost:3001/api/profile", payload, {
+      await axios.put("http://localhost:8000/api/profile", payload, {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         withCredentials: true,
       });
-      const res = await axios.get("http://localhost:3001/api/profile/me", {
+      const res = await axios.get("http://localhost:8000/api/profile/me", {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true,
       });
@@ -356,6 +360,19 @@ useEffect(() => {
             lastCheckIn={formatDateTime(vitals.length > 0 ? vitals[vitals.length - 1]?.createdAt : null)}
             onEdit={() => setIsEditing(true)}
           />
+        )}
+
+        {patient && (
+          <div className="w-full max-w-4xl flex justify-center">
+            <button
+              onClick={() => setShowAssignModal(true)}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+              disabled={!patient._id}
+            >
+              <Stethoscope size={20} />
+              Assign Doctor & Hospital
+            </button>
+          </div>
         )}
 
         {isEditing && (
@@ -410,6 +427,13 @@ useEffect(() => {
           refreshToken={alertRefreshToken}
           age={patient?.dob ? Number(computeAge(patient.dob)) : 0}
         />
+
+        {showAssignModal && patient && (
+          <Assign 
+            patientId={patient._id} 
+            onClose={() => setShowAssignModal(false)} 
+          />
+        )}
 
         <VitalsEntry
           systolic={systolic}

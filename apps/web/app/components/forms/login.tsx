@@ -22,6 +22,8 @@ const Login = () => {
 
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      console.log("API_URL =>", API_URL);
+
 
       const loginRes = await fetch(`${API_URL}/api/login`, {
         method: "POST",

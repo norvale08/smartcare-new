@@ -26,6 +26,8 @@ interface Recommendation {
   tips?: string[];
   advice?: string[];
 }
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 
 export default function Lifestyle({ lifestyle, setLifestyle }: LifestyleProps) {
   const [vitalData, setVitalData] = useState<VitalData | null>(null);
@@ -38,7 +40,7 @@ export default function Lifestyle({ lifestyle, setLifestyle }: LifestyleProps) {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch('http://localhost:3001/api/hypertensionVitals/me', {
+      const res = await fetch(`${API_URL}/api/hypertensionVitals/me`, {
         headers: { 'Authorization': `Bearer ${token}` },
         credentials: 'include'
       });

@@ -22,6 +22,11 @@ const userSchema = new Schema({
     type: String,
     required: true
   },
+  role: {
+    type: String,
+    enum: ['patient', 'doctor', 'admin'],
+    default: 'patient'
+  },
   
   // Profile tracking fields - NEW ADDITIONS
   isFirstLogin: { 

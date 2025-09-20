@@ -33,6 +33,12 @@ const PatientSchema = new Schema({
   allergies: { type: String, default: "" },
   surgeries: { type: String, default: "" },
 
+  location: {
+    lat: { type: Number },
+    lng: { type: Number }
+  },
+  assignedDoctor: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
   createdAt: { type: Date, default: Date.now },
 });
 

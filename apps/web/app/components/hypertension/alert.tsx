@@ -20,6 +20,8 @@ export default function HypertensionAlert({
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 
   useEffect(() => {
     const fetchTodayVitals = async () => {
@@ -34,8 +36,8 @@ export default function HypertensionAlert({
           return;
         }
 
-        const res = await fetch(
-          "http://localhost:3001/api/hypertensionVitals/me",
+        const res = await fetch
+          (`${API_URL}/api/hypertensionVitals/me`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
