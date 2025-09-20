@@ -1,5 +1,6 @@
 import express from "express";
 import AssignmentRequest from "../models/assignmentRequest";
+import Patient from "../models/patient";
 import { verifyToken, AuthenticatedRequest } from "../middleware/verifyToken";
 import { connectMongoDB } from "../lib/mongodb";
 
@@ -28,9 +29,17 @@ router.post("/request", async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ message: "Invalid type" });
     }
 
+    // Fetch the patient's Patient profile ID
+    const patientProfile = await Patient.findOne({ userId: user.userId });
+    if (!patientProfile) {
+      return res.status(404).json({ message: "Patient profile not found" });
+    }
+
+    const patientId = patientProfile._id;
+
     // Check if request already exists
     const existingRequest = await AssignmentRequest.findOne({
-      patientId: user.userId,
+      patientId,
       doctorId: doctorId || null,
       hospitalId: hospitalId || null,
       status: "pending",
@@ -41,7 +50,7 @@ router.post("/request", async (req: AuthenticatedRequest, res) => {
     }
 
     const requestData = {
-      patientId: user.userId,
+      patientId,
       doctorId: doctorId || undefined,
       hospitalId: hospitalId || undefined,
       type,

@@ -36,11 +36,11 @@ router.post("/", async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-// Get all hospitals (admin only)
+// Get all hospitals (admin and patient)
 router.get("/", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: "Access denied. Admin role required." });
+    if (req.user?.role !== 'admin' && req.user?.role !== 'patient') {
+      return res.status(403).json({ message: "Access denied. Admin or patient role required." });
     }
 
     const hospitals = await Hospital.find().lean();

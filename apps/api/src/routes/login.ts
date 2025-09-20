@@ -51,8 +51,8 @@ router.post('/', async (req, res) => {
     let redirectTo = "/dashboard"; // default
     let message = "";
 
-    // 🔥 Profile incomplete → force profile setup (but not for admin)
-    if (!user.profileCompleted && user.role !== 'admin') {
+    // 🔥 Profile incomplete → force profile setup (but not for admin or doctor)
+    if (!user.profileCompleted && user.role !== 'admin' && user.role !== 'doctor') {
       redirectTo = "/profile";
       message = "Please complete your profile.";
       if (user.isFirstLogin) {
@@ -65,6 +65,12 @@ router.post('/', async (req, res) => {
       redirectTo = "/admin";
       message = "Welcome to the admin dashboard.";
       console.log("🔄 Admin detected, redirecting to /admin");
+    }
+    // Doctor role - direct to doctors dashboard
+    else if (user.role === 'doctor') {
+      redirectTo = "/doctors";
+      message = "Welcome to your doctor dashboard.";
+      console.log("🔄 Doctor detected, redirecting to /doctors");
     }
     // ✅ Profile complete + diseases selected (for non-admin)
     else if (user.selectedDiseases?.length > 0) {

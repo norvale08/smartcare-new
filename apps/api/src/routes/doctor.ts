@@ -11,7 +11,9 @@ router.use(verifyToken);
 // Register doctor (admin only)
 router.post("/register", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (req.user?.role !== 'admin') {
+    const user = req.user!; // ✅ ensure req.user is not undefined
+
+    if (user.role !== "admin") {
       return res.status(403).json({ message: "Access denied. Admin role required." });
     }
 
@@ -30,8 +32,8 @@ router.post("/register", async (req: AuthenticatedRequest, res: Response) => {
       email,
       phoneNumber,
       password: hashedPassword,
-      role: 'doctor',
-      specialty
+      role: "doctor",
+      specialty,
     });
 
     await doctor.save();
@@ -42,14 +44,16 @@ router.post("/register", async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-// Get all doctors (admin only)
+// Get all doctors (admin and patient)
 router.get("/", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: "Access denied. Admin role required." });
+    const user = req.user!; // ✅
+
+    if (user.role !== "admin" && user.role !== "patient") {
+      return res.status(403).json({ message: "Access denied. Admin or patient role required." });
     }
 
-    const doctors = await User.find({ role: 'doctor' }).select('-password').lean();
+    const doctors = await User.find({ role: "doctor" }).select("-password").lean();
     res.json({ data: doctors });
   } catch (error) {
     console.error("Error fetching doctors:", error);
@@ -60,29 +64,35 @@ router.get("/", async (req: AuthenticatedRequest, res: Response) => {
 // Get assigned patients for the doctor
 router.get("/patients", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (req.user?.role !== 'doctor') {
+    const user = req.user!; // ✅
+
+    if (user.role !== "doctor") {
       return res.status(403).json({ message: "Access denied. Doctor role required." });
     }
 
-    const doctorId = req.user._id || req.user.userId; // support both
+    const doctorId = user._id || user.userId; // support both
     const patients = await Patient.find({ assignedDoctor: doctorId })
       .populate("userId", "firstName lastName email phoneNumber")
       .lean();
 
-    const formattedPatients = patients.map(p => ({
+    const formattedPatients = patients.map((p) => ({
       id: p._id,
       name: p.fullName,
       age: new Date().getFullYear() - new Date(p.dob).getFullYear(),
       gender: p.gender.charAt(0).toUpperCase() + p.gender.slice(1),
-      condition: p.diabetes ? 'Diabetes' : p.hypertension ? 'Hypertension' : 'Cardiovascular',
+      condition: p.diabetes
+        ? "Diabetes"
+        : p.hypertension
+        ? "Hypertension"
+        : "Cardiovascular",
       vitals: {
-        heartRate: 'N/A',
-        bloodPressure: 'N/A',
-        glucose: p.diabetes ? 'N/A' : 'N/A'
+        heartRate: "N/A",
+        bloodPressure: "N/A",
+        glucose: "N/A",
       },
-      riskLevel: 'low',
+      riskLevel: "low",
       location: p.location || null,
-      lastUpdate: new Date(p.createdAt).toLocaleString()
+      lastUpdate: new Date(p.createdAt).toLocaleString(),
     }));
 
     res.json({ data: formattedPatients });

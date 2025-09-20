@@ -22,7 +22,8 @@ const Notifications: React.FC<NotificationsProps> = ({ alerts, show, toggle, tok
   useEffect(() => {
     const fetchNotificationCount = async () => {
       try {
-        const res = await fetch("/api/notifications/unread-count", {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const res = await fetch(`${API_URL}/api/notifications/unread-count`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -31,13 +32,15 @@ const Notifications: React.FC<NotificationsProps> = ({ alerts, show, toggle, tok
         if (!res.ok) throw new Error("Failed to fetch unread count");
 
         const data = await res.json();
-        setUnreadCount(data.total);
+        setUnreadCount(data.count);
       } catch (error) {
         console.error("Notification fetch error:", error);
       }
     };
 
-    fetchNotificationCount();
+    if (token) {
+      fetchNotificationCount();
+    }
   }, [token]);
 
   return (

@@ -15,6 +15,7 @@ import medicationsRoutes from './routes/medications';
 import doctorRoutes from './routes/doctor';
 import hospitalRoutes from './routes/hospital';
 import assignmentRoutes from './routes/assignment';
+import notificationsRoutes from './routes/notifications';
 
 dotenv.config();
 
@@ -98,6 +99,7 @@ app.use('/api/userStatus', userStatusRouter);
 app.use('/api/doctor', doctorRoutes);
 app.use('/api/hospital', hospitalRoutes);
 app.use('/api/assignment', assignmentRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 
 // 404 handler
