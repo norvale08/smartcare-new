@@ -12,6 +12,10 @@ import profileRoutes from './routes/patient';
 import uploadRoute from "./routes/upload";
 import hypertensionRoutes from './routes/hypertensionVitals';
 import medicationsRoutes from './routes/medications';
+import doctorRoutes from './routes/doctor';
+import hospitalRoutes from './routes/hospital';
+import assignmentRoutes from './routes/assignment';
+import notificationsRoutes from './routes/notifications';
 
 dotenv.config();
 
@@ -92,6 +96,11 @@ app.use('/api/diabetesVitals', diabetesRoutes);
 app.use('/api/hypertensionVitals', hypertensionRoutes);
 app.use('/api/medications', medicationsRoutes);
 app.use('/api/userStatus', userStatusRouter);
+app.use('/api/doctor', doctorRoutes);
+app.use('/api/hospital', hospitalRoutes);
+app.use('/api/assignment', assignmentRoutes);
+app.use('/api/notifications', notificationsRoutes);
+
 
 // 404 handler
 app.use('*', (req, res) => {

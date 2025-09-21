@@ -12,6 +12,17 @@ const EmergencySchema = new mongoose.Schema({
 
 const Emergency = mongoose.models.Emergency || mongoose.model('Emergency', EmergencySchema);
 
+// GET /api/emergency - fetch alerts (for doctors)
+router.get('/', async (req, res) => {
+  try {
+    // For now, return empty array; later populate from Emergency model or other alerts
+    res.json({ data: [] });
+  } catch (error) {
+    console.error("Error fetching alerts:", error);
+    res.status(500).json({ message: "Failed to fetch alerts" });
+  }
+});
+
 // POST /api/emergency
 router.post('/', async (req, res) => {
   try {

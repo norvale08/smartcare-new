@@ -12,12 +12,15 @@
     "lint": "turbo run lint"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "tsx": "^4.20.5",
     "turbo": "^2.5.4"
   },
   "dependencies": {
+    "ai-service": "workspace:*",
+    "bcryptjs": "^3.0.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-native": "0.79.4",
-    "ai-service": "workspace:*"
+    "react-native": "0.79.4"
   }
 }

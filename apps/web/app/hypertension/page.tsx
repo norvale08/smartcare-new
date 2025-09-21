@@ -1,30 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  HeartPulse,
-  Globe,
-  TriangleAlert,
-  MicVocal,
-  Pill,
-  Utensils,
-  AlertCircle,
-  CheckCircle,
-  Wine,
-  Cigarette,
-  Coffee,
-  Activity,
+import {HeartPulse,Globe,TriangleAlert,MicVocal,Pill,Utensils,AlertCircle,CheckCircle,Wine,Cigarette,Coffee,Activity, Stethoscope
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import axios from 'axios';
 import MedicationAnalysisPage from "../components/hypertension/medicationAnalysis";
 import { useSession } from "next-auth/react";
 import HypertensionAlert from "../components/hypertension/alert";
+import Assign from "../components/hypertension/assign";
 import { useVoiceInput } from "../components/hypertension/useVoiceInput";
 import { wordsToNumbers } from "../components/hypertension/words-to-numbers"
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
-} from "recharts";
+import Lifestyle from "../components/hypertension/Lifestyle";
+import ProfileCard from "../components/hypertension/ProfileCard";
+import VitalsEntry from "../components/hypertension/VitalsEntry";
+import Diet from "../components/hypertension/Diet";
+import Charts from "../components/hypertension/charts";
 
 //Mock drug data
 
@@ -44,6 +35,8 @@ const mockDietRecommendations = {
 function DashboardPage() {
   const { data: session, status } = useSession();
   console.log("Submitting vitals with userId:", session?.user?.id);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 
   const [systolic, setSystolic] = useState('');
   const [diastolic, setDiastolic] = useState('');
@@ -51,6 +44,7 @@ function DashboardPage() {
   const [message, setMessage] = useState('');
   const [hasToken, setHasToken] = useState(false);
   const [alertRefreshToken, setAlertRefreshToken] = useState(0);
+  const [showAssignModal, setShowAssignModal] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -78,7 +72,7 @@ function DashboardPage() {
     }
 
     try {
-      const response = await axios.post('http://localhost:3001/api/hypertensionVitals', {
+      const response = await axios.post(`${API_URL}/api/hypertensionVitals`, {
         systolic: Number(systolic),
         diastolic: Number(diastolic),
         heartRate: Number(heartRate),
@@ -136,8 +130,8 @@ function DashboardPage() {
   const Provider = dynamic(() => import("../components/maps/ProviderMap"), {
     ssr: false,
   });
-   
-  const { listening, transcript, startListening, stopListening, setTranscript, error } =
+  
+   const { listening, transcript, startListening, stopListening, setTranscript, error } =
     useVoiceInput();
 
   const [language, setLanguage] = useState<string>("en-US");
@@ -170,7 +164,7 @@ function DashboardPage() {
     stopListening();
   }, [transcript, listeningField, setTranscript, stopListening]);
 
-  const [vitals, setVitals] = useState<any[]>([]);
+const [vitals, setVitals] = useState<any[]>([]);
   const formatDateTime = (d?: Date | string | null) => {
     if (!d) return "—";
     try {
@@ -182,43 +176,43 @@ function DashboardPage() {
     }
   };
 
-  useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (!token) return;
+useEffect(() => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  if (!token) return;
 
-    const fetchVitals = async () => {
-      try {
-        const res = await axios.get("http://localhost:3001/api/hypertensionVitals/me", {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true,
-        });
+  const fetchVitals = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/hypertensionVitals/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
 
         const allVitals = res.data.data;
-        const threeWeeksAgo = new Date();
-        threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
+      const threeWeeksAgo = new Date();
+      threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
 
-        const recentVitals = allVitals
-          .map((v: any) => ({
-            systolic: Number(v.systolic),
-            diastolic: Number(v.diastolic),
-            heartRate: Number(v.heartRate),
+      const recentVitals = allVitals
+        .map((v: any) => ({
+          systolic: Number(v.systolic),
+          diastolic: Number(v.diastolic),
+          heartRate: Number(v.heartRate),
             createdAt: new Date(v.timestamp || v.createdAt),
-            date: new Date(v.timestamp || v.createdAt).toLocaleDateString(),
-          }))
-          .filter((v: any) => v.createdAt >= threeWeeksAgo)
-          .sort((a: any, b: any) => a.createdAt.getTime() - b.createdAt.getTime());
+          date: new Date(v.timestamp || v.createdAt).toLocaleDateString(),
+        }))
+        .filter((v: any) => v.createdAt >= threeWeeksAgo)
+        .sort((a: any, b: any) => a.createdAt.getTime() - b.createdAt.getTime());
 
         console.log("Fetched vitals:", recentVitals);
-        setVitals(recentVitals);
-      } catch (err) {
-        console.error("Failed to fetch vitals", err);
-      }
-    };
+      setVitals(recentVitals);
+    } catch (err) {
+      console.error("Failed to fetch vitals", err);
+    }
+  };
 
-    fetchVitals();
-  }, [alertRefreshToken]);
+  fetchVitals();
+}, [alertRefreshToken]);
 
-  const [patient, setPatient] = useState<any>(null);
+ const [patient, setPatient] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
 
@@ -233,7 +227,7 @@ function DashboardPage() {
     return age;
   };
 
-  useEffect(() => {
+useEffect(() => {
     const tokenStr = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!tokenStr) return;
     const getUserFromToken = (t: string) => {
@@ -257,7 +251,7 @@ function DashboardPage() {
     };
     const fetchPatient = async () => {
       try {
-        const res = await axios.get("http://localhost:3001/api/profile/me", {
+        const res = await axios.get("http://localhost:8000/api/profile/me", {
           headers: { Authorization: `Bearer ${tokenStr}` },
           withCredentials: true,
         });
@@ -293,7 +287,7 @@ function DashboardPage() {
     };
     fetchPatient();
   }, []);
-
+  
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setEditForm((prev: any) => ({ ...prev, [name]: value }));
@@ -311,11 +305,11 @@ function DashboardPage() {
         height: editForm.height ? Number(editForm.height) : undefined,
         phoneNumber: editForm.phoneNumber,
       };
-      await axios.put("http://localhost:3001/api/profile", payload, {
+      await axios.put("http://localhost:8000/api/profile", payload, {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         withCredentials: true,
       });
-      const res = await axios.get("http://localhost:3001/api/profile/me", {
+      const res = await axios.get("http://localhost:8000/api/profile/me", {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true,
       });
@@ -350,7 +344,9 @@ function DashboardPage() {
               <span className="text-white font-semibold">SJ</span>
             </div>
             <span className="text-sm font-medium text-gray-700">
-              Sarah Johnson
+            {patient?.fullName || `${patient?.firstname ?? ""} ${patient?.lastname ?? ""}`.trim() || "Unknown Patient"}
+                
+              {/* Sarah Johnson */}
             </span>
           </div>
         </div>
@@ -359,35 +355,23 @@ function DashboardPage() {
       <main className="flex flex-col items-center px-4 py-6 gap-6">
         
         {patient && (
-          <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-4xl flex justify-between items-center">
-            <div className="flex gap-4 items-center">
-              <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold text-xl">
-                  {(patient?.fullName?.[0] || patient?.firstname?.[0] || "P")}
-                </span>
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-800">
-                  {patient?.fullName || `${patient?.firstname ?? ""} ${patient?.lastname ?? ""}`.trim() || "Unknown Patient"}
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Age: {computeAge(patient?.dob)} | Weight: {patient?.weight ?? "—"} kg
-                  <br />
-                  Last check-in: {formatDateTime(vitals.length > 0 ? vitals[vitals.length - 1]?.createdAt : null)}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsEditing(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm"
-              >
-                Edit Profile
-              </button>
-              <div className="bg-emerald-400 text-white rounded-full px-4 py-2 text-sm font-medium">
-                ● {patient?.status || "Active"}
-              </div>
-            </div>
+          <ProfileCard
+            patient={patient}
+            lastCheckIn={formatDateTime(vitals.length > 0 ? vitals[vitals.length - 1]?.createdAt : null)}
+            onEdit={() => setIsEditing(true)}
+          />
+        )}
+
+        {patient && (
+          <div className="w-full max-w-4xl flex justify-center">
+            <button
+              onClick={() => setShowAssignModal(true)}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+              disabled={!patient._id}
+            >
+              <Stethoscope size={20} />
+              Assign Doctor & Hospital
+            </button>
           </div>
         )}
 
@@ -399,9 +383,9 @@ function DashboardPage() {
                 <div>
                   <label className="text-sm text-gray-700">Full Name</label>
                   <input name="fullName" value={editForm.fullName || ""} onChange={handleEditChange} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
-                </div>
+            </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
+            <div>
                     <label className="text-sm text-gray-700">DOB</label>
                     <input type="date" name="dob" value={editForm.dob || ""} onChange={handleEditChange} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
                   </div>
@@ -420,11 +404,11 @@ function DashboardPage() {
                   <div>
                     <label className="text-sm text-gray-700">Weight (kg)</label>
                     <input type="number" name="weight" value={editForm.weight ?? ""} onChange={handleEditChange} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
-                  </div>
-                  <div>
+          </div>
+            <div>
                     <label className="text-sm text-gray-700">Height (cm)</label>
                     <input type="number" name="height" value={editForm.height ?? ""} onChange={handleEditChange} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
-                  </div>
+            </div>
                 </div>
                 <div>
                   <label className="text-sm text-gray-700">Phone Number</label>
@@ -439,381 +423,52 @@ function DashboardPage() {
           </div>
         )}
 
-        <HypertensionAlert refreshToken={alertRefreshToken} />
+        <HypertensionAlert 
+          refreshToken={alertRefreshToken}
+          age={patient?.dob ? Number(computeAge(patient.dob)) : 0}
+        />
 
-        <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-6">
-            Enter Your Vitals
-          </h3>
+        {showAssignModal && patient && (
+          <Assign 
+            patientId={patient._id} 
+            onClose={() => setShowAssignModal(false)} 
+          />
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Blood Pressure (mmHg)
-              </label>
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="number"
-                  placeholder="Systolic (120)"
-                  value={systolic}
-                  onChange={(e) => setSystolic(e.target.value)}
-                  className="border-2 border-gray-300 rounded-lg px-3 py-2 focus:border-emerald-400 focus:outline-none flex-1 w-1/2"
-                />
-                <span className="flex items-center text-gray-500 px-2">/</span>
-                <input
-                  type="number"
-                  placeholder="Diastolic (80)"
-                  value={diastolic}
-                  onChange={(e) => setDiastolic(e.target.value)}
-                  className="border-2 border-gray-300 rounded-lg px-3 py-2 focus:border-emerald-400 focus:outline-none flex-1 w-1/2"
-                />
-              </div>
-              <div className="flex gap-2 items-center">
-                <button
-                  onClick={() => {
-                    setListeningField("systolic");
-                    startListening(language);
-                  }}
-                  disabled={listening}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-3 py-2 flex items-center justify-center gap-2 text-sm transition-colors disabled:opacity-50 flex-1"
-                >
-                  <MicVocal size={16} />
-                  Voice Systolic
-                </button>
-                <button
-                  onClick={() => {
-                    setListeningField("diastolic");
-                    startListening(language);
-                  }}
-                  disabled={listening}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-3 py-2 flex items-center justify-center gap-2 text-sm transition-colors disabled:opacity-50 flex-1"
-                >
-                  <MicVocal size={16} />
-                  Voice Diastolic
-                </button>
-              </div>
-              <div className="flex gap-2 items-center mt-2">
-                {listening && (
-                  <span className="text-xs text-emerald-700">Listening…</span>
-                )}
-                {transcript && (
-                  <span className="text-xs text-gray-600">"{transcript}"</span>
-                )}
-                {error && (
-                  <span className="text-xs text-red-600">{error}</span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Heart Rate (BPM)
-              </label>
-              <input
-                type="number"
-                placeholder="72"
-                value={heartRate}
-                onChange={(e) => setHeartRate(e.target.value)}
-                className="border-2 border-gray-300 rounded-lg px-3 py-2 mb-3 focus:border-emerald-400 focus:outline-none"
-              />
-              <button
-                onClick={() => {
-                  setListeningField("heartRate");
-                  startListening(language);
-                }}
-                disabled={listening}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-3 py-2 flex items-center justify-center gap-2 text-sm transition-colors disabled:opacity-50"
-              >
-                <MicVocal size={16} />
-                Voice Heart Rate
-              </button>
-              <div className="flex items-center gap-2 mt-2">
-                {listening && (
-                  <span className="text-xs text-emerald-700">Listening…</span>
-                )}
-                {transcript && (
-                  <span className="text-xs text-gray-600">"{transcript}"</span>
-                )}
-                {error && (
-                  <span className="text-xs text-red-600">{error}</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {message && (
-            <p className="text-sm mb-4 text-gray-700 font-medium">{message}</p>
-          )}
-
-          <div className="flex justify-end">
-            <button
-              onClick={handleSubmit}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-              disabled={!hasToken || !systolic || !diastolic || !heartRate}
-            >
-              {status === "loading" ? "Checking login..." : "Save Vitals"}
-            </button>
-          </div>
-        </div>
+        <VitalsEntry
+          systolic={systolic}
+          diastolic={diastolic}
+          heartRate={heartRate}
+          setSystolic={setSystolic}
+          setDiastolic={setDiastolic}
+          setHeartRate={setHeartRate}
+          listening={listening}
+          transcript={transcript}
+          error={error}
+          onVoiceSystolic={() => { setListeningField("systolic"); startListening(language); }}
+          onVoiceDiastolic={() => { setListeningField("diastolic"); startListening(language); }}
+          onVoiceHeartRate={() => { setListeningField("heartRate"); startListening(language); }}
+          canSave={hasToken && systolic && diastolic && heartRate}
+          onSave={handleSubmit}
+          statusText={status === "loading" ? "Checking login..." : "Save Vitals"}
+        />
 
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
           <MedicationAnalysisPage />
         </div>
 
-        <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Activity className="text-purple-600" size={20} />
-            <h3 className="text-lg font-semibold text-gray-800">Lifestyle Assessment</h3>
-          </div>
+        <Lifestyle lifestyle={lifestyle} setLifestyle={setLifestyle} />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Substance Use</h4>
-              <div className="space-y-3">
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={lifestyle.alcohol}
-                    onChange={(e) => setLifestyle({...lifestyle, alcohol: e.target.checked})}
-                    className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                  />
-                  <Wine className="text-purple-600" size={16} />
-                  <span className="text-sm text-gray-700">Regular alcohol consumption</span>
-                </label>
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={lifestyle.smoking}
-                    onChange={(e) => setLifestyle({...lifestyle, smoking: e.target.checked})}
-                    className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                  />
-                  <Cigarette className="text-purple-600" size={16} />
-                  <span className="text-sm text-gray-700">Smoking/tobacco use</span>
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Daily Habits</h4>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Coffee className="text-purple-600" size={16} />
-                  <label className="text-sm text-gray-700">Caffeine intake (cups/day):</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    value={lifestyle.caffeine}
-                    onChange={(e) => setLifestyle({...lifestyle, caffeine: parseInt(e.target.value) || 0})}
-                    className="w-16 border border-gray-300 rounded px-2 py-1 text-sm focus:border-purple-400 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-700 mb-2 block">Exercise frequency:</label>
-                  <select
-                    value={lifestyle.exercise}
-                    onChange={(e) => setLifestyle({...lifestyle, exercise: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
-                  >
-                    <option value="">Select frequency</option>
-                    <option value="none">No exercise</option>
-                    <option value="low">1-2 times per week</option>
-                    <option value="moderate">3-4 times per week</option>
-                    <option value="high">5+ times per week</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Diet
+          dietGenerated={dietGenerated}
+          onGenerate={generateDietPlan}
+          lifestyle={lifestyle}
+          recommendations={mockDietRecommendations}
+        />
 
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <Utensils className="text-green-600" size={20} />
-              <h3 className="text-lg font-semibold text-gray-800">AI Diet Recommendations</h3>
+          <Charts vitals={vitals} />
             </div>
-            <button
-              onClick={generateDietPlan}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-            >
-              Generate Diet Plan
-            </button>
-          </div>
-
-          {dietGenerated && (
-            <div className="space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-green-700">
-                  <strong>AI Analysis:</strong> Based on your lifestyle assessment {lifestyle.alcohol && "(alcohol use noted)"} 
-                  {lifestyle.smoking && "(smoking detected)"} and health data, here's your personalized diet plan:
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-blue-800 mb-2">🌅 Breakfast</h4>
-                  <p className="text-sm text-blue-700">{mockDietRecommendations.breakfast}</p>
-                </div>
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-yellow-800 mb-2">🌞 Lunch</h4>
-                  <p className="text-sm text-yellow-700">{mockDietRecommendations.lunch}</p>
-                </div>
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-orange-800 mb-2">🌙 Dinner</h4>
-                  <p className="text-sm text-orange-700">{mockDietRecommendations.dinner}</p>
-                </div>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-purple-800 mb-2">🍎 Snacks</h4>
-                  <p className="text-sm text-purple-700">{mockDietRecommendations.snacks}</p>
-                </div>
-              </div>
-
-              {(lifestyle.alcohol || lifestyle.smoking) && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <h4 className="font-medium text-red-800 mb-2">⚠️ Lifestyle Recommendations</h4>
-                  <ul className="text-sm text-red-700 space-y-1">
-                    {lifestyle.alcohol && <li>• Limit alcohol consumption to support cardiovascular health</li>}
-                    {lifestyle.smoking && <li>• Consider smoking cessation programs for better heart health</li>}
-                    {lifestyle.caffeine > 4 && <li>• Reduce caffeine intake to help manage blood pressure</li>}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Activity className="text-emerald-600" size={20} />
-            <h3 className="text-lg font-semibold text-gray-800">Health Trends</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
-              <h4 className="font-semibold text-red-800 mb-4 flex items-center gap-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                Blood Pressure Trends
-              </h4>
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={vitals.length > 0 ? vitals : []}>
-                  <defs>
-                    <linearGradient id="systolicGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#dc2626" stopOpacity={0.1}/>
-                    </linearGradient>
-                    <linearGradient id="diastolicGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0.1}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis 
-                    dataKey="date" 
-                    tickFormatter={(value) => value}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                    fontSize={12}
-                    stroke="#6b7280"
-                  />
-                  <YAxis domain={[60, 180]} fontSize={12} stroke="#6b7280" />
-                  <Tooltip 
-                    labelFormatter={(value) => `Date: ${value}`}
-                    formatter={(value, name) => [value, name]}
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                    }}
-                  />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="systolic" 
-                    stroke="#dc2626" 
-                    strokeWidth={3}
-                    fill="url(#systolicGradient)"
-                    name="Systolic" 
-                    dot={{ fill: '#dc2626', strokeWidth: 2, r: 5 }}
-                    activeDot={{ r: 7, fill: '#dc2626' }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="diastolic" 
-                    stroke="#2563eb" 
-                    strokeWidth={3}
-                    fill="url(#diastolicGradient)"
-                    name="Diastolic" 
-                    dot={{ fill: '#2563eb', strokeWidth: 2, r: 5 }}
-                    activeDot={{ r: 7, fill: '#2563eb' }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-              {vitals.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-red-600 text-sm font-medium">No data available</p>
-                  <p className="text-red-500 text-xs mt-1">Save some vitals to see trends</p>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
-              <h4 className="font-semibold text-orange-800 mb-4 flex items-center gap-2">
-                <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
-                Heart Rate Trends
-              </h4>
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={vitals.length > 0 ? vitals : []}>
-                  <defs>
-                    <linearGradient id="heartRateGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ea580c" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#ea580c" stopOpacity={0.1}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis 
-                    dataKey="date" 
-                    tickFormatter={(value) => value}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                    fontSize={12}
-                    stroke="#6b7280"
-                  />
-                  <YAxis domain={[50, 120]} fontSize={12} stroke="#6b7280" />
-                  <Tooltip 
-                    labelFormatter={(value) => `Date: ${value}`}
-                    formatter={(value, name) => [`${value} BPM`, name]}
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                    }}
-                  />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="heartRate" 
-                    stroke="#ea580c" 
-                    strokeWidth={3}
-                    fill="url(#heartRateGradient)"
-                    name="Heart Rate" 
-                    dot={{ fill: '#ea580c', strokeWidth: 2, r: 5 }}
-                    activeDot={{ r: 7, fill: '#ea580c' }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-              {vitals.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-orange-600 text-sm font-medium">No data available</p>
-                  <p className="text-orange-500 text-xs mt-1">Save some vitals to see trends</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
 
         <div className="w-full max-w-4xl">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">

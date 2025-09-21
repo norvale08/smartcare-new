@@ -22,11 +22,16 @@ const Login = () => {
 
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      console.log("API_URL =>", API_URL);
+
 
       const loginRes = await fetch(`${API_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        credentials: 'include' // Add credentials for cookies
+      }).catch((err) => {
+        throw new Error(`Network error: ${err.message}`);
       });
 
       if (!loginRes.ok) {
