@@ -1,23 +1,50 @@
-import React from 'react'
-import Link from 'next/link'
-import { HeartPulse, } from "lucide-react"
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { HeartPulse, Menu, X } from 'lucide-react';
 
 const Header = () => {
-  return (
-    <div className='flex flex-row justify-evenly gap-4 shadow-md bg-slate-400 text-black h-12 items-center'>
-        <div>
-           <h1 className="text-lg  font-bold flex flex-row items-center gap-2 text-white">
-                       <HeartPulse color="darkblue"  size={30} />
-                       SmartCare
-                     </h1> 
-        </div>
-<Link href="/diabetes">Home</Link>
-<Link href='/features'>Features</Link>
-<Link href='/resources'>Resources</Link>
-<Link href='/aboutUs'>About Us</Link>
-<Link href='/contact'>Contact</Link>
-    </div>
-  )
-}
+  const [menuOpen, setMenuOpen] = useState(false);
 
-export default Header
+  const toggleMenu = () => setMenuOpen(!menuOpen);
+
+  return (
+    <header className="bg-slate-400 text-black shadow-md">
+      {/* Top bar */}
+      <div className="flex justify-between items-center px-4 h-14">
+        <div className="flex items-center gap-2">
+          <HeartPulse color="darkblue" size={30} />
+          <h1 className="text-lg font-bold text-white">SmartCare</h1>
+        </div>
+
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex gap-16 font-medium">
+          <Link href="/diabetes" className="hover:p-2 hover:bg-slate-300 rounded-sm transition duration-200">Home</Link>
+          <Link href="/features" className="hover:p-2 hover:bg-slate-300 rounded-sm transition duration-200">Features</Link>
+          <Link href="/resources" className="hover:p-2 hover:bg-slate-300 rounded-sm transition duration-200">Resources</Link>
+          <Link href="/aboutUs" className="hover:p-2 hover:bg-slate-300 rounded-sm transition duration-200">About Us</Link>
+          <Link href="/contact" className="hover:p-2 hover:bg-slate-300 rounded-sm transition duration-200">Contact</Link>
+        </nav>
+
+        {/* Mobile Menu Icon */}
+        <div className="md:hidden">
+          <button onClick={toggleMenu}>
+            {menuOpen ? <X size={28} /> : <Menu size={28} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Dropdown Menu */}
+      {menuOpen && (
+        <nav className="flex flex-col md:hidden bg-slate-500 text-white px-4 py-2 space-y-2">
+          <Link href="/diabetes" onClick={() => setMenuOpen(false)}>Home</Link>
+          <Link href="/features" onClick={() => setMenuOpen(false)}>Features</Link>
+          <Link href="/resources" onClick={() => setMenuOpen(false)}>Resources</Link>
+          <Link href="/aboutUs" onClick={() => setMenuOpen(false)}>About Us</Link>
+          <Link href="/contact" onClick={() => setMenuOpen(false)}>Contact</Link>
+        </nav>
+      )}
+    </header>
+  );
+};
+
+export default Header;
