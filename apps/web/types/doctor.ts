@@ -10,8 +10,7 @@ export interface Vitals {
 export type Condition = 'Hypertension' | 'Diabetes';
 
 export interface Patient {
-  _id?: string;  // MongoDB ID
-  id?: number;   // Mock/frontend ID
+  id: number;
   name: string;
   age: number;
   gender: 'Male' | 'Female' | 'Other';

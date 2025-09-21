@@ -29,7 +29,6 @@ router.post('/', async (req, res) => {
     // Debug logs
     console.log("=== LOGIN DEBUG INFO ===");
     console.log("User email:", user.email);
-    console.log("User role:", user.role);
     console.log("Is first login:", user.isFirstLogin);
     console.log("Profile completed:", user.profileCompleted);
     console.log("Selected diseases:", user.selectedDiseases);
@@ -39,7 +38,6 @@ router.post('/', async (req, res) => {
         userId: user._id,
         email: user.email,
         name: `${user.firstName} ${user.lastName}`,
-        role: user.role,
         status: user.profileCompleted ? 'complete' : 'incomplete',
         disease: user.selectedDiseases || [],
         isFirstLogin: user.isFirstLogin
@@ -51,8 +49,8 @@ router.post('/', async (req, res) => {
     let redirectTo = "/dashboard"; // default
     let message = "";
 
-    // 🔥 Profile incomplete → force profile setup (but not for admin or doctor)
-    if (!user.profileCompleted && user.role !== 'admin' && user.role !== 'doctor') {
+    // 🔥 Profile incomplete → force profile setup
+    if (!user.profileCompleted) {
       redirectTo = "/profile";
       message = "Please complete your profile.";
       if (user.isFirstLogin) {
@@ -60,19 +58,7 @@ router.post('/', async (req, res) => {
         console.log("✅ Updated isFirstLogin to false");
       }
     } 
-    // Admin role - direct to admin dashboard (overrides other logic)
-    else if (user.role === 'admin') {
-      redirectTo = "/admin";
-      message = "Welcome to the admin dashboard.";
-      console.log("🔄 Admin detected, redirecting to /admin");
-    }
-    // Doctor role - direct to doctors dashboard
-    else if (user.role === 'doctor') {
-      redirectTo = "/doctors";
-      message = "Welcome to your doctor dashboard.";
-      console.log("🔄 Doctor detected, redirecting to /doctors");
-    }
-    // ✅ Profile complete + diseases selected (for non-admin)
+    // ✅ Profile complete + diseases selected
     else if (user.selectedDiseases?.length > 0) {
       if (user.selectedDiseases.length === 1) {
         // Single disease → go straight to dashboard
@@ -104,7 +90,7 @@ router.post('/', async (req, res) => {
         console.log("🔄 Multiple diseases, redirecting to selector.");
       }
     } 
-    // ✅ Profile complete but no disease (for non-admin)
+    // ✅ Profile complete but no disease
     else {
       redirectTo = "/dashboard";
       message = "Welcome to your health dashboard.";
