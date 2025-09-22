@@ -24,7 +24,7 @@ router.post("/", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // 🔑 Create JWT with role included
+    // Create JWT with role included
     const token = jwt.sign(
       {
         userId: user._id,
@@ -36,23 +36,22 @@ router.post("/", async (req, res) => {
       { expiresIn: "24h" }
     );
 
-    let redirectTo = "/dashboard"; // default
+    let redirectTo = "/dashboard"; // default redirect
     let message = "";
 
-    // ✅ Role-based redirect + message
     switch (user.role) {
       case "admin":
-        redirectTo = "/admin/dashboard";
+        redirectTo = "/admin";
         message = "Welcome Admin, you have full access.";
         break;
 
       case "doctor":
-        redirectTo = "/doctor/dashboard";
+        redirectTo = "/doctors";
         message = "Welcome Doctor, here are your patients.";
         break;
 
       case "patient":
-        // ⚠️ kept your exact patient logic untouched
+        // Only patients have profile logic
         if (!user.profileCompleted) {
           redirectTo = "/profile";
           message = "Please complete your profile.";

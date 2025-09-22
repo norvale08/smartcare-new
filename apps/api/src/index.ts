@@ -12,7 +12,7 @@ import profileRoutes from './routes/patient';
 import uploadRoute from "./routes/upload";
 import hypertensionRoutes from './routes/hypertensionVitals';
 import medicationsRoutes from './routes/medications';
-
+import doctorsRoutes from "./routes/doctors"
 dotenv.config();
 
 const app = express();
@@ -92,7 +92,7 @@ app.use('/api/diabetesVitals', diabetesRoutes);
 app.use('/api/hypertensionVitals', hypertensionRoutes);
 app.use('/api/medications', medicationsRoutes);
 app.use('/api/userStatus', userStatusRouter);
-
+app.use ('/api/doctors',doctorsRoutes)
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 

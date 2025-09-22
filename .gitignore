@@ -38,3 +38,6 @@ yarn-error.log*
 *.pem
 *.log
 logs/
+
+#ignore the seed admin script
+apps/api/scripts/seedAdmin.ts
