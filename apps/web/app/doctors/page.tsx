@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Header from './components/Header';
 import WelcomePanel from "./components/WelcomePanel";
 import PatientsTable from "./components/AssignedPatients";
@@ -42,8 +42,21 @@ const DoctorsDashboard = () => {
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [careNotes, setCareNotes] = useState<CareNote[]>([]);
+
+
+  const carePanelRef = useRef<HTMLDivElement | null>(null);
+
+  const handleViewCarePlan = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setTimeout(() => {
+      carePanelRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100); // slight delay to ensure component has rendered
+  };
+
+
 
   const handleAddPrescription = (newPrescription: Omit<Prescription, 'id'>) => {
     const newEntry: Prescription = {
@@ -86,7 +99,7 @@ const DoctorsDashboard = () => {
           <div className="lg:col-span-2 space-y-6">
             <PatientsTable
               patients={filteredPatients}
-              setSelectedPatient={setSelectedPatient}
+              setSelectedPatient={handleViewCarePlan}
             />
             <VitalTrendsChart
               vitalTrends={vitalTrends}
@@ -103,12 +116,19 @@ const DoctorsDashboard = () => {
           <div className="space-y-6">
             <Alerts alerts={alerts} />
             <PatientLocations patients={patients} />
-            {selectedPatient && <CareManagement
-              selectedPatient={selectedPatient}
-              prescriptions={prescriptions}
-              careNotes={careNotes}
-              onAddPrescription={handleAddPrescription}
-              onAddCareNote={handleAddCareNote} />}
+
+            {selectedPatient && (
+              <div ref={carePanelRef}>
+                <CareManagement
+                  selectedPatient={selectedPatient}
+                  prescriptions={prescriptions}
+                  careNotes={careNotes}
+                  onAddPrescription={handleAddPrescription}
+                  onAddCareNote={handleAddCareNote}
+                />
+              </div>
+            )}
+
           </div>
         </div>
       </div>
