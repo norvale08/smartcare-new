@@ -34,6 +34,7 @@
     "multer": "^2.0.1",
     "multer-storage-cloudinary": "^4.0.0",
     "next-auth": "^4.24.11",
+    "nodemailer": "^7.0.6",
     "ollama": "^0.5.16",
     "typescript": "^5.8.3",
     "winston": "^3.17.0"

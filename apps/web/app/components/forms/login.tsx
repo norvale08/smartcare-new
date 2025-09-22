@@ -30,15 +30,21 @@ const Login = () => {
         body: JSON.stringify(data),
       });
 
+      const loginData = await loginRes.json();
+
       if (!loginRes.ok) {
-        const errorData = await loginRes.json();
-        toast.error(errorData.message || "Login failed");
+        console.log("Login failed response:", loginData);
+        toast.error(loginData.message || "Login failed");
         return;
       }
 
-      const { token, user, redirectTo } = await loginRes.json();
+      const { token, user, redirectTo } = loginData;
 
-      // ✅ Save in localStorage
+      console.log("✅ Login successful");
+      console.log("User role:", user.role);
+      console.log("Redirect URL from backend:", redirectTo);
+
+      // Save in localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("role", user.role);
@@ -46,8 +52,9 @@ const Login = () => {
       toast.success("Login successful!");
       reset();
 
-      // ✅ Redirect according to backend OR fallback by role
+      // Redirect according to backend OR fallback by role
       if (redirectTo) {
+        console.log("Redirecting to backend-provided URL:", redirectTo);
         router.replace(redirectTo);
       } else {
         switch (user.role) {
