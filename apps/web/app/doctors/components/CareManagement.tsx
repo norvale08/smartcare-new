@@ -1,7 +1,10 @@
 'use client';
 import React, { useState } from 'react';
 import { Prescription, CareNote, Patient, Condition } from '@/types/doctor';
-import { Plus, Edit3, Save, X, Pill, FileText, Calendar, Apple, Dumbbell } from 'lucide-react';
+import { Plus, Edit3, X, Pill, FileText, Calendar, Apple, Dumbbell, Send } from 'lucide-react';
+import { chatWithOllama } from '@/lib/ollamaClient';
+import ReactMarkdown from "react-markdown";
+
 
 interface CareManagementProps {
   prescriptions: Prescription[];
@@ -20,6 +23,14 @@ const CareManagement: React.FC<CareManagementProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'prescriptions' | 'notes'>('prescriptions');
   const [showAddForm, setShowAddForm] = useState(false);
+
+  // chatbot state
+  const [showChatbot, setShowChatbot] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{ sender: 'user' | 'ai'; text: string }[]>([]);
+  const [userInput, setUserInput] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // prescriptions
   const [newPrescription, setNewPrescription] = useState({
     medication: '',
     dosage: '',
@@ -28,18 +39,22 @@ const CareManagement: React.FC<CareManagementProps> = ({
     endDate: '',
     notes: ''
   });
+
+  // care note
   const [newNote, setNewNote] = useState({
     note: '',
     type: 'observation' as 'observation' | 'treatment' | 'consultation'
   });
-  const [nutritionRecommendation, setNutritionRecommendation] = useState("");
-  const [lifestyleRecommendation, setLifestyleRecommendation] = useState("");
+
+  // recommendations
+  const [nutritionRecommendation, setNutritionRecommendation] = useState('');
+  const [lifestyleRecommendation, setLifestyleRecommendation] = useState('');
 
   const handleAddPrescription = () => {
     if (!selectedPatient || !newPrescription.medication) return;
 
     onAddPrescription({
-      patientId: selectedPatient.id.toString(),
+      patientId: selectedPatient.id!.toString(),
       ...newPrescription
     });
 
@@ -55,57 +70,78 @@ const CareManagement: React.FC<CareManagementProps> = ({
   };
 
   const handleAddNote = () => {
-    if (!selectedPatient || !newNote.note) return;
+    if (!selectedPatient || (!newNote.note && !nutritionRecommendation && !lifestyleRecommendation)) return;
+    // Combine free note + recommendations into one care note text
+    const combinedNote =
+      `${newNote.note ? newNote.note + "\n\n" : ""}` +
+      `${nutritionRecommendation ? "**🍎 **Nutrition:** " + nutritionRecommendation + "\n\n" : ""}` +
+      `${lifestyleRecommendation ? "**🏋️ Lifestyle:** " + lifestyleRecommendation : ""}`;
 
     onAddCareNote({
-      patientId: selectedPatient.id.toString(),
-      note: newNote.note,
+      patientId: selectedPatient.id!.toString(),
+      note: combinedNote.trim(),
       type: newNote.type,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
-    setNewNote({
-      note: '',
-      type: 'observation'
-    });
+    // Reset states
+    setNewNote({ note: "", type: "observation" });
+    setNutritionRecommendation("");
+    setLifestyleRecommendation("");
     setShowAddForm(false);
   };
 
-  const patientPrescriptions = prescriptions.filter(p =>
-    selectedPatient ? p.patientId === selectedPatient.id.toString() : true
-  );
+  // chatbot message handling
+  const handleSendMessage = async () => {
+    if (!userInput.trim()) return;
 
-  const patientNotes = careNotes.filter(n =>
-    selectedPatient ? n.patientId === selectedPatient.id.toString() : true
-  );
+    const newMessage = { sender: "user" as const, text: userInput };
+    setChatMessages((prev) => [...prev, newMessage]);
 
-  const generateNutritionRecommendation = () => {
-    if (!selectedPatient) return;
+    setUserInput("");
+    setLoading(true);
 
-    const nutritionPlans: Record<Condition, string> = {
-      'Hypertension': 'Low sodium diet (< 2300mg/day), rich in potassium (bananas, spinach), DASH diet principles',
-      'Diabetes': 'Low glycemic index foods, portion control, regular meal timing, limit refined sugars'
-    };
+    // Start with an empty AI message placeholder
+    let aiReply = { sender: "ai" as const, text: "" };
+    setChatMessages((prev) => [...prev, aiReply]);
 
-    setNutritionRecommendation(nutritionPlans[selectedPatient.condition] || nutritionPlans['Hypertension']);
+    try {
+      await chatWithOllama(
+        `You are a healthcare assistant. Based on this patient’s needs, give nutrition and lifestyle recommendations.\n\nUser: ${userInput}\nAI:`,
+        (token) => {
+          // Append tokens as they come in
+          aiReply = { ...aiReply, text: aiReply.text + token };
+          setChatMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = aiReply;
+            return updated;
+          });
+        }
+      );
+    } catch {
+      setChatMessages((prev) => [
+        ...prev,
+        { sender: "ai", text: "⚠️ Something went wrong calling Ollama." },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const generateLifestyleRecommendation = () => {
-    if (!selectedPatient) return;
 
-    const lifestylePlans: Record<Condition, string> = {
-      'Hypertension': 'Regular moderate exercise (30 min/day), stress management, limit alcohol, maintain healthy weight',
-      'Diabetes': 'Regular physical activity, blood glucose monitoring, weight management, foot care'
-    };
-
-    setLifestyleRecommendation(lifestylePlans[selectedPatient.condition] || lifestylePlans['Hypertension']);
-  };
+  const patientPrescriptions = prescriptions.filter(
+    (p) => selectedPatient?.id && p.patientId === selectedPatient.id.toString()
+  );
+  const patientNotes = careNotes.filter(
+    (n) => selectedPatient?.id && n.patientId === selectedPatient.id.toString()
+  );
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold">
-          {selectedPatient ? `${selectedPatient.name} - Care Management` : 'Care Management'}
+          {selectedPatient ? `${selectedPatient.name} - Care Management (${selectedPatient.condition})` : 'Care Management'}
         </h3>
         <button
           onClick={() => setShowAddForm(true)}
@@ -254,7 +290,38 @@ const CareManagement: React.FC<CareManagementProps> = ({
                 </div>
               </div>
             ) : (
+              /* Care Note form */
               <div className="space-y-4">
+                {/* Note Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Type
+                  </label>
+                  <select
+                    value={newNote.type}
+                    onChange={(e) => setNewNote({ ...newNote, type: e.target.value as 'observation' | 'treatment' | 'consultation' })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="observation">Observation</option>
+                    <option value="treatment">Treatment</option>
+                    <option value="consultation">Consultation</option>
+                  </select>
+                </div>
+                {/* Care Note Text */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Note
+                  </label>
+                  <textarea
+                    value={newNote.note}
+                    onChange={(e) => setNewNote({ ...newNote, note: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Enter care note..."
+                  />
+                </div>
+
+
                 {/* Nutrition Recommendations */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -263,7 +330,7 @@ const CareManagement: React.FC<CareManagementProps> = ({
                       Nutrition Plan
                     </h4>
                     <button
-                      onClick={generateNutritionRecommendation}
+                      onClick={() => setShowChatbot(true)}
                       className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200"
                     >
                       AI Generate
@@ -273,7 +340,7 @@ const CareManagement: React.FC<CareManagementProps> = ({
                     placeholder="Nutrition recommendations..."
                     value={nutritionRecommendation}
                     onChange={(e) => setNutritionRecommendation(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm h-20 resize-none"
+                    className="w-full px-3 py-2 border rounded text-sm h-20 resize-none"
                   />
                 </div>
 
@@ -285,7 +352,7 @@ const CareManagement: React.FC<CareManagementProps> = ({
                       Lifestyle Plan
                     </h4>
                     <button
-                      onClick={generateLifestyleRecommendation}
+                      onClick={() => setShowChatbot(true)}
                       className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200"
                     >
                       AI Generate
@@ -295,9 +362,11 @@ const CareManagement: React.FC<CareManagementProps> = ({
                     placeholder="Lifestyle recommendations..."
                     value={lifestyleRecommendation}
                     onChange={(e) => setLifestyleRecommendation(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm h-20 resize-none"
+                    className="w-full px-3 py-2 border rounded text-sm h-20 resize-none"
                   />
                 </div>
+
+                {/* Save buttons */}
                 <div className="flex space-x-3">
                   <button
                     onClick={handleAddNote}
@@ -312,83 +381,158 @@ const CareManagement: React.FC<CareManagementProps> = ({
                     Cancel
                   </button>
                 </div>
+
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Content */}
-      <div className="space-y-4">
-        {activeTab === 'prescriptions' ? (
-          patientPrescriptions.length === 0 ? (
-            <div className="text-center py-8">
-              <Pill className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No prescriptions found</p>
-              <p className="text-sm text-gray-400">Add a prescription to get started</p>
+      {/* Chatbot Modal */}
+      {showChatbot && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4 flex flex-col h-[500px]">
+            <div className="flex justify-between items-center border-b pb-2 mb-2">
+              <h3 className="text-lg font-semibold">SmartCare Assistant</h3>
+              <button onClick={() => setShowChatbot(false)} className="text-gray-500 hover:text-gray-700">
+                <X className="h-5 w-5" />
+              </button>
             </div>
-          ) : (
-            patientPrescriptions.map((prescription) => (
-              <div key={prescription.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h4 className="font-semibold text-gray-800">{prescription.medication}</h4>
-                    <p className="text-sm text-gray-600">{prescription.dosage} - {prescription.frequency}</p>
-                  </div>
-                  <button className="text-gray-400 hover:text-gray-600">
-                    <Edit3 className="h-4 w-4" />
-                  </button>
-                </div>
 
-                <div className="flex items-center space-x-4 text-xs text-gray-500 mb-2">
-                  <div className="flex items-center space-x-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>{new Date(prescription.startDate).toLocaleDateString()}</span>
-                  </div>
-                  <span>to</span>
-                  <div className="flex items-center space-x-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>{new Date(prescription.endDate).toLocaleDateString()}</span>
-                  </div>
+            {/* Chat area */}
+            <div className="flex-1 overflow-y-auto space-y-3 p-2 border rounded">
+              {chatMessages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`p-2 rounded-lg max-w-[80%] ${msg.sender === 'user'
+                    ? 'bg-blue-100 text-blue-800 self-end ml-auto'
+                    : 'bg-gray-100 text-gray-800 self-start'
+                    }`}
+                >
+                  {msg.text}
                 </div>
+              ))}
+              {loading && <p className="text-sm text-gray-500">AI is typing...</p>}
+            </div>
 
-                {prescription.notes && (
-                  <p className="text-sm text-gray-600 bg-gray-50 rounded p-2">
-                    {prescription.notes}
-                  </p>
-                )}
+            {/* Input */}
+            <div className="flex items-center mt-3">
+              <input
+                type="text"
+                placeholder="Ask about nutrition or lifestyle..."
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                className="flex-1 border rounded-lg px-3 py-2 text-sm"
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={loading}
+                className="ml-2 bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="space-y-4">
+        <div className="max-h-96 overflow-y-auto space-y-4 pr-2">
+          {activeTab === "prescriptions" ? (
+            patientPrescriptions.length === 0 ? (
+              <div className="text-center py-8">
+                <Pill className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No prescriptions found</p>
+                <p className="text-sm text-gray-400">
+                  Add a prescription to get started
+                </p>
               </div>
-            ))
-          )
-        ) : (
-          patientNotes.length === 0 ? (
+            ) : (
+              patientPrescriptions.map((prescription) => (
+                <div
+                  key={prescription.id}
+                  className="border border-gray-200 rounded-lg p-4 bg-white"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h4 className="font-semibold text-gray-800">
+                        {prescription.medication}
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {prescription.dosage} - {prescription.frequency}
+                      </p>
+                    </div>
+                    <button className="text-gray-400 hover:text-gray-600">
+                      <Edit3 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center space-x-4 text-xs text-gray-500 mb-2">
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>
+                        {new Date(prescription.startDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <span>to</span>
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>
+                        {new Date(prescription.endDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {prescription.notes && (
+                    <p className="text-sm text-gray-600 bg-gray-50 rounded p-2">
+                      {prescription.notes}
+                    </p>
+                  )}
+                </div>
+              ))
+            )
+          ) : patientNotes.length === 0 ? (
             <div className="text-center py-8">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No care notes found</p>
-              <p className="text-sm text-gray-400">Add a care note to get started</p>
+              <p className="text-sm text-gray-400">
+                Add a care note to get started
+              </p>
             </div>
           ) : (
             patientNotes.map((note) => (
-              <div key={note.id} className="border border-gray-200 rounded-lg p-4">
+              <div
+                key={note.id}
+                className="border border-gray-200 rounded-lg p-4 bg-white"
+              >
                 <div className="flex items-start justify-between mb-2">
-                  <span className={`text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded ${note.type === 'observation' ? 'bg-blue-100 text-blue-700' :
-                    note.type === 'treatment' ? 'bg-green-100 text-green-700' :
-                      'bg-purple-100 text-purple-700'
-                    }`}>
+                  <span
+                    className={`text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded ${note.type === "observation"
+                      ? "bg-blue-100 text-blue-700"
+                      : note.type === "treatment"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-purple-100 text-purple-700"
+                      }`}
+                  >
                     {note.type}
                   </span>
                   <span className="text-xs text-gray-500">
                     {new Date(note.timestamp).toLocaleString()}
                   </span>
                 </div>
-                <p className="text-sm text-gray-700">{note.note}</p>
+                <div className="prose prose-sm max-w-none text-gray-700">
+                  <ReactMarkdown>{note.note}</ReactMarkdown>
+                </div>
               </div>
             ))
-          )
-        )}
+          )}
+        </div>
       </div>
+
+
     </div>
   );
 };
-export default CareManagement;
 
+export default CareManagement;
