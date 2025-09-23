@@ -1,134 +1,106 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import Diabetes from "../models/diabetesModel";
 import { connectMongoDB } from "../lib/mongodb";
 import { SmartCareAI, type GlucoseData } from "../services/SmartCareAI";
+import { verifyToken, AuthenticatedRequest } from "../middleware/verifyToken";
 
 const router = express.Router();
 const smartCareAI = new SmartCareAI();
 
-// Connect to MongoDB once when this module is loaded
 connectMongoDB();
 
-
-router.post("/", async (req, res) => {
+/**
+ * POST /api/diabetesVitals
+ * Save new vitals immediately + generate AI feedback asynchronously
+ */
+router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // 1. Save vitals to database
+    if (!req.user?.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-    const newVitals = new Diabetes(req.body);
+    const { glucose, context = "Random", language = "en", requestAI } = req.body;
+
+    const newVitals = new Diabetes({
+      ...req.body,
+      userId: req.user.userId,
+    });
+
     const saved = await newVitals.save();
 
-    // 2. Extract necessary fields for AI feedback
-    const { glucose, context = "Random", language = "en" } = req.body;
+    // Respond immediately without waiting for AI
+    res.status(201).json({
+      message: "✅ Diabetes vitals saved successfully",
+      id: saved._id,
+      data: saved,
+      aiFeedback: null,  // initially null
+      aiProcessing: !!requestAI, // flag to indicate AI is being generated
+    });
 
-    let aiFeedback: string | null = null;
-
-    // 3. Generate AI feedback if glucose is valid
-    if (typeof glucose === "number" && !isNaN(glucose) && glucose > 0) {
+    // Generate AI feedback in the background
+    if (requestAI && typeof glucose === "number" && glucose > 0) {
       try {
-        console.log(`🤖 Generating AI feedback for glucose: ${glucose} mg/dL (${context})`);
-
         const glucoseData: GlucoseData = {
           glucose,
           context: context as "Fasting" | "Post-meal" | "Random",
           language: language as "en" | "sw",
         };
 
-        aiFeedback = await smartCareAI.generateGlucoseFeedback(glucoseData);
-        console.log("✅ AI Feedback Generated successfully");
+        const aiFeedback = await smartCareAI.generateGlucoseFeedback(glucoseData);
+
+        // Update the vitals record with AI feedback
+        await Diabetes.findByIdAndUpdate(saved._id, { aiFeedback });
+
+        console.log(`✅ AI feedback saved for vitals ${saved._id}`);
       } catch (aiError: any) {
         console.error("❌ AI feedback generation failed:", aiError.message);
       }
-    } else {
-      console.warn("⚠️ No valid glucose value provided for AI feedback.");
     }
-
-    // 4. Return response with AI feedback if available
-    res.status(201).json({
-      message: "Diabetes vitals saved successfully",
-      id: saved._id,
-      data: saved,
-      aiFeedback,
-      aiProvider: "SmartCareAI-Ollama",
-    });
   } catch (error: any) {
     console.error("❌ Database error:", error.message);
-    res.status(500).json({
-      message: "Server error",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
 /**
- * GET: Health check for SmartCareAI
- * (⚠️ Must be BEFORE '/:id' to avoid conflicts)
+ * GET /api/diabetesVitals/me
+ * Retrieve vitals for the logged-in user
  */
-router.get("/ai/health", async (req, res) => {
+router.get("/me", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const isConnected = await smartCareAI.checkConnection();
-    const models = isConnected ? await smartCareAI.getAvailableModels() : [];
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
+    const vitals = await Diabetes.find({ userId }).sort({ createdAt: -1 });
     res.status(200).json({
-      smartCareAI: {
-        connected: isConnected,
-        availableModels: models,
-        provider: "Ollama",
-      },
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      smartCareAI: {
-        connected: false,
-        error: error.message,
-        provider: "Ollama",
-      },
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-/**
- * GET: Retrieve all diabetes vitals
- */
-router.get("/", async (req, res) => {
-  try {
-    const vitals = await Diabetes.find().sort({ createdAt: -1 });
-    res.status(200).json({
-      message: "Diabetes vitals retrieved successfully",
+      message: "✅ User vitals retrieved successfully",
       data: vitals,
       count: vitals.length,
     });
   } catch (error: any) {
-    console.error("❌ Database error:", error.message);
-    res.status(500).json({
-      message: "Server error",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
 /**
- * GET: Retrieve a specific diabetes vital by ID
+ * GET /api/diabetesVitals/ai/:id
+ * Retrieve AI feedback for a specific vitals record
  */
-router.get("/:id", async (req, res) => {
+router.get("/ai/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const vital = await Diabetes.findById(req.params.id);
-    if (!vital) {
-      return res.status(404).json({
-        message: "Diabetes vital not found",
-      });
+    const vitals = await Diabetes.findById(req.params.id);
+    if (!vitals) {
+      return res.status(404).json({ message: "Vital record not found" });
     }
+
     res.status(200).json({
-      message: "Diabetes vital retrieved successfully",
-      data: vital,
+      aiFeedback: vitals.aiFeedback || null,
+      aiProcessing: !vitals.aiFeedback, // true if feedback is still generating
     });
   } catch (error: any) {
-    console.error("❌ Database error:", error.message);
-    res.status(500).json({
-      message: "Server error",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
