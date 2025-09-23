@@ -92,4 +92,6 @@ export interface AnomalyData {
   vitalValue?: number;
   normal?: number;
   abnormal?: number;
+
+  [key: string]: string | number | undefined;
 }
