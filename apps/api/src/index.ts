@@ -18,12 +18,12 @@ dotenv.config();
 const app = express();
 
 // ✅ CRITICAL: Convert PORT to number for app.listen()
-const PORT = parseInt(process.env.PORT || '3001', 10);
+const PORT = parseInt(process.env.PORT || '8000', 10);
 
 // ✅ CORS CONFIGURATION - MUST BE BEFORE OTHER MIDDLEWARE
 const allowedOrigins = [
   'http://localhost:3000',
-  'http://localhost:3001',
+  'http://localhost:8000',
   'https://smartcare-new-web.vercel.app', // ✅ Your Vercel URL
 ];
 
