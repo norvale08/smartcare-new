@@ -9,6 +9,9 @@ const smartCareAI = new SmartCareAI();
 
 connectMongoDB();
 
+// ✅ Allow preflight OPTIONS requests for all routes in this router
+router.options("*", (_req, res) => res.sendStatus(200));
+
 /**
  * POST /api/diabetesVitals
  * Save new vitals immediately + generate AI feedback asynchronously
@@ -33,11 +36,11 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       message: "✅ Diabetes vitals saved successfully",
       id: saved._id,
       data: saved,
-      aiFeedback: null,  // initially null
-      aiProcessing: !!requestAI, // flag to indicate AI is being generated
+      aiFeedback: null,
+      aiProcessing: !!requestAI,
     });
 
-    // Generate AI feedback in the background
+    // Generate AI feedback in background
     if (requestAI && typeof glucose === "number" && glucose > 0) {
       try {
         const glucoseData: GlucoseData = {
@@ -50,7 +53,6 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
 
         // Update the vitals record with AI feedback
         await Diabetes.findByIdAndUpdate(saved._id, { aiFeedback });
-
         console.log(`✅ AI feedback saved for vitals ${saved._id}`);
       } catch (aiError: any) {
         console.error("❌ AI feedback generation failed:", aiError.message);
@@ -97,7 +99,7 @@ router.get("/ai/:id", verifyToken, async (req: AuthenticatedRequest, res: Respon
 
     res.status(200).json({
       aiFeedback: vitals.aiFeedback || null,
-      aiProcessing: !vitals.aiFeedback, // true if feedback is still generating
+      aiProcessing: !vitals.aiFeedback,
     });
   } catch (error: any) {
     res.status(500).json({ message: "Server error", error: error.message });
