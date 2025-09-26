@@ -1,6 +1,7 @@
+//page.tsx
 'use client';
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Header from './components/Header';
 import WelcomePanel from "./components/WelcomePanel";
 import PatientsTable from "./components/AssignedPatients";
@@ -12,6 +13,7 @@ import CareManagement from "./components/CareManagement";
 
 
 import { Patient, VitalTrend, DashboardStats, Prescription, CareNote } from "../../types/doctor";
+import { formatRelativeTime } from "./lib/utils";
 
 
 import {
@@ -35,6 +37,7 @@ const anomalyDistributionBar = anomalyDistribution.filter(
 
 const DoctorsDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedVital, setSelectedVital] = useState<keyof VitalTrend>("heartRate");
 
@@ -42,6 +45,55 @@ const DoctorsDashboard = () => {
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/doctorDashboard`, {
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        } // Express API
+        const data = await res.json();
+
+        // Transform backend -> frontend structure
+        const transformed: Patient[] = data.map((p: any) => {
+          // Build condition string from booleans
+          const conditionList: string[] = [];
+          if (p.conditions?.diabetes) conditionList.push("Diabetes");
+          if (p.conditions?.hypertension) conditionList.push("Hypertension");
+
+          // Capitalize helper
+          const capitalize = (str: string) =>
+            str
+              ? str
+                .toLowerCase()
+                .replace(/\b\w/g, (c) => c.toUpperCase())
+              : "";
+
+          return {
+            id: p._id,
+            name: capitalize(p.fullName),
+            age: new Date().getFullYear() - new Date(p.dob).getFullYear(),
+            gender: capitalize(p.gender),
+            condition: conditionList.length > 0 ? conditionList.join(", ") : "",
+            vitals: p.vitals,
+            riskLevel: p.riskLevel,
+            location: p.location ?? "Unknown",
+            lastUpdate: formatRelativeTime(p.updatedAt) || formatRelativeTime(p.createdAt),
+          };
+        });
+
+        setPatients(transformed);
+      } catch (err) {
+        console.error("Error fetching patients:", err);
+      }
+    };
+
+    fetchPatients();
+  }, []);
 
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [careNotes, setCareNotes] = useState<CareNote[]>([]);
