@@ -10,7 +10,7 @@ export const dashboardStats = {
 
 export const patients: Patient[] = [
   {
-    id: 1,
+    id: "1",
     name: "Antorny John Kaiser",
     age: 65, gender: "Male",
     condition: "Hypertension",
@@ -20,29 +20,27 @@ export const patients: Patient[] = [
     vitals: {
       heartRate: 72,
       bloodPressure: '125/75',
-      glucose: 105,
       temperature: 98.2,
       oxygenSat: 97
     }
   },
   {
-    id: 2,
+    id: "2",
     name: "Jane Smith",
     age: 72,
     gender: "Female",
     condition: "Diabetes",
-    riskLevel: "medium",
+    riskLevel: "low",
     location: "Kisumu",
     lastUpdate: '15 mins ago',
     vitals: {
       heartRate: 92,
       glucose: 95,
       temperature: 98.4,
-      oxygenSat: 89
     }
   },
   {
-    id: 3,
+    id: "3",
     name: "Samuel Karanja",
     age: 58,
     gender: "Male",
@@ -53,13 +51,12 @@ export const patients: Patient[] = [
     vitals: {
       heartRate: 78,
       bloodPressure: '135/85',
-      glucose: 180,
       temperature: 99.1,
       oxygenSat: 98
     }
   },
   {
-    id: 4,
+    id: "4",
     name: "Alice Obwaya",
     age: 70,
     gender: "Female",
@@ -69,7 +66,6 @@ export const patients: Patient[] = [
     lastUpdate: '2 hours ago',
     vitals: {
       heartRate: 85,
-      bloodPressure: '160/90',
       glucose: 120,
       temperature: 98.6,
       oxygenSat: 96
