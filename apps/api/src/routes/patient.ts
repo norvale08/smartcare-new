@@ -57,13 +57,25 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
 
     // Save to Patient model
     const patientData = {
-      ...body,
       userId: req.userId,
-      selectedDiseases,
+      fullName: body.fullName,
+      firstname: body.firstname,
+      lastname: body.lastname,
+      phoneNumber: body.phoneNumber,
+      dob: body.dob ? new Date(body.dob) : null,
+      gender: body.gender,
+      weight: body.weight ? parseInt(body.weight) : null,
+      height: body.height ? parseInt(body.height) : null,
+      picture: body.picture || null,
+      relationship: body.relationship,
+
       diabetes: body.diabetes === true || body.diabetes === "true",
       hypertension: body.hypertension === true || body.hypertension === "true",
-      cardiovascular:
-        body.cardiovascular === true || body.cardiovascular === "true",
+      cardiovascular: body.cardiovascular === true || body.cardiovascular === "true",
+
+      allergies: body.allergies || "",
+      surgeries: body.surgeries || "",
+      doctorId: body.doctorId || null,
     };
 
     const newPatient = new Patient(patientData);
@@ -84,14 +96,11 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
 
       diabetes: body.diabetes === true || body.diabetes === "true",
       hypertension: body.hypertension === true || body.hypertension === "true",
-      cardiovascular:
-        body.cardiovascular === true || body.cardiovascular === "true",
+      cardiovascular: body.cardiovascular === true || body.cardiovascular === "true",
 
       allergies: body.allergies || "",
       surgeries: body.surgeries || "",
-      conditions: body.conditions || "",
 
-      selectedDiseases,
       profileCompleted: true,
       isFirstLogin: false,
       updatedAt: new Date(),
@@ -210,6 +219,7 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
       "cardiovascular",
       "allergies",
       "surgeries",
+      "doctorId",
     ];
 
     const update: any = {};
