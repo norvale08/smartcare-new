@@ -1,4 +1,16 @@
-import {Schema,model,models} from "mongoose";
+//models/diabetetsModel.ts
+import mongoose, { Schema, Document, model, models } from "mongoose";
+
+export interface IDiabetes extends Document {
+    userId: mongoose.Types.ObjectId;
+    glucose: number;
+    context: "Fasting" | "Post-meal" | "Random";
+    language: "en" | "sw";
+    aiRequested?: boolean;
+    aiFeedback?: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
 
 const DiabetesSchema = new Schema({
     glucose: {
@@ -16,7 +28,8 @@ const DiabetesSchema = new Schema({
         default: "en"
     },
     userId: {  // Add this field
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
         required: true
     },
     aiRequested: {
@@ -25,7 +38,7 @@ const DiabetesSchema = new Schema({
     aiFeedback: {
         type: String,
     }
-}, {timestamps: true});
+}, { timestamps: true });
 
 const Diabetes = models.Diabetes || model("Diabetes", DiabetesSchema);
 export default Diabetes;
