@@ -1,12 +1,18 @@
+// AssignedPatients.tsx
 import { Patient } from "@/types/doctor";
 import { getRiskColor } from "../lib/utils";
+
 
 import {
   Activity,
   Heart,
   Clock,
   Droplet,
+  Info,
   MapPin,
+  Thermometer,
+  Wind,
+  Scale,
 } from 'lucide-react';
 
 interface PatientsTableProps {
@@ -14,14 +20,28 @@ interface PatientsTableProps {
   setSelectedPatient: (patient: Patient) => void;
 }
 
+// Define icon + label mapping for vitals
+const vitalIcons: Record<
+  "heartRate" | "bloodPressure" | "glucose" | "context" | "temperature" | "oxygenSat" | "bmi",
+  { icon: JSX.Element; unit?: string }
+> = {
+  heartRate: { icon: <Heart className="w-3 h-3 text-red-500" />, unit: "bpm" },
+  bloodPressure: { icon: <Activity className="w-3 h-3 text-blue-500" /> },
+  glucose: { icon: <Droplet className="w-3 h-3 text-green-500" />, unit: "mg/dL" },
+  context: { icon: <Info className="w-3 h-3 text-yellow-500" />, unit: "" },
+  temperature: { icon: <Thermometer className="w-3 h-3 text-orange-500" />, unit: "°C" },
+  oxygenSat: { icon: <Wind className="w-3 h-3 text-purple-500" />, unit: "%" },
+  bmi: { icon: <Scale className="w-3 h-3 text-indigo-500" />, unit: "kg/m²" },
+};
+
 const PatientsTable: React.FC<PatientsTableProps> = ({ patients, setSelectedPatient }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <h2 className="text-lg font-semibold mb-4">Assigned Patients</h2>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[700px] overflow-y-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
@@ -47,18 +67,23 @@ const PatientsTable: React.FC<PatientsTableProps> = ({ patients, setSelectedPati
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{patient.condition}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <Heart className="w-3 h-3 text-red-500" />
-                      <span>{patient.vitals?.heartRate ?? ''} bpm</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Activity className="w-3 h-3 text-blue-500" />
-                      <span>{patient.vitals?.bloodPressure ?? 'N/A'}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Droplet className="w-3 h-3 text-green-500" />
-                      <span>{patient.vitals?.glucose ?? 'N/A'} mg/dL</span>
-                    </div>
+                    {patient.vitals &&
+                      (Object.keys(vitalIcons) as (keyof typeof vitalIcons)[]).map(
+                        (key) => {
+                          const value = patient.vitals?.[key];
+                          if (value === undefined || value === null || value === "")
+                            return null;
+
+                          const vital = vitalIcons[key];
+                        return (
+                          <div key={key} className="flex items-center space-x-2">
+                            {vital.icon}
+                            <span>
+                              {value} {vital.unit ?? ""}
+                            </span>
+                          </div>
+                        );
+                      })}
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -79,7 +104,7 @@ const PatientsTable: React.FC<PatientsTableProps> = ({ patients, setSelectedPati
                     <Clock className="h-3 w-3" />
                     <span>{patient.lastUpdate}</span>
                   </div>
-                  </td>
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <button
                     onClick={() => setSelectedPatient(patient)}
