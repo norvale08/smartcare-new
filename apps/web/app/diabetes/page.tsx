@@ -7,24 +7,22 @@ import DiabetesAIFeedback from "../components/diabetesPages/DiabetesAIFeedback";
 import DiabetesLifestyle from "../components/diabetesPages/DiabetesLifestyle";
 import DiabetesMedications from "../components/diabetesPages/DiabetesMedications";
 import DiabetesFoodAdvice from "../components/diabetesPages/DiabetesFoodAdvice";
+import { LifestyleData } from "../components/diabetesPages/DiabetesLifestyle";
 
 const Page = () => {
   const [refreshToken, setRefreshToken] = useState(0);
   const [vitalsId, setVitalsId] = useState<string | undefined>();
   const [requestAI, setRequestAI] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "vitals" | "lifestyle" | "medications" | "food" | "final"
-  >("vitals");
+  const [activeTab, setActiveTab] = useState<"vitals" | "lifestyle" | "medications" | "food" | "final">("vitals");
 
   const [lifestyleDone, setLifestyleDone] = useState(false);
   const [medicationsDone, setMedicationsDone] = useState(false);
   const [foodDone, setFoodDone] = useState(false);
 
-  // Replace this with actual userId from your auth/session
   const userId = "USER_ID_HERE";
 
   const handleVitalsSubmit = (id: string, aiRequested: boolean) => {
-    setRefreshToken((prev) => prev + 1);
+    setRefreshToken(prev => prev + 1);
     setVitalsId(id);
     setRequestAI(aiRequested);
   };
@@ -33,16 +31,11 @@ const Page = () => {
 
   const isTabDisabled = (tab: string) => {
     switch (tab) {
-      case "lifestyle":
-        return !vitalsId;
-      case "medications":
-        return !lifestyleDone;
-      case "food":
-        return !medicationsDone;
-      case "final":
-        return !foodDone;
-      default:
-        return false;
+      case "lifestyle": return !vitalsId;
+      case "medications": return !lifestyleDone;
+      case "food": return !medicationsDone;
+      case "final": return !foodDone;
+      default: return false;
     }
   };
 
@@ -50,30 +43,24 @@ const Page = () => {
     <div className="max-w-4xl mx-auto mt-8 space-y-6">
       <DiabetesAlerts refreshToken={refreshToken} />
 
-      {/* Tabs Navigation */}
       <div className="flex gap-4 border-b">
-        {["vitals", "lifestyle", "medications", "food", "final"].map((tab) => (
+        {["vitals", "lifestyle", "medications", "food", "final"].map(tab => (
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
             disabled={isTabDisabled(tab)}
             className={`px-4 py-2 font-medium capitalize transition-colors ${
-              activeTab === tab
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-blue-500"
+              activeTab === tab ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-blue-500"
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {tab}
-            {(tab === "lifestyle" && lifestyleDone) ||
-            (tab === "medications" && medicationsDone) ||
-            (tab === "food" && foodDone) ? (
+            {(tab === "lifestyle" && lifestyleDone) || (tab === "medications" && medicationsDone) || (tab === "food" && foodDone) ? (
               <span className="ml-1 text-green-500">✓</span>
             ) : null}
           </button>
         ))}
       </div>
 
-      {/* Tab Content */}
       <div>
         {activeTab === "vitals" && (
           <div className="space-y-6">
@@ -84,8 +71,8 @@ const Page = () => {
 
         {activeTab === "lifestyle" && (
           <DiabetesLifestyle
-            userId={userId} // <-- pass userId here
-            onSubmit={() => {
+            userId={userId}
+            onSubmit={(data: LifestyleData) => {
               setLifestyleDone(true);
               setTimeout(() => setActiveTab("medications"), 500);
             }}
@@ -136,7 +123,7 @@ const Page = () => {
                 setLifestyleDone(false);
                 setMedicationsDone(false);
                 setFoodDone(false);
-                setRefreshToken((prev) => prev + 1);
+                setRefreshToken(prev => prev + 1);
               }}
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
             >

@@ -6,9 +6,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 interface Props {
   vitalsId?: string;
   enabled: boolean;
+  onComplete?: () => void; // ✅ allow parent to pass a callback
 }
 
-const DiabetesAIFeedback: React.FC<Props> = ({ vitalsId, enabled }) => {
+const DiabetesAIFeedback: React.FC<Props> = ({ vitalsId, enabled, onComplete }) => {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -31,6 +32,9 @@ const DiabetesAIFeedback: React.FC<Props> = ({ vitalsId, enabled }) => {
         if (data.aiFeedback) {
           setFeedback(data.aiFeedback);
           setLoading(false);
+
+          // ✅ Notify parent once feedback is ready
+          if (onComplete) onComplete();
         } else {
           setFeedback("⚠️ No AI feedback available yet.");
           setLoading(false);
@@ -43,7 +47,7 @@ const DiabetesAIFeedback: React.FC<Props> = ({ vitalsId, enabled }) => {
     };
 
     fetchFeedback();
-  }, [vitalsId, enabled]);
+  }, [vitalsId, enabled, onComplete]);
 
   return (
     <div className="bg-white shadow-md p-5 rounded-lg border-l-4 border-purple-500">
