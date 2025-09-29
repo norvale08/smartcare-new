@@ -1,26 +1,27 @@
+//doctor.ts
+
 // patient types
-export interface Vitals {
-  heartRate?: number;
-  bloodPressure?: string;
-  glucose?: number;
-  temperature?: number;
-  oxygenSat?: number;
+export interface Patient {
+  id: string;
+  name: string;
+  age: number;
+  gender: string;
+  condition?: string;
+  vitals?: {
+    heartRate?: number;
+    bloodPressure?: string;
+    glucose?: number;
+    temperature?: number;
+    oxygenSat?: number;
+    context?: string;
+    bmi?: number;
+  };
+  riskLevel: "low" | "high" | "critical";
+  location?: string;
+  lastUpdate?: string;
 }
 
 export type Condition = 'Hypertension' | 'Diabetes';
-
-export interface Patient {
-  id: number;
-  name: string;
-  age: number;
-  gender: 'Male' | 'Female' | 'Other';
-  condition: Condition;
-  vitals?: Vitals;
-  riskLevel: "low" | "medium" | "high" | "critical";
-  location: string;
-  lastUpdate: string;
-}
-
 
 // dashboard stats types
 export interface DashboardStats {

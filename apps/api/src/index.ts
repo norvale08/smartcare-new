@@ -1,8 +1,9 @@
+//index.ts
 import express from 'express';
 import cors from 'cors'; // ✅ ADD THIS IMPORT
 import session from "express-session";
-import { connectMongoDB } from './lib/mongodb';
 import dotenv from "dotenv";
+import { connectMongoDB } from './lib/mongodb';
 import authRoute from "./routes/auth";
 import loginRoute from './routes/login';
 import emergencyRoutes from './routes/emergency';
@@ -11,10 +12,22 @@ import userStatusRouter from './routes/userStatus';
 import profileRoutes from './routes/patient';
 import uploadRoute from "./routes/upload";
 import hypertensionRoutes from './routes/hypertensionVitals';
+
 //import medicationsRoutes from './routes/medications';
 import doctorsRoutes from "./routes/doctors"
 import diabetesAiRoutes from "./routes/diabetesAi";
 import LifestyleRoutes from "./routes/diabetesLifestyle"
+
+import medicationsRoutes from './routes/medications';
+import doctorsRoutes from "./routes/doctors";
+import logoutRoute from './routes/logout';
+/* import messagesRouter from './routes/messages'; */
+import doctorDashboardRouter from './routes/doctorDashboardRoutes';
+
+
+
+
+
 dotenv.config();
 
 const app = express();
@@ -94,9 +107,19 @@ app.use('/api/diabetesVitals', diabetesRoutes);
 app.use('/api/hypertensionVitals', hypertensionRoutes);
 //app.use('/api/medications', medicationsRoutes);
 app.use('/api/userStatus', userStatusRouter);
+
 app.use ('/api/doctors',doctorsRoutes);
 app.use("/api/diabetesAi", diabetesAiRoutes);
 app.use('/api/lifestyle', LifestyleRoutes)
+
+app.use ('/api/doctors',doctorsRoutes)
+app.use('/api/logout', logoutRoute);
+/* app.use('/api/messages', messagesRouter); */
+app.use('/api/doctorDashboard', doctorDashboardRouter);
+
+
+
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 

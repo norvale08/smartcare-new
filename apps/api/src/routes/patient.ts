@@ -215,7 +215,37 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
 
     // Save to Patient model
     const patientData = {
+
       userId: new mongoose.Types.ObjectId(req.userId),
+=======
+      userId: req.userId,
+      fullName: body.fullName,
+      firstname: body.firstname,
+      lastname: body.lastname,
+      phoneNumber: body.phoneNumber,
+      dob: body.dob ? new Date(body.dob) : null,
+      gender: body.gender,
+      weight: body.weight ? parseInt(body.weight) : null,
+      height: body.height ? parseInt(body.height) : null,
+      picture: body.picture || null,
+      relationship: body.relationship,
+
+      diabetes: body.diabetes === true || body.diabetes === "true",
+      hypertension: body.hypertension === true || body.hypertension === "true",
+      cardiovascular: body.cardiovascular === true || body.cardiovascular === "true",
+
+      allergies: body.allergies || "",
+      surgeries: body.surgeries || "",
+      doctorId: body.doctorId || null,
+    };
+
+    const newPatient = new Patient(patientData);
+    const savedPatient = await newPatient.save();
+    console.log("✅ Patient saved:", savedPatient._id);
+
+    // Update User record
+    const userUpdateData = {
+
       fullName: body.fullName,
       firstname: body.firstname,
       lastname: body.lastname,
@@ -229,6 +259,7 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
       diabetes: body.diabetes === true || body.diabetes === "true",
       hypertension: body.hypertension === true || body.hypertension === "true",
       cardiovascular: body.cardiovascular === true || body.cardiovascular === "true",
+
       allergies: body.allergies || "",
       surgeries: body.surgeries || "",
     };
@@ -243,6 +274,12 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
     // Update User record
     const userUpdateData = {
       selectedDiseases,
+
+
+      allergies: body.allergies || "",
+      surgeries: body.surgeries || "",
+
+
       profileCompleted: true,
       isFirstLogin: false,
       patientProfileId: savedPatient._id,
@@ -348,6 +385,7 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
       "cardiovascular",
       "allergies",
       "surgeries",
+      "doctorId",
     ];
 
     const update: any = {};
