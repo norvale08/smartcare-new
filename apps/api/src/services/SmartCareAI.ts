@@ -17,6 +17,25 @@ export interface LifestyleAIInput extends GlucoseData {
   lifestyle: LifestyleData;
 }
 
+export interface VitalsData {
+  glucose: number;
+  context: "Fasting" | "Post-meal" | "Random";
+  bloodPressure?: {
+    systolic: number;
+    diastolic: number;
+  };
+  weight?: number;
+  height?: number;
+  age?: number;
+  language?: "en" | "sw";
+}
+
+export interface FoodAdviceInput extends VitalsData {
+  lifestyle?: LifestyleData;
+  medicalHistory?: string[];
+  allergies?: string[];
+}
+
 export class SmartCareAI {
   private model = process.env.OLLAMA_MODEL || "llama3.2:3b";
 
@@ -41,7 +60,6 @@ export class SmartCareAI {
       for await (const token of stream) {
         const text = token.message?.content || "";
         content += text;
-        // Remove this line: process.stdout.write(text);
       }
 
       return content.trim() || "⚠️ No summary available.";
@@ -73,7 +91,6 @@ export class SmartCareAI {
       for await (const token of stream) {
         const text = token.message?.content || "";
         content += text;
-        // Remove this line: process.stdout.write(text);
       }
 
       return content.trim() || "⚠️ No feedback available.";
@@ -117,13 +134,117 @@ export class SmartCareAI {
       for await (const token of stream) {
         const text = token.message?.content || "";
         content += text;
-        
       }
 
       return content.trim() || "⚠️ No lifestyle advice available.";
     } catch (err) {
       console.error("AI error (lifestyle advice):", err);
       return "❌ Could not generate lifestyle AI advice.";
+    }
+  }
+
+  // 🆕 Generate Kenyan food recommendations based on vitals
+  async generateKenyanFoodAdvice(data: FoodAdviceInput): Promise<string> {
+    try {
+      const bmi = data.weight && data.height ? (data.weight / Math.pow(data.height / 100, 2)).toFixed(1) : null;
+      const bpStatus = data.bloodPressure ? 
+        (data.bloodPressure.systolic >= 140 || data.bloodPressure.diastolic >= 90 ? "High" : 
+         data.bloodPressure.systolic >= 120 || data.bloodPressure.diastolic >= 80 ? "Elevated" : "Normal") : "Unknown";
+
+      const kenyanFoods = {
+        grains: ["ugali (whole wheat)", "brown rice", "millet porridge", "sorghum", "quinoa", "oats", "arrow root (nduma)"],
+        vegetables: ["sukuma wiki (kale)", "spinach (mchicha)", "terere (amaranth)", "kunde (cowpeas leaves)", "mrenda (jute mallow)", "managu (African nightshade)", "pumpkin leaves", "sweet potato leaves"],
+        proteins: ["fish (tilapia, salmon)", "chicken (grilled/boiled)", "beans", "lentils (dengu)", "green grams (ndengu)", "githeri", "eggs", "lean beef (small portions)"],
+        fruits: ["avocado", "passion fruit", "guava", "papaya", "oranges", "apples", "watermelon", "pineapple (small portions)"],
+        healthyFats: ["avocado", "nuts (groundnuts)", "seeds", "olive oil", "fish oil"],
+        avoid: ["white ugali", "white rice", "chapati (frequent)", "mandazi", "soda", "processed foods", "excess red meat"]
+      };
+
+      const prompt = `
+        You are a Kenyan nutritionist specializing in diabetes management. 
+        
+        Patient Vitals:
+        - Blood glucose: ${data.glucose} mg/dL (${data.context})
+        - Blood pressure: ${data.bloodPressure ? `${data.bloodPressure.systolic}/${data.bloodPressure.diastolic} mmHg (${bpStatus})` : "Not provided"}
+        - BMI: ${bmi ? `${bmi} kg/m²` : "Not calculated"}
+        - Age: ${data.age || "Not provided"}
+        ${data.lifestyle ? `- Exercise: ${data.lifestyle.exercise}, Alcohol: ${data.lifestyle.alcohol}` : ""}
+        
+        Available Kenyan Foods:
+        - Grains: ${kenyanFoods.grains.join(", ")}
+        - Vegetables: ${kenyanFoods.vegetables.join(", ")}
+        - Proteins: ${kenyanFoods.proteins.join(", ")}
+        - Fruits: ${kenyanFoods.fruits.join(", ")}
+        - Healthy fats: ${kenyanFoods.healthyFats.join(", ")}
+        - Foods to limit: ${kenyanFoods.avoid.join(", ")}
+
+        Provide a comprehensive Kenyan food plan that:
+        1. Addresses their current glucose level and blood pressure
+        2. Suggests specific Kenyan meals for breakfast, lunch, and dinner
+        3. Mentions portion sizes and timing
+        4. Includes traditional Kenyan foods that are diabetes-friendly
+        5. Gives specific cooking methods (e.g., boiling, steaming vs frying)
+        6. Mentions foods to avoid or limit
+        
+        Format as a practical meal plan they can follow immediately.
+        ${data.language === "sw" ? "Respond in Kiswahili." : "Respond in English."}
+        
+        Keep the advice culturally relevant, practical, and affordable for Kenyan context.
+      `;
+
+      let content = "";
+      const stream = await ollama.chat({ 
+        model: this.model, 
+        messages: [{ role: "user", content: prompt }], 
+        stream: true 
+      });
+
+      for await (const token of stream) {
+        const text = token.message?.content || "";
+        content += text;
+      }
+
+      return content.trim() || "⚠️ No food advice available.";
+    } catch (err) {
+      console.error("AI error (food advice):", err);
+      return "❌ Could not generate food advice.";
+    }
+  }
+
+  // 🆕 Generate quick food recommendations for specific situations
+  async generateQuickFoodTips(data: { glucose: number; context: string; language?: string }): Promise<string> {
+    try {
+      const prompt = `
+        You are a Kenyan nutritionist. 
+        The patient has a glucose reading of ${data.glucose} mg/dL (${data.context}).
+        
+        Provide 3-4 immediate Kenyan food recommendations or warnings based on this reading:
+        - If high glucose: foods to avoid right now and what to eat to help lower it
+        - If low glucose: immediate Kenyan foods to help raise glucose safely
+        - If normal: foods to maintain stable levels
+        
+        Use common Kenyan foods like ugali, sukuma wiki, githeri, fruits, etc.
+        ${data.language === "sw" ? "Respond in Kiswahili." : "Respond in English."}
+        
+        Keep it brief (2-3 sentences) and actionable.
+      `;
+
+      let content = "";
+      const stream = await ollama.chat({ 
+        model: this.model, 
+        messages: [{ role: "user", content: prompt }], 
+        stream: true 
+      });
+
+      for await (const token of stream) {
+        const text = token.message?.content || "";
+        content += text;
+      }
+
+      return content.trim() || "⚠️ No quick tips available.";
+    } catch (err) {
+      console.error("AI error (quick food tips):", err);
+      return "❌ Could not generate quick food tips.";
     }
   }
 }

@@ -3,10 +3,11 @@ import jwt from "jsonwebtoken";
 import Patient from "../models/patient";
 import User from "../models/user";
 import { connectMongoDB } from "../lib/mongodb";
+import mongoose from "mongoose";
 
 const router = express.Router();
 
-// Simple authentication middleware
+// Authentication middleware
 const authenticateUser = (req: any, res: any, next: any) => {
   try {
     const token =
@@ -30,6 +31,163 @@ const authenticateUser = (req: any, res: any, next: any) => {
     return res.status(401).json({ message: "Invalid token" });
   }
 };
+
+// Get the authenticated user's patient profile
+router.get("/me", authenticateUser, async (req: any, res: any) => {
+  try {
+    await connectMongoDB();
+
+    console.log("=== PROFILE FETCH DEBUG ===");
+    console.log("🔍 Looking for userId:", req.userId);
+    console.log("🔍 userId type:", typeof req.userId);
+    console.log("🔍 Is valid ObjectId:", mongoose.Types.ObjectId.isValid(req.userId));
+
+    // Ensure userId is ObjectId
+    const userId = new mongoose.Types.ObjectId(req.userId);
+    console.log("🔍 Converted to ObjectId:", userId);
+
+    // Try to get Patient document
+    const patient = await Patient.findOne({ userId: userId }).sort({ createdAt: -1 });
+    
+    console.log("🔍 Patient query result:", patient ? "FOUND" : "NOT FOUND");
+    
+    if (patient) {
+      console.log("✅ Patient profile found:", patient._id);
+      console.log("📋 Patient data:", {
+        fullName: patient.fullName,
+        dob: patient.dob,
+        gender: patient.gender,
+        weight: patient.weight,
+        height: patient.height
+      });
+
+      return res.status(200).json({ 
+        success: true,
+        data: {
+          _id: patient._id,
+          userId: patient.userId,
+          fullName: patient.fullName,
+          firstname: patient.firstname,
+          lastname: patient.lastname,
+          dob: patient.dob,
+          gender: patient.gender,
+          weight: patient.weight,
+          height: patient.height,
+          picture: patient.picture,
+          phoneNumber: patient.phoneNumber,
+          relationship: patient.relationship,
+          diabetes: patient.diabetes,
+          hypertension: patient.hypertension,
+          cardiovascular: patient.cardiovascular,
+          allergies: patient.allergies,
+          surgeries: patient.surgeries,
+          createdAt: patient.createdAt
+        }
+      });
+    }
+
+    // If no Patient document found, check how many exist
+    const allPatients = await Patient.find({});
+    console.log("📊 Total Patient documents in DB:", allPatients.length);
+    
+    if (allPatients.length > 0) {
+      console.log("📋 Sample Patient userIds:", allPatients.slice(0, 3).map(p => ({
+        _id: p._id,
+        userId: p.userId,
+        fullName: p.fullName
+      })));
+    }
+
+    // Check if User exists
+    const user = await User.findById(userId);
+    console.log("🔍 User found:", user ? "YES" : "NO");
+    
+    if (user) {
+      console.log("📋 User data:", {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        profileCompleted: user.profileCompleted
+      });
+    }
+
+    if (!user) {
+      console.log("❌ User not found in database");
+      return res.status(404).json({ 
+        success: false,
+        message: "User account not found",
+        code: "USER_NOT_FOUND"
+      });
+    }
+
+    console.log("⚠️ No Patient document found for this user");
+    return res.status(404).json({ 
+      success: false,
+      message: "Patient profile not found. Please complete your profile.",
+      code: "PROFILE_NOT_FOUND",
+      hint: "You may need to complete the multi-step profile form"
+    });
+
+  } catch (error) {
+    console.error("❌ Fetch patient error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to fetch patient profile",
+      code: "SERVER_ERROR",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// Debug endpoint - shows all data
+router.get("/debug", authenticateUser, async (req: any, res: any) => {
+  try {
+    await connectMongoDB();
+
+    const userId = new mongoose.Types.ObjectId(req.userId);
+    
+    const patient = await Patient.findOne({ userId: userId }).sort({ createdAt: -1 });
+    const allPatients = await Patient.find({}).limit(5);
+    const user = await User.findById(userId);
+
+    res.status(200).json({
+      success: true,
+      debug: {
+        requestedUserId: req.userId,
+        userIdType: typeof req.userId,
+        convertedUserId: userId.toString(),
+        
+        patientFound: !!patient,
+        patientData: patient || null,
+        
+        userFound: !!user,
+        userData: user ? {
+          _id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileCompleted: user.profileCompleted,
+          role: user.role
+        } : null,
+        
+        totalPatientsInDB: allPatients.length,
+        samplePatients: allPatients.map(p => ({
+          _id: p._id,
+          userId: p.userId.toString(),
+          fullName: p.fullName,
+          createdAt: p.createdAt
+        }))
+      }
+    });
+  } catch (error) {
+    console.error("❌ Debug error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Debug failed",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
 
 router.post("/", authenticateUser, async (req: any, res: any) => {
   try {
@@ -57,43 +215,37 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
 
     // Save to Patient model
     const patientData = {
-      ...body,
-      userId: req.userId,
-      selectedDiseases,
-      diabetes: body.diabetes === true || body.diabetes === "true",
-      hypertension: body.hypertension === true || body.hypertension === "true",
-      cardiovascular:
-        body.cardiovascular === true || body.cardiovascular === "true",
-    };
-
-    const newPatient = new Patient(patientData);
-    const savedPatient = await newPatient.save();
-    console.log("✅ Patient saved:", savedPatient._id);
-
-    // Update User record
-    const userUpdateData = {
+      userId: new mongoose.Types.ObjectId(req.userId),
       fullName: body.fullName,
       firstname: body.firstname,
       lastname: body.lastname,
-      phoneNumber: body.phoneNumber,
-      dob: body.dob ? new Date(body.dob) : undefined,
+      dob: new Date(body.dob),
       gender: body.gender,
-      weight: body.weight ? parseInt(body.weight) : undefined,
-      height: body.height ? parseInt(body.height) : undefined,
+      weight: parseInt(body.weight),
+      height: parseInt(body.height),
+      picture: body.picture,
+      phoneNumber: body.phoneNumber,
       relationship: body.relationship,
-
       diabetes: body.diabetes === true || body.diabetes === "true",
       hypertension: body.hypertension === true || body.hypertension === "true",
-      cardiovascular:
-        body.cardiovascular === true || body.cardiovascular === "true",
-
+      cardiovascular: body.cardiovascular === true || body.cardiovascular === "true",
       allergies: body.allergies || "",
       surgeries: body.surgeries || "",
-      conditions: body.conditions || "",
+    };
 
+    console.log("💾 Saving Patient data:", patientData);
+
+    const newPatient = new Patient(patientData);
+    const savedPatient = await newPatient.save();
+    console.log("✅ Patient saved with _id:", savedPatient._id);
+    console.log("✅ Patient userId:", savedPatient.userId);
+
+    // Update User record
+    const userUpdateData = {
       selectedDiseases,
       profileCompleted: true,
       isFirstLogin: false,
+      patientProfileId: savedPatient._id,
       updatedAt: new Date(),
     };
 
@@ -114,7 +266,8 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
       {
         userId: updatedUser._id,
         email: updatedUser.email,
-        name: `${updatedUser.firstname} ${updatedUser.lastname}`,
+        name: `${updatedUser.firstName} ${updatedUser.lastName}`,
+        role: updatedUser.role,
         status: "complete",
         disease: selectedDiseases,
         isFirstLogin: false,
@@ -149,7 +302,7 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
       user: {
         id: updatedUser._id,
         email: updatedUser.email,
-        name: `${updatedUser.firstname} ${updatedUser.lastname}`,
+        name: `${updatedUser.firstName} ${updatedUser.lastName}`,
         profileCompleted: true,
         selectedDiseases,
       },
@@ -159,40 +312,25 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
   } catch (error) {
     console.error("❌ Profile save error:", error);
 
-    // Safe TypeScript handling of unknown error
     let details: string | undefined;
     if (error instanceof Error) {
       details = error.message;
     }
 
     res.status(500).json({
+      success: false,
       error: "Failed to save patient's profile",
       details: process.env.NODE_ENV === "development" ? details : undefined,
     });
   }
 });
 
-// Get the authenticated user's patient profile
-router.get("/me", authenticateUser, async (req: any, res: any) => {
-  try {
-    await connectMongoDB();
-
-    const patient = await Patient.findOne({ userId: req.userId }).sort({ createdAt: -1 });
-    if (!patient) {
-      return res.status(404).json({ message: "Patient profile not found" });
-    }
-
-    res.status(200).json({ data: patient });
-  } catch (error) {
-    console.error("❌ Fetch patient error:", error);
-    res.status(500).json({ message: "Failed to fetch patient profile" });
-  }
-});
-
-// Update the authenticated user's patient profile
+// Update patient profile
 router.put("/", authenticateUser, async (req: any, res: any) => {
   try {
     await connectMongoDB();
+
+    const userId = new mongoose.Types.ObjectId(req.userId);
 
     const updatableFields = [
       "fullName",
@@ -224,8 +362,8 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
     }
 
     const patient = await Patient.findOneAndUpdate(
-      { userId: req.userId },
-      { $set: update, $setOnInsert: { userId: req.userId } },
+      { userId: userId },
+      { $set: update, $setOnInsert: { userId: userId } },
       { new: true, upsert: true }
     );
 
@@ -233,22 +371,17 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
       return res.status(404).json({ message: "Patient profile not found" });
     }
 
-    // Optionally mirror some fields to User
-    try {
-      const userUpdate: any = {};
-      if (update.weight !== undefined) userUpdate.weight = parseInt(update.weight);
-      if (update.height !== undefined) userUpdate.height = parseInt(update.height);
-      if (Object.keys(userUpdate).length > 0) {
-        await User.findByIdAndUpdate(req.userId, userUpdate, { new: true });
-      }
-    } catch (e) {
-      console.warn("Non-critical: failed to mirror fields to User", e);
-    }
-
-    res.status(200).json({ message: "Patient profile updated", data: patient });
+    res.status(200).json({ 
+      success: true,
+      message: "Patient profile updated", 
+      data: patient 
+    });
   } catch (error) {
     console.error("❌ Update patient error:", error);
-    res.status(500).json({ message: "Failed to update patient profile" });
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to update patient profile" 
+    });
   }
 });
 
