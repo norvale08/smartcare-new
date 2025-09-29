@@ -12,11 +12,18 @@ import userStatusRouter from './routes/userStatus';
 import profileRoutes from './routes/patient';
 import uploadRoute from "./routes/upload";
 import hypertensionRoutes from './routes/hypertensionVitals';
+
+//import medicationsRoutes from './routes/medications';
+import doctorsRoutes from "./routes/doctors"
+import diabetesAiRoutes from "./routes/diabetesAi";
+import LifestyleRoutes from "./routes/diabetesLifestyle"
+
 import medicationsRoutes from './routes/medications';
 import doctorsRoutes from "./routes/doctors";
 import logoutRoute from './routes/logout';
 /* import messagesRouter from './routes/messages'; */
 import doctorDashboardRouter from './routes/doctorDashboardRoutes';
+
 
 
 
@@ -98,12 +105,18 @@ app.use('/api/profile', profileRoutes);
 app.use("/api/upload", uploadRoute);
 app.use('/api/diabetesVitals', diabetesRoutes);
 app.use('/api/hypertensionVitals', hypertensionRoutes);
-app.use('/api/medications', medicationsRoutes);
+//app.use('/api/medications', medicationsRoutes);
 app.use('/api/userStatus', userStatusRouter);
+
+app.use ('/api/doctors',doctorsRoutes);
+app.use("/api/diabetesAi", diabetesAiRoutes);
+app.use('/api/lifestyle', LifestyleRoutes)
+
 app.use ('/api/doctors',doctorsRoutes)
 app.use('/api/logout', logoutRoute);
 /* app.use('/api/messages', messagesRouter); */
 app.use('/api/doctorDashboard', doctorDashboardRouter);
+
 
 
 

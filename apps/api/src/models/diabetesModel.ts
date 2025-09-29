@@ -1,3 +1,6 @@
+
+import { Schema, model, models } from "mongoose";
+
 //models/diabetetsModel.ts
 import mongoose, { Schema, Document, model, models } from "mongoose";
 
@@ -12,33 +15,50 @@ export interface IDiabetes extends Document {
     updatedAt: Date;
 }
 
-const DiabetesSchema = new Schema({
+
+const DiabetesSchema = new Schema(
+  {
     glucose: {
-        type: Number,
-        required: true
+      type: Number,
+      required: true,
     },
     context: {
-        type: String,
-        enum: ["Fasting", "Post-meal", "Random"],
-        required: true
+      type: String,
+      enum: ["Fasting", "Post-meal", "Random"],
+      required: true,
     },
     language: {
-        type: String,
-        enum: ["en", "sw"],
-        default: "en"
+      type: String,
+      enum: ["en", "sw"],
+      default: "en",
     },
+
+    userId: {
+      type: String,
+      required: true,
+
     userId: {  // Add this field
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true
+
     },
     aiRequested: {
-        type: Boolean
+      type: Boolean,
+      default: false,
     },
     aiFeedback: {
+
+      type: String,
+    },
+  },
+  { timestamps: true }
+);
+
         type: String,
     }
 }, { timestamps: true });
+
 
 const Diabetes = models.Diabetes || model("Diabetes", DiabetesSchema);
 export default Diabetes;
