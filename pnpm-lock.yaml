@@ -33,6 +33,9 @@ importers:
       '@auth/express':
         specifier: ^0.11.0
         version: 0.11.0(express@4.21.2)(nodemailer@7.0.6)
+      '@huggingface/inference':
+        specifier: ^4.8.0
+        version: 4.8.0
       ai-service:
         specifier: workspace:*
         version: link:../../packages/ai-service
@@ -774,6 +777,17 @@ packages:
 
   '@floating-ui/utils@0.2.10':
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
+
+  '@huggingface/inference@4.8.0':
+    resolution: {integrity: sha512-Eq98EAXqYn4rKMfrbEXuhc3IjKfaeIO6eXNOZk9xk6v5akrIWRtd6d1h0fjAWyX4zRbdUpXRh6MvsqXnzGvXCA==}
+    engines: {node: '>=18'}
+
+  '@huggingface/jinja@0.5.1':
+    resolution: {integrity: sha512-yUZLld4lrM9iFxHCwFQ7D1HW2MWMwSbeB7WzWqFYDWK+rEb+WldkLdAJxUPOmgICMHZLzZGVcVjFh3w/YGubng==}
+    engines: {node: '>=18'}
+
+  '@huggingface/tasks@0.19.48':
+    resolution: {integrity: sha512-9OIMhl6lSvuim0EisMPbwO4fUmMlbAXh5/GIMVAQALoByouockaaDxMuzJ9IffHRsl3qjS+QSD/mPe65kuPeyQ==}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -5556,6 +5570,15 @@ snapshots:
       react-dom: 19.1.0(react@18.3.1)
 
   '@floating-ui/utils@0.2.10': {}
+
+  '@huggingface/inference@4.8.0':
+    dependencies:
+      '@huggingface/jinja': 0.5.1
+      '@huggingface/tasks': 0.19.48
+
+  '@huggingface/jinja@0.5.1': {}
+
+  '@huggingface/tasks@0.19.48': {}
 
   '@humanfs/core@0.19.1': {}
 

@@ -11,8 +11,10 @@ import userStatusRouter from './routes/userStatus';
 import profileRoutes from './routes/patient';
 import uploadRoute from "./routes/upload";
 import hypertensionRoutes from './routes/hypertensionVitals';
-import medicationsRoutes from './routes/medications';
+//import medicationsRoutes from './routes/medications';
 import doctorsRoutes from "./routes/doctors"
+import diabetesAiRoutes from "./routes/diabetesAi";
+import LifestyleRoutes from "./routes/diabetesLifestyle"
 dotenv.config();
 
 const app = express();
@@ -90,9 +92,11 @@ app.use('/api/profile', profileRoutes);
 app.use("/api/upload", uploadRoute);
 app.use('/api/diabetesVitals', diabetesRoutes);
 app.use('/api/hypertensionVitals', hypertensionRoutes);
-app.use('/api/medications', medicationsRoutes);
+//app.use('/api/medications', medicationsRoutes);
 app.use('/api/userStatus', userStatusRouter);
-app.use ('/api/doctors',doctorsRoutes)
+app.use ('/api/doctors',doctorsRoutes);
+app.use("/api/diabetesAi", diabetesAiRoutes);
+app.use('/api/lifestyle', LifestyleRoutes)
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 

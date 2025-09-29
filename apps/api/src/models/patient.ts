@@ -1,4 +1,5 @@
-import mongoose,{Schema,model,models} from "mongoose";
+// patient.ts
+import mongoose, { Schema, model, models } from "mongoose";
 
 const PatientSchema = new Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -14,7 +15,7 @@ const PatientSchema = new Schema({
   height: { type: Number, required: true },
   picture: { type: String }, // Store base64 or URL
 
-  
+
   firstname: { type: String, required: true },
   lastname: { type: String, required: true },
   phoneNumber: { type: String, required: true },
@@ -24,18 +25,21 @@ const PatientSchema = new Schema({
     required: true,
   },
 
-  
+
   diabetes: { type: Boolean, default: false },
   hypertension: { type: Boolean, default: false },
   cardiovascular: { type: Boolean, default: false },
 
-  
+
   allergies: { type: String, default: "" },
   surgeries: { type: String, default: "" },
+  doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // ✅ assigned doctor
 
-  createdAt: { type: Date, default: Date.now },
-});
+},
 
-const Patient = models.Patient ||model("Patient",PatientSchema);
+  { timestamps: true }   // ✅ adds createdAt + updatedAt
+);
+
+const Patient = models.Patient || model("Patient", PatientSchema);
 
 export default Patient;

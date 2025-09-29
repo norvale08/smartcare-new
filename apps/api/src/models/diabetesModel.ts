@@ -1,31 +1,35 @@
-import {Schema,model,models} from "mongoose";
+import { Schema, model, models } from "mongoose";
 
-const DiabetesSchema = new Schema({
+const DiabetesSchema = new Schema(
+  {
     glucose: {
-        type: Number,
-        required: true
+      type: Number,
+      required: true,
     },
     context: {
-        type: String,
-        enum: ["Fasting", "Post-meal", "Random"],
-        required: true
+      type: String,
+      enum: ["Fasting", "Post-meal", "Random"],
+      required: true,
     },
     language: {
-        type: String,
-        enum: ["en", "sw"],
-        default: "en"
+      type: String,
+      enum: ["en", "sw"],
+      default: "en",
     },
-    userId: {  // Add this field
-        type: String,
-        required: true
+    userId: {
+      type: String,
+      required: true,
     },
     aiRequested: {
-        type: Boolean
+      type: Boolean,
+      default: false,
     },
     aiFeedback: {
-        type: String,
-    }
-}, {timestamps: true});
+      type: String,
+    },
+  },
+  { timestamps: true }
+);
 
 const Diabetes = models.Diabetes || model("Diabetes", DiabetesSchema);
 export default Diabetes;
