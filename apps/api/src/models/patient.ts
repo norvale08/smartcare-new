@@ -33,11 +33,11 @@ const PatientSchema = new Schema({
 
   allergies: { type: String, default: "" },
   surgeries: { type: String, default: "" },
-  doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // ✅ assigned doctor
+  doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // assigned doctor
 
 },
 
-  { timestamps: true }   // ✅ adds createdAt + updatedAt
+  { timestamps: true }   // adds createdAt + updatedAt
 );
 
 const Patient = models.Patient || model("Patient", PatientSchema);
