@@ -7,7 +7,7 @@ import EmergencyStep from "./emergency";
 import MedicalHistoryStep from "./MedicalHistoryStep";
 import ConditionsSelectionStep from "./ConditionSelection";
 import ReviewStep from "./Review";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 const steps = [
   { number: 1, title: "Basic Info" },
@@ -19,13 +19,12 @@ const steps = [
 
 const MultiStepForm = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const initialStep = Number(searchParams?.get("step") ?? 1); // ✅ Fixed
-  const [step, setStep] = useState(initialStep);
+  const [step, setStep] = useState(1); // start at step 1
 
   const methods = useForm({
     mode: "onChange",
     defaultValues: {
+      userId: "",
       fullName: "",
       dob: "",
       gender: "",
@@ -61,7 +60,8 @@ const MultiStepForm = () => {
         if (res.ok) {
           const data = await res.json();
           if (data?.success && data.data) {
-            reset(data.data); // prefill form
+            // include userId in form values
+            reset({ ...data.data, userId: data.data.userId });
           }
         }
       } catch (err) {
@@ -74,7 +74,7 @@ const MultiStepForm = () => {
 
   const onSubmit = async (data: any) => {
     try {
-      console.log("Submitting:", data);
+      console.log("Submitting vitals with userId:", data.userId);
       const token = localStorage.getItem("token");
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile`, {
