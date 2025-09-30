@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { TriangleAlert, CheckCircle } from "lucide-react";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 
 type StatusData = {
   systolic: number;
@@ -27,7 +29,7 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
           return;
         }
 
-        const res = await fetch('http://localhost:3001/api/hypertensionVitals/me', {
+        const res = await fetch(`${API_URL}/api/hypertensionVitals/me`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
