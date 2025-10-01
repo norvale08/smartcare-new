@@ -19,7 +19,8 @@ const steps = [
 
 const MultiStepForm = () => {
   const router = useRouter();
-  const [step, setStep] = useState(1); // start at step 1
+  const [step, setStep] = useState(1);
+  const [isExistingProfile, setIsExistingProfile] = useState(false);
 
   const methods = useForm({
     mode: "onChange",
@@ -60,12 +61,18 @@ const MultiStepForm = () => {
         if (res.ok) {
           const data = await res.json();
           if (data?.success && data.data) {
+            console.log("✅ Existing profile found:", data.data);
+            setIsExistingProfile(true);
             // include userId in form values
             reset({ ...data.data, userId: data.data.userId });
           }
+        } else {
+          console.log("ℹ️ No existing profile found");
+          setIsExistingProfile(false);
         }
       } catch (err) {
         console.error("❌ Error fetching profile:", err);
+        setIsExistingProfile(false);
       }
     };
 
@@ -74,11 +81,18 @@ const MultiStepForm = () => {
 
   const onSubmit = async (data: any) => {
     try {
-      console.log("Submitting vitals with userId:", data.userId);
+      console.log("=== PROFILE SUBMISSION DEBUG ===");
+      console.log("Is existing profile:", isExistingProfile);
+      console.log("Submitting data:", data);
+      
       const token = localStorage.getItem("token");
 
+      // Use POST for new profiles, PUT for updates
+      const method = isExistingProfile ? "PUT" : "POST";
+      console.log("Using HTTP method:", method);
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile`, {
-        method: "PUT",
+        method: method,
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -87,16 +101,29 @@ const MultiStepForm = () => {
       });
 
       const result = await res.json();
+      
       if (!res.ok) {
-        console.error("Submission failed:", result);
+        console.error("❌ Submission failed:", result);
         alert("Something went wrong. Please try again.");
         return;
       }
 
       console.log("✅ Success:", result);
-      if (result.token) localStorage.setItem("token", result.token);
+      console.log("📍 Redirect destination:", result.redirectTo);
+
+      // Update token if provided
+      if (result.token) {
+        localStorage.setItem("token", result.token);
+        console.log("🔑 Token updated");
+      }
+
       alert("Profile updated successfully!");
-      router.push(result.redirectTo || "/dashboard");
+
+      // CRITICAL: Use redirectTo from response, with proper fallback
+      const redirectPath = result.redirectTo || "/profile";
+      console.log("🚀 Redirecting to:", redirectPath);
+      
+      router.push(redirectPath);
     } catch (error) {
       console.error("❌ Error submitting form:", error);
       alert("Server error. Try again later.");
@@ -104,16 +131,24 @@ const MultiStepForm = () => {
   };
 
   const handleNext = async () => {
+    // Validate condition selection on step 3
     if (step === 3) {
       const values = getValues();
       if (!(values.diabetes || values.hypertension || values.cardiovascular)) {
-        setError("conditions", { type: "manual", message: "Select at least one condition" });
+        setError("conditions", { 
+          type: "manual", 
+          message: "Please select at least one health condition" 
+        });
         return;
-      } else clearErrors("conditions");
+      } else {
+        clearErrors("conditions");
+      }
     }
 
     const isStepValid = await trigger();
-    if (isStepValid) setStep((prev) => Math.min(prev + 1, steps.length));
+    if (isStepValid) {
+      setStep((prev) => Math.min(prev + 1, steps.length));
+    }
   };
 
   const handlePrevious = () => setStep((prev) => Math.max(prev - 1, 1));
@@ -163,13 +198,13 @@ const MultiStepForm = () => {
                     <button
                       type="button"
                       onClick={handleNext}
-                      className="bg-blue-600 text-white py-2 px-4 rounded"
+                      className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
                     >
                       Next Step
                     </button>
                   ) : (
                     <Button type="submit" className="ml-auto">
-                      Submit
+                      {isExistingProfile ? "Update Profile" : "Complete Profile"}
                     </Button>
                   )}
                 </div>

@@ -308,8 +308,6 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
   }
 });
 
-// Update patient profile
-// Update patient profile
 router.put("/", authenticateUser, async (req: any, res: any) => {
   try {
     await connectMongoDB();
