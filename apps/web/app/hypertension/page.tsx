@@ -59,7 +59,7 @@ const getBpLevel = (systolic: number, diastolic: number): string => {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// Mock drug data removed since it was causing syntax issues
+
 
 function DashboardPage() {
   const { data: session, status } = useSession();
@@ -114,6 +114,17 @@ function DashboardPage() {
       setDiastolic('');
       setHeartRate('');
       setAlertRefreshToken(Date.now());
+
+      // Refresh AI recommendations after vitals update
+      try {
+        const res = await axios.get(`${API_URL}/api/hypertension/lifestyle`, {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        });
+        setAiRecommendations(res.data);
+      } catch (err) {
+        console.error("Failed to refresh AI recommendations:", err);
+      }
     } catch (error: any) {
       setMessage(error?.response?.data?.message || '❌ Failed to save vitals');
       console.error(error);
@@ -127,6 +138,9 @@ function DashboardPage() {
     exercise: ""
   });
   const [dietGenerated, setDietGenerated] = useState(false);
+
+  const [aiRecommendations, setAiRecommendations] = useState({ advice: '', alerts: [], warnings: [] });
+  const [loadingAI, setLoadingAI] = useState(false);
 
   // Doctor search states
   // const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -224,7 +238,23 @@ function DashboardPage() {
       }
     };
 
+    const fetchAIRecommendations = async () => {
+      try {
+        setLoadingAI(true);
+        const res = await axios.get(`${API_URL}/api/hypertension/lifestyle`, {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        });
+        setAiRecommendations(res.data);
+      } catch (err) {
+        console.error("Failed to fetch AI recommendations:", err);
+      } finally {
+        setLoadingAI(false);
+      }
+    };
+
     fetchVitals();
+    fetchAIRecommendations();
   }, [alertRefreshToken]);
 
   const todayAlert = getTodayAlertStatus(vitals);
@@ -399,6 +429,8 @@ function DashboardPage() {
           bpLevel={currentBpLevel}
           alertStatus={todayAlert.status}
           todayVitals={{ systolic: todayAlert.systolic, diastolic: todayAlert.diastolic, heartRate: todayAlert.heartRate }}
+          aiRecommendations={aiRecommendations}
+          loadingAI={loadingAI}
         />
 
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
