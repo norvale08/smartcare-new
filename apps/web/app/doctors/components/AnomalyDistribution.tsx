@@ -1,3 +1,4 @@
+// AnomalyDistribution.tsx
 "use client";
 import React from "react";
 import {
@@ -14,7 +15,7 @@ import {
 } from "recharts";
 import { AnomalyData } from "@/types/doctor";
 
-const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e"];
+const COLORS = ["#ef4444",  "#eab308", "#22c55e"];
 
 interface AnomalyProps {
   anomalyDistributionPie?: AnomalyData[]; // expects { risk: string; riskValue: number }

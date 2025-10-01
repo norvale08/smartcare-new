@@ -16,7 +16,7 @@ const PatientLocations: React.FC<PatientLocationsProps> = ({ patients }) => {
         <p className="text-gray-500">Map integration goes here</p>
       </div>
       <div className="p-6">
-        <div className="space-y-3">
+        <div className="max-h-[500px] overflow-y-auto space-y-3 pr-2">
           {patients.map((patient) => (
             <div key={patient.id} className="flex items-center justify-between p-3 border rounded-lg">
               <div className="flex items-center space-x-3">
