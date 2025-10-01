@@ -77,15 +77,15 @@ export interface TimeBloodPressure {
 export interface VitalTrend {
   heartRate: TimeValue[];
   bloodPressure: TimeBloodPressure[];
-  temperature: TimeValue[];
   glucose: TimeValue[];
+  bmi: TimeValue[];   // Added BMI trend
 }
 
 
 // anomaly distribution types
 export interface AnomalyData {
   // For Pie Chart
-  risk?: "critical" | "high" | "medium" | "low";
+  risk?: "critical" | "high" | "low";
   riskValue?: number;
 
   // For Bar Chart
