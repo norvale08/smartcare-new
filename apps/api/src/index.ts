@@ -16,6 +16,7 @@ import doctorsRoutes from "./routes/doctors"
 import diabetesAiRoutes from "./routes/diabetesAi";
 import LifestyleRoutes from "./routes/diabetesLifestyle";
 import hypertensionLifestyle from "./routes/hypertensionLifestyle";
+import doctorDashboardRouter from './routes/doctorDashboardRoutes';
 dotenv.config();
 
 const app = express();
@@ -99,6 +100,8 @@ app.use ('/api/doctors',doctorsRoutes);
 app.use("/api/diabetesAi", diabetesAiRoutes);
 app.use('/api/lifestyle', LifestyleRoutes);
 app.use('/api/hypertension/lifestyle', hypertensionLifestyle);
+app.use('/api/doctorDashboard', doctorDashboardRouter);
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 

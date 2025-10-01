@@ -5,127 +5,29 @@ import Diabetes, { IDiabetes } from "../models/diabetesModel";
 import HypertensionVital, { IHypertensionVital } from "../models/hypertensionVitals";
 import { formatRelativeTime } from "../utils/timeFormatter";
 import { evaluateRiskLevel } from "../utils/aiRiskEvaluator";
+import { getWeeklyWindow } from "../utils/getDateWindow";
+import { fill7Days, aggregateDailyBloodPressure } from "../utils/aggregateDaily";
 
 const router = Router();
 
-/**
- * Utility: Calculate age from DOB
- */
+// Calculate age from DOB
 function calculateAge(dob: Date): number {
     const diff = Date.now() - dob.getTime();
     const ageDt = new Date(diff);
     return Math.abs(ageDt.getUTCFullYear() - 1970);
 }
 
-/**
- * Utility: Calculate BMI
- */
+// Calculate BMI
 function calculateBMI(weight: number, height: number): number | null {
     if (!weight || !height) return null;
     return +(weight / Math.pow(height / 100, 2)).toFixed(1); // height in cm
 }
 
-/**
- * Utility: Determine risk level based on vitals + demographics
- */
+// Determine risk level based on vitals + demographics
 type RiskLevel = "low" | "high" | "critical";
 
-/* function determineRiskLevel(patient: any, vitals: any): RiskLevel {
-    const age = calculateAge(patient.dob);
-    const bmi = calculateBMI(patient.weight, patient.height);
-    let risk: RiskLevel = "low";
 
-    // 🔹 Diabetes risk
-    if (vitals.glucose) {
-        const glucose = vitals.glucose;
-        if (
-            (vitals.context === "Fasting" && glucose > 180) ||
-            (vitals.context === "Random" && glucose > 250)
-        ) {
-            return "critical"; // uncontrolled diabetes
-        } else if (
-            (vitals.context === "Fasting" && glucose > 125) ||
-            (vitals.context === "Random" && glucose > 200)
-        ) {
-            risk = "high";
-        } else if (glucose > 100) {
-            risk = "medium";
-        }
-    }
-    // 🔹 Hypertension risk
-    if (vitals.bloodPressure) {
-        const [systolic, diastolic] = vitals.bloodPressure
-            .split("/")
-            .map((n: string) => parseInt(n, 10));
-
-        if (systolic > 180 || diastolic > 120) {
-            return "critical"; // hypertensive crisis
-        } else if (systolic > 160 || diastolic > 100) {
-            risk = "high";
-        } else if (systolic > 140 || diastolic > 90) {
-            if (risk === "low") risk = "medium";
-        }
-    }
-
-    // 🔹 Heart rate risk
-    if (vitals.heartRate) {
-        if (vitals.heartRate < 40 || vitals.heartRate > 150) {
-            return "critical";
-        } else if (vitals.heartRate < 50 || vitals.heartRate > 120) {
-            risk = "high";
-        }
-    }
-
-    // --- Oxygen Saturation ---
-    if (vitals.oxygenSat) {
-        if (vitals.oxygenSat < 85) {
-            return "critical";
-        } else if (vitals.oxygenSat < 90) {
-            risk = "high";
-        } else if (vitals.oxygenSat < 95) {
-            if (risk === "low") risk = "medium";
-        }
-    }
-
-    // --- Temperature ---
-    if (vitals.temperature) {
-        if (vitals.temperature > 40) {
-            return "critical";
-        } else if (vitals.temperature > 38.5) {
-            risk = "high";
-        } else if (vitals.temperature > 37.5) {
-            if (risk === "low") risk = "medium";
-        }
-    }
-
-    // --- Age factor ---
-    if (age > 75 && (risk as RiskLevel) !== "critical") {
-        if (risk === "low") risk = "medium";
-        else if (risk === "medium") risk = "high";
-    }
-
-    // --- BMI factor ---
-    if (bmi && (bmi < 18.5 || bmi > 35)) {
-        if (risk === "low") risk = "medium";
-    }
-
-    // 🔹 Age factor
-    if (age > 65 && risk !== "high") {
-        risk = "medium";
-    }
-
-    // 🔹 BMI factor
-    if (bmi && (bmi < 18.5 || bmi > 30)) {
-        if (risk === "low") risk = "medium";
-    }
-
-    return risk;
-} */
-
-/**
- * @route   GET /patients
- * @desc    Get all patients with their latest vitals
- */
+// Get all patients with their latest vitals
 router.get("/", async (req, res) => {
     try {
         const { search } = req.query;
@@ -166,8 +68,8 @@ router.get("/", async (req, res) => {
                 const bmi = calculateBMI(patient.weight, patient.height);
                 if (bmi) vitals.bmi = bmi;
 
-                // 🔹 Calculate Risk Level
-                const riskLevel = await evaluateRiskLevel(patient.toObject(), vitals);/* determineRiskLevel(patient.toObject(), vitals); */
+                // Calculate Risk Level
+                const riskLevel = await evaluateRiskLevel(patient.toObject(), vitals);
 
                 return {
                     ...patient.toObject(),
@@ -183,62 +85,6 @@ router.get("/", async (req, res) => {
         );
 
         res.json(patientsWithVitals);
-    } catch (err: any) {
-        console.error("Error in GET /doctorDashboard:", err.message, err.stack);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-/**
- * @route   GET /patients/:id
- * @desc    Get single patient with latest vitals
- */
-router.get("/:id", async (req, res) => {
-    try {
-        const patient = await Patient.findById(req.params.id);
-        if (!patient) return res.status(404).json({ error: "Patient not found" });
-
-        let vitals: any = {};
-
-        // 🔹 Latest Diabetes Record
-        const diabetes: IDiabetes | null = await Diabetes.findOne({
-            userId: patient.userId,
-        })
-            .sort({ createdAt: -1 })
-            .lean<IDiabetes>();
-
-        if (diabetes) {
-            vitals.glucose = diabetes.glucose;
-            vitals.context = diabetes.context;
-        }
-
-        // 🔹 Latest Hypertension Record
-        const hypertension: IHypertensionVital | null =
-            await HypertensionVital.findOne({ userId: patient.userId })
-                .sort({ createdAt: -1 })
-                .lean<IHypertensionVital>();
-
-        if (hypertension) {
-            vitals.bloodPressure = `${hypertension.systolic}/${hypertension.diastolic}`;
-            vitals.heartRate = hypertension.heartRate;
-        }
-
-        const bmi = calculateBMI(patient.weight, patient.height);
-        if (bmi) vitals.bmi = bmi;
-
-        // 🔹 Calculate Risk Level
-        const riskLevel = await evaluateRiskLevel(patient.toObject(), vitals);/* determineRiskLevel(patient.toObject(), vitals); */
-
-        res.json({
-            ...patient.toObject(),
-            vitals,
-            riskLevel,
-            // Explicit conditions from patient collection
-            conditions: {
-                diabetes: patient.diabetes,
-                hypertension: patient.hypertension,
-            },
-        });
     } catch (err: any) {
         console.error("Error in GET /doctorDashboard:", err.message, err.stack);
         res.status(500).json({ error: err.message });
@@ -296,6 +142,90 @@ router.get("/api/doctorDashboard", async (req, res) => {
         console.error("Error fetching patients:", err);
         res.status(500).json({ error: "Failed to fetch patients" });
     }
+});
+
+
+
+// Vital Trends
+
+// GET /api/doctorDashboard/vitalTrends
+router.get("/vitalTrends", async (req, res) => {
+    try {
+    const { start, end } = getWeeklyWindow();
+
+    const patients = await Patient.find({
+      updatedAt: { $gte: start, $lte: end },
+    }).lean();
+
+    const diabetes = await Diabetes.find({
+      createdAt: { $gte: start, $lte: end },
+    }).lean();
+
+    const hypertension = await HypertensionVital.find({
+      createdAt: { $gte: start, $lte: end },
+    }).lean();
+
+    // Aggregate per day
+    const heartRate = fill7Days(
+      hypertension.reduce((acc, r) => {
+        const dayKey = new Date(r.createdAt).toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+        });
+        if (!acc[dayKey]) acc[dayKey] = [];
+        acc[dayKey].push(r.heartRate);
+        return acc;
+      }, {} as Record<string, number[]>),
+      "heartRate"
+    );
+
+    const bloodPressure = aggregateDailyBloodPressure(hypertension);
+
+    const glucose = fill7Days(
+      diabetes.reduce((acc, r) => {
+        const dayKey = new Date(r.createdAt).toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+        });
+        if (!acc[dayKey]) acc[dayKey] = [];
+        acc[dayKey].push(r.glucose);
+        return acc;
+      }, {} as Record<string, number[]>),
+      "glucose"
+    );
+
+    // BMI per patient (derive then group daily)
+    const bmiRecords = patients
+      .map((p) => ({
+        createdAt: p.updatedAt || p.createdAt,
+        bmi:
+          p.weight && p.height
+            ? +(p.weight / Math.pow(p.height / 100, 2)).toFixed(1)
+            : null,
+      }))
+      .filter((r) => r.bmi !== null);
+
+    const bmi = fill7Days(
+      bmiRecords.reduce((acc, r) => {
+        const dayKey = new Date(r.createdAt).toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+        });
+        if (!acc[dayKey]) acc[dayKey] = [];
+        acc[dayKey].push(r.bmi as number);
+        return acc;
+      }, {} as Record<string, number[]>),
+      "bmi"
+    );
+
+    res.json({ heartRate, bloodPressure, glucose, bmi });
+  } catch (err: any) {
+    console.error("Error in GET /vitalTrends:", err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 

@@ -1,17 +1,23 @@
+//WelcomePanel.tsx
 'use client';
-import React, { useState } from "react";
-import { DashboardStats, Alert, Patient } from "@/types/doctor";
+import React from "react";
+import { DashboardStats, Patient } from "@/types/doctor";
 
 
 interface WelcomePanelProps {
   stats: DashboardStats;
   patients: Patient[];
-  alerts: Alert[];
+  loading?: boolean;
 }
 
-export default function WelcomePanel({ stats, patients, alerts }: WelcomePanelProps) {
-  const [allAlerts] = useState<Alert[]>(alerts);
-  const [filteredPatients] = useState<Patient[]>(patients);
+export default function WelcomePanel({ stats, patients, loading }: WelcomePanelProps) {
+  // Count patients by risk level
+  const criticalCases = patients.filter(p => p.riskLevel === "critical").length;
+  const highCases = patients.filter(p => p.riskLevel === "high").length;
+
+  // Decide what to display
+  const displayCases = criticalCases > 0 ? criticalCases : highCases;
+  const displayLabel = criticalCases > 0 ? "Critical Cases" : "High Risk Cases";
 
   return (
     <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
@@ -25,11 +31,23 @@ export default function WelcomePanel({ stats, patients, alerts }: WelcomePanelPr
         </div>
         <div className="flex space-x-8">
           <div className="text-center">
-            <div className="text-3xl font-bold">{allAlerts.filter(a => a.severity === 'critical').length}</div>
-            <div className="text-blue-100">Critical Alerts</div>
+            <div className="text-3xl font-bold">
+              {loading ? (
+                <span className="animate-pulse">...</span>
+              ) : (
+                displayCases
+              )}
+            </div>
+            <div className="text-blue-100">{displayLabel}</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold">{filteredPatients.length}</div>
+            <div className="text-3xl font-bold">
+              {loading ? (
+                <span className="animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
+              ) : (
+                patients.length
+              )}
+            </div>
             <div className="text-blue-100">Assigned Patients</div>
           </div>
         </div>

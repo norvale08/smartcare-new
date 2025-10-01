@@ -10,26 +10,22 @@ import AnomalyDistributionChart from "./components/AnomalyDistribution";
 import Alerts from "./components/AlertsPanel";
 import PatientLocations from "./components/PatientLocation";
 import CareManagement from "./components/CareManagement";
+import PatientsTableSkeleton from "./components/PatientsTableSkeleton";
 
 
-import { Patient, VitalTrend, DashboardStats, Prescription, CareNote } from "../../types/doctor";
+
+import { Patient, VitalTrend, DashboardStats, Prescription, CareNote, AnomalyData } from "../../types/doctor";
 import { formatRelativeTime } from "./lib/utils";
 
 
 import {
-  patients,
   alerts,
-  vitalTrends,
   anomalyDistribution,
 } from "./lib/mockData";
 
 const stats: DashboardStats = {
   date: new Date(),
 };
-
-const anomalyDistributionPie = anomalyDistribution.filter(
-  (d) => d.risk && typeof d.riskValue === "number"
-);
 
 const anomalyDistributionBar = anomalyDistribution.filter(
   (d) => d.vital && typeof d.vitalValue === "number"
@@ -38,6 +34,7 @@ const anomalyDistributionBar = anomalyDistribution.filter(
 const DoctorsDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(true); // track loading state
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedVital, setSelectedVital] = useState<keyof VitalTrend>("heartRate");
 
@@ -89,11 +86,35 @@ const DoctorsDashboard = () => {
         setPatients(transformed);
       } catch (err) {
         console.error("Error fetching patients:", err);
+      } finally {
+        setLoading(false); // stop loading
       }
     };
 
     fetchPatients();
   }, []);
+
+
+  // Vital Trends
+  const [vitalTrends, setVitalTrends] = useState<VitalTrend>({ heartRate: [], bloodPressure: [], glucose: [], bmi: [], });
+
+  useEffect(() => {
+    const fetchTrends = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/doctorDashboard/vitalTrends`, {
+          cache: "no-store",
+        });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        setVitalTrends(data);
+      } catch (err) {
+        console.error("Error fetching vital trends:", err);
+      }
+    };
+    fetchTrends();
+  }, [API_URL]);
+
+
 
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [careNotes, setCareNotes] = useState<CareNote[]>([]);
@@ -127,6 +148,23 @@ const DoctorsDashboard = () => {
   };
 
 
+  // Compute anomaly distribution dynamically
+  const anomalyDistributionPie: AnomalyData[] = [
+    {
+      risk: "critical",
+      riskValue: patients.filter((p) => p.riskLevel === "critical").length,
+    },
+    {
+      risk: "high",
+      riskValue: patients.filter((p) => p.riskLevel === "high").length,
+    },
+    {
+      risk: "low",
+      riskValue: patients.filter((p) => p.riskLevel === "low").length,
+    },
+  ];
+
+
   const patientId = '12345'; // Replace with actual logic or dynamic value
   const token = 'your-auth-token'; // Possibly from auth context or localStorage
 
@@ -144,15 +182,20 @@ const DoctorsDashboard = () => {
         <WelcomePanel
           stats={stats}
           patients={patients}
-          alerts={alerts} />
+          loading={loading}   // pass loading state
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
-            <PatientsTable
-              patients={filteredPatients}
-              setSelectedPatient={handleViewCarePlan}
-            />
+            {loading ? (
+              <PatientsTableSkeleton />  // Show skeleton while loading
+            ) : (
+              <PatientsTable
+                patients={filteredPatients}
+                setSelectedPatient={handleViewCarePlan}
+              />
+            )}
             <VitalTrendsChart
               vitalTrends={vitalTrends}
               selectedVital={selectedVital}

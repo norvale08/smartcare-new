@@ -308,7 +308,6 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
   }
 });
 
-// Update patient profile
 router.put("/", authenticateUser, async (req: any, res: any) => {
   try {
     await connectMongoDB();
@@ -338,9 +337,7 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
       }
     }
 
-    if (update.dob) {
-      update.dob = new Date(update.dob);
-    }
+    if (update.dob) update.dob = new Date(update.dob);
 
     const patient = await Patient.findOneAndUpdate(
       { userId: req.userId },
@@ -352,23 +349,51 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
       return res.status(404).json({ message: "Patient profile not found" });
     }
 
-    // Mirror fields to User
+    // Mirror to User
     try {
       const userUpdate: any = {};
-      if (update.weight !== undefined) userUpdate.weight = parseInt(update.weight);
-      if (update.height !== undefined) userUpdate.height = parseInt(update.height);
-      if (Object.keys(userUpdate).length > 0) {
-        await User.findByIdAndUpdate(req.userId, userUpdate, { new: true });
+      for (const field of ["weight", "height", "firstname", "lastname", "fullName", "phoneNumber", "dob", "gender", "diabetes", "hypertension", "cardiovascular", "allergies", "surgeries"]) {
+        if (update[field] !== undefined) userUpdate[field] = update[field];
       }
+      userUpdate.profileCompleted = true;
+      await User.findByIdAndUpdate(req.userId, userUpdate, { new: true });
     } catch (e) {
       console.warn("Non-critical: failed to mirror fields to User", e);
     }
 
-    res.status(200).json({ message: "Patient profile updated", data: patient });
+    // Determine redirect
+    const selectedDiseases: string[] = [];
+    if (patient.diabetes) selectedDiseases.push("diabetes");
+    if (patient.hypertension) selectedDiseases.push("hypertension");
+    if (patient.cardiovascular) selectedDiseases.push("cardiovascular");
+
+    let redirectTo = "/dashboard";
+    if (selectedDiseases.length > 0) {
+      const primaryDisease = selectedDiseases[0];
+      switch (primaryDisease) {
+        case "diabetes":
+          redirectTo = "/diabetes";
+          break;
+        case "hypertension":
+          redirectTo = "/hypertension";
+          break;
+        case "cardiovascular":
+          redirectTo = "/cardiovascular";
+          break;
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Patient profile updated",
+      data: patient,
+      redirectTo, // ✅ return redirect
+    });
   } catch (error) {
     console.error("❌ Update patient error:", error);
     res.status(500).json({ message: "Failed to update patient profile" });
   }
 });
+
 
 export default router;
