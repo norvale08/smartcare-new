@@ -47,6 +47,21 @@ const MultiStepForm = () => {
 
   const { handleSubmit, getValues, setError, clearErrors, trigger, reset } = methods;
 
+  // Check URL for step parameter on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stepParam = params.get('step');
+    if (stepParam) {
+      const stepNumber = parseInt(stepParam, 10);
+      if (stepNumber >= 1 && stepNumber <= steps.length) {
+        setStep(stepNumber);
+      }
+    } else {
+      // No step parameter means base route, so start at step 1
+      setStep(1);
+    }
+  }, []);
+
   // Prefill form with existing user profile
   useEffect(() => {
     const fetchProfile = async () => {
@@ -153,6 +168,11 @@ const MultiStepForm = () => {
 
   const handlePrevious = () => setStep((prev) => Math.max(prev - 1, 1));
 
+  const handleGoToStep = (targetStep: number) => {
+    clearErrors(); // Clear any validation errors when navigating from review
+    setStep(targetStep);
+  };
+
   return (
     <div className="min-h-screen py-12 bg-gray-50">
       <div className="container max-w-4xl mx-auto">
@@ -185,7 +205,7 @@ const MultiStepForm = () => {
                 {step === 2 && <EmergencyStep />}
                 {step === 3 && <ConditionsSelectionStep />}
                 {step === 4 && <MedicalHistoryStep />}
-                {step === 5 && <ReviewStep goToStep={setStep} />}
+                {step === 5 && <ReviewStep goToStep={handleGoToStep} />}
 
                 {/* Navigation */}
                 <div className="flex justify-between mt-8">
