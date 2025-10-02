@@ -12,16 +12,36 @@ import {
   CartesianGrid,
   YAxis,
   XAxis,
+  Legend,
+  LabelList,
 } from "recharts";
-import { AnomalyData } from "@/types/doctor";
+import { AnomalyPieData, AnomalyBarData } from "@/types/doctor";
 
-const COLORS = ["#ef4444",  "#eab308", "#22c55e"];
+const COLORS = ["#ef4444", "#eab308", "#22c55e"];
 
 interface AnomalyProps {
-  anomalyDistributionPie?: AnomalyData[]; // expects { risk: string; riskValue: number }
-  anomalyDistributionBar?: AnomalyData[]; // expects { vital: string; normal: number; abnormal: number }
+  anomalyDistributionPie?: AnomalyPieData[]; // expects { risk: string; riskValue: number }
+  anomalyDistributionBar?: AnomalyBarData[]; // expects { vital: string; normal: number; abnormal: number }
 }
 
+// Custom tooltip
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white p-3 shadow-md rounded-lg border">
+        <p className="font-semibold">{label}</p>
+        <p className="text-green-600">
+          Normal: {data.normalCount}
+        </p>
+        <p className="text-red-600">
+          Abnormal: {data.abnormalCount}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 const AnomalyDistributionChart: React.FC<AnomalyProps> = ({
   anomalyDistributionPie = [],
   anomalyDistributionBar = [],
@@ -58,9 +78,32 @@ const AnomalyDistributionChart: React.FC<AnomalyProps> = ({
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="vital" />
             <YAxis />
-            <Tooltip />
-            <Bar dataKey="normal" stackId="a" fill="#10B981" name="Normal" />
-            <Bar dataKey="abnormal" stackId="a" fill="#EF4444" name="Abnormal" />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend />
+            <Bar dataKey="normal" stackId="a" fill="#4ade80" name="Normal (%)">
+              <LabelList
+                dataKey="normal"
+                position="inside"
+                formatter={(label: React.ReactNode) => {
+                  if (typeof label === "number" && label > 0) {
+                    return `${label}%`;
+                  }
+                  return ""; // hide 0% (or anything invalid)
+                }}
+              />
+            </Bar>
+            <Bar dataKey="abnormal" stackId="a" fill="#f87171" name="Abnormal (%)">
+              <LabelList
+                dataKey="abnormal"
+                position="inside"
+                formatter={(label: React.ReactNode) => {
+                  if (typeof label === "number" && label > 0) {
+                    return `${label}%`;
+                  }
+                  return ""; // hide 0% (or anything invalid)
+                }}
+              />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
