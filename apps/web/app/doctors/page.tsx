@@ -14,22 +14,18 @@ import PatientsTableSkeleton from "./components/PatientsTableSkeleton";
 
 
 
-import { Patient, VitalTrend, DashboardStats, Prescription, CareNote, AnomalyData } from "../../types/doctor";
+import { Patient, VitalTrend, DashboardStats, Prescription, CareNote, AnomalyPieData, AnomalyBarData } from "../../types/doctor";
 import { formatRelativeTime } from "./lib/utils";
 
 
 import {
   alerts,
-  anomalyDistribution,
 } from "./lib/mockData";
 
 const stats: DashboardStats = {
   date: new Date(),
 };
 
-const anomalyDistributionBar = anomalyDistribution.filter(
-  (d) => d.vital && typeof d.vitalValue === "number"
-);
 
 const DoctorsDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -149,7 +145,7 @@ const DoctorsDashboard = () => {
 
 
   // Compute anomaly distribution dynamically
-  const anomalyDistributionPie: AnomalyData[] = [
+  const anomalyDistributionPie: AnomalyPieData[] = [
     {
       risk: "critical",
       riskValue: patients.filter((p) => p.riskLevel === "critical").length,
@@ -163,6 +159,25 @@ const DoctorsDashboard = () => {
       riskValue: patients.filter((p) => p.riskLevel === "low").length,
     },
   ];
+
+
+  const [anomalyDistributionBar, setAnomalyDistributionBar] = useState<AnomalyBarData[]>([]);
+
+  useEffect(() => {
+    const fetchAnomalyDistribution = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/doctorDashboard/anomalyDistribution`, {
+          cache: "no-store",
+        });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        setAnomalyDistributionBar(data.anomalyDistributionBar);
+      } catch (err) {
+        console.error("Error fetching anomaly distribution:", err);
+      }
+    };
+    fetchAnomalyDistribution();
+  }, [API_URL]);
 
 
   const patientId = '12345'; // Replace with actual logic or dynamic value
