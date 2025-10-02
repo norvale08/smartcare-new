@@ -1,5 +1,5 @@
 "use client";
-
+import Link from "next/link";
 import React from "react";
 
 interface PatientProfileProps {
@@ -55,12 +55,12 @@ const PatientProfile: React.FC<PatientProfileProps> = ({ patient, vitals, onEdit
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <button
-          onClick={onEditClick}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm"
-        >
-          Edit Profile
-        </button>
+        <Link
+  href="/profile?step=5"
+  className="inline-block px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm border border-blue-200 font-medium text-sm"
+>
+  Edit Profile
+</Link>
         <div className="bg-emerald-400 text-white rounded-full px-4 py-2 text-sm font-medium">
           ● {patient?.status || "Active"}
         </div>
