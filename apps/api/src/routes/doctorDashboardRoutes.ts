@@ -7,6 +7,7 @@ import { formatRelativeTime } from "../utils/timeFormatter";
 import { evaluateRiskLevel } from "../utils/aiRiskEvaluator";
 import { getWeeklyWindow } from "../utils/getDateWindow";
 import { fill7Days, aggregateDailyBloodPressure } from "../utils/aggregateDaily";
+import { classifyVital } from "../utils/aiVitalClassifier";
 
 const router = Router();
 
@@ -151,81 +152,161 @@ router.get("/api/doctorDashboard", async (req, res) => {
 // GET /api/doctorDashboard/vitalTrends
 router.get("/vitalTrends", async (req, res) => {
     try {
-    const { start, end } = getWeeklyWindow();
+        const { start, end } = getWeeklyWindow();
 
-    const patients = await Patient.find({
-      updatedAt: { $gte: start, $lte: end },
-    }).lean();
+        const patients = await Patient.find({
+            updatedAt: { $gte: start, $lte: end },
+        }).lean();
 
-    const diabetes = await Diabetes.find({
-      createdAt: { $gte: start, $lte: end },
-    }).lean();
+        const diabetes = await Diabetes.find({
+            createdAt: { $gte: start, $lte: end },
+        }).lean();
 
-    const hypertension = await HypertensionVital.find({
-      createdAt: { $gte: start, $lte: end },
-    }).lean();
+        const hypertension = await HypertensionVital.find({
+            createdAt: { $gte: start, $lte: end },
+        }).lean();
 
-    // Aggregate per day
-    const heartRate = fill7Days(
-      hypertension.reduce((acc, r) => {
-        const dayKey = new Date(r.createdAt).toLocaleDateString("en-GB", {
-          weekday: "short",
-          day: "2-digit",
-          month: "short",
-        });
-        if (!acc[dayKey]) acc[dayKey] = [];
-        acc[dayKey].push(r.heartRate);
-        return acc;
-      }, {} as Record<string, number[]>),
-      "heartRate"
-    );
+        // Aggregate per day
+        const heartRate = fill7Days(
+            hypertension.reduce((acc, r) => {
+                const dayKey = new Date(r.createdAt).toLocaleDateString("en-GB", {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "short",
+                });
+                if (!acc[dayKey]) acc[dayKey] = [];
+                acc[dayKey].push(r.heartRate);
+                return acc;
+            }, {} as Record<string, number[]>),
+            "heartRate"
+        );
 
-    const bloodPressure = aggregateDailyBloodPressure(hypertension);
+        const bloodPressure = aggregateDailyBloodPressure(hypertension);
 
-    const glucose = fill7Days(
-      diabetes.reduce((acc, r) => {
-        const dayKey = new Date(r.createdAt).toLocaleDateString("en-GB", {
-          weekday: "short",
-          day: "2-digit",
-          month: "short",
-        });
-        if (!acc[dayKey]) acc[dayKey] = [];
-        acc[dayKey].push(r.glucose);
-        return acc;
-      }, {} as Record<string, number[]>),
-      "glucose"
-    );
+        const glucose = fill7Days(
+            diabetes.reduce((acc, r) => {
+                const dayKey = new Date(r.createdAt).toLocaleDateString("en-GB", {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "short",
+                });
+                if (!acc[dayKey]) acc[dayKey] = [];
+                acc[dayKey].push(r.glucose);
+                return acc;
+            }, {} as Record<string, number[]>),
+            "glucose"
+        );
 
-    // BMI per patient (derive then group daily)
-    const bmiRecords = patients
-      .map((p) => ({
-        createdAt: p.updatedAt || p.createdAt,
-        bmi:
-          p.weight && p.height
-            ? +(p.weight / Math.pow(p.height / 100, 2)).toFixed(1)
-            : null,
-      }))
-      .filter((r) => r.bmi !== null);
+        // BMI per patient (derive then group daily)
+        const bmiRecords = patients
+            .map((p) => ({
+                createdAt: p.updatedAt || p.createdAt,
+                bmi:
+                    p.weight && p.height
+                        ? +(p.weight / Math.pow(p.height / 100, 2)).toFixed(1)
+                        : null,
+            }))
+            .filter((r) => r.bmi !== null);
 
-    const bmi = fill7Days(
-      bmiRecords.reduce((acc, r) => {
-        const dayKey = new Date(r.createdAt).toLocaleDateString("en-GB", {
-          weekday: "short",
-          day: "2-digit",
-          month: "short",
-        });
-        if (!acc[dayKey]) acc[dayKey] = [];
-        acc[dayKey].push(r.bmi as number);
-        return acc;
-      }, {} as Record<string, number[]>),
-      "bmi"
-    );
+        const bmi = fill7Days(
+            bmiRecords.reduce((acc, r) => {
+                const dayKey = new Date(r.createdAt).toLocaleDateString("en-GB", {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "short",
+                });
+                if (!acc[dayKey]) acc[dayKey] = [];
+                acc[dayKey].push(r.bmi as number);
+                return acc;
+            }, {} as Record<string, number[]>),
+            "bmi"
+        );
 
-    res.json({ heartRate, bloodPressure, glucose, bmi });
-  } catch (err: any) {
-    console.error("Error in GET /vitalTrends:", err.message);
-    res.status(500).json({ error: err.message });
-  }
+        res.json({ heartRate, bloodPressure, glucose, bmi });
+    } catch (err: any) {
+        console.error("Error in GET /vitalTrends:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+router.get("/anomalyDistribution", async (req, res) => {
+    try {
+        const patients = await Patient.find().lean();
+        const diabetes = await Diabetes.find().lean();
+        const hypertension = await HypertensionVital.find().lean();
+
+        let distribution: Record<string, { normal: number; abnormal: number }> = {
+            HeartRate: { normal: 0, abnormal: 0 },
+            BloodPressure: { normal: 0, abnormal: 0 },
+            Glucose: { normal: 0, abnormal: 0 },
+            BMI: { normal: 0, abnormal: 0 },
+        };
+
+        // Process BMI
+        for (const p of patients) {
+            if (p.weight && p.height) {
+                const bmi = +(p.weight / Math.pow(p.height / 100, 2)).toFixed(1);
+                const status = await classifyVital("BMI", bmi, {
+                    age: p.age,
+                    gender: p.gender,
+                    conditions: { diabetes: p.diabetes, hypertension: p.hypertension },
+                });
+                distribution.BMI[status]++;
+            }
+        }
+
+        // Process Glucose
+        for (const d of diabetes) {
+            const patient = patients.find((p) => String(p.userId) === String(d.userId));
+            const status = await classifyVital("Glucose", d.glucose, {
+                age: patient ? calculateAge(patient.dob) : undefined,
+                gender: patient?.gender,
+                conditions: { diabetes: patient?.diabetes, hypertension: patient?.hypertension },
+                context: d.context,
+            });
+            distribution.Glucose[status]++;
+        }
+
+        // Process Hypertension Vitals
+        for (const h of hypertension) {
+            const patient = patients.find((p) => String(p.userId) === String(h.userId));
+
+            const statusHR = await classifyVital("HeartRate", h.heartRate, {
+                age: patient ? calculateAge(patient.dob) : undefined,
+                gender: patient?.gender,
+                conditions: { diabetes: patient?.diabetes, hypertension: patient?.hypertension },
+            });
+            distribution.HeartRate[statusHR]++;
+
+            const statusBP = await classifyVital("BloodPressure", `${h.systolic}/${h.diastolic}`, {
+                age: patient ? calculateAge(patient.dob) : undefined,
+                gender: patient?.gender,
+                conditions: { diabetes: patient?.diabetes, hypertension: patient?.hypertension },
+            });
+            distribution.BloodPressure[statusBP]++;
+        }
+
+        // Convert counts to percentages + include raw counts
+        const anomalyDistributionBar = Object.entries(distribution).map(
+            ([vital, counts]) => {
+                const total = counts.normal + counts.abnormal;
+                return {
+                    vital,
+                    normal: total > 0 ? Math.round((counts.normal / total) * 100) : 0,
+                    abnormal: total > 0 ? Math.round((counts.abnormal / total) * 100) : 0,
+                    total,
+                    normalCount: counts.normal,
+                    abnormalCount: counts.abnormal,
+                };
+            }
+        );
+
+        res.json({ anomalyDistributionBar });
+    } catch (err: any) {
+        console.error("Error in GET /anomalyDistribution:", err.message);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 
