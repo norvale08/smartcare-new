@@ -83,16 +83,17 @@ export interface VitalTrend {
 
 
 // anomaly distribution types
-export interface AnomalyData {
-  // For Pie Chart
-  risk?: "critical" | "high" | "low";
-  riskValue?: number;
-
-  // For Bar Chart
-  vital?: string; // e.g. "HeartRate", "BloodPressure"
-  vitalValue?: number;
-  normal?: number;
-  abnormal?: number;
-
-  [key: string]: string | number | undefined;
+// For Pie Chart
+export interface AnomalyPieData {
+  risk: "critical" | "high" | "low";
+  riskValue: number; // count or percentage depending on backend
+}
+// For Bar Chart
+export interface AnomalyBarData {
+  vital: string;        // e.g. "HeartRate", "BloodPressure"
+  normal: number;       // percentage (%)
+  abnormal: number;     // percentage (%)
+  total: number;        // total count
+  normalCount: number;  // raw count
+  abnormalCount: number;// raw count
 }
