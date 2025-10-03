@@ -1,5 +1,6 @@
 // routes/doctorDashboardRoutes.ts
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
 import Patient from "../models/patient";
 import Diabetes, { IDiabetes } from "../models/diabetesModel";
 import HypertensionVital, { IHypertensionVital } from "../models/hypertensionVitals";
@@ -8,6 +9,15 @@ import { evaluateRiskLevel } from "../utils/aiRiskEvaluator";
 import { getWeeklyWindow } from "../utils/getDateWindow";
 import { fill7Days, aggregateDailyBloodPressure } from "../utils/aggregateDaily";
 import { classifyVital } from "../utils/aiVitalClassifier";
+import User from "../models/user";
+
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    email?: string;
+    role?: string;
+  };
+}
 
 const router = Router();
 
@@ -27,8 +37,106 @@ function calculateBMI(weight: number, height: number): number | null {
 // Determine risk level based on vitals + demographics
 type RiskLevel = "low" | "high" | "critical";
 
+// --- Auth Middleware ---
+const authenticateUser = (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const token = req.header("Authorization")?.replace("Bearer ", "") || req.body.token;
+    if (!token) return res.status(401).json({ message: "No token provided" });
 
-// Get all patients with their latest vitals
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-default-secret") as any;
+
+    req.user = {
+      id: decoded.userId,
+      email: decoded.email,
+      role: decoded.role,
+    };
+
+    console.log("✅ Authenticated user:", req.user);
+    next();
+  } catch (error) {
+    console.error("❌ Token verification failed:", error);
+    return res.status(401).json({ message: "Invalid token" });
+  }
+};
+
+// --- Doctor Info ---
+router.get("/doctor", authenticateUser, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user?.id) return res.status(401).json({ error: "Unauthorized" });
+
+    const doctor = await User.findById(req.user.id).select("firstName lastName fullName role");
+    if (!doctor || doctor.role !== "doctor") return res.status(404).json({ error: "Doctor not found" });
+
+    const doctorName = doctor.fullName || `${doctor.firstName} ${doctor.lastName}`;
+    res.json({ name: doctorName });
+  } catch (err) {
+    console.error("❌ Error fetching doctor:", err);
+    res.status(500).json({ error: "Failed to fetch doctor info" });
+  }
+});
+
+// --- Assigned Patients (NEW) ---
+router.get("/assignedPatients", authenticateUser, async (req: AuthRequest, res) => {
+  try {
+    const { search } = req.query;
+        const query: any = {};
+
+        if (search) {
+            query.fullName = { $regex: search, $options: "i" }; // case-insensitive search
+        }
+    if (!req.user?.id) return res.status(401).json({ error: "Unauthorized" });
+
+    // fetch only patients where doctorId matches the logged in doctor
+    const patients = await Patient.find({ doctorId: req.user.id });
+
+    const patientsWithVitals = await Promise.all(
+      patients.map(async (patient) => {
+        let vitals: any = {};
+
+        // Diabetes
+        const diabetes: IDiabetes | null = await Diabetes.findOne({ userId: patient.userId })
+          .sort({ createdAt: -1 })
+          .lean<IDiabetes>();
+        if (diabetes) {
+          vitals.glucose = diabetes.glucose;
+          vitals.context = diabetes.context;
+        }
+
+        // Hypertension
+        const hypertension: IHypertensionVital | null = await HypertensionVital.findOne({ userId: patient.userId })
+          .sort({ createdAt: -1 })
+          .lean<IHypertensionVital>();
+        if (hypertension) {
+          vitals.bloodPressure = `${hypertension.systolic}/${hypertension.diastolic}`;
+          vitals.heartRate = hypertension.heartRate;
+        }
+
+        const bmi = calculateBMI(patient.weight, patient.height);
+        if (bmi) vitals.bmi = bmi;
+
+        // Risk Level
+        const riskLevel = await evaluateRiskLevel(patient.toObject(), vitals);
+
+        return {
+          ...patient.toObject(),
+          vitals,
+          riskLevel,
+          conditions: {
+            diabetes: patient.diabetes,
+            hypertension: patient.hypertension,
+          },
+        };
+      })
+    );
+
+    res.json(patientsWithVitals);
+  } catch (err: any) {
+    console.error("❌ Error in GET /assignedPatients:", err.message, err.stack);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* // Get all patients with their latest vitals
 router.get("/", async (req, res) => {
     try {
         const { search } = req.query;
@@ -90,7 +198,7 @@ router.get("/", async (req, res) => {
         console.error("Error in GET /doctorDashboard:", err.message, err.stack);
         res.status(500).json({ error: err.message });
     }
-});
+}); */
 
 router.get("/api/doctorDashboard", async (req, res) => {
     try {

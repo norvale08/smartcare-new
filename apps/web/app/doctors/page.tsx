@@ -29,6 +29,7 @@ const stats: DashboardStats = {
 
 const DoctorsDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [doctorName, setDoctorName] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true); // track loading state
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -39,32 +40,55 @@ const DoctorsDashboard = () => {
   );
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+  // helper fetch wrapper that adds Authorization header
+  const authFetch = async (url: string, options: RequestInit = {}) => {
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: token ? `Bearer ${token}` : "",
+        "Content-Type": "application/json",
+      },
+    });
+  };
+
+  // Fetch doctor info
   useEffect(() => {
-    const fetchPatients = async () => {
+    const fetchDoctor = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/doctorDashboard`, {
+        const res = await authFetch(`${API_URL}/api/doctorDashboard/doctor`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        setDoctorName(data.name);
+      } catch (err) {
+        console.error("Error fetching doctor info:", err);
+      }
+    };
+    if (token) fetchDoctor();
+  }, [API_URL, token]);
+
+
+  // Fetch ONLY assigned patients
+  useEffect(() => {
+    const fetchAssignedPatients = async () => {
+      try {
+        const res = await authFetch(`${API_URL}/api/doctorDashboard/assignedPatients`, {
           cache: "no-store",
         });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        } // Express API
         const data = await res.json();
 
         // Transform backend -> frontend structure
         const transformed: Patient[] = data.map((p: any) => {
-          // Build condition string from booleans
           const conditionList: string[] = [];
           if (p.conditions?.diabetes) conditionList.push("Diabetes");
           if (p.conditions?.hypertension) conditionList.push("Hypertension");
 
-          // Capitalize helper
           const capitalize = (str: string) =>
-            str
-              ? str
-                .toLowerCase()
-                .replace(/\b\w/g, (c) => c.toUpperCase())
-              : "";
+            str ? str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : "";
 
           return {
             id: p._id,
@@ -81,14 +105,14 @@ const DoctorsDashboard = () => {
 
         setPatients(transformed);
       } catch (err) {
-        console.error("Error fetching patients:", err);
+        console.error("Error fetching assigned patients:", err);
       } finally {
-        setLoading(false); // stop loading
+        setLoading(false);
       }
     };
 
-    fetchPatients();
-  }, []);
+    if (token) fetchAssignedPatients();
+  }, [API_URL, token]);
 
 
   // Vital Trends
@@ -181,7 +205,7 @@ const DoctorsDashboard = () => {
 
 
   const patientId = '12345'; // Replace with actual logic or dynamic value
-  const token = 'your-auth-token'; // Possibly from auth context or localStorage
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -190,7 +214,7 @@ const DoctorsDashboard = () => {
         setSearchTerm={setSearchTerm}
         alerts={alerts}
         patientId={patientId}
-        token={token}
+        token={token || ""}
       />
 
       <div className="p-6 space-y-6">
@@ -198,6 +222,7 @@ const DoctorsDashboard = () => {
           stats={stats}
           patients={patients}
           loading={loading}   // pass loading state
+          doctorName={doctorName} // pass doctor’s name
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
