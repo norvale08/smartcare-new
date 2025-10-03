@@ -8,9 +8,10 @@ interface WelcomePanelProps {
   stats: DashboardStats;
   patients: Patient[];
   loading?: boolean;
+  doctorName: string;
 }
 
-export default function WelcomePanel({ stats, patients, loading }: WelcomePanelProps) {
+export default function WelcomePanel({ stats, patients, loading, doctorName, }: WelcomePanelProps) {
   // Count patients by risk level
   const criticalCases = patients.filter(p => p.riskLevel === "critical").length;
   const highCases = patients.filter(p => p.riskLevel === "high").length;
@@ -24,7 +25,7 @@ export default function WelcomePanel({ stats, patients, loading }: WelcomePanelP
       {/* Welcome Panel */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Welcome back, Dr. Smith</h2>
+          <h2 className="text-2xl font-bold">Welcome back, {doctorName || "Doctor"}</h2>
           <p className="text-blue-100 mt-1">
             Here's your patient overview for {stats.date.toLocaleDateString()}
           </p>
