@@ -1,5 +1,6 @@
+//index.ts
 import express from 'express';
-import cors from 'cors'; // ✅ ADD THIS IMPORT
+import cors from 'cors'; 
 import session from "express-session";
 import { connectMongoDB } from './lib/mongodb';
 import dotenv from "dotenv";
@@ -17,6 +18,7 @@ import diabetesAiRoutes from "./routes/diabetesAi";
 import LifestyleRoutes from "./routes/diabetesLifestyle";
 import hypertensionLifestyle from "./routes/hypertensionLifestyle";
 import doctorDashboardRouter from './routes/doctorDashboardRoutes';
+import adminPatientsRoutes from "./routes/admin";
 dotenv.config();
 
 const app = express();
@@ -101,6 +103,7 @@ app.use("/api/diabetesAi", diabetesAiRoutes);
 app.use('/api/lifestyle', LifestyleRoutes);
 app.use('/api/hypertension/lifestyle', hypertensionLifestyle);
 app.use('/api/doctorDashboard', doctorDashboardRouter);
+app.use("/api/admin/patients", adminPatientsRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
