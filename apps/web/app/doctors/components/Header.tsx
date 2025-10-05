@@ -9,7 +9,7 @@ import Notifications from "./Notifications";
 import Messages from "./Message";
 import DownloadButton from "./DownloadButton";
 import { useState } from "react";
-
+import { useRouter } from "next/navigation";
 import { Alert } from '@/types/doctor';
 
 // Props interface
@@ -24,6 +24,27 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ searchTerm, setSearchTerm, alerts, patientId, token }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
+  const router = useRouter();
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+  const handleLogout = async () => {
+    try {
+      // Optionally notify backend to clear session
+      await fetch(`${API_URL}/api/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Logout request failed:", err);
+    } finally {
+      // Remove token from local storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user"); // if stored
+      // Redirect to home page
+      router.push("/");
+    }
+  };
 
   return (
     <header className="bg-white shadow-sm border-b">
@@ -74,6 +95,7 @@ const Header: React.FC<HeaderProps> = ({ searchTerm, setSearchTerm, alerts, pati
             <Settings className="w-5 h-5" />
           </button>
           <button 
+          onClick={handleLogout}
           className="p-2 hover:bg-gray-100 rounded-lg"
           title="Logout">
             <LogOut className="w-5 h-5" />

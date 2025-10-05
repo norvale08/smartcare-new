@@ -19,6 +19,8 @@ import LifestyleRoutes from "./routes/diabetesLifestyle";
 import hypertensionLifestyle from "./routes/hypertensionLifestyle";
 import adminPatientsRoutes from "./routes/admin";
 import doctorDashboardRouter from './routes/doctorDashboardRoutes';
+import logoutRoute from "./routes/logout";
+import verifyTokenRoute from "./routes/verifyTokenRoute";
 dotenv.config();
 
 const app = express();
@@ -104,6 +106,8 @@ app.use('/api/lifestyle', LifestyleRoutes);
 app.use('/api/hypertension/lifestyle', hypertensionLifestyle);
 app.use("/api/admin/patients", adminPatientsRoutes);
 app.use('/api/doctorDashboard', doctorDashboardRouter);
+app.use('/api/logout', logoutRoute);
+app.use("/api/verifyToken", verifyTokenRoute);
 
 // 404 handler
 app.use('*', (req, res) => {
