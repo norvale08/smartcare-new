@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Header from './components/Header';
 import WelcomePanel from "./components/WelcomePanel";
 import PatientsTable from "./components/AssignedPatients";
@@ -28,6 +29,10 @@ const stats: DashboardStats = {
 
 
 const DoctorsDashboard = () => {
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [doctorName, setDoctorName] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -42,6 +47,37 @@ const DoctorsDashboard = () => {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
+
+  // Route protection: redirect unauthenticated doctors
+useEffect(() => {
+    const verifyAuth = async () => {
+      if (!token) {
+        setIsAuthenticated(false);
+        setAuthChecked(true);
+        router.push("/");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/api/verifyToken`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Token invalid");
+
+        setIsAuthenticated(true);
+      } catch (err) {
+        console.error("Auth verification failed:", err);
+        localStorage.removeItem("token");
+        setIsAuthenticated(false);
+        router.push("/");
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+
+    verifyAuth();
+  }, [router, token, API_URL]);
+
   // helper fetch wrapper that adds Authorization header
   const authFetch = async (url: string, options: RequestInit = {}) => {
     return fetch(url, {
@@ -53,6 +89,7 @@ const DoctorsDashboard = () => {
       },
     });
   };
+
 
   // Fetch doctor info
   useEffect(() => {
@@ -205,6 +242,28 @@ const DoctorsDashboard = () => {
 
 
   const patientId = '12345'; // Replace with actual logic or dynamic value
+
+
+  // Render Logic
+  // --------------------
+  if (!authChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verifying session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <p className="text-gray-600">Redirecting...</p>
+      </div>
+    );
+  }
 
 
   return (
