@@ -41,12 +41,79 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    
+    // CRITICAL: Disease boolean fields (for login redirect logic)
+    diabetes: {
+      type: Boolean,
+      default: false,
+    },
+    hypertension: {
+      type: Boolean,
+      default: false,
+    },
+    cardiovascular: {
+      type: Boolean,
+      default: false,
+    },
+    
+    // Disease array (for display/reference)
     selectedDiseases: [
       {
         type: String,
         enum: ["diabetes", "hypertension", "cardiovascular"],
       },
     ],
+    
+    // Additional profile fields (used by profile routes)
+    fullName: {
+      type: String,
+      default: "",
+    },
+    firstname: {
+      type: String,
+      default: "",
+    },
+    lastname: {
+      type: String,
+      default: "",
+    },
+    dob: {
+      type: Date,
+      default: null,
+    },
+    gender: {
+      type: String,
+      default: "",
+    },
+    weight: {
+      type: Number,
+      default: null,
+    },
+    height: {
+      type: Number,
+      default: null,
+    },
+    relationship: {
+      type: String,
+      default: "",
+    },
+    allergies: {
+      type: String,
+      default: "",
+    },
+    surgeries: {
+      type: String,
+      default: "",
+    },
+    conditions: {
+      type: String,
+      default: "",
+    },
+    picture: {
+      type: String,
+      default: null,
+    },
+    
     patientProfileId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Patient",

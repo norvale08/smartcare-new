@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { Button } from "@repo/ui";
 import BasicInfoStep from "./BasicInfo";
@@ -18,12 +18,14 @@ const steps = [
 ];
 
 const MultiStepForm = () => {
-  const [step, setStep] = useState(1);
   const router = useRouter();
+  const [step, setStep] = useState(1);
+  const [isExistingProfile, setIsExistingProfile] = useState(false);
 
   const methods = useForm({
     mode: "onChange",
     defaultValues: {
+      userId: "",
       fullName: "",
       dob: "",
       gender: "",
@@ -43,15 +45,69 @@ const MultiStepForm = () => {
     },
   });
 
-  const { handleSubmit, getValues, setError, clearErrors, trigger } = methods;
+  const { handleSubmit, getValues, setError, clearErrors, trigger, reset } = methods;
+
+  // Check URL for step parameter on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stepParam = params.get('step');
+    if (stepParam) {
+      const stepNumber = parseInt(stepParam, 10);
+      if (stepNumber >= 1 && stepNumber <= steps.length) {
+        setStep(stepNumber);
+      }
+    } else {
+      // No step parameter means base route, so start at step 1
+      setStep(1);
+    }
+  }, []);
+
+  // Prefill form with existing user profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.success && data.data) {
+            console.log("✅ Existing profile found:", data.data);
+            setIsExistingProfile(true);
+            // include userId in form values
+            reset({ ...data.data, userId: data.data.userId });
+          }
+        } else {
+          console.log("ℹ️ No existing profile found");
+          setIsExistingProfile(false);
+        }
+      } catch (err) {
+        console.error("❌ Error fetching profile:", err);
+        setIsExistingProfile(false);
+      }
+    };
+
+    fetchProfile();
+  }, [reset]);
 
   const onSubmit = async (data: any) => {
     try {
-      // Get stored token
+      console.log("=== PROFILE SUBMISSION DEBUG ===");
+      console.log("Is existing profile:", isExistingProfile);
+      console.log("Submitting data:", data);
+      
       const token = localStorage.getItem("token");
 
+      // Use POST for new profiles, PUT for updates
+      const method = isExistingProfile ? "PUT" : "POST";
+      console.log("Using HTTP method:", method);
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile`, {
-        method: "POST",
+        method: method,
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -59,24 +115,30 @@ const MultiStepForm = () => {
         body: JSON.stringify(data),
       });
 
+      const result = await res.json();
+      
       if (!res.ok) {
-        const errorData = await res.json();
-        console.error("Submission failed:", errorData);
+        console.error("❌ Submission failed:", result);
         alert("Something went wrong. Please try again.");
         return;
       }
 
-      const result = await res.json();
       console.log("✅ Success:", result);
+      console.log("📍 Redirect destination:", result.redirectTo);
 
-      // Save new token from backend
+      // Update token if provided
       if (result.token) {
         localStorage.setItem("token", result.token);
+        console.log("🔑 Token updated");
       }
 
-      alert("Profile saved successfully!");
-      router.push(result.redirectTo || "/dashboard");
+      alert("Profile updated successfully!");
 
+      // CRITICAL: Use redirectTo from response, with proper fallback
+      const redirectPath = result.redirectTo || "/profile";
+      console.log("🚀 Redirecting to:", redirectPath);
+      
+      router.push(redirectPath);
     } catch (error) {
       console.error("❌ Error submitting form:", error);
       alert("Server error. Try again later.");
@@ -84,15 +146,13 @@ const MultiStepForm = () => {
   };
 
   const handleNext = async () => {
+    // Validate condition selection on step 3
     if (step === 3) {
       const values = getValues();
-      const hasAny =
-        values.diabetes || values.hypertension || values.cardiovascular;
-
-      if (!hasAny) {
-        setError("conditions", {
-          type: "manual",
-          message: "Select at least one condition",
+      if (!(values.diabetes || values.hypertension || values.cardiovascular)) {
+        setError("conditions", { 
+          type: "manual", 
+          message: "Please select at least one health condition" 
         });
         return;
       } else {
@@ -106,8 +166,11 @@ const MultiStepForm = () => {
     }
   };
 
-  const handlePrevious = () => {
-    setStep((prev) => Math.max(prev - 1, 1));
+  const handlePrevious = () => setStep((prev) => Math.max(prev - 1, 1));
+
+  const handleGoToStep = (targetStep: number) => {
+    clearErrors(); // Clear any validation errors when navigating from review
+    setStep(targetStep);
   };
 
   return (
@@ -116,28 +179,19 @@ const MultiStepForm = () => {
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="bg-white shadow-sm rounded-xl p-8 md:flex">
-              {/* Sidebar Step Navigation */}
+              {/* Sidebar */}
               <nav className="md:w-1/4 md:border-r md:pr-8 mb-8 md:mb-0">
                 <ul role="list" className="space-y-6">
                   {steps.map((s) => (
                     <li key={s.number} className="flex items-center gap-3">
                       <span
-                        className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-full text-sm font-medium
-                          ${
-                            step >= s.number
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-100 text-gray-400"
-                          }`}
+                        className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-full text-sm font-medium ${
+                          step >= s.number ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-400"
+                        }`}
                       >
                         {s.number}
                       </span>
-                      <span
-                        className={`text-sm ${
-                          step >= s.number
-                            ? "text-gray-900"
-                            : "text-gray-400"
-                        }`}
-                      >
+                      <span className={step >= s.number ? "text-gray-900" : "text-gray-400"}>
                         {s.title}
                       </span>
                     </li>
@@ -151,16 +205,12 @@ const MultiStepForm = () => {
                 {step === 2 && <EmergencyStep />}
                 {step === 3 && <ConditionsSelectionStep />}
                 {step === 4 && <MedicalHistoryStep />}
-                {step === 5 && <ReviewStep />}
+                {step === 5 && <ReviewStep goToStep={handleGoToStep} />}
 
-                {/* Navigation Buttons */}
+                {/* Navigation */}
                 <div className="flex justify-between mt-8">
                   {step > 1 && (
-                    <Button
-                      type="button"
-                      onClick={handlePrevious}
-                      variant="outline"
-                    >
+                    <Button type="button" onClick={handlePrevious} variant="outline">
                       Previous
                     </Button>
                   )}
@@ -168,13 +218,13 @@ const MultiStepForm = () => {
                     <button
                       type="button"
                       onClick={handleNext}
-                      className="bg-blue-600 text-white py-2 px-4 rounded"
+                      className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
                     >
                       Next Step
                     </button>
                   ) : (
                     <Button type="submit" className="ml-auto">
-                      Submit
+                      {isExistingProfile ? "Update Profile" : "Complete Profile"}
                     </Button>
                   )}
                 </div>

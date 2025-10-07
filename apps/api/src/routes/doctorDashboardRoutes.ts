@@ -1,131 +1,142 @@
 // routes/doctorDashboardRoutes.ts
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
 import Patient from "../models/patient";
 import Diabetes, { IDiabetes } from "../models/diabetesModel";
 import HypertensionVital, { IHypertensionVital } from "../models/hypertensionVitals";
 import { formatRelativeTime } from "../utils/timeFormatter";
 import { evaluateRiskLevel } from "../utils/aiRiskEvaluator";
+import { getWeeklyWindow } from "../utils/getDateWindow";
+import { fill7Days, aggregateDailyBloodPressure } from "../utils/aggregateDaily";
+import { classifyVital } from "../utils/aiVitalClassifier";
+import User from "../models/user";
+
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    email?: string;
+    role?: string;
+  };
+}
 
 const router = Router();
 
-/**
- * Utility: Calculate age from DOB
- */
+// Calculate age from DOB
 function calculateAge(dob: Date): number {
     const diff = Date.now() - dob.getTime();
     const ageDt = new Date(diff);
     return Math.abs(ageDt.getUTCFullYear() - 1970);
 }
 
-/**
- * Utility: Calculate BMI
- */
+// Calculate BMI
 function calculateBMI(weight: number, height: number): number | null {
     if (!weight || !height) return null;
     return +(weight / Math.pow(height / 100, 2)).toFixed(1); // height in cm
 }
 
-/**
- * Utility: Determine risk level based on vitals + demographics
- */
+// Determine risk level based on vitals + demographics
 type RiskLevel = "low" | "high" | "critical";
 
-/* function determineRiskLevel(patient: any, vitals: any): RiskLevel {
-    const age = calculateAge(patient.dob);
-    const bmi = calculateBMI(patient.weight, patient.height);
-    let risk: RiskLevel = "low";
+// --- Auth Middleware ---
+const authenticateUser = (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const token = req.header("Authorization")?.replace("Bearer ", "") || req.body.token;
+    if (!token) return res.status(401).json({ message: "No token provided" });
 
-    // 🔹 Diabetes risk
-    if (vitals.glucose) {
-        const glucose = vitals.glucose;
-        if (
-            (vitals.context === "Fasting" && glucose > 180) ||
-            (vitals.context === "Random" && glucose > 250)
-        ) {
-            return "critical"; // uncontrolled diabetes
-        } else if (
-            (vitals.context === "Fasting" && glucose > 125) ||
-            (vitals.context === "Random" && glucose > 200)
-        ) {
-            risk = "high";
-        } else if (glucose > 100) {
-            risk = "medium";
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-default-secret") as any;
+
+    req.user = {
+      id: decoded.userId,
+      email: decoded.email,
+      role: decoded.role,
+    };
+
+    console.log("✅ Authenticated user:", req.user);
+    next();
+  } catch (error) {
+    console.error("❌ Token verification failed:", error);
+    return res.status(401).json({ message: "Invalid token" });
+  }
+};
+
+// --- Doctor Info ---
+router.get("/doctor", authenticateUser, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user?.id) return res.status(401).json({ error: "Unauthorized" });
+
+    const doctor = await User.findById(req.user.id).select("firstName lastName fullName role");
+    if (!doctor || doctor.role !== "doctor") return res.status(404).json({ error: "Doctor not found" });
+
+    const doctorName = doctor.fullName || `${doctor.firstName} ${doctor.lastName}`;
+    res.json({ name: doctorName });
+  } catch (err) {
+    console.error("❌ Error fetching doctor:", err);
+    res.status(500).json({ error: "Failed to fetch doctor info" });
+  }
+});
+
+// --- Assigned Patients (NEW) ---
+router.get("/assignedPatients", authenticateUser, async (req: AuthRequest, res) => {
+  try {
+    const { search } = req.query;
+        const query: any = {};
+
+        if (search) {
+            query.fullName = { $regex: search, $options: "i" }; // case-insensitive search
         }
-    }
-    // 🔹 Hypertension risk
-    if (vitals.bloodPressure) {
-        const [systolic, diastolic] = vitals.bloodPressure
-            .split("/")
-            .map((n: string) => parseInt(n, 10));
+    if (!req.user?.id) return res.status(401).json({ error: "Unauthorized" });
 
-        if (systolic > 180 || diastolic > 120) {
-            return "critical"; // hypertensive crisis
-        } else if (systolic > 160 || diastolic > 100) {
-            risk = "high";
-        } else if (systolic > 140 || diastolic > 90) {
-            if (risk === "low") risk = "medium";
+    // fetch only patients where doctorId matches the logged in doctor
+    const patients = await Patient.find({ doctorId: req.user.id });
+
+    const patientsWithVitals = await Promise.all(
+      patients.map(async (patient) => {
+        let vitals: any = {};
+
+        // Diabetes
+        const diabetes: IDiabetes | null = await Diabetes.findOne({ userId: patient.userId })
+          .sort({ createdAt: -1 })
+          .lean<IDiabetes>();
+        if (diabetes) {
+          vitals.glucose = diabetes.glucose;
+          vitals.context = diabetes.context;
         }
-    }
 
-    // 🔹 Heart rate risk
-    if (vitals.heartRate) {
-        if (vitals.heartRate < 40 || vitals.heartRate > 150) {
-            return "critical";
-        } else if (vitals.heartRate < 50 || vitals.heartRate > 120) {
-            risk = "high";
+        // Hypertension
+        const hypertension: IHypertensionVital | null = await HypertensionVital.findOne({ userId: patient.userId })
+          .sort({ createdAt: -1 })
+          .lean<IHypertensionVital>();
+        if (hypertension) {
+          vitals.bloodPressure = `${hypertension.systolic}/${hypertension.diastolic}`;
+          vitals.heartRate = hypertension.heartRate;
         }
-    }
 
-    // --- Oxygen Saturation ---
-    if (vitals.oxygenSat) {
-        if (vitals.oxygenSat < 85) {
-            return "critical";
-        } else if (vitals.oxygenSat < 90) {
-            risk = "high";
-        } else if (vitals.oxygenSat < 95) {
-            if (risk === "low") risk = "medium";
-        }
-    }
+        const bmi = calculateBMI(patient.weight, patient.height);
+        if (bmi) vitals.bmi = bmi;
 
-    // --- Temperature ---
-    if (vitals.temperature) {
-        if (vitals.temperature > 40) {
-            return "critical";
-        } else if (vitals.temperature > 38.5) {
-            risk = "high";
-        } else if (vitals.temperature > 37.5) {
-            if (risk === "low") risk = "medium";
-        }
-    }
+        // Risk Level
+        const riskLevel = await evaluateRiskLevel(patient.toObject(), vitals);
 
-    // --- Age factor ---
-    if (age > 75 && (risk as RiskLevel) !== "critical") {
-        if (risk === "low") risk = "medium";
-        else if (risk === "medium") risk = "high";
-    }
+        return {
+          ...patient.toObject(),
+          vitals,
+          riskLevel,
+          conditions: {
+            diabetes: patient.diabetes,
+            hypertension: patient.hypertension,
+          },
+        };
+      })
+    );
 
-    // --- BMI factor ---
-    if (bmi && (bmi < 18.5 || bmi > 35)) {
-        if (risk === "low") risk = "medium";
-    }
+    res.json(patientsWithVitals);
+  } catch (err: any) {
+    console.error("❌ Error in GET /assignedPatients:", err.message, err.stack);
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    // 🔹 Age factor
-    if (age > 65 && risk !== "high") {
-        risk = "medium";
-    }
-
-    // 🔹 BMI factor
-    if (bmi && (bmi < 18.5 || bmi > 30)) {
-        if (risk === "low") risk = "medium";
-    }
-
-    return risk;
-} */
-
-/**
- * @route   GET /patients
- * @desc    Get all patients with their latest vitals
- */
+/* // Get all patients with their latest vitals
 router.get("/", async (req, res) => {
     try {
         const { search } = req.query;
@@ -166,8 +177,8 @@ router.get("/", async (req, res) => {
                 const bmi = calculateBMI(patient.weight, patient.height);
                 if (bmi) vitals.bmi = bmi;
 
-                // 🔹 Calculate Risk Level
-                const riskLevel = await evaluateRiskLevel(patient.toObject(), vitals);/* determineRiskLevel(patient.toObject(), vitals); */
+                // Calculate Risk Level
+                const riskLevel = await evaluateRiskLevel(patient.toObject(), vitals);
 
                 return {
                     ...patient.toObject(),
@@ -187,63 +198,7 @@ router.get("/", async (req, res) => {
         console.error("Error in GET /doctorDashboard:", err.message, err.stack);
         res.status(500).json({ error: err.message });
     }
-});
-
-/**
- * @route   GET /patients/:id
- * @desc    Get single patient with latest vitals
- */
-router.get("/:id", async (req, res) => {
-    try {
-        const patient = await Patient.findById(req.params.id);
-        if (!patient) return res.status(404).json({ error: "Patient not found" });
-
-        let vitals: any = {};
-
-        // 🔹 Latest Diabetes Record
-        const diabetes: IDiabetes | null = await Diabetes.findOne({
-            userId: patient.userId,
-        })
-            .sort({ createdAt: -1 })
-            .lean<IDiabetes>();
-
-        if (diabetes) {
-            vitals.glucose = diabetes.glucose;
-            vitals.context = diabetes.context;
-        }
-
-        // 🔹 Latest Hypertension Record
-        const hypertension: IHypertensionVital | null =
-            await HypertensionVital.findOne({ userId: patient.userId })
-                .sort({ createdAt: -1 })
-                .lean<IHypertensionVital>();
-
-        if (hypertension) {
-            vitals.bloodPressure = `${hypertension.systolic}/${hypertension.diastolic}`;
-            vitals.heartRate = hypertension.heartRate;
-        }
-
-        const bmi = calculateBMI(patient.weight, patient.height);
-        if (bmi) vitals.bmi = bmi;
-
-        // 🔹 Calculate Risk Level
-        const riskLevel = await evaluateRiskLevel(patient.toObject(), vitals);/* determineRiskLevel(patient.toObject(), vitals); */
-
-        res.json({
-            ...patient.toObject(),
-            vitals,
-            riskLevel,
-            // Explicit conditions from patient collection
-            conditions: {
-                diabetes: patient.diabetes,
-                hypertension: patient.hypertension,
-            },
-        });
-    } catch (err: any) {
-        console.error("Error in GET /doctorDashboard:", err.message, err.stack);
-        res.status(500).json({ error: err.message });
-    }
-});
+}); */
 
 router.get("/api/doctorDashboard", async (req, res) => {
     try {
@@ -295,6 +250,170 @@ router.get("/api/doctorDashboard", async (req, res) => {
     } catch (err) {
         console.error("Error fetching patients:", err);
         res.status(500).json({ error: "Failed to fetch patients" });
+    }
+});
+
+
+
+// Vital Trends
+
+// GET /api/doctorDashboard/vitalTrends
+router.get("/vitalTrends", async (req, res) => {
+    try {
+        const { start, end } = getWeeklyWindow();
+
+        const patients = await Patient.find({
+            updatedAt: { $gte: start, $lte: end },
+        }).lean();
+
+        const diabetes = await Diabetes.find({
+            createdAt: { $gte: start, $lte: end },
+        }).lean();
+
+        const hypertension = await HypertensionVital.find({
+            createdAt: { $gte: start, $lte: end },
+        }).lean();
+
+        // Aggregate per day
+        const heartRate = fill7Days(
+            hypertension.reduce((acc, r) => {
+                const dayKey = new Date(r.createdAt).toLocaleDateString("en-GB", {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "short",
+                });
+                if (!acc[dayKey]) acc[dayKey] = [];
+                acc[dayKey].push(r.heartRate);
+                return acc;
+            }, {} as Record<string, number[]>),
+            "heartRate"
+        );
+
+        const bloodPressure = aggregateDailyBloodPressure(hypertension);
+
+        const glucose = fill7Days(
+            diabetes.reduce((acc, r) => {
+                const dayKey = new Date(r.createdAt).toLocaleDateString("en-GB", {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "short",
+                });
+                if (!acc[dayKey]) acc[dayKey] = [];
+                acc[dayKey].push(r.glucose);
+                return acc;
+            }, {} as Record<string, number[]>),
+            "glucose"
+        );
+
+        // BMI per patient (derive then group daily)
+        const bmiRecords = patients
+            .map((p) => ({
+                createdAt: p.updatedAt || p.createdAt,
+                bmi:
+                    p.weight && p.height
+                        ? +(p.weight / Math.pow(p.height / 100, 2)).toFixed(1)
+                        : null,
+            }))
+            .filter((r) => r.bmi !== null);
+
+        const bmi = fill7Days(
+            bmiRecords.reduce((acc, r) => {
+                const dayKey = new Date(r.createdAt).toLocaleDateString("en-GB", {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "short",
+                });
+                if (!acc[dayKey]) acc[dayKey] = [];
+                acc[dayKey].push(r.bmi as number);
+                return acc;
+            }, {} as Record<string, number[]>),
+            "bmi"
+        );
+
+        res.json({ heartRate, bloodPressure, glucose, bmi });
+    } catch (err: any) {
+        console.error("Error in GET /vitalTrends:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+router.get("/anomalyDistribution", async (req, res) => {
+    try {
+        const patients = await Patient.find().lean();
+        const diabetes = await Diabetes.find().lean();
+        const hypertension = await HypertensionVital.find().lean();
+
+        let distribution: Record<string, { normal: number; abnormal: number }> = {
+            HeartRate: { normal: 0, abnormal: 0 },
+            BloodPressure: { normal: 0, abnormal: 0 },
+            Glucose: { normal: 0, abnormal: 0 },
+            BMI: { normal: 0, abnormal: 0 },
+        };
+
+        // Process BMI
+        for (const p of patients) {
+            if (p.weight && p.height) {
+                const bmi = +(p.weight / Math.pow(p.height / 100, 2)).toFixed(1);
+                const status = await classifyVital("BMI", bmi, {
+                    age: p.age,
+                    gender: p.gender,
+                    conditions: { diabetes: p.diabetes, hypertension: p.hypertension },
+                });
+                distribution.BMI[status]++;
+            }
+        }
+
+        // Process Glucose
+        for (const d of diabetes) {
+            const patient = patients.find((p) => String(p.userId) === String(d.userId));
+            const status = await classifyVital("Glucose", d.glucose, {
+                age: patient ? calculateAge(patient.dob) : undefined,
+                gender: patient?.gender,
+                conditions: { diabetes: patient?.diabetes, hypertension: patient?.hypertension },
+                context: d.context,
+            });
+            distribution.Glucose[status]++;
+        }
+
+        // Process Hypertension Vitals
+        for (const h of hypertension) {
+            const patient = patients.find((p) => String(p.userId) === String(h.userId));
+
+            const statusHR = await classifyVital("HeartRate", h.heartRate, {
+                age: patient ? calculateAge(patient.dob) : undefined,
+                gender: patient?.gender,
+                conditions: { diabetes: patient?.diabetes, hypertension: patient?.hypertension },
+            });
+            distribution.HeartRate[statusHR]++;
+
+            const statusBP = await classifyVital("BloodPressure", `${h.systolic}/${h.diastolic}`, {
+                age: patient ? calculateAge(patient.dob) : undefined,
+                gender: patient?.gender,
+                conditions: { diabetes: patient?.diabetes, hypertension: patient?.hypertension },
+            });
+            distribution.BloodPressure[statusBP]++;
+        }
+
+        // Convert counts to percentages + include raw counts
+        const anomalyDistributionBar = Object.entries(distribution).map(
+            ([vital, counts]) => {
+                const total = counts.normal + counts.abnormal;
+                return {
+                    vital,
+                    normal: total > 0 ? Math.round((counts.normal / total) * 100) : 0,
+                    abnormal: total > 0 ? Math.round((counts.abnormal / total) * 100) : 0,
+                    total,
+                    normalCount: counts.normal,
+                    abnormalCount: counts.abnormal,
+                };
+            }
+        );
+
+        res.json({ anomalyDistributionBar });
+    } catch (err: any) {
+        console.error("Error in GET /anomalyDistribution:", err.message);
+        res.status(500).json({ error: err.message });
     }
 });
 

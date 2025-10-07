@@ -1,4 +1,15 @@
-import { Schema, model, models } from "mongoose";
+import mongoose, { Schema, Document, model, models } from "mongoose";
+
+export interface IDiabetes extends Document {
+    userId: mongoose.Types.ObjectId;
+    glucose: number;
+    context: "Fasting" | "Post-meal" | "Random";
+    language: "en" | "sw";
+    aiRequested?: boolean;
+    aiFeedback?: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
 
 const DiabetesSchema = new Schema(
   {

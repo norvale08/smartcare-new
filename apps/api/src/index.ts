@@ -1,5 +1,6 @@
+//index.ts
 import express from 'express';
-import cors from 'cors'; // ✅ ADD THIS IMPORT
+import cors from 'cors'; 
 import session from "express-session";
 import { connectMongoDB } from './lib/mongodb';
 import dotenv from "dotenv";
@@ -14,7 +15,12 @@ import hypertensionRoutes from './routes/hypertensionVitals';
 //import medicationsRoutes from './routes/medications';
 import doctorsRoutes from "./routes/doctors"
 import diabetesAiRoutes from "./routes/diabetesAi";
-import LifestyleRoutes from "./routes/diabetesLifestyle"
+import LifestyleRoutes from "./routes/diabetesLifestyle";
+import hypertensionLifestyle from "./routes/hypertensionLifestyle";
+import adminPatientsRoutes from "./routes/admin";
+import doctorDashboardRouter from './routes/doctorDashboardRoutes';
+import logoutRoute from "./routes/logout";
+import verifyTokenRoute from "./routes/verifyTokenRoute";
 dotenv.config();
 
 const app = express();
@@ -96,7 +102,13 @@ app.use('/api/hypertensionVitals', hypertensionRoutes);
 app.use('/api/userStatus', userStatusRouter);
 app.use ('/api/doctors',doctorsRoutes);
 app.use("/api/diabetesAi", diabetesAiRoutes);
-app.use('/api/lifestyle', LifestyleRoutes)
+app.use('/api/lifestyle', LifestyleRoutes);
+app.use('/api/hypertension/lifestyle', hypertensionLifestyle);
+app.use("/api/admin/patients", adminPatientsRoutes);
+app.use('/api/doctorDashboard', doctorDashboardRouter);
+app.use('/api/logout', logoutRoute);
+app.use("/api/verifyToken", verifyTokenRoute);
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 

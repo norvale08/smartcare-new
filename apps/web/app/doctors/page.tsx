@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Header from './components/Header';
 import WelcomePanel from "./components/WelcomePanel";
 import PatientsTable from "./components/AssignedPatients";
@@ -10,34 +11,32 @@ import AnomalyDistributionChart from "./components/AnomalyDistribution";
 import Alerts from "./components/AlertsPanel";
 import PatientLocations from "./components/PatientLocation";
 import CareManagement from "./components/CareManagement";
+import PatientsTableSkeleton from "./components/PatientsTableSkeleton";
 
 
-import { Patient, VitalTrend, DashboardStats, Prescription, CareNote } from "../../types/doctor";
+
+import { Patient, VitalTrend, DashboardStats, Prescription, CareNote, AnomalyPieData, AnomalyBarData } from "../../types/doctor";
 import { formatRelativeTime } from "./lib/utils";
 
 
 import {
-  patients,
   alerts,
-  vitalTrends,
-  anomalyDistribution,
 } from "./lib/mockData";
 
 const stats: DashboardStats = {
   date: new Date(),
 };
 
-const anomalyDistributionPie = anomalyDistribution.filter(
-  (d) => d.risk && typeof d.riskValue === "number"
-);
-
-const anomalyDistributionBar = anomalyDistribution.filter(
-  (d) => d.vital && typeof d.vitalValue === "number"
-);
 
 const DoctorsDashboard = () => {
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState("");
+  const [doctorName, setDoctorName] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(true); // track loading state
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedVital, setSelectedVital] = useState<keyof VitalTrend>("heartRate");
 
@@ -46,32 +45,87 @@ const DoctorsDashboard = () => {
   );
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  useEffect(() => {
-    const fetchPatients = async () => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+
+  // Route protection: redirect unauthenticated doctors
+useEffect(() => {
+    const verifyAuth = async () => {
+      if (!token) {
+        setIsAuthenticated(false);
+        setAuthChecked(true);
+        router.push("/");
+        return;
+      }
+
       try {
-        const res = await fetch(`${API_URL}/api/doctorDashboard`, {
+        const res = await fetch(`${API_URL}/api/verifyToken`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Token invalid");
+
+        setIsAuthenticated(true);
+      } catch (err) {
+        console.error("Auth verification failed:", err);
+        localStorage.removeItem("token");
+        setIsAuthenticated(false);
+        router.push("/");
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+
+    verifyAuth();
+  }, [router, token, API_URL]);
+
+  // helper fetch wrapper that adds Authorization header
+  const authFetch = async (url: string, options: RequestInit = {}) => {
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: token ? `Bearer ${token}` : "",
+        "Content-Type": "application/json",
+      },
+    });
+  };
+
+
+  // Fetch doctor info
+  useEffect(() => {
+    const fetchDoctor = async () => {
+      try {
+        const res = await authFetch(`${API_URL}/api/doctorDashboard/doctor`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        setDoctorName(data.name);
+      } catch (err) {
+        console.error("Error fetching doctor info:", err);
+      }
+    };
+    if (token) fetchDoctor();
+  }, [API_URL, token]);
+
+
+  // Fetch ONLY assigned patients
+  useEffect(() => {
+    const fetchAssignedPatients = async () => {
+      try {
+        const res = await authFetch(`${API_URL}/api/doctorDashboard/assignedPatients`, {
           cache: "no-store",
         });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        } // Express API
         const data = await res.json();
 
         // Transform backend -> frontend structure
         const transformed: Patient[] = data.map((p: any) => {
-          // Build condition string from booleans
           const conditionList: string[] = [];
           if (p.conditions?.diabetes) conditionList.push("Diabetes");
           if (p.conditions?.hypertension) conditionList.push("Hypertension");
 
-          // Capitalize helper
           const capitalize = (str: string) =>
-            str
-              ? str
-                .toLowerCase()
-                .replace(/\b\w/g, (c) => c.toUpperCase())
-              : "";
+            str ? str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : "";
 
           return {
             id: p._id,
@@ -88,12 +142,36 @@ const DoctorsDashboard = () => {
 
         setPatients(transformed);
       } catch (err) {
-        console.error("Error fetching patients:", err);
+        console.error("Error fetching assigned patients:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchPatients();
-  }, []);
+    if (token) fetchAssignedPatients();
+  }, [API_URL, token]);
+
+
+  // Vital Trends
+  const [vitalTrends, setVitalTrends] = useState<VitalTrend>({ heartRate: [], bloodPressure: [], glucose: [], bmi: [], });
+
+  useEffect(() => {
+    const fetchTrends = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/doctorDashboard/vitalTrends`, {
+          cache: "no-store",
+        });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        setVitalTrends(data);
+      } catch (err) {
+        console.error("Error fetching vital trends:", err);
+      }
+    };
+    fetchTrends();
+  }, [API_URL]);
+
+
 
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [careNotes, setCareNotes] = useState<CareNote[]>([]);
@@ -127,8 +205,66 @@ const DoctorsDashboard = () => {
   };
 
 
+  // Compute anomaly distribution dynamically
+  const anomalyDistributionPie: AnomalyPieData[] = [
+    {
+      risk: "critical",
+      riskValue: patients.filter((p) => p.riskLevel === "critical").length,
+    },
+    {
+      risk: "high",
+      riskValue: patients.filter((p) => p.riskLevel === "high").length,
+    },
+    {
+      risk: "low",
+      riskValue: patients.filter((p) => p.riskLevel === "low").length,
+    },
+  ];
+
+
+  const [anomalyDistributionBar, setAnomalyDistributionBar] = useState<AnomalyBarData[]>([]);
+
+  useEffect(() => {
+    const fetchAnomalyDistribution = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/doctorDashboard/anomalyDistribution`, {
+          cache: "no-store",
+        });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        setAnomalyDistributionBar(data.anomalyDistributionBar);
+      } catch (err) {
+        console.error("Error fetching anomaly distribution:", err);
+      }
+    };
+    fetchAnomalyDistribution();
+  }, [API_URL]);
+
+
   const patientId = '12345'; // Replace with actual logic or dynamic value
-  const token = 'your-auth-token'; // Possibly from auth context or localStorage
+
+
+  // Render Logic
+  // --------------------
+  if (!authChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verifying session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <p className="text-gray-600">Redirecting...</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -137,22 +273,28 @@ const DoctorsDashboard = () => {
         setSearchTerm={setSearchTerm}
         alerts={alerts}
         patientId={patientId}
-        token={token}
+        token={token || ""}
       />
 
       <div className="p-6 space-y-6">
         <WelcomePanel
           stats={stats}
           patients={patients}
-          alerts={alerts} />
+          loading={loading}   // pass loading state
+          doctorName={doctorName} // pass doctor’s name
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
-            <PatientsTable
-              patients={filteredPatients}
-              setSelectedPatient={handleViewCarePlan}
-            />
+            {loading ? (
+              <PatientsTableSkeleton />  // Show skeleton while loading
+            ) : (
+              <PatientsTable
+                patients={filteredPatients}
+                setSelectedPatient={handleViewCarePlan}
+              />
+            )}
             <VitalTrendsChart
               vitalTrends={vitalTrends}
               selectedVital={selectedVital}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 
 interface UserProfile {
   _id: string;
@@ -217,15 +218,15 @@ const UserProfileHeader: React.FC = () => {
   const bmi = calculateBMI(userProfile.weight, userProfile.height);
   const bmiStatus = getBMIStatus(bmi);
 
-  // Get active health conditions
+  
   const healthConditions = [];
   if (userProfile.diabetes) healthConditions.push("Diabetes");
   if (userProfile.hypertension) healthConditions.push("Hypertension");
-  if (userProfile.cardiovascular) healthConditions.push("Cardiovascular");
+  
 
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md rounded-xl p-6 mb-6">
-      {/* Header Section */}
+      
       <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-6">
         {/* Profile Picture */}
         <div className="relative">
@@ -268,9 +269,13 @@ const UserProfileHeader: React.FC = () => {
         </div>
 
         {/* Edit Button */}
-        <button className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm border border-blue-200 font-medium text-sm">
-          Edit Profile
-        </button>
+        <Link
+  href="/profile?step=5"
+  className="inline-block px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm border border-blue-200 font-medium text-sm"
+>
+  Edit Profile
+</Link>
+
       </div>
 
       {/* Stats Grid */}
