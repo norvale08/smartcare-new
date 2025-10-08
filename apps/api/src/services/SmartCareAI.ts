@@ -4,6 +4,10 @@ export interface GlucoseData {
   glucose: number;
   context: "Fasting" | "Post-meal" | "Random";
   language?: "en" | "sw";
+  age?: number;
+  weight?: number;
+  height?: number;
+  gender?: string;
 }
 
 export interface LifestyleData {
@@ -27,6 +31,7 @@ export interface VitalsData {
   weight?: number;
   height?: number;
   age?: number;
+  gender?: string;
   language?: "en" | "sw";
 }
 
@@ -39,22 +44,28 @@ export interface FoodAdviceInput extends VitalsData {
 export class SmartCareAI {
   private model = process.env.OLLAMA_MODEL || "llama3.2:3b";
 
-  // ✅ Summarize glucose reading
+  // ✅ Summarize glucose reading — includes age, weight, height, gender
   async generateSummary(data: GlucoseData): Promise<string> {
     try {
       const prompt = `
         You are a medical assistant.
-        Summarize the patient's glucose reading in 1–2 sentences max.
+        Summarize the patient's glucose reading concisely (1–2 sentences).
+        Include brief interpretation considering their age, weight, height, and gender if available.
         If language is "sw", respond in Kiswahili. Otherwise, use English.
 
-        Data: ${JSON.stringify(data)}
+        Patient Info:
+        - Glucose: ${data.glucose} mg/dL (${data.context})
+        - Age: ${data.age ?? "Not provided"}
+        - Weight: ${data.weight ? data.weight + " kg" : "Not provided"}
+        - Height: ${data.height ? data.height + " cm" : "Not provided"}
+        - Gender: ${data.gender ?? "Not provided"}
       `;
 
       let content = "";
-      const stream = await ollama.chat({ 
-        model: this.model, 
-        messages: [{ role: "user", content: prompt }], 
-        stream: true 
+      const stream = await ollama.chat({
+        model: this.model,
+        messages: [{ role: "user", content: prompt }],
+        stream: true
       });
 
       for await (const token of stream) {
@@ -69,23 +80,29 @@ export class SmartCareAI {
     }
   }
 
-  // ✅ Provide glucose feedback
+  // ✅ Provide glucose feedback — considers demographics
   async generateGlucoseFeedback(data: GlucoseData): Promise<string> {
     try {
       const prompt = `
         You are a medical assistant.
-        Provide a short health interpretation of this glucose reading.
-        Mention whether it is normal, high, or low, and give a brief recommendation.
-        Respond in Kiswahili if language is "sw", otherwise use English.
+        Analyze the following glucose reading and provide a short interpretation (2–3 sentences).
+        Consider the patient's age, weight, height, and gender for context.
+        Mention whether it is normal, high, or low, and provide a practical recommendation.
+        If language is "sw", respond in Kiswahili; otherwise, use English.
 
-        Data: ${JSON.stringify(data)}
+        Patient Info:
+        - Glucose: ${data.glucose} mg/dL (${data.context})
+        - Age: ${data.age ?? "Not provided"}
+        - Weight: ${data.weight ? data.weight + " kg" : "Not provided"}
+        - Height: ${data.height ? data.height + " cm" : "Not provided"}
+        - Gender: ${data.gender ?? "Not provided"}
       `;
 
       let content = "";
-      const stream = await ollama.chat({ 
-        model: this.model, 
-        messages: [{ role: "user", content: prompt }], 
-        stream: true 
+      const stream = await ollama.chat({
+        model: this.model,
+        messages: [{ role: "user", content: prompt }],
+        stream: true
       });
 
       for await (const token of stream) {
@@ -100,35 +117,42 @@ export class SmartCareAI {
     }
   }
 
-  // ✅ Lifestyle-based AI advice  
+  // ✅ Lifestyle-based AI advice — UPDATED to consider age, weight, height, gender
   async generateLifestyleFeedback(data: LifestyleAIInput): Promise<string> {
     try {
       const prompt = `
-        You are a medical assistant specializing in diabetes care.
-        
+        You are a medical assistant specializing in diabetes and lifestyle management.
+
+        Analyze the patient's glucose level and lifestyle habits while considering their 
+        age, weight, height, and gender to provide personalized recommendations.
+
         Patient Information:
-        - Current glucose: ${data.glucose} mg/dL (${data.context})
-        - Alcohol consumption: ${data.lifestyle.alcohol}
-        - Smoking habit: ${data.lifestyle.smoking}
-        - Exercise frequency: ${data.lifestyle.exercise}
-        - Sleep pattern: ${data.lifestyle.sleep}
-        
-        Provide personalized lifestyle advice in 3-4 sentences that:
-        1. Comments on their current glucose level
-        2. Addresses their specific lifestyle factors
-        3. Gives actionable recommendations for improvement
-        4. Mentions any concerning patterns
-        
+        - Glucose: ${data.glucose} mg/dL (${data.context})
+        - Age: ${data.age ?? "Not provided"}
+        - Weight: ${data.weight ? data.weight + " kg" : "Not provided"}
+        - Height: ${data.height ? data.height + " cm" : "Not provided"}
+        - Gender: ${data.gender ?? "Not provided"}
+
+        Lifestyle Factors:
+        - Alcohol: ${data.lifestyle.alcohol ?? "Not provided"}
+        - Smoking: ${data.lifestyle.smoking ?? "Not provided"}
+        - Exercise: ${data.lifestyle.exercise ?? "Not provided"}
+        - Sleep: ${data.lifestyle.sleep ?? "Not provided"}
+
+        Provide 3–4 sentences of personalized lifestyle feedback that:
+        1. Interprets their glucose result
+        2. Considers their age, weight, or gender
+        3. Discusses how their habits may affect glucose control
+        4. Ends with practical and encouraging advice.
+
         ${data.language === "sw" ? "Respond in Kiswahili." : "Respond in English."}
-        
-        Keep the tone supportive and encouraging while being medically accurate.
       `;
 
       let content = "";
-      const stream = await ollama.chat({ 
-        model: this.model, 
-        messages: [{ role: "user", content: prompt }], 
-        stream: true 
+      const stream = await ollama.chat({
+        model: this.model,
+        messages: [{ role: "user", content: prompt }],
+        stream: true
       });
 
       for await (const token of stream) {
@@ -143,60 +167,50 @@ export class SmartCareAI {
     }
   }
 
-  // 🆕 Generate Kenyan food recommendations based on vitals
+  // ✅ Kenyan food advice
   async generateKenyanFoodAdvice(data: FoodAdviceInput): Promise<string> {
     try {
-      const bmi = data.weight && data.height ? (data.weight / Math.pow(data.height / 100, 2)).toFixed(1) : null;
-      const bpStatus = data.bloodPressure ? 
-        (data.bloodPressure.systolic >= 140 || data.bloodPressure.diastolic >= 90 ? "High" : 
-         data.bloodPressure.systolic >= 120 || data.bloodPressure.diastolic >= 80 ? "Elevated" : "Normal") : "Unknown";
-
-      const kenyanFoods = {
-        grains: ["ugali (whole wheat)", "brown rice", "millet porridge", "sorghum", "quinoa", "oats", "arrow root (nduma)"],
-        vegetables: ["sukuma wiki (kale)", "spinach (mchicha)", "terere (amaranth)", "kunde (cowpeas leaves)", "mrenda (jute mallow)", "managu (African nightshade)", "pumpkin leaves", "sweet potato leaves"],
-        proteins: ["fish (tilapia, salmon)", "chicken (grilled/boiled)", "beans", "lentils (dengu)", "green grams (ndengu)", "githeri", "eggs", "lean beef (small portions)"],
-        fruits: ["avocado", "passion fruit", "guava", "papaya", "oranges", "apples", "watermelon", "pineapple (small portions)"],
-        healthyFats: ["avocado", "nuts (groundnuts)", "seeds", "olive oil", "fish oil"],
-        avoid: ["white ugali", "white rice", "chapati (frequent)", "mandazi", "soda", "processed foods", "excess red meat"]
-      };
+      const bmi =
+        data.weight && data.height
+          ? (data.weight / Math.pow(data.height / 100, 2)).toFixed(1)
+          : null;
+      const bpStatus = data.bloodPressure
+        ? data.bloodPressure.systolic >= 140 || data.bloodPressure.diastolic >= 90
+          ? "High"
+          : data.bloodPressure.systolic >= 120 || data.bloodPressure.diastolic >= 80
+          ? "Elevated"
+          : "Normal"
+        : "Unknown";
 
       const prompt = `
-        You are a Kenyan nutritionist specializing in diabetes management. 
-        
-        Patient Vitals:
-        - Blood glucose: ${data.glucose} mg/dL (${data.context})
-        - Blood pressure: ${data.bloodPressure ? `${data.bloodPressure.systolic}/${data.bloodPressure.diastolic} mmHg (${bpStatus})` : "Not provided"}
-        - BMI: ${bmi ? `${bmi} kg/m²` : "Not calculated"}
-        - Age: ${data.age || "Not provided"}
-        ${data.lifestyle ? `- Exercise: ${data.lifestyle.exercise}, Alcohol: ${data.lifestyle.alcohol}` : ""}
-        
-        Available Kenyan Foods:
-        - Grains: ${kenyanFoods.grains.join(", ")}
-        - Vegetables: ${kenyanFoods.vegetables.join(", ")}
-        - Proteins: ${kenyanFoods.proteins.join(", ")}
-        - Fruits: ${kenyanFoods.fruits.join(", ")}
-        - Healthy fats: ${kenyanFoods.healthyFats.join(", ")}
-        - Foods to limit: ${kenyanFoods.avoid.join(", ")}
+        You are a Kenyan nutritionist specializing in diabetes management.
 
-        Provide a comprehensive Kenyan food plan that:
-        1. Addresses their current glucose level and blood pressure
-        2. Suggests specific Kenyan meals for breakfast, lunch, and dinner
-        3. Mentions portion sizes and timing
-        4. Includes traditional Kenyan foods that are diabetes-friendly
-        5. Gives specific cooking methods (e.g., boiling, steaming vs frying)
-        6. Mentions foods to avoid or limit
-        
-        Format as a practical meal plan they can follow immediately.
+        Patient Vitals:
+        - Glucose: ${data.glucose} mg/dL (${data.context})
+        - Blood Pressure: ${
+          data.bloodPressure
+            ? `${data.bloodPressure.systolic}/${data.bloodPressure.diastolic} (${bpStatus})`
+            : "Not provided"
+        }
+        - Age: ${data.age ?? "Not provided"}
+        - BMI: ${bmi ?? "Not calculated"}
+        - Gender: ${data.gender ?? "Not provided"}
+
+        Provide a Kenyan food plan that:
+        1. Reflects their glucose and pressure status
+        2. Suggests meals with portion guidance
+        3. Uses Kenyan foods (ugali, sukuma wiki, githeri, ndengu)
+        4. Mentions foods to avoid or limit
+        5. Includes cooking methods (boiling, steaming preferred)
+
         ${data.language === "sw" ? "Respond in Kiswahili." : "Respond in English."}
-        
-        Keep the advice culturally relevant, practical, and affordable for Kenyan context.
       `;
 
       let content = "";
-      const stream = await ollama.chat({ 
-        model: this.model, 
-        messages: [{ role: "user", content: prompt }], 
-        stream: true 
+      const stream = await ollama.chat({
+        model: this.model,
+        messages: [{ role: "user", content: prompt }],
+        stream: true
       });
 
       for await (const token of stream) {
@@ -211,29 +225,31 @@ export class SmartCareAI {
     }
   }
 
-  // 🆕 Generate quick food recommendations for specific situations
-  async generateQuickFoodTips(data: { glucose: number; context: string; language?: string }): Promise<string> {
+  // ✅ Quick Kenyan food tips
+  async generateQuickFoodTips(data: {
+    glucose: number;
+    context: string;
+    language?: string;
+  }): Promise<string> {
     try {
       const prompt = `
-        You are a Kenyan nutritionist. 
+        You are a Kenyan nutritionist.
         The patient has a glucose reading of ${data.glucose} mg/dL (${data.context}).
-        
-        Provide 3-4 immediate Kenyan food recommendations or warnings based on this reading:
-        - If high glucose: foods to avoid right now and what to eat to help lower it
-        - If low glucose: immediate Kenyan foods to help raise glucose safely
-        - If normal: foods to maintain stable levels
-        
-        Use common Kenyan foods like ugali, sukuma wiki, githeri, fruits, etc.
+
+        Give 3–4 immediate Kenyan food recommendations:
+        - If high: foods to avoid and eat now
+        - If low: quick foods to raise sugar safely
+        - If normal: foods to maintain stability
+
+        Use local foods (ugali, sukuma wiki, githeri, fruits).
         ${data.language === "sw" ? "Respond in Kiswahili." : "Respond in English."}
-        
-        Keep it brief (2-3 sentences) and actionable.
       `;
 
       let content = "";
-      const stream = await ollama.chat({ 
-        model: this.model, 
-        messages: [{ role: "user", content: prompt }], 
-        stream: true 
+      const stream = await ollama.chat({
+        model: this.model,
+        messages: [{ role: "user", content: prompt }],
+        stream: true
       });
 
       for await (const token of stream) {

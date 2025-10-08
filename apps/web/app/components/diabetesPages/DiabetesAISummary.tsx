@@ -5,43 +5,51 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface Props {
   vitalsId?: string;
-  enabled?: boolean;
   onComplete?: () => void;
 }
 
-const DiabetesAISummary: React.FC<Props> = ({ vitalsId, enabled = true, onComplete }) => {
+const DiabetesAISummary: React.FC<Props> = ({ vitalsId, onComplete }) => {
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // ✅ Load the summary for this vitalsId from localStorage
   useEffect(() => {
-    if (!vitalsId || !enabled) return;
+    if (!vitalsId) return;
+
+    const savedSummary = localStorage.getItem(`AISummary_${vitalsId}`);
+    if (savedSummary) setSummary(savedSummary);
+  }, [vitalsId]);
+
+  // ✅ Fetch summary from backend if not in localStorage
+  useEffect(() => {
+    if (!vitalsId) return;
 
     const token = localStorage.getItem("token");
     if (!token) return;
 
     const fetchSummary = async () => {
-      try {
-        setLoading(true);
-        setSummary(null);
+      // Already have summary for this vitalsId? Skip fetch
+      if (localStorage.getItem(`AISummary_${vitalsId}`)) return;
 
-        const res = await fetch(`${API_URL}/api/diabetesVitals/ai/${vitalsId}`, {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_URL}/api/diabetesAi/summary/${vitalsId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!res.ok) throw new Error(`Server returned ${res.status}`);
 
         const data = await res.json();
+        const brief = data.aiFeedback
+          ? data.aiFeedback.split(". ").slice(0, 2).join(". ") + "."
+          : "⚠️ No AI summary available yet.";
 
-        if (data.aiFeedback) {
-          // Keep AI summary short (max 2 sentences)
-          const brief = data.aiFeedback.split(". ").slice(0, 2).join(". ") + ".";
-          setSummary(brief);
-          onComplete?.();
-        } else if (data.aiProcessing) {
-          setSummary("⏳ AI summary is being generated. Please check back shortly.");
-        } else {
-          setSummary("⚠️ No AI summary available.");
-        }
+        setSummary(brief);
+
+        // ✅ Persist summary per vitalsId
+        localStorage.setItem(`AISummary_${vitalsId}`, brief);
+
+        onComplete?.();
       } catch (err) {
         console.error("AI summary fetch error:", err);
         setSummary("❌ Could not fetch AI summary. Try again later.");
@@ -51,7 +59,7 @@ const DiabetesAISummary: React.FC<Props> = ({ vitalsId, enabled = true, onComple
     };
 
     fetchSummary();
-  }, [vitalsId, enabled, onComplete]);
+  }, [vitalsId, onComplete]);
 
   return (
     <div className="bg-white shadow-md p-5 rounded-lg border-l-4 border-blue-500">
