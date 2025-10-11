@@ -49,7 +49,7 @@ const DoctorsDashboard = () => {
 
 
   // Route protection: redirect unauthenticated doctors
-useEffect(() => {
+  useEffect(() => {
     const verifyAuth = async () => {
       if (!token) {
         setIsAuthenticated(false);
@@ -127,6 +127,11 @@ useEffect(() => {
           const capitalize = (str: string) =>
             str ? str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : "";
 
+          // Extract coordinates
+          const coordinates = p.coordinates
+            ? { lat: p.coordinates.lat, lng: p.coordinates.lng }
+            : null;
+
           return {
             id: p._id,
             name: capitalize(p.fullName),
@@ -136,6 +141,7 @@ useEffect(() => {
             vitals: p.vitals,
             riskLevel: p.riskLevel,
             location: p.location ?? "Unknown",
+            coordinates: coordinates,
             lastUpdate: formatRelativeTime(p.updatedAt) || formatRelativeTime(p.createdAt),
           };
         });
@@ -245,7 +251,6 @@ useEffect(() => {
 
 
   // Render Logic
-  // --------------------
   if (!authChecked) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">

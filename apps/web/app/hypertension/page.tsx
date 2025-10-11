@@ -1,7 +1,9 @@
+//hypertension/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { HeartPulse,Globe,TriangleAlert,MicVocal,Pill,Utensils,AlertCircle,CheckCircle,Wine,Cigarette,Coffee,Activity, User, Search, Send,
+import {
+  HeartPulse, Globe, TriangleAlert, MicVocal, Pill, Utensils, AlertCircle, CheckCircle, Wine, Cigarette, Coffee, Activity, User, Search, Send,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import axios from 'axios';
@@ -19,6 +21,7 @@ import DietRecommendations from "./components/DietRecommendations";
 import type { LifestyleData } from "./components/LifestyleAssessment";
 import HealthTrends from "./components/HealthTrends";
 import NearbyClinics from "./components/NearbyClinics";
+import useLocationTracker from "@/lib/useLocationTracker";
 // import { Doctor } from "@/types/doctor";
 import { Button, Input, Card, CardHeader, CardContent, CardDescription, CardTitle } from "@repo/ui";
 import {
@@ -62,6 +65,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 
 function DashboardPage() {
+  useLocationTracker(); // 🩵 start location tracking here
   const { data: session, status } = useSession();
   console.log("Submitting vitals with userId:", session?.user?.id);
 
@@ -159,7 +163,7 @@ function DashboardPage() {
   const Provider = dynamic(() => import("../components/maps/ProviderMap"), {
     ssr: false,
   });
-   
+
   const { listening, transcript, startListening, stopListening, setTranscript, error } =
     useVoiceInput();
 
@@ -371,14 +375,14 @@ function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header 
+      <Header
         language={language}
         onLanguageChange={setLanguage}
         patient={patient}
       />
 
       <main className="flex flex-col items-center px-4 py-6 gap-6">
-        
+
         {patient && (
           <PatientProfile
             patient={patient}

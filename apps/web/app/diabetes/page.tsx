@@ -1,3 +1,4 @@
+//diabetes/page.tsx
 "use client";
 import React, { useState } from "react";
 import DiabetesAlerts from "../components/diabetesPages/DiabetesAlerts";
@@ -8,8 +9,10 @@ import LifestyleForm from "../components/diabetesPages/DiabetesLifestyle"; // âœ
 import DiabetesMedications from "../components/diabetesPages/DiabetesMedications";
 import DiabetesFoodAdvice from "../components/diabetesPages/DiabetesFoodAdvice";
 import UserProfileHeader from "../components/UserProfileHeader";
+import useLocationTracker from "@/lib/useLocationTracker";
 
 const Page = () => {
+  useLocationTracker(); // ðŸ©µ start location tracking here
   const [refreshToken, setRefreshToken] = useState(0);
   const [vitalsId, setVitalsId] = useState<string | undefined>();
   const [requestAI, setRequestAI] = useState(false);
