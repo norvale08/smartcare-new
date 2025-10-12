@@ -1,19 +1,12 @@
 //PatientLocation.tsx
 "use client";
+
 import React, { useEffect, useRef, useState } from "react";
 import { Patient } from "@/types/doctor";
 import { getRiskColor } from "../lib/utils";
 import { MapPin } from "lucide-react";
-import L from "leaflet";
+const L = typeof window !== "undefined" ? require("leaflet") : null;
 import "leaflet/dist/leaflet.css";
-
-// Fix for default marker icons in Next.js
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-});
 
 
 interface PatientLocationsProps {
@@ -21,46 +14,25 @@ interface PatientLocationsProps {
 }
 
 const PatientLocations: React.FC<PatientLocationsProps> = ({ patients }) => {
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
+  const markersRef = useRef<any[]>([]);
 
-  // Function to get marker color based on risk level
-  const getMarkerColor = (riskLevel: "low" | "high" | "critical") => {
-    switch (riskLevel) {
-      case "critical":
-        return "#dc2626"; // red
-      case "high":
-        return "#f59e0b"; // amber
-      case "low":
-        return "#10b981"; // green
-      default:
-        return "#6b7280"; // gray
-    }
-  };
-
-  // Create custom icon with risk-based color
-  const createCustomIcon = (riskLevel: "low" | "high" | "critical") => {
-    const color = getMarkerColor(riskLevel);
-    const svgIcon = `
-      <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12.5 0C5.596 0 0 5.596 0 12.5c0 9.375 12.5 28.125 12.5 28.125S25 21.875 25 12.5C25 5.596 19.404 0 12.5 0z" 
-              fill="${color}" stroke="white" stroke-width="2"/>
-        <circle cx="12.5" cy="12.5" r="5" fill="white"/>
-      </svg>
-    `;
-
-    return L.divIcon({
-      html: svgIcon,
-      className: "custom-marker-icon",
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-    });
-  };
-
+  // Only create Leaflet map on the client
   useEffect(() => {
+    if (typeof window === "undefined" || !L) return;
     if (!mapContainerRef.current || mapRef.current) return;
+
+    // Fix default icons in Next.js
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl:
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+      iconUrl:
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+      shadowUrl:
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+    });
 
     // Initialize map
     const map = L.map(mapContainerRef.current, {
@@ -77,15 +49,15 @@ const PatientLocations: React.FC<PatientLocationsProps> = ({ patients }) => {
     mapRef.current = map;
 
     return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+      map.remove();
+      mapRef.current = null;
     };
   }, []);
 
+
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (typeof window === "undefined" || !L || !mapRef.current) return;
+
 
     // Clear existing markers
     markersRef.current.forEach((marker) => marker.remove());
@@ -93,19 +65,50 @@ const PatientLocations: React.FC<PatientLocationsProps> = ({ patients }) => {
 
     // Filter patients with valid coordinates
     const patientsWithCoords = patients.filter(
-      (patient) =>
-        patient.coordinates &&
-        typeof patient.coordinates.lat === "number" &&
-        typeof patient.coordinates.lng === "number"
+      (p) =>
+        p.coordinates &&
+        typeof p.coordinates.lat === "number" &&
+        typeof p.coordinates.lng === "number"
     );
 
-    if (patientsWithCoords.length === 0) {
-      console.log("No patients with valid coordinates");
-      return;
-    }
+    if (patientsWithCoords.length === 0) return;
 
     // Add markers for each patient
     const bounds = L.latLngBounds([]);
+
+    // Function to get marker color based on risk level
+    const getMarkerColor = (riskLevel: "low" | "high" | "critical") => {
+      switch (riskLevel) {
+        case "critical":
+          return "#dc2626"; // red
+        case "high":
+          return "#f59e0b"; // amber
+        case "low":
+          return "#10b981"; // green
+        default:
+          return "#6b7280"; // gray
+      }
+    };
+
+    // Create custom icon with risk-based color
+    const createCustomIcon = (riskLevel: "low" | "high" | "critical") => {
+      const color = getMarkerColor(riskLevel);
+      const svgIcon = `
+      <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12.5 0C5.596 0 0 5.596 0 12.5c0 9.375 12.5 28.125 12.5 28.125S25 21.875 25 12.5C25 5.596 19.404 0 12.5 0z" 
+              fill="${color}" stroke="white" stroke-width="2"/>
+        <circle cx="12.5" cy="12.5" r="5" fill="white"/>
+      </svg>
+    `;
+
+      return L.divIcon({
+        html: svgIcon,
+        className: "custom-marker-icon",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+      });
+    };
 
     patientsWithCoords.forEach((patient) => {
       if (!patient.coordinates) return;

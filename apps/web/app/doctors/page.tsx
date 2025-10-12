@@ -50,6 +50,8 @@ const DoctorsDashboard = () => {
 
   // Route protection: redirect unauthenticated doctors
   useEffect(() => {
+    if (typeof window === "undefined") return; // guard SSR
+
     const verifyAuth = async () => {
       if (!token) {
         setIsAuthenticated(false);
@@ -93,6 +95,8 @@ const DoctorsDashboard = () => {
 
   // Fetch doctor info
   useEffect(() => {
+    if (typeof window === "undefined") return; // guard SSR
+
     const fetchDoctor = async () => {
       try {
         const res = await authFetch(`${API_URL}/api/doctorDashboard/doctor`, { cache: "no-store" });
@@ -109,6 +113,8 @@ const DoctorsDashboard = () => {
 
   // Fetch ONLY assigned patients
   useEffect(() => {
+    if (typeof window === "undefined") return; // guard SSR
+
     const fetchAssignedPatients = async () => {
       try {
         const res = await authFetch(`${API_URL}/api/doctorDashboard/assignedPatients`, {
@@ -162,6 +168,7 @@ const DoctorsDashboard = () => {
   const [vitalTrends, setVitalTrends] = useState<VitalTrend>({ heartRate: [], bloodPressure: [], glucose: [], bmi: [], });
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const fetchTrends = async () => {
       try {
         const res = await fetch(`${API_URL}/api/doctorDashboard/vitalTrends`, {
@@ -231,6 +238,7 @@ const DoctorsDashboard = () => {
   const [anomalyDistributionBar, setAnomalyDistributionBar] = useState<AnomalyBarData[]>([]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const fetchAnomalyDistribution = async () => {
       try {
         const res = await fetch(`${API_URL}/api/doctorDashboard/anomalyDistribution`, {

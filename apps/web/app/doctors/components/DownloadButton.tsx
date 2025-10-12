@@ -1,4 +1,5 @@
 // DownloadButton.tsx
+"use client";
 import { Download } from "lucide-react";
 
 interface DownloadButtonProps {
