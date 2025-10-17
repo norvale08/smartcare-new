@@ -33,9 +33,14 @@ router.get("/summary/:id", verifyToken, async (req: AuthenticatedRequest, res: R
       return res.status(404).json({ message: "Vitals not found" });
     }
 
+    // ✅ Security: Verify the vitals belong to the requesting user
+    if (vitals.userId.toString() !== userId) {
+      return res.status(403).json({ message: "Forbidden: Access denied" });
+    }
+
     // ✅ Check if summary already exists to avoid regeneration
     if (vitals.summary) {
-      console.log("📋 Using existing summary");
+      console.log(`📋 Using existing summary for vitals ${req.params.id}`);
       return res.status(200).json({ aiFeedback: vitals.summary, summary: true, cached: true });
     }
 
@@ -60,9 +65,9 @@ router.get("/summary/:id", verifyToken, async (req: AuthenticatedRequest, res: R
 
     const aiFeedback = await smartCareAI.generateSummary(glucoseData);
 
-    // ✅ Save to 'summary' field and also to 'aiFeedback' for backwards compatibility
+    // ✅ Only save to 'summary' field - remove aiFeedback assignment
     vitals.summary = aiFeedback;
-    vitals.aiFeedback = aiFeedback;
+    // ❌ REMOVE THIS LINE: vitals.aiFeedback = aiFeedback;
     await vitals.save();
 
     res.status(200).json({ aiFeedback, summary: true, cached: false });

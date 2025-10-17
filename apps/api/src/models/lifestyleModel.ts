@@ -1,10 +1,22 @@
-// models/lifestyleModel.ts
-import { Schema, model, models } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
-const LifestyleSchema = new Schema(
+export interface ILifestyle extends Document {
+  userId: mongoose.Types.ObjectId;
+  alcohol: "None" | "Occasionally" | "Frequently";
+  smoking: "None" | "Light" | "Heavy";
+  exercise: "Daily" | "Few times/week" | "Rarely" | "None";
+  sleep: "<5 hrs" | "6-7 hrs" | "7-8 hrs" | ">8 hrs" | "Irregular";
+  aiAdvice?: string;
+  isGenerating?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const LifestyleSchema = new Schema<ILifestyle>(
   {
     userId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: "User",
       required: true,
     },
     alcohol: {
@@ -29,23 +41,21 @@ const LifestyleSchema = new Schema(
     },
     aiAdvice: {
       type: String,
+      default: undefined,
     },
-    warnings: {
-      type: [String],
-    },
-    glucoseContext: {
-      glucose: Number,
-      context: String,
-      readingDate: Date,
+    isGenerating: {
+      type: Boolean,
+      default: false,
     },
   },
-  { 
-    timestamps: true 
+  {
+    timestamps: true,
   }
 );
 
-// Index for efficient queries
-LifestyleSchema.index({ userId: 1, createdAt: -1 });
+// Index for faster queries
+LifestyleSchema.index({ userId: 1, updatedAt: -1 });
 
-const Lifestyle = models.Lifestyle || model("Lifestyle", LifestyleSchema);
+const Lifestyle = mongoose.models.Lifestyle || mongoose.model<ILifestyle>("Lifestyle", LifestyleSchema);
+
 export default Lifestyle;
