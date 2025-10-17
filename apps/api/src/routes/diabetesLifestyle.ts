@@ -1,204 +1,218 @@
-import express, { Request, Response } from "express";
-import { SmartCareAI } from "../services/SmartCareAI"; 
-import Diabetes from "../models/diabetesModel";
-import Lifestyle from "../models/lifestyleModel";
+import express, { Response } from "express";
+import Lifestyle from "../models/lifestyleModel"; // Adjust path as needed
+import Patient from "../models/patient";
+import { SmartCareAI } from "../services/SmartCareAI";
 import { verifyToken, AuthenticatedRequest } from "../middleware/verifyToken";
 
 const router = express.Router();
+const smartCareAI = new SmartCareAI();
 
-// Initialize AI service
-let aiService: SmartCareAI;
-try {
-  aiService = new SmartCareAI();
-  console.log("✅ SmartCareAI service initialized successfully");
-} catch (error) {
-  console.error("❌ Failed to initialize SmartCareAI service:", error);
-  aiService = null as any;
-}
-
-interface LifestyleData {
-  alcohol?: string;
-  smoking?: string;
-  exercise?: string;
-  sleep?: string;
-}
-
-// Allow preflight OPTIONS requests
 router.options("*", (_req, res) => res.sendStatus(200));
 
-// POST lifestyle data
+const calculateAge = (dob: Date | string | undefined): number => {
+  if (!dob) return 0;
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age > 0 ? age : 0;
+};
+
+/**
+ * ✅ POST /api/lifestyle
+ * Save lifestyle data WITHOUT generating AI (async generation)
+ */
 router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
-
-    const lifestyleData: LifestyleData = req.body;
-    console.log("📝 Received lifestyle data for user:", userId, lifestyleData);
-
-    // Validate
-    const requiredFields = ['alcohol', 'smoking', 'exercise', 'sleep'];
-    const missingFields = requiredFields.filter(field => !lifestyleData[field as keyof LifestyleData]);
-    if (missingFields.length > 0) {
-      return res.status(400).json({ success: false, message: `Missing required fields: ${missingFields.join(', ')}` });
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Latest glucose reading
-    const latestGlucoseReading = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
-    if (!latestGlucoseReading) {
-      return res.status(404).json({ success: false, message: "No glucose readings found. Please add a glucose reading first." });
+    const { alcohol, smoking, exercise, sleep } = req.body;
+
+    if (!alcohol || !smoking || !exercise || !sleep) {
+      return res.status(400).json({ message: "All lifestyle fields are required" });
     }
 
-    console.log("🩸 Found latest glucose reading:", {
-      glucose: latestGlucoseReading.glucose,
-      context: latestGlucoseReading.context,
-      date: latestGlucoseReading.createdAt
-    });
+    // Create or update lifestyle record
+    let lifestyle = await Lifestyle.findOne({ userId });
 
-    // Warnings
-    const warnings: string[] = [];
-    if (lifestyleData.alcohol === "Frequently") warnings.push("High alcohol consumption can affect blood sugar control");
-    if (lifestyleData.smoking === "Heavy") warnings.push("Smoking significantly increases diabetes complications risk");
-    if (lifestyleData.exercise === "None") warnings.push("Regular exercise is crucial for blood sugar management");
-    if (lifestyleData.sleep === "<5 hrs" || lifestyleData.sleep === "Irregular") warnings.push("Poor sleep patterns can worsen blood sugar control");
-
-    // Save lifestyle record with initial state
-    const lifestyleRecord = new Lifestyle({
-      userId,
-      ...lifestyleData,
-      aiAdvice: "Generating personalized advice...",
-      isGenerating: true,
-      warnings,
-      glucoseContext: {
-        glucose: latestGlucoseReading.glucose,
-        context: latestGlucoseReading.context,
-        readingDate: latestGlucoseReading.createdAt
-      }
-    });
-
-    const savedRecord = await lifestyleRecord.save();
-    console.log("💾 Saved lifestyle record with ID:", savedRecord._id);
-
-    // Send immediate response
-    res.json({
-      success: true,
-      message: "Lifestyle data saved successfully",
-      recordId: savedRecord._id,
-      warning: warnings.length > 0 ? warnings.join(". ") : null,
-      data: savedRecord
-    });
-
-    // Generate AI advice in background (don't await)
-    generateAIAdviceBackground(savedRecord._id.toString(), {
-      glucose: latestGlucoseReading.glucose,
-      context: latestGlucoseReading.context,
-      language: latestGlucoseReading.language || "en",
-      lifestyle: lifestyleData
-    }).catch(error => {
-      console.error("❌ Background AI generation failed:", error);
-    });
-
-  } catch (error) {
-    console.error("❌ Error in lifestyle POST:", error);
-    res.status(500).json({ success: false, message: "Failed to process lifestyle data" });
-  }
-});
-
-// Background AI generation function
-async function generateAIAdviceBackground(recordId: string, aiInput: any) {
-  try {
-    console.log("🤖 Starting AI advice generation for record:", recordId);
-    
-    if (!aiService) {
-      console.log("❌ AI service not available");
-      await Lifestyle.findByIdAndUpdate(recordId, {
-        aiAdvice: "AI service is currently unavailable. Please try again later.",
-        isGenerating: false
+    if (lifestyle) {
+      // Update existing
+      lifestyle.alcohol = alcohol;
+      lifestyle.smoking = smoking;
+      lifestyle.exercise = exercise;
+      lifestyle.sleep = sleep;
+      lifestyle.isGenerating = true;
+      lifestyle.aiAdvice = undefined; // Clear old advice
+      await lifestyle.save();
+    } else {
+      // Create new
+      lifestyle = new Lifestyle({
+        userId,
+        alcohol,
+        smoking,
+        exercise,
+        sleep,
+        isGenerating: true,
       });
-      return;
+      await lifestyle.save();
     }
 
-    // Mark as generating
-    await Lifestyle.findByIdAndUpdate(recordId, {
-      aiAdvice: "Generating personalized advice...",
-      isGenerating: true
+    console.log(`💾 Lifestyle data saved for user ${userId}: ${lifestyle._id}`);
+
+    // Start AI generation in background (don't await)
+    generateLifestyleAIAsync(lifestyle._id.toString(), userId);
+
+    res.status(201).json({
+      message: "✅ Lifestyle data saved successfully",
+      recordId: lifestyle._id,
+      success: true,
     });
-
-    // Generate advice
-    console.log("🔄 Calling AI service with input:", aiInput);
-    const aiGeneratedAdvice = await aiService.generateLifestyleFeedback(aiInput);
-    console.log("✅ AI advice generated:", aiGeneratedAdvice.substring(0, 100) + "...");
-
-    // Update database with generated advice
-    const updatedRecord = await Lifestyle.findByIdAndUpdate(recordId, {
-      aiAdvice: aiGeneratedAdvice || "AI advice generation completed but no response received.",
-      isGenerating: false
-    }, { new: true });
-
-    console.log("💾 Updated lifestyle record with AI advice");
-
-  } catch (error) {
-    console.error("❌ Error in AI advice generation:", error);
-    await Lifestyle.findByIdAndUpdate(recordId, {
-      aiAdvice: "Sorry, AI advice generation failed. Please try again later.",
-      isGenerating: false
-    });
-  }
-}
-
-// Get AI advice with detailed logging
-router.get("/advice/:recordId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { recordId } = req.params;
-    const userId = req.user?.userId;
-    
-    console.log("📡 Fetching AI advice for record:", recordId, "user:", userId);
-    
-    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
-
-    const record = await Lifestyle.findOne({ _id: recordId, userId });
-    if (!record) {
-      console.log("❌ Record not found:", recordId);
-      return res.status(404).json({ success: false, message: "Record not found" });
-    }
-
-    const isGenerating = record.aiAdvice === "Generating personalized advice..." || record.isGenerating;
-    
-    console.log("📊 Record status:", {
-      aiAdvice: record.aiAdvice.substring(0, 50) + "...",
-      isGenerating,
-      lastUpdated: record.updatedAt
-    });
-
-    res.json({ 
-      success: true, 
-      aiAdvice: record.aiAdvice, 
-      isGenerating, 
-      lastUpdated: record.updatedAt 
-    });
-
-  } catch (error) {
-    console.error("❌ Error fetching AI advice:", error);
-    res.status(500).json({ success: false, message: "Failed to fetch AI advice" });
+  } catch (error: any) {
+    console.error("❌ Lifestyle save error:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-// Get latest lifestyle data for a user
+/**
+ * ✅ GET /api/lifestyle/latest
+ * Get the latest lifestyle record for the user
+ */
 router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
-
-    const latestRecord = await Lifestyle.findOne({ userId }).sort({ createdAt: -1 });
-    
-    if (!latestRecord) {
-      return res.status(404).json({ success: false, message: "No lifestyle data found" });
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
-    res.json({ success: true, data: latestRecord });
-  } catch (error) {
-    console.error("❌ Error fetching latest lifestyle data:", error);
-    res.status(500).json({ success: false, message: "Failed to fetch lifestyle data" });
+    const lifestyle = await Lifestyle.findOne({ userId }).sort({ updatedAt: -1 });
+
+    if (!lifestyle) {
+      return res.status(404).json({ message: "No lifestyle data found", success: false });
+    }
+
+    res.status(200).json({
+      message: "✅ Lifestyle data retrieved",
+      data: lifestyle,
+      success: true,
+    });
+  } catch (error: any) {
+    console.error("❌ Error retrieving lifestyle data:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
+/**
+ * ✅ GET /api/lifestyle/advice/:id
+ * Poll for AI advice generation status
+ */
+router.get("/advice/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const lifestyle = await Lifestyle.findById(req.params.id);
+
+    if (!lifestyle) {
+      return res.status(404).json({ message: "Lifestyle record not found", success: false });
+    }
+
+    // Security: Verify ownership
+    if (lifestyle.userId.toString() !== userId) {
+      return res.status(403).json({ message: "Forbidden: Access denied", success: false });
+    }
+
+    res.status(200).json({
+      success: true,
+      isGenerating: lifestyle.isGenerating || false,
+      aiAdvice: lifestyle.aiAdvice || null,
+      lastUpdated: lifestyle.updatedAt,
+    });
+  } catch (error: any) {
+    console.error("❌ Error fetching AI advice:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message, success: false });
+  }
+});
+
+/**
+ * 🔄 Background AI generation (async - doesn't block response)
+ */
+async function generateLifestyleAIAsync(lifestyleId: string, userId: string) {
+  try {
+    console.log(`🧠 Starting background AI generation for lifestyle ${lifestyleId}`);
+
+    const lifestyle = await Lifestyle.findById(lifestyleId);
+    if (!lifestyle) {
+      console.error("❌ Lifestyle record not found for AI generation");
+      return;
+    }
+
+    const patient = await Patient.findOne({ userId });
+    if (!patient) {
+      console.error("❌ Patient profile not found for AI generation");
+      return;
+    }
+
+    // Get the latest vitals for glucose context
+    const Diabetes = require("../models/diabetesModel").default;
+    const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
+
+    if (!latestVitals) {
+      lifestyle.aiAdvice = "⚠️ Please submit glucose vitals first to get personalized advice.";
+      lifestyle.isGenerating = false;
+      await lifestyle.save();
+      return;
+    }
+
+    const age = calculateAge(patient.dob);
+
+    const lifestyleInput = {
+      glucose: latestVitals.glucose,
+      context: latestVitals.context as "Fasting" | "Post-meal" | "Random",
+      language: (latestVitals.language as "en" | "sw") || "en",
+      age,
+      gender: patient.gender,
+      weight: patient.weight,
+      height: patient.height,
+      lifestyle: {
+        alcohol: lifestyle.alcohol,
+        smoking: lifestyle.smoking,
+        exercise: lifestyle.exercise,
+        sleep: lifestyle.sleep,
+      },
+    };
+
+    console.log(`🤖 Generating lifestyle AI advice:`, lifestyleInput);
+
+    const aiAdvice = await smartCareAI.generateLifestyleFeedback(lifestyleInput);
+
+    lifestyle.aiAdvice = aiAdvice;
+    lifestyle.isGenerating = false;
+    await lifestyle.save();
+
+    console.log(`✅ AI advice generated for lifestyle ${lifestyleId}`);
+  } catch (error: any) {
+    console.error("❌ Background AI generation error:", error.message);
+
+    // Mark as failed
+    try {
+      const lifestyle = await Lifestyle.findById(lifestyleId);
+      if (lifestyle) {
+        lifestyle.aiAdvice = "❌ Failed to generate AI advice. Please try refreshing.";
+        lifestyle.isGenerating = false;
+        await lifestyle.save();
+      }
+    } catch (saveError) {
+      console.error("Failed to update lifestyle record after error:", saveError);
+    }
+  }
+}
 
 export default router;
