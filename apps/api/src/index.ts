@@ -22,6 +22,7 @@ import doctorDashboardRouter from './routes/doctorDashboardRoutes';
 import logoutRoute from "./routes/logout";
 import verifyTokenRoute from "./routes/verifyTokenRoute";
 import locationUpdateRoute from "./routes/locationUpdate";
+import foodRecommendationRouter from "./routes/diabetesFood"
 dotenv.config();
 
 const app = express();
@@ -111,6 +112,7 @@ app.use('/api/logout', logoutRoute);
 app.use("/api/verifyToken", verifyTokenRoute);
 app.use("/api/location", locationUpdateRoute);
 
+app.use("/api/food/recommendation",foodRecommendationRouter );
 
 // 404 handler
 app.use('*', (req, res) => {
