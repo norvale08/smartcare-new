@@ -137,7 +137,8 @@ function DashboardPage() {
     caffeine: 0,
     exercise: ""
   });
-  const [dietGenerated, setDietGenerated] = useState(false);
+  const [dietData, setDietData] = useState<any>(null);
+  const [dietLoading, setDietLoading] = useState(false);
 
   const [aiRecommendations, setAiRecommendations] = useState({ advice: '', alerts: [], warnings: [] });
   const [loadingAI, setLoadingAI] = useState(false);
@@ -151,10 +152,6 @@ function DashboardPage() {
     hospitalId: "",
     isAvailable: false
   });
-
-  const generateDietPlan = () => {
-    setDietGenerated(true);
-  };
 
   const Provider = dynamic(() => import("../components/maps/ProviderMap"), {
     ssr: false,
@@ -253,8 +250,46 @@ function DashboardPage() {
       }
     };
 
+    const fetchDietRecommendations = async () => {
+  try {
+    setDietLoading(true);
+    const token = localStorage.getItem("token");
+    const res = await axios.get(`${API_URL}/api/hypertension/diet`, {
+      headers: { Authorization: `Bearer ${token}` },
+      withCredentials: true,
+    });
+
+    // Handle both possible response shapes
+    const data = res.data.data || res.data;
+
+    if (data && data.breakfast) {
+      setDietData(data);
+    } else {
+      console.warn("Diet API returned unexpected data:", data);
+      setDietData(null);
+    }
+  } catch (err: any) {
+    console.error("Failed to fetch diet recommendations:", err?.response?.data || err);
+    if (err?.response?.status === 401) {
+      console.warn("User not authenticated — token invalid or missing");
+    }
+    // Fallback default
+    setDietData({
+      breakfast: "Maziwa lala with mkate wa maharage and bananas",
+      lunch: "Sukuma wiki with lean proteins and small portion of ugali",
+      dinner: "Fish with traditional vegetables",
+      snacks: "Fresh fruits or boiled maize",
+      generalAdvice: "Focus on traditional Kenyan foods with less salt and more vegetables.",
+      calorieTarget: 2000,
+    });
+  } finally {
+    setDietLoading(false);
+  }
+};
+
     fetchVitals();
     fetchAIRecommendations();
+    fetchDietRecommendations();
   }, [alertRefreshToken]);
 
   const todayAlert = getTodayAlertStatus(vitals);
@@ -434,20 +469,12 @@ function DashboardPage() {
         />
 
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <Utensils className="text-green-600" size={20} />
-              <h3 className="text-lg font-semibold text-gray-800">AI Diet Recommendations</h3>
-            </div>
-            <button
-              onClick={generateDietPlan}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-            >
-              Generate Diet Plan
-            </button>
+          <div className="flex items-center gap-2 mb-6">
+            <Utensils className="text-green-600" size={20} />
+            <h3 className="text-lg font-semibold text-gray-800">AI Diet Recommendations</h3>
           </div>
 
-          <DietRecommendations lifestyle={lifestyle} />
+          <DietRecommendations dietData={dietData} loading={dietLoading} />
         </div>
 
         <HealthTrends vitals={vitals} />
