@@ -17,6 +17,7 @@ import doctorsRoutes from "./routes/doctors"
 import diabetesAiRoutes from "./routes/diabetesAi";
 import LifestyleRoutes from "./routes/diabetesLifestyle";
 import hypertensionLifestyle from "./routes/hypertensionLifestyle";
+import hypertensionDiet from "./routes/hypertensionDiet";
 import adminPatientsRoutes from "./routes/admin";
 import doctorDashboardRouter from './routes/doctorDashboardRoutes';
 import logoutRoute from "./routes/logout";
@@ -104,6 +105,7 @@ app.use ('/api/doctors',doctorsRoutes);
 app.use("/api/diabetesAi", diabetesAiRoutes);
 app.use('/api/lifestyle', LifestyleRoutes);
 app.use('/api/hypertension/lifestyle', hypertensionLifestyle);
+app.use('/api/hypertension/diet', hypertensionDiet);
 app.use("/api/admin/patients", adminPatientsRoutes);
 app.use('/api/doctorDashboard', doctorDashboardRouter);
 app.use('/api/logout', logoutRoute);

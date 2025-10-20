@@ -2,6 +2,7 @@ import ollama from "ollama";
 import mongoose from "mongoose";
 import HypertensionLifestyle, { ILifestyle } from "../models/hypertensionLifestyle";
 import HypertensionVital from "../models/hypertensionVitals";
+import Patient from "../models/patient";
 
 // Function to generate daily alerts from recent vitals
 async function getDailyAlerts(userId: string): Promise<string[]> {
@@ -205,6 +206,199 @@ We're here to support your heart health journey. While we couldn't generate pers
 • Limit alcohol and avoid smoking
 
 Remember: Small, consistent changes lead to significant improvements. You've got this! 💪`;
+}
+
+// Function to get patient demographics
+async function getPatientDemographics(userId: string) {
+  const patient = await Patient.findOne({
+    userId: new mongoose.Types.ObjectId(userId)
+  }).exec();
+
+  if (!patient) {
+    return {
+      weight: 70, // default values
+      height: 170,
+      gender: "Other"
+    };
+  }
+
+  return {
+    weight: patient.weight || 70,
+    height: patient.height || 170,
+    gender: patient.gender || "Other"
+  };
+}
+
+// Function to calculate BMI
+function calculateBMI(weight: number, height: number): number {
+  const heightInMeters = height / 100;
+  return weight / (heightInMeters * heightInMeters);
+}
+
+// Main function to generate AI diet recommendations
+export async function generateDietRecommendations(
+  userId: string
+): Promise<{
+  breakfast: string;
+  lunch: string;
+  dinner: string;
+  snacks: string;
+  generalAdvice: string;
+  calorieTarget?: number;
+}> {
+  try {
+    // Get patient demographics
+    const demographics = await getPatientDemographics(userId);
+    const bmi = calculateBMI(demographics.weight, demographics.height);
+
+    // Get latest vitals
+    const latestVitals = await HypertensionVital.findOne({
+      userId: new mongoose.Types.ObjectId(userId)
+    })
+      .sort({ createdAt: -1 })
+      .exec();
+
+    // Get current lifestyle
+    const lifestyle = await getCurrentLifestyle(userId);
+
+    // Get daily alerts
+    const alerts = await getDailyAlerts(userId);
+
+    // Calculate daily calorie target based on demographics and activity
+    const baseCalories = (() => {
+      if (demographics.gender === "Male") {
+        return 88.362 + (13.397 * demographics.weight) + (4.799 * demographics.height) - (5.677 * 30); // assuming 30 years
+      } else {
+        return 447.593 + (9.247 * demographics.weight) + (3.098 * demographics.height) - (4.330 * 30); // assuming 30 years
+      }
+    })();
+
+    const activityMultiplier = lifestyle.exercise === "Daily" ? 1.55 : 
+                              lifestyle.exercise === "Few times/week" ? 1.375 : 
+                              lifestyle.exercise === "Rarely" ? 1.2 : 1.1;
+    
+    const calorieTarget = Math.round(baseCalories * activityMultiplier);
+
+    // Create prompt for diet recommendations
+    const prompt = `You are a nutrition expert specializing in Kenyan cuisine for hypertension management. Create a personalized diet plan for a patient with the following profile:
+
+👤 PATIENT PROFILE:
+- Gender: ${demographics.gender}
+- Weight: ${demographics.weight} kg
+- Height: ${demographics.height} cm  
+- BMI: ${bmi.toFixed(1)}
+- Daily Calorie Target: ${calorieTarget} calories
+
+📊 CURRENT HEALTH STATUS:
+${alerts.join("\n")}
+
+🏃 LIFESTYLE FACTORS:
+- Exercise: ${lifestyle.exercise}
+- Alcohol: ${lifestyle.alcohol}
+- Smoking: ${lifestyle.smoking}
+
+Please provide a complete day's meal plan using ONLY traditional Kenyan foods that support heart health and blood pressure management. Focus on:
+
+🍞 BREAKFAST (30% of daily calories):
+- Traditional Kenyan breakfast options
+- Low sodium, high fiber choices
+- Include portion sizes
+
+🥙 LUNCH (35% of daily calories):
+- Balanced Kenyan lunch dishes
+- Focus on lean proteins and vegetables
+- Traditional preparation methods
+
+🍽️ DINNER (25% of daily calories):
+- Light, easily digestible Kenyan dinner
+- Include traditional vegetables
+- Healthy cooking methods
+
+🍎 SNACKS (10% of daily calories):
+- Healthy Kenyan snack options
+- Blood pressure-friendly choices
+
+💡 GENERAL ADVICE:
+Provide 3-4 sentences of specific dietary advice based on their profile and vitals. Include practical Kenyan context.
+
+CRITICAL REQUIREMENTS:
+- Use ONLY authentic Kenyan foods (no international dishes)
+- Include traditional cooking methods
+- Specify reasonable portion sizes
+- Focus on low-sodium, high-potassium, high-fiber options
+- Avoid processed foods and excessive oil
+- Consider cultural preferences and availability
+- Be specific about ingredients (e.g., "mchuzi mix" instead of just "spices")
+
+Format your response exactly as:
+BREAKFAST: [Detailed Kenyan breakfast recommendation with portions]
+LUNCH: [Detailed Kenyan lunch recommendation with portions]
+DINNER: [Detailed Kenyan dinner recommendation with portions]
+SNACKS: [Detailed Kenyan snacks recommendation]
+GENERAL ADVICE: [Specific dietary advice]`;
+
+    // Call Ollama
+    const response = await ollama.generate({
+      model: "llama3.2:3b",
+      prompt: prompt,
+      stream: false
+    });
+
+    const rawResponse = response.response;
+
+    // Parse the response
+    const dietPlan = parseDietResponse(rawResponse);
+
+    return {
+      ...dietPlan,
+      calorieTarget
+    };
+
+  } catch (error) {
+    console.error("❌ Error generating diet recommendations:", error);
+    return getFallbackDietRecommendations();
+  }
+}
+
+// Helper function to parse diet response
+function parseDietResponse(rawResponse: string) {
+  const lines = rawResponse.split('\n');
+  
+  let breakfast = "Traditional Kenyan porridge with banana and nuts";
+  let lunch = "Sukuma wiki with lean beef and ugali";
+  let dinner = "Fish with traditional vegetables and small portion of ugali";
+  let snacks = "Fruits or boiled maize";
+  let generalAdvice = "Focus on traditional Kenyan foods with less salt and more vegetables.";
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    if (trimmedLine.startsWith('BREAKFAST:')) {
+      breakfast = trimmedLine.replace('BREAKFAST:', '').trim();
+    } else if (trimmedLine.startsWith('LUNCH:')) {
+      lunch = trimmedLine.replace('LUNCH:', '').trim();
+    } else if (trimmedLine.startsWith('DINNER:')) {
+      dinner = trimmedLine.replace('DINNER:', '').trim();
+    } else if (trimmedLine.startsWith('SNACKS:')) {
+      snacks = trimmedLine.replace('SNACKS:', '').trim();
+    } else if (trimmedLine.startsWith('GENERAL ADVICE:')) {
+      generalAdvice = trimmedLine.replace('GENERAL ADVICE:', '').trim();
+    }
+  }
+
+  return { breakfast, lunch, dinner, snacks, generalAdvice };
+}
+
+// Fallback diet recommendations if AI generation fails
+function getFallbackDietRecommendations() {
+  return {
+    breakfast: "Mandazi with unsweetened tea and banana (limit 1 mandazi)",
+    lunch: "Sukuma wiki with grilled chicken and small portion of ugali",
+    dinner: "Fish (tilapia) with traditional vegetables like mchicha",
+    snacks: "Fresh mango or boiled maize",
+    generalAdvice: "Choose traditional Kenyan foods with less salt. Focus on vegetables, fruits, and lean proteins. Limit processed foods and excessive oil.",
+    calorieTarget: 2000
+  };
 }
 
 // Function to update patient's lifestyle based on choices
