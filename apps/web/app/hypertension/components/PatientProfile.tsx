@@ -18,6 +18,7 @@ const PatientProfile: React.FC<PatientProfileProps> = ({ patient, vitals, onEdit
     const m = today.getMonth() - birth.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
     return age;
+    
   };
 
   const formatDateTime = (d?: Date | string | null) => {

@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ language, onLanguageChange, patient }) => {
-  const userName = patient?.fullName || "Sarah Johnson";
+  const userName = patient?.fullName || "Sarah ";
   const userInitials = userName.slice(0, 2).toUpperCase();
 
   return (
