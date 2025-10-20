@@ -1,4 +1,4 @@
-import ollama from "ollama";
+import Groq from "groq-sdk";
 
 export interface GlucoseData {
   glucose: number;
@@ -42,184 +42,161 @@ export interface FoodAdviceInput extends VitalsData {
 }
 
 export class SmartCareAI {
-  private model = process.env.OLLAMA_MODEL || "llama3.2:3b";
+  private groq: Groq;
+  private model = "llama-3.3-70b-versatile"; // Fast and accurate
 
-  // ✅ Summarize glucose reading — includes age, weight, height, gender
+  constructor() {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      throw new Error("GROQ_API_KEY not found in environment variables");
+    }
+    
+    this.groq = new Groq({ apiKey });
+  }
+
+  // ✅ Summarize glucose reading
   async generateSummary(data: GlucoseData): Promise<string> {
     try {
-      const prompt = `
-        You are a medical assistant.
-        Summarize the patient's glucose reading concisely (1–2 sentences).
-        Include brief interpretation considering their age, weight, height, and gender if available.
-        If language is "sw", respond in Kiswahili. Otherwise, use English.
+      const prompt = `You are a medical assistant. Summarize this glucose reading in 1-2 sentences.
+Glucose: ${data.glucose} mg/dL (${data.context})
+Age: ${data.age ?? "N/A"}, Weight: ${data.weight ?? "N/A"} kg, Height: ${data.height ?? "N/A"} cm, Gender: ${data.gender ?? "N/A"}
+${data.language === "sw" ? "Respond in Kiswahili." : ""}`;
 
-        Patient Info:
-        - Glucose: ${data.glucose} mg/dL (${data.context})
-        - Age: ${data.age ?? "Not provided"}
-        - Weight: ${data.weight ? data.weight + " kg" : "Not provided"}
-        - Height: ${data.height ? data.height + " cm" : "Not provided"}
-        - Gender: ${data.gender ?? "Not provided"}
-      `;
-
-      let content = "";
-      const stream = await ollama.chat({
-        model: this.model,
+      const completion = await this.groq.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        stream: true
+        model: this.model,
+        temperature: 0.7,
+        max_tokens: 150,
       });
 
-      for await (const token of stream) {
-        const text = token.message?.content || "";
-        content += text;
-      }
-
-      return content.trim() || "⚠️ No summary available.";
-    } catch (err) {
+      const text = completion.choices[0]?.message?.content || "";
+      return text.trim() || "⚠️ No summary available.";
+    } catch (err: any) {
       console.error("AI error (summary):", err);
       return "❌ Could not generate summary.";
     }
   }
 
-  // ✅ Provide glucose feedback — considers demographics
+  // ✅ Provide glucose feedback
   async generateGlucoseFeedback(data: GlucoseData): Promise<string> {
     try {
-      const prompt = `
-        You are a medical assistant.
-        Analyze the following glucose reading and provide a short interpretation (2–3 sentences).
-        Consider the patient's age, weight, height, and gender for context.
-        Mention whether it is normal, high, or low, and provide a practical recommendation.
-        If language is "sw", respond in Kiswahili; otherwise, use English.
+      const prompt = `Medical assistant: Analyze glucose ${data.glucose} mg/dL (${data.context}).
+Patient: Age ${data.age ?? "N/A"}, ${data.gender ?? "N/A"}, ${data.weight ?? "N/A"} kg
+Is it normal/high/low? Give 2-3 sentence recommendation.
+${data.language === "sw" ? "Kiswahili." : ""}`;
 
-        Patient Info:
-        - Glucose: ${data.glucose} mg/dL (${data.context})
-        - Age: ${data.age ?? "Not provided"}
-        - Weight: ${data.weight ? data.weight + " kg" : "Not provided"}
-        - Height: ${data.height ? data.height + " cm" : "Not provided"}
-        - Gender: ${data.gender ?? "Not provided"}
-      `;
-
-      let content = "";
-      const stream = await ollama.chat({
-        model: this.model,
+      const completion = await this.groq.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        stream: true
+        model: this.model,
+        temperature: 0.7,
+        max_tokens: 200,
       });
 
-      for await (const token of stream) {
-        const text = token.message?.content || "";
-        content += text;
-      }
-
-      return content.trim() || "⚠️ No feedback available.";
-    } catch (err) {
+      const text = completion.choices[0]?.message?.content || "";
+      return text.trim() || "⚠️ No feedback available.";
+    } catch (err: any) {
       console.error("AI error (feedback):", err);
       return "❌ Could not generate AI feedback.";
     }
   }
 
-  // ✅ Lifestyle-based AI advice — UPDATED to consider age, weight, height, gender
+  // ✅ Lifestyle-based AI advice
   async generateLifestyleFeedback(data: LifestyleAIInput): Promise<string> {
     try {
-      const prompt = `
-        You are a medical assistant specializing in diabetes and lifestyle management.
+      const prompt = `Medical assistant for diabetes management.
 
-        Analyze the patient's glucose level and lifestyle habits while considering their 
-        age, weight, height, and gender to provide personalized recommendations.
+Patient: Age ${data.age ?? "N/A"}, ${data.gender ?? "N/A"}, ${data.weight ?? "N/A"} kg
+Glucose: ${data.glucose} mg/dL (${data.context})
+Lifestyle: Alcohol: ${data.lifestyle.alcohol ?? "N/A"}, Smoking: ${data.lifestyle.smoking ?? "N/A"}, Exercise: ${data.lifestyle.exercise ?? "N/A"}, Sleep: ${data.lifestyle.sleep ?? "N/A"}
 
-        Patient Information:
-        - Glucose: ${data.glucose} mg/dL (${data.context})
-        - Age: ${data.age ?? "Not provided"}
-        - Weight: ${data.weight ? data.weight + " kg" : "Not provided"}
-        - Height: ${data.height ? data.height + " cm" : "Not provided"}
-        - Gender: ${data.gender ?? "Not provided"}
+Provide 3-4 sentences:
+1. Glucose status
+2. How lifestyle affects glucose
+3. Key recommendation
 
-        Lifestyle Factors:
-        - Alcohol: ${data.lifestyle.alcohol ?? "Not provided"}
-        - Smoking: ${data.lifestyle.smoking ?? "Not provided"}
-        - Exercise: ${data.lifestyle.exercise ?? "Not provided"}
-        - Sleep: ${data.lifestyle.sleep ?? "Not provided"}
+${data.language === "sw" ? "Kiswahili." : ""}`;
 
-        Provide 3–4 sentences of personalized lifestyle feedback that:
-        1. Interprets their glucose result
-        2. Considers their age, weight, or gender
-        3. Discusses how their habits may affect glucose control
-        4. Ends with practical and encouraging advice.
-
-        ${data.language === "sw" ? "Respond in Kiswahili." : "Respond in English."}
-      `;
-
-      let content = "";
-      const stream = await ollama.chat({
-        model: this.model,
+      const completion = await this.groq.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        stream: true
+        model: this.model,
+        temperature: 0.7,
+        max_tokens: 300,
       });
 
-      for await (const token of stream) {
-        const text = token.message?.content || "";
-        content += text;
-      }
-
-      return content.trim() || "⚠️ No lifestyle advice available.";
-    } catch (err) {
+      const text = completion.choices[0]?.message?.content || "";
+      return text.trim() || "⚠️ No lifestyle advice available.";
+    } catch (err: any) {
       console.error("AI error (lifestyle advice):", err);
       return "❌ Could not generate lifestyle AI advice.";
     }
   }
 
-  // ✅ Kenyan food advice
+  // ✅ Kenyan food advice (ENHANCED with lifestyle & demographics)
   async generateKenyanFoodAdvice(data: FoodAdviceInput): Promise<string> {
     try {
       const bmi =
         data.weight && data.height
           ? (data.weight / Math.pow(data.height / 100, 2)).toFixed(1)
           : null;
+      
       const bpStatus = data.bloodPressure
         ? data.bloodPressure.systolic >= 140 || data.bloodPressure.diastolic >= 90
           ? "High"
           : data.bloodPressure.systolic >= 120 || data.bloodPressure.diastolic >= 80
           ? "Elevated"
           : "Normal"
-        : "Unknown";
+        : "Not recorded";
 
-      const prompt = `
-        You are a Kenyan nutritionist specializing in diabetes management.
+      const lifestyleInfo = data.lifestyle 
+        ? `Lifestyle: Alcohol: ${data.lifestyle.alcohol}, Smoking: ${data.lifestyle.smoking}, Exercise: ${data.lifestyle.exercise}, Sleep: ${data.lifestyle.sleep}`
+        : "";
 
-        Patient Vitals:
-        - Glucose: ${data.glucose} mg/dL (${data.context})
-        - Blood Pressure: ${
-          data.bloodPressure
-            ? `${data.bloodPressure.systolic}/${data.bloodPressure.diastolic} (${bpStatus})`
-            : "Not provided"
-        }
-        - Age: ${data.age ?? "Not provided"}
-        - BMI: ${bmi ?? "Not calculated"}
-        - Gender: ${data.gender ?? "Not provided"}
+      const allergiesInfo = data.allergies && data.allergies.length > 0
+        ? `Allergies: ${data.allergies.join(", ")}`
+        : "";
 
-        Provide a Kenyan food plan that:
-        1. Reflects their glucose and pressure status
-        2. Suggests meals with portion guidance
-        3. Uses Kenyan foods (ugali, sukuma wiki, githeri, ndengu)
-        4. Mentions foods to avoid or limit
-        5. Includes cooking methods (boiling, steaming preferred)
+      const prompt = `You are a Kenyan nutritionist specializing in diabetes management. Use ONLY authentic Kenyan foods and meals.
 
-        ${data.language === "sw" ? "Respond in Kiswahili." : "Respond in English."}
-      `;
+Patient Profile:
+- Age: ${data.age ?? "N/A"}, Gender: ${data.gender ?? "N/A"}
+- Glucose: ${data.glucose} mg/dL (${data.context})
+- Blood Pressure: ${bpStatus}
+- BMI: ${bmi ?? "N/A"}
+- Weight: ${data.weight ?? "N/A"} kg, Height: ${data.height ?? "N/A"} cm
+${lifestyleInfo}
+${allergiesInfo}
 
-      let content = "";
-      const stream = await ollama.chat({
-        model: this.model,
+Create a daily Kenyan meal plan using ONLY these authentic Kenyan foods:
+
+STARCHES: Ugali (whole maize meal), brown ugali, arrow roots, sweet potatoes (viazi vitamu), cassava (muhogo), millet ugali, sorghum ugali
+PROTEINS: Omena (sardines), tilapia, mbuta, beef (nyama ya ng'ombe), chicken (kuku), eggs (mayai), beans (maharagwe), ndengu (green grams), njahi (black beans), kunde, githeri (maize + beans)
+VEGETABLES: Sukuma wiki (kale), managu (African nightshade), terere (amaranth), kunde leaves, spinach, cabbage (kabichi), tomatoes (nyanya), onions (vitunguu)
+FRUITS: Pawpaw (papai), guava (mapera), bananas (ndizi), oranges (machungwa), passion fruit (maracuja), avocado (parachichi), pineapple (nanasi)
+DRINKS: Uji (porridge - millet/wimbi/sorghum), mursik, chai ya tangawizi (ginger tea), water, fermented milk
+
+Provide:
+1. BREAKFAST with Kenyan foods and portion
+2. MID-MORNING SNACK (Kenyan fruits/nuts)
+3. LUNCH with Kenyan foods and portion
+4. AFTERNOON SNACK 
+5. DINNER with Kenyan foods and portion
+6. Foods to COMPLETELY AVOID
+7. Kenyan cooking methods (boil, steam, roast on jiko)
+
+DO NOT suggest: pasta, rice (unless specified), pizza, burgers, or foreign foods.
+Use Kenyan measurements: debe, bakuli, kibaba, handful (kiganja).
+${data.language === "sw" ? "Jibu kwa Kiswahili. Tumia chakula cha Kikenya tu." : "Use ONLY Kenyan foods."}`;
+
+      const completion = await this.groq.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        stream: true
+        model: this.model,
+        temperature: 0.7,
+        max_tokens: 1500, // Longer for detailed meal plans
       });
 
-      for await (const token of stream) {
-        const text = token.message?.content || "";
-        content += text;
-      }
-
-      return content.trim() || "⚠️ No food advice available.";
-    } catch (err) {
+      const text = completion.choices[0]?.message?.content || "";
+      return text.trim() || "⚠️ No food advice available.";
+    } catch (err: any) {
       console.error("AI error (food advice):", err);
       return "❌ Could not generate food advice.";
     }
@@ -232,33 +209,53 @@ export class SmartCareAI {
     language?: string;
   }): Promise<string> {
     try {
-      const prompt = `
-        You are a Kenyan nutritionist.
-        The patient has a glucose reading of ${data.glucose} mg/dL (${data.context}).
+      let status = "";
+      let advice = "";
 
-        Give 3–4 immediate Kenyan food recommendations:
-        - If high: foods to avoid and eat now
-        - If low: quick foods to raise sugar safely
-        - If normal: foods to maintain stability
-
-        Use local foods (ugali, sukuma wiki, githeri, fruits).
-        ${data.language === "sw" ? "Respond in Kiswahili." : "Respond in English."}
-      `;
-
-      let content = "";
-      const stream = await ollama.chat({
-        model: this.model,
-        messages: [{ role: "user", content: prompt }],
-        stream: true
-      });
-
-      for await (const token of stream) {
-        const text = token.message?.content || "";
-        content += text;
+      if (data.context === "Fasting") {
+        if (data.glucose < 70) {
+          status = "LOW";
+          advice = "Eat IMMEDIATELY: ripe banana, sweet potato (viazi vitamu), or sukari kidogo na maji";
+        } else if (data.glucose > 126) {
+          status = "HIGH";
+          advice = "AVOID: ugali mweupe, chapati, mandazi, soda. EAT: sukuma wiki, managu, terere na maharagwe";
+        } else {
+          status = "NORMAL";
+          advice = "MAINTAIN: githeri, ndengu, arrow roots, kunde, omena na sukuma wiki";
+        }
+      } else if (data.context === "Post-meal") {
+        if (data.glucose < 100) {
+          status = "LOW";
+          advice = "Eat snack: ndizi, papai, or handful of njugu karanga (groundnuts)";
+        } else if (data.glucose > 180) {
+          status = "HIGH";
+          advice = "Walk 15 mins. Next meal: reduce ugali, add sukuma wiki na mboga";
+        } else {
+          status = "NORMAL";
+          advice = "Good! Continue with: whole maize ugali, vegetables, and lean proteins";
+        }
       }
 
-      return content.trim() || "⚠️ No quick tips available.";
-    } catch (err) {
+      const prompt = `Kenyan nutritionist. Glucose ${data.glucose} mg/dL (${data.context}) - ${status}.
+
+Give 3-4 IMMEDIATE Kenyan food tips:
+${advice}
+
+Use ONLY: ugali, sukuma wiki, managu, githeri, ndengu, omena, tilapia, viazi vitamu, arrow roots, kunde, maharagwe, fruits (papai, ndizi, mapera).
+
+Mention Kenyan measurements and cooking (boil, steam, roast).
+${data.language === "sw" ? "Jibu kwa Kiswahili." : ""}`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: this.model,
+        temperature: 0.7,
+        max_tokens: 250,
+      });
+
+      const text = completion.choices[0]?.message?.content || "";
+      return text.trim() || "⚠️ No quick tips available.";
+    } catch (err: any) {
       console.error("AI error (quick food tips):", err);
       return "❌ Could not generate quick food tips.";
     }

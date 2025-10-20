@@ -20,7 +20,7 @@ const calculateAge = (dob: Date | string | undefined): number => {
   return age > 0 ? age : 0;
 };
 
-// GET latest lifestyle for user
+// ✅ GET latest lifestyle for user
 router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -36,7 +36,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
   }
 });
 
-// POST new lifestyle
+// ✅ POST new lifestyle
 router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -75,7 +75,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
     });
     await lifestyleDoc.save();
 
-    // Prepare input for AI (exclude BP, heart rate, temperature)
+    // Prepare input for AI
     const aiInput: LifestyleAIInput = {
       glucose,
       context,
@@ -95,6 +95,39 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
   } catch (error: any) {
     console.error("❌ Save lifestyle error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// ✅ NEW: GET AI advice by record ID
+router.get("/advice/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const lifestyle = await Lifestyle.findById(id);
+
+    if (!lifestyle) {
+      return res.status(404).json({ success: false, message: "Lifestyle record not found" });
+    }
+
+    // If AI advice is still being generated (optional)
+    if (!lifestyle.aiAdvice || lifestyle.aiAdvice === "") {
+      return res.status(200).json({
+        success: true,
+        isGenerating: true,
+        aiAdvice: null,
+        lastUpdated: lifestyle.updatedAt,
+      });
+    }
+
+    // AI advice available
+    res.status(200).json({
+      success: true,
+      isGenerating: false,
+      aiAdvice: lifestyle.aiAdvice,
+      lastUpdated: lifestyle.updatedAt,
+    });
+  } catch (error: any) {
+    console.error("❌ Fetch lifestyle advice error:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 });
 
