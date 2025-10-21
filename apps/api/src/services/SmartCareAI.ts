@@ -42,27 +42,64 @@ export interface FoodAdviceInput extends VitalsData {
 }
 
 export class SmartCareAI {
-  private groq: Groq;
-  private model = "llama-3.3-70b-versatile"; // Fast and accurate
+  private groq: Groq | null = null;
+  private model = "llama-3.3-70b-versatile";
+  private apiKeyError: string | null = null;
 
   constructor() {
     const apiKey = process.env.GROQ_API_KEY;
+    
+    // Enhanced logging for debugging
+    console.log("🔍 SmartCareAI Initialization:");
+    console.log("- NODE_ENV:", process.env.NODE_ENV);
+    console.log("- API Key exists:", !!apiKey);
+    console.log("- API Key length:", apiKey?.length || 0);
+    console.log("- API Key prefix:", apiKey?.substring(0, 8) || "NONE");
+    
     if (!apiKey) {
-      throw new Error("GROQ_API_KEY not found in environment variables");
+      this.apiKeyError = "GROQ_API_KEY not found in environment variables";
+      console.error("❌", this.apiKeyError);
+      console.error("Available env vars:", Object.keys(process.env).filter(k => !k.includes("SECRET") && !k.includes("KEY")));
+      // Don't throw - allow graceful degradation
+      return;
     }
     
-    this.groq = new Groq({ apiKey });
+    if (!apiKey.startsWith("gsk_")) {
+      console.warn("⚠️ Warning: API key doesn't start with 'gsk_' - may be invalid");
+    }
+    
+    try {
+      this.groq = new Groq({ apiKey });
+      console.log("✅ Groq SDK initialized successfully");
+    } catch (error: any) {
+      this.apiKeyError = `Failed to initialize Groq: ${error.message}`;
+      console.error("❌", this.apiKeyError);
+    }
+  }
+
+  private checkApiKey(): boolean {
+    if (this.apiKeyError || !this.groq) {
+      console.error("❌ Cannot use AI - API key issue:", this.apiKeyError);
+      return false;
+    }
+    return true;
   }
 
   // ✅ Summarize glucose reading
   async generateSummary(data: GlucoseData): Promise<string> {
+    if (!this.checkApiKey()) {
+      return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
+    }
+
     try {
+      console.log("📝 Generating summary for glucose:", data.glucose);
+      
       const prompt = `You are a medical assistant. Summarize this glucose reading in 1-2 sentences.
 Glucose: ${data.glucose} mg/dL (${data.context})
 Age: ${data.age ?? "N/A"}, Weight: ${data.weight ?? "N/A"} kg, Height: ${data.height ?? "N/A"} cm, Gender: ${data.gender ?? "N/A"}
 ${data.language === "sw" ? "Respond in Kiswahili." : ""}`;
 
-      const completion = await this.groq.chat.completions.create({
+      const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
         model: this.model,
         temperature: 0.7,
@@ -70,22 +107,46 @@ ${data.language === "sw" ? "Respond in Kiswahili." : ""}`;
       });
 
       const text = completion.choices[0]?.message?.content || "";
+      console.log("✅ Summary generated successfully");
       return text.trim() || "⚠️ No summary available.";
     } catch (err: any) {
-      console.error("AI error (summary):", err);
-      return "❌ Could not generate summary.";
+      console.error("❌ AI error (summary):", {
+        message: err.message,
+        status: err.status,
+        code: err.code,
+        type: err.type
+      });
+      
+      // Return user-friendly errors
+      if (err.status === 401) {
+        return "❌ Invalid API key. Please contact support.";
+      }
+      if (err.status === 429) {
+        return "❌ Rate limit exceeded. Please try again in a few minutes.";
+      }
+      if (err.code === "ENOTFOUND" || err.code === "ECONNREFUSED") {
+        return "❌ Network error. Cannot reach AI service.";
+      }
+      
+      return `❌ AI Error: ${err.message}`;
     }
   }
 
   // ✅ Provide glucose feedback
   async generateGlucoseFeedback(data: GlucoseData): Promise<string> {
+    if (!this.checkApiKey()) {
+      return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
+    }
+
     try {
+      console.log("📊 Generating feedback for glucose:", data.glucose);
+      
       const prompt = `Medical assistant: Analyze glucose ${data.glucose} mg/dL (${data.context}).
 Patient: Age ${data.age ?? "N/A"}, ${data.gender ?? "N/A"}, ${data.weight ?? "N/A"} kg
 Is it normal/high/low? Give 2-3 sentence recommendation.
 ${data.language === "sw" ? "Kiswahili." : ""}`;
 
-      const completion = await this.groq.chat.completions.create({
+      const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
         model: this.model,
         temperature: 0.7,
@@ -93,16 +154,23 @@ ${data.language === "sw" ? "Kiswahili." : ""}`;
       });
 
       const text = completion.choices[0]?.message?.content || "";
+      console.log("✅ Feedback generated successfully");
       return text.trim() || "⚠️ No feedback available.";
     } catch (err: any) {
-      console.error("AI error (feedback):", err);
-      return "❌ Could not generate AI feedback.";
+      console.error("❌ AI error (feedback):", err);
+      return this.handleAIError(err);
     }
   }
 
   // ✅ Lifestyle-based AI advice
   async generateLifestyleFeedback(data: LifestyleAIInput): Promise<string> {
+    if (!this.checkApiKey()) {
+      return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
+    }
+
     try {
+      console.log("🏃 Generating lifestyle feedback");
+      
       const prompt = `Medical assistant for diabetes management.
 
 Patient: Age ${data.age ?? "N/A"}, ${data.gender ?? "N/A"}, ${data.weight ?? "N/A"} kg
@@ -116,7 +184,7 @@ Provide 3-4 sentences:
 
 ${data.language === "sw" ? "Kiswahili." : ""}`;
 
-      const completion = await this.groq.chat.completions.create({
+      const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
         model: this.model,
         temperature: 0.7,
@@ -124,16 +192,23 @@ ${data.language === "sw" ? "Kiswahili." : ""}`;
       });
 
       const text = completion.choices[0]?.message?.content || "";
+      console.log("✅ Lifestyle feedback generated successfully");
       return text.trim() || "⚠️ No lifestyle advice available.";
     } catch (err: any) {
-      console.error("AI error (lifestyle advice):", err);
-      return "❌ Could not generate lifestyle AI advice.";
+      console.error("❌ AI error (lifestyle advice):", err);
+      return this.handleAIError(err);
     }
   }
 
-  // ✅ Kenyan food advice (ENHANCED with lifestyle & demographics)
+  // ✅ Kenyan food advice
   async generateKenyanFoodAdvice(data: FoodAdviceInput): Promise<string> {
+    if (!this.checkApiKey()) {
+      return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
+    }
+
     try {
+      console.log("🍽️ Generating Kenyan food advice");
+      
       const bmi =
         data.weight && data.height
           ? (data.weight / Math.pow(data.height / 100, 2)).toFixed(1)
@@ -187,18 +262,19 @@ DO NOT suggest: pasta, rice (unless specified), pizza, burgers, or foreign foods
 Use Kenyan measurements: debe, bakuli, kibaba, handful (kiganja).
 ${data.language === "sw" ? "Jibu kwa Kiswahili. Tumia chakula cha Kikenya tu." : "Use ONLY Kenyan foods."}`;
 
-      const completion = await this.groq.chat.completions.create({
+      const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
         model: this.model,
         temperature: 0.7,
-        max_tokens: 1500, // Longer for detailed meal plans
+        max_tokens: 1500,
       });
 
       const text = completion.choices[0]?.message?.content || "";
+      console.log("✅ Food advice generated successfully");
       return text.trim() || "⚠️ No food advice available.";
     } catch (err: any) {
-      console.error("AI error (food advice):", err);
-      return "❌ Could not generate food advice.";
+      console.error("❌ AI error (food advice):", err);
+      return this.handleAIError(err);
     }
   }
 
@@ -208,7 +284,13 @@ ${data.language === "sw" ? "Jibu kwa Kiswahili. Tumia chakula cha Kikenya tu." :
     context: string;
     language?: string;
   }): Promise<string> {
+    if (!this.checkApiKey()) {
+      return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
+    }
+
     try {
+      console.log("💡 Generating quick food tips");
+      
       let status = "";
       let advice = "";
 
@@ -246,7 +328,7 @@ Use ONLY: ugali, sukuma wiki, managu, githeri, ndengu, omena, tilapia, viazi vit
 Mention Kenyan measurements and cooking (boil, steam, roast).
 ${data.language === "sw" ? "Jibu kwa Kiswahili." : ""}`;
 
-      const completion = await this.groq.chat.completions.create({
+      const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
         model: this.model,
         temperature: 0.7,
@@ -254,10 +336,25 @@ ${data.language === "sw" ? "Jibu kwa Kiswahili." : ""}`;
       });
 
       const text = completion.choices[0]?.message?.content || "";
+      console.log("✅ Quick tips generated successfully");
       return text.trim() || "⚠️ No quick tips available.";
     } catch (err: any) {
-      console.error("AI error (quick food tips):", err);
-      return "❌ Could not generate quick food tips.";
+      console.error("❌ AI error (quick food tips):", err);
+      return this.handleAIError(err);
     }
+  }
+
+  // Helper method for consistent error handling
+  private handleAIError(err: any): string {
+    if (err.status === 401) {
+      return "❌ Invalid API key. Please contact support.";
+    }
+    if (err.status === 429) {
+      return "❌ Rate limit exceeded. Please try again in a few minutes.";
+    }
+    if (err.code === "ENOTFOUND" || err.code === "ECONNREFUSED") {
+      return "❌ Network error. Cannot reach AI service.";
+    }
+    return `❌ AI temporarily unavailable: ${err.message}`;
   }
 }
