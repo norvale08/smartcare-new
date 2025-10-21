@@ -1,13 +1,21 @@
-import express, { Response } from "express";
+import express, { Request, Response } from "express";
 import Diabetes from "../models/diabetesModel";
 import Patient from "../models/patient";
 import { SmartCareAI } from "../services/SmartCareAI";
-import { verifyToken, AuthenticatedRequest } from "../middleware/verifyToken";
+import { verifyToken } from "../middleware/verifyToken";
 
 const router = express.Router();
 const smartCareAI = new SmartCareAI();
 
 router.options("*", (_req, res) => res.sendStatus(200));
+
+// ✅ Define the AuthenticatedRequest interface directly in this file
+interface AuthenticatedRequest extends Request {
+  user?: {
+    userId: string;
+    [key: string]: any;
+  };
+}
 
 const calculateAge = (dob: Date | string | undefined): number => {
   if (!dob) return 0;
@@ -21,10 +29,11 @@ const calculateAge = (dob: Date | string | undefined): number => {
   return age > 0 ? age : 0;
 };
 
-// ✅ FIXED: Summary endpoint following the EXACT pattern from lifestyle route
-router.get("/summary/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
+// ✅ MAIN ENDPOINT: GET /api/diabetesAi/summary/:id
+router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    // ✅ Type assertion for authenticated request
+    const userId = (req as AuthenticatedRequest).user?.userId;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -36,7 +45,7 @@ router.get("/summary/:id", verifyToken, async (req: AuthenticatedRequest, res: R
       return res.status(404).json({ message: "Vitals not found" });
     }
 
-    // ✅ KEY FIX: Return existing summary immediately if available (like lifestyle does)
+    // ✅ Return existing summary immediately if available
     if (vitals.summary && vitals.summary.trim() !== "") {
       console.log("📋 Returning existing summary");
       return res.status(200).json({ 
@@ -93,8 +102,8 @@ router.get("/summary/:id", verifyToken, async (req: AuthenticatedRequest, res: R
   }
 });
 
-// ✅ NEW: Separate endpoint to check if summary is ready (polling endpoint)
-router.get("/summary-status/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
+// ✅ Separate endpoint to check if summary is ready (polling endpoint)
+router.get("/summary-status/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const vitals = await Diabetes.findById(req.params.id);
     
