@@ -8,9 +8,9 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
+    "dev": "NODE_OPTIONS='--max-old-space-size=4096' nodemon --watch src --ext ts --exec ts-node src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "NODE_OPTIONS='--max-old-space-size=4096' node dist/index.js"
   },
   "keywords": [],
   "author": "",
