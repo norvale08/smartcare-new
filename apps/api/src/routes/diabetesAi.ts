@@ -5,11 +5,20 @@ import { SmartCareAI } from "../services/SmartCareAI";
 import { verifyToken } from "../middleware/verifyToken";
 
 const router = express.Router();
-const smartCareAI = new SmartCareAI();
+
+// ✅ Create ONE shared instance instead of per-request
+let smartCareAI: SmartCareAI | null = null;
+
+const getAIService = () => {
+  if (!smartCareAI) {
+    console.log("🤖 Initializing SmartCareAI service...");
+    smartCareAI = new SmartCareAI();
+  }
+  return smartCareAI;
+};
 
 router.options("*", (_req, res) => res.sendStatus(200));
 
-// ✅ Define the AuthenticatedRequest interface directly in this file
 interface AuthenticatedRequest extends Request {
   user?: {
     userId: string;
@@ -29,41 +38,85 @@ const calculateAge = (dob: Date | string | undefined): number => {
   return age > 0 ? age : 0;
 };
 
+// ✅ Helper function to check if summary is valid
+const isValidSummary = (summary: string | undefined): boolean => {
+  if (!summary || summary.trim() === "") return false;
+  
+  // Check for error messages
+  const errorIndicators = ["❌", "⚠️", "Error:", "unavailable", "failed"];
+  return !errorIndicators.some(indicator => 
+    summary.includes(indicator)
+  );
+};
+
 // ✅ MAIN ENDPOINT: GET /api/diabetesAi/summary/:id
 router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  
   try {
-    // ✅ Type assertion for authenticated request
     const userId = (req as AuthenticatedRequest).user?.userId;
     if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    console.log("🔍 Fetching vitals for ID:", req.params.id);
-    const vitals = await Diabetes.findById(req.params.id);
-    
-    if (!vitals) {
-      return res.status(404).json({ message: "Vitals not found" });
-    }
-
-    // ✅ Return existing summary immediately if available
-    if (vitals.summary && vitals.summary.trim() !== "") {
-      console.log("📋 Returning existing summary");
-      return res.status(200).json({ 
-        success: true,
-        aiFeedback: vitals.summary, 
-        cached: true 
+      console.error("❌ Unauthorized: No userId in token");
+      return res.status(401).json({ 
+        success: false,
+        message: "Unauthorized" 
       });
     }
 
-    console.log("🔍 Fetching patient profile for userId:", userId);
+    const vitalId = req.params.id;
+    console.log("=".repeat(60));
+    console.log(`🔍 [${new Date().toISOString()}] Summary request for vital: ${vitalId}`);
+    console.log(`👤 User: ${userId}`);
+
+    // ✅ 1. Fetch vitals
+    const vitals = await Diabetes.findById(vitalId);
+    
+    if (!vitals) {
+      console.error(`❌ Vitals not found: ${vitalId}`);
+      return res.status(404).json({ 
+        success: false,
+        message: "Vitals not found" 
+      });
+    }
+
+    console.log(`📊 Vitals found - Glucose: ${vitals.glucose} mg/dL (${vitals.context})`);
+
+    // ✅ 2. Check if we have a VALID cached summary
+    if (isValidSummary(vitals.summary)) {
+      const age = Date.now() - new Date(vitals.updatedAt).getTime();
+      const ageMinutes = Math.floor(age / 60000);
+      
+      console.log(`✅ Valid cached summary found (${ageMinutes} minutes old)`);
+      console.log(`📝 Summary: ${vitals.summary?.substring(0, 100)}...`);
+      console.log(`⏱️  Response time: ${Date.now() - startTime}ms`);
+      console.log("=".repeat(60));
+      
+      return res.status(200).json({ 
+        success: true,
+        aiFeedback: vitals.summary, 
+        cached: true,
+        cacheAge: ageMinutes
+      });
+    }
+
+    console.log("🔄 No valid cached summary - generating new one");
+
+    // ✅ 3. Fetch patient profile
+    console.log(`🔍 Fetching patient profile for userId: ${userId}`);
     const patient = await Patient.findOne({ userId });
     
     if (!patient) {
-      return res.status(404).json({ message: "Patient profile not found" });
+      console.error(`❌ Patient profile not found for userId: ${userId}`);
+      return res.status(404).json({ 
+        success: false,
+        message: "Patient profile not found. Please complete your profile first." 
+      });
     }
 
     const age = calculateAge(patient.dob);
+    console.log(`👤 Patient found - Age: ${age}, Gender: ${patient.gender}`);
 
+    // ✅ 4. Prepare glucose data
     const glucoseData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -74,35 +127,94 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       height: patient.height,
     };
 
-    console.log("🧠 Generating AI summary for:", glucoseData);
+    console.log("📋 Glucose data prepared:", JSON.stringify(glucoseData, null, 2));
 
-    // Generate AI feedback
-    const aiFeedback = await smartCareAI.generateSummary(glucoseData);
+    // ✅ 5. Check if GROQ_API_KEY exists
+    if (!process.env.GROQ_API_KEY) {
+      console.error("❌ GROQ_API_KEY not found in environment");
+      console.error("Available env vars:", Object.keys(process.env).filter(k => 
+        !k.includes("SECRET") && !k.includes("PASSWORD")
+      ));
+      
+      return res.status(503).json({
+        success: false,
+        message: "AI service not configured. Please contact support.",
+        error: "GROQ_API_KEY missing"
+      });
+    }
 
-    // Save to database
+    console.log("✅ GROQ_API_KEY is configured");
+
+    // ✅ 6. Generate AI summary
+    console.log("🤖 Calling SmartCareAI.generateSummary()...");
+    const aiStartTime = Date.now();
+    
+    const ai = getAIService();
+    const aiFeedback = await ai.generateSummary(glucoseData);
+    
+    const aiDuration = Date.now() - aiStartTime;
+    console.log(`🤖 AI responded in ${aiDuration}ms`);
+    console.log(`📝 Generated feedback: ${aiFeedback?.substring(0, 150)}...`);
+
+    // ✅ 7. Check if AI generation failed
+    if (!isValidSummary(aiFeedback)) {
+      console.error("❌ AI generated invalid summary:", aiFeedback);
+      
+      return res.status(500).json({
+        success: false,
+        message: "Failed to generate AI summary",
+        error: aiFeedback,
+        details: {
+          groqConfigured: !!process.env.GROQ_API_KEY,
+          vitalId,
+          glucoseData
+        }
+      });
+    }
+
+    // ✅ 8. Save to database
+    console.log("💾 Saving summary to database...");
     vitals.summary = aiFeedback;
     vitals.aiFeedback = aiFeedback;
     await vitals.save();
+    console.log("✅ Summary saved successfully");
 
-    console.log("✅ Summary generated and saved");
+    const totalDuration = Date.now() - startTime;
+    console.log(`⏱️  Total request time: ${totalDuration}ms`);
+    console.log("=".repeat(60));
 
-    // ✅ Return same format as lifestyle route
+    // ✅ 9. Return success response
     res.status(200).json({ 
       success: true,
       aiFeedback, 
-      cached: false 
+      cached: false,
+      generationTime: aiDuration,
+      totalTime: totalDuration
     });
+
   } catch (error: any) {
-    console.error("❌ Summary generation error:", error.message);
+    const duration = Date.now() - startTime;
+    console.error("=".repeat(60));
+    console.error("❌ SUMMARY GENERATION ERROR:");
+    console.error("- Message:", error.message);
+    console.error("- Stack:", error.stack);
+    console.error("- Duration:", duration, "ms");
+    console.error("=".repeat(60));
+    
     res.status(500).json({ 
       success: false,
-      message: "Server error", 
-      error: error.message 
+      message: "Failed to generate summary", 
+      error: error.message,
+      details: {
+        duration,
+        timestamp: new Date().toISOString(),
+        groqConfigured: !!process.env.GROQ_API_KEY
+      }
     });
   }
 });
 
-// ✅ Separate endpoint to check if summary is ready (polling endpoint)
+// ✅ Separate endpoint to check if summary is ready
 router.get("/summary-status/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const vitals = await Diabetes.findById(req.params.id);
@@ -114,11 +226,7 @@ router.get("/summary-status/:id", verifyToken, async (req: Request, res: Respons
       });
     }
 
-    // Check if summary exists and is not an error message
-    const hasSummary = vitals.summary && 
-                       vitals.summary.trim() !== "" && 
-                       !vitals.summary.includes("❌") && 
-                       !vitals.summary.includes("⚠️");
+    const hasSummary = isValidSummary(vitals.summary);
 
     res.status(200).json({
       success: true,
@@ -131,6 +239,40 @@ router.get("/summary-status/:id", verifyToken, async (req: Request, res: Respons
     res.status(500).json({ 
       success: false,
       message: "Server error", 
+      error: error.message 
+    });
+  }
+});
+
+// ✅ Force regenerate summary (bypass cache)
+router.post("/summary/:id/regenerate", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const vitals = await Diabetes.findById(req.params.id);
+    if (!vitals) {
+      return res.status(404).json({ success: false, message: "Vitals not found" });
+    }
+
+    // Clear existing summary to force regeneration
+    vitals.summary = "";
+    await vitals.save();
+
+    console.log("🔄 Summary cleared, triggering regeneration");
+
+    res.status(200).json({
+      success: true,
+      message: "Summary regeneration triggered. Fetch summary again to get new result."
+    });
+
+  } catch (error: any) {
+    console.error("❌ Regenerate error:", error.message);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to regenerate summary", 
       error: error.message 
     });
   }
