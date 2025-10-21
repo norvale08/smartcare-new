@@ -21,25 +21,34 @@ const calculateAge = (dob: Date | string | undefined): number => {
   return age > 0 ? age : 0;
 };
 
+// ✅ FIXED: Summary endpoint following the EXACT pattern from lifestyle route
 router.get("/summary/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
-      return res.status(401).json({ message: "User ID missing from token" });
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
+    console.log("🔍 Fetching vitals for ID:", req.params.id);
     const vitals = await Diabetes.findById(req.params.id);
+    
     if (!vitals) {
       return res.status(404).json({ message: "Vitals not found" });
     }
 
-    // ✅ Check if summary already exists to avoid regeneration
-    if (vitals.summary) {
-      console.log("📋 Using existing summary");
-      return res.status(200).json({ aiFeedback: vitals.summary, summary: true, cached: true });
+    // ✅ KEY FIX: Return existing summary immediately if available (like lifestyle does)
+    if (vitals.summary && vitals.summary.trim() !== "") {
+      console.log("📋 Returning existing summary");
+      return res.status(200).json({ 
+        success: true,
+        aiFeedback: vitals.summary, 
+        cached: true 
+      });
     }
 
+    console.log("🔍 Fetching patient profile for userId:", userId);
     const patient = await Patient.findOne({ userId });
+    
     if (!patient) {
       return res.status(404).json({ message: "Patient profile not found" });
     }
@@ -49,26 +58,72 @@ router.get("/summary/:id", verifyToken, async (req: AuthenticatedRequest, res: R
     const glucoseData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
-      language: (vitals.language as "en" | "sw") || "en",
+      language: (patient.language as "en" | "sw") || "en",
       age,
       gender: patient.gender,
       weight: patient.weight,
       height: patient.height,
     };
 
-    console.log("🧠 Generating new AI summary:", glucoseData);
+    console.log("🧠 Generating AI summary for:", glucoseData);
 
+    // Generate AI feedback
     const aiFeedback = await smartCareAI.generateSummary(glucoseData);
 
-    // ✅ Save to 'summary' field and also to 'aiFeedback' for backwards compatibility
+    // Save to database
     vitals.summary = aiFeedback;
     vitals.aiFeedback = aiFeedback;
     await vitals.save();
 
-    res.status(200).json({ aiFeedback, summary: true, cached: false });
+    console.log("✅ Summary generated and saved");
+
+    // ✅ Return same format as lifestyle route
+    res.status(200).json({ 
+      success: true,
+      aiFeedback, 
+      cached: false 
+    });
   } catch (error: any) {
-    console.error("❌ AI summary generation error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("❌ Summary generation error:", error.message);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error", 
+      error: error.message 
+    });
+  }
+});
+
+// ✅ NEW: Separate endpoint to check if summary is ready (polling endpoint)
+router.get("/summary-status/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const vitals = await Diabetes.findById(req.params.id);
+    
+    if (!vitals) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Vitals not found" 
+      });
+    }
+
+    // Check if summary exists and is not an error message
+    const hasSummary = vitals.summary && 
+                       vitals.summary.trim() !== "" && 
+                       !vitals.summary.includes("❌") && 
+                       !vitals.summary.includes("⚠️");
+
+    res.status(200).json({
+      success: true,
+      isGenerating: !hasSummary,
+      aiFeedback: hasSummary ? vitals.summary : null,
+      lastUpdated: vitals.updatedAt,
+    });
+  } catch (error: any) {
+    console.error("❌ Summary status check error:", error.message);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error", 
+      error: error.message 
+    });
   }
 });
 
