@@ -1,10 +1,13 @@
-import ollama from "ollama";
+import Groq from "groq-sdk";
 import mongoose from "mongoose";
 import HypertensionLifestyle, { ILifestyle } from "../models/hypertensionLifestyle";
 import HypertensionVital from "../models/hypertensionVitals";
 import Patient from "../models/patient";
 
-// Function to generate daily alerts from recent vitals
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const model = "llama-3.3-70b-versatile"; // High-quality model
+
+// ✅ Generate daily alerts from recent vitals (matching frontend logic)
 async function getDailyAlerts(userId: string): Promise<string[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -13,35 +16,56 @@ async function getDailyAlerts(userId: string): Promise<string[]> {
 
   const vitals = await HypertensionVital.find({
     userId: new mongoose.Types.ObjectId(userId),
-    createdAt: { $gte: today, $lt: tomorrow }
+    createdAt: { $gte: today, $lt: tomorrow },
   })
     .sort({ createdAt: -1 })
     .limit(5);
 
   const alerts: string[] = [];
-  vitals.forEach(vital => {
-    if (vital.systolic >= 140) {
-      alerts.push(`High systolic BP: ${vital.systolic} mmHg`);
+  
+  if (vitals.length === 0) {
+    alerts.push("No vitals recorded today - please enter your blood pressure readings");
+    return alerts;
+  }
+
+  // Use the same logic as the frontend alerts.tsx component
+  vitals.forEach((vital) => {
+    const systolic = Number(vital.systolic);
+    const diastolic = Number(vital.diastolic);
+    const heartRate = Number(vital.heartRate);
+
+    // Blood pressure alerts (matching frontend logic)
+    if (systolic >= 180 || diastolic >= 120) {
+      alerts.push(`🚨 HYPERTENSIVE CRISIS: ${systolic}/${diastolic} mmHg - Seek immediate medical attention!`);
+    } else if (systolic >= 140 || diastolic >= 90) {
+      alerts.push(`⚠️ Stage 2 Hypertension: ${systolic}/${diastolic} mmHg - Consult your doctor soon`);
+    } else if (systolic >= 130 || diastolic >= 80) {
+      alerts.push(`⚠️ Stage 1 Hypertension: ${systolic}/${diastolic} mmHg - Monitor closely`);
+    } else if (systolic >= 120) {
+      alerts.push(`📈 Elevated Blood Pressure: ${systolic}/${diastolic} mmHg - Consider lifestyle changes`);
+    } else if (systolic < 90 || diastolic < 60) {
+      alerts.push(`📉 Low Blood Pressure: ${systolic}/${diastolic} mmHg - Contact healthcare provider if unwell`);
     }
-    if (vital.diastolic >= 90) {
-      alerts.push(`High diastolic BP: ${vital.diastolic} mmHg`);
-    }
-    if (vital.heartRate > 100) {
-      alerts.push(`Elevated heart rate: ${vital.heartRate} bpm`);
+
+    // Heart rate alerts
+    if (heartRate < 60) {
+      alerts.push(`💙 Bradycardia: Heart rate ${heartRate} bpm - Low heart rate detected`);
+    } else if (heartRate > 100) {
+      alerts.push(`❤️ Tachycardia: Heart rate ${heartRate} bpm - Elevated heart rate`);
     }
   });
 
   if (alerts.length === 0) {
-    alerts.push("No alerts today - vitals stable");
+    alerts.push("✅ Vitals stable today - no alerts detected");
   }
 
   return alerts;
 }
 
-// Function to get current lifestyle
+// ✅ Fetch current lifestyle
 async function getCurrentLifestyle(userId: string) {
   const lifestyle = await HypertensionLifestyle.findOne({
-    userId: new mongoose.Types.ObjectId(userId)
+    userId: new mongoose.Types.ObjectId(userId),
   })
     .sort({ createdAt: -1 })
     .exec();
@@ -51,27 +75,26 @@ async function getCurrentLifestyle(userId: string) {
         smoking: lifestyle.smoking,
         alcohol: lifestyle.alcohol,
         exercise: lifestyle.exercise,
-        sleep: lifestyle.sleep
+        sleep: lifestyle.sleep,
       }
     : {
         smoking: "None",
         alcohol: "None",
         exercise: "None",
-        sleep: "Irregular"
+        sleep: "Irregular",
       };
 }
 
-// Main function to generate AI lifestyle recommendations
+// ✅ Main AI Lifestyle Recommendation Function
 export async function generateLifestyleRecommendations(
-  userId: string,
-  weather?: string
+  userId: string
 ): Promise<{ advice: string; alerts: string[]; warnings: string[] }> {
   try {
     const alerts = await getDailyAlerts(userId);
     const lifestyle = await getCurrentLifestyle(userId);
 
-    // Enhanced prompt for better structured output
-    const prompt = `You are a hypertension management AI assistant. Provide personalized lifestyle recommendations based on the following patient data:
+    const prompt = `
+You are a hypertension management AI assistant. Provide personalized lifestyle recommendations based on the following patient data:
 
 📊 DAILY VITALS ALERTS:
 ${alerts.join("\n")}
@@ -82,354 +105,301 @@ ${alerts.join("\n")}
 - Exercise: ${lifestyle.exercise}
 - Sleep: ${lifestyle.sleep}
 
-🌤️ WEATHER: ${weather || "Not provided"}
-
 Please provide recommendations in the following structured format:
 
 GENERAL ADVICE:
-Provide 2-3 sentences of encouraging, personalized advice addressing their current situation. Be empathetic and motivating.
+Provide 2-3 sentences of empathetic and encouraging advice.
 
 IMMEDIATE ACTIONS:
-List specific actions they should take today based on their vitals.
+List 3-4 clear actions to take today based on their vitals.
 
 LIFESTYLE IMPROVEMENTS:
-Suggest concrete changes to smoking, alcohol, exercise, or sleep habits if any are risky for hypertension.
+Suggest improvements to smoking, alcohol, exercise, or sleep if needed.
 
-WEATHER CONSIDERATIONS:
-If weather data is available, provide weather-specific tips (e.g., indoor exercise on hot days, hydration reminders).
+Keep it short, positive, and actionable.
+`;
 
-Keep the response concise, actionable, and encouraging. Focus on what they CAN do rather than just restrictions.`;
-
-    // Call Ollama
-    const response = await ollama.generate({
-      model: "llama3.2:3b",
-      prompt: prompt,
-      stream: false
+    const completion = await groq.chat.completions.create({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 600,
     });
 
-    const rawAdvice = response.response;
-
-    // Parse and structure the advice
-    const structuredAdvice = parseAndStructureAdvice(rawAdvice, lifestyle, alerts);
-
-    // Extract warnings based on lifestyle and vitals
+    const rawAdvice = completion.choices[0]?.message?.content || getFallbackAdvice();
+    const structuredAdvice = parseAndStructureAdvice(rawAdvice);
     const warnings = extractWarnings(lifestyle, alerts);
 
-    // Update lifestyle with aiAdvice and warnings
-    const updatedLifestyle = await HypertensionLifestyle.findOneAndUpdate(
+    await HypertensionLifestyle.findOneAndUpdate(
       { userId: new mongoose.Types.ObjectId(userId) },
       { aiAdvice: structuredAdvice, warnings },
       { new: true, upsert: true }
-    ).exec();
+    );
 
-    if (updatedLifestyle) {
-      console.log("✅ Lifestyle updated with AI advice");
-    }
-
+    console.log("✅ AI lifestyle advice generated via Groq");
     return { advice: structuredAdvice, alerts, warnings };
   } catch (error) {
-    console.error("❌ Error generating recommendations:", error);
+    console.error("❌ Error generating Groq recommendations:", error);
     return {
       advice: getFallbackAdvice(),
       alerts: await getDailyAlerts(userId),
-      warnings: []
+      warnings: [],
     };
   }
 }
 
-// Helper function to parse and structure the AI advice
-function parseAndStructureAdvice(rawAdvice: string, lifestyle: any, alerts: string[]): string {
-  // Clean up the advice and add emoji/formatting
-  let structured = rawAdvice;
-
-  // Add section headers with emojis if not present
-  if (!structured.includes("GENERAL ADVICE")) {
-    structured = `💡 PERSONALIZED INSIGHTS:\n\n${structured}`;
-  }
-
-  // Format sections with better visual hierarchy
-  structured = structured
+// ✅ Helper: Format and structure advice
+function parseAndStructureAdvice(rawAdvice: string): string {
+  let text = rawAdvice
     .replace(/GENERAL ADVICE:/gi, "💡 KEY INSIGHTS:")
     .replace(/IMMEDIATE ACTIONS:/gi, "\n🎯 TODAY'S ACTION PLAN:")
     .replace(/LIFESTYLE IMPROVEMENTS:/gi, "\n🌟 LIFESTYLE GOALS:")
-    .replace(/WEATHER CONSIDERATIONS:/gi, "\n🌤️ WEATHER TIPS:");
+    .replace(/WEATHER CONSIDERATIONS:/gi, "\n🌤 WEATHER TIPS:");
 
-  return structured;
+  if (!text.includes("KEY INSIGHTS")) {
+    text = "💡 PERSONALIZED INSIGHTS:\n\n" + text;
+  }
+
+  return text.trim();
 }
 
-// Helper function to extract warnings based on lifestyle and vitals
+// ✅ Helper: Detect warnings based on lifestyle/vitals
 function extractWarnings(lifestyle: any, alerts: string[]): string[] {
   const warnings: string[] = [];
 
-  // Check for risky lifestyle combinations
-  if (lifestyle.smoking === "Heavy" && alerts.some(a => a.includes("High"))) {
-    warnings.push("Smoking combined with elevated BP significantly increases cardiovascular risk");
-  }
+  if (lifestyle.smoking === "Heavy" && alerts.some((a) => a.includes("High")))
+    warnings.push("Smoking combined with high BP raises cardiovascular risk.");
 
-  if (lifestyle.alcohol === "Frequently" && alerts.some(a => a.includes("High"))) {
-    warnings.push("Frequent alcohol consumption may be contributing to high blood pressure");
-  }
+  if (lifestyle.alcohol === "Frequently" && alerts.some((a) => a.includes("High")))
+    warnings.push("Frequent alcohol use may elevate blood pressure.");
 
-  if (lifestyle.exercise === "None" || lifestyle.exercise === "Rarely") {
-    warnings.push("Lack of physical activity increases hypertension risk - start with 10-minute walks");
-  }
+  if (["None", "Rarely"].includes(lifestyle.exercise))
+    warnings.push("Lack of physical activity increases hypertension risk.");
 
-  if (lifestyle.sleep === "<5 hrs" || lifestyle.sleep === "Irregular") {
-    warnings.push("Poor sleep quality can elevate blood pressure - aim for 7-8 hours nightly");
-  }
+  if (["<5 hrs", "Irregular"].includes(lifestyle.sleep))
+    warnings.push("Poor sleep can elevate BP. Aim for 7-8 hours per night.");
 
-  // Check for multiple high readings
-  const highBPAlerts = alerts.filter(a => a.includes("High systolic") || a.includes("High diastolic"));
-  if (highBPAlerts.length >= 2) {
-    warnings.push("Multiple elevated readings detected - consider consulting your healthcare provider");
-  }
+  const highBPAlerts = alerts.filter(
+    (a) => a.includes("High systolic") || a.includes("High diastolic")
+  );
+  if (highBPAlerts.length >= 2)
+    warnings.push("Multiple high readings detected — consult your provider.");
 
   return warnings;
 }
 
-// Fallback advice if AI generation fails
+// ✅ Fallback Advice
 function getFallbackAdvice(): string {
   return `💡 KEY INSIGHTS:
 
-We're here to support your heart health journey. While we couldn't generate personalized AI recommendations right now, here are some foundational tips to keep you on track.
+We’re here to support your heart health journey. While we couldn’t generate personalized AI recommendations now, here are essential tips:
 
 🎯 TODAY'S ACTION PLAN:
-• Monitor your blood pressure at consistent times each day
-• Stay hydrated with 6-8 glasses of water
-• Take any prescribed medications as directed
-• Practice 5-10 minutes of deep breathing or meditation
+• Monitor BP daily at the same time
+• Stay hydrated (6–8 glasses/day)
+• Take medications as prescribed
+• Practice deep breathing or light meditation
 
 🌟 LIFESTYLE GOALS:
-• Reduce sodium intake to less than 2,300mg daily
-• Aim for 30 minutes of moderate exercise most days
-• Prioritize 7-8 hours of quality sleep
-• Limit alcohol and avoid smoking
+• Reduce salt intake
+• Exercise at least 30 mins daily
+• Sleep 7–8 hours
+• Limit alcohol, avoid smoking
 
-Remember: Small, consistent changes lead to significant improvements. You've got this! 💪`;
+Consistency brings progress 💪`;
 }
 
-// Function to get patient demographics
-async function getPatientDemographics(userId: string) {
-  const patient = await Patient.findOne({
-    userId: new mongoose.Types.ObjectId(userId)
-  }).exec();
-
-  if (!patient) {
-    return {
-      weight: 70, // default values
-      height: 170,
-      gender: "Other"
-    };
-  }
-
-  return {
-    weight: patient.weight || 70,
-    height: patient.height || 170,
-    gender: patient.gender || "Other"
-  };
-}
-
-// Function to calculate BMI
-function calculateBMI(weight: number, height: number): number {
-  const heightInMeters = height / 100;
-  return weight / (heightInMeters * heightInMeters);
-}
-
-// Main function to generate AI diet recommendations
-export async function generateDietRecommendations(
-  userId: string
-): Promise<{
-  breakfast: string;
-  lunch: string;
-  dinner: string;
-  snacks: string;
-  generalAdvice: string;
-  calorieTarget?: number;
-}> {
+// ✅ Generate diet recommendations
+export async function generateDietRecommendations(userId: string) {
   try {
-    // Get patient demographics
-    const demographics = await getPatientDemographics(userId);
-    const bmi = calculateBMI(demographics.weight, demographics.height);
-
-    // Get latest vitals
-    const latestVitals = await HypertensionVital.findOne({
-      userId: new mongoose.Types.ObjectId(userId)
-    })
-      .sort({ createdAt: -1 })
-      .exec();
-
-    // Get current lifestyle
+    // Get current lifestyle data
     const lifestyle = await getCurrentLifestyle(userId);
+    
+    // Get patient profile (gender and weight)
+    const patient = await Patient.findOne({
+      userId: new mongoose.Types.ObjectId(userId),
+    });
+    
+    // Get recent vitals first to analyze alerts
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Get daily alerts
+    const vitals = await HypertensionVital.find({
+      userId: new mongoose.Types.ObjectId(userId),
+      createdAt: { $gte: today, $lt: tomorrow },
+    })
+    .sort({ createdAt: -1 })
+    .limit(5);
+
+    // Generate daily alerts from vitals (using same logic as lifestyle function)
     const alerts = await getDailyAlerts(userId);
 
-    // Calculate daily calorie target based on demographics and activity
-    const baseCalories = (() => {
-      if (demographics.gender === "Male") {
-        return 88.362 + (13.397 * demographics.weight) + (4.799 * demographics.height) - (5.677 * 30); // assuming 30 years
-      } else {
-        return 447.593 + (9.247 * demographics.weight) + (3.098 * demographics.height) - (4.330 * 30); // assuming 30 years
-      }
-    })();
+    const latestVital = vitals[0];
+    const bpStatus = latestVital ? 
+      (latestVital.systolic >= 140 || latestVital.diastolic >= 90 ? "High" : 
+       latestVital.systolic >= 120 || latestVital.diastolic >= 80 ? "Elevated" : "Normal") : 
+      "Not recorded";
 
-    const activityMultiplier = lifestyle.exercise === "Daily" ? 1.55 : 
-                              lifestyle.exercise === "Few times/week" ? 1.375 : 
-                              lifestyle.exercise === "Rarely" ? 1.2 : 1.1;
-    
-    const calorieTarget = Math.round(baseCalories * activityMultiplier);
+    // Get patient demographics
+    const gender = patient?.gender || "Not specified";
+    const weight = patient?.weight || "Not specified";
+    const age = patient?.dob ? computeAge(patient.dob) : "Not specified";
 
     // Create prompt for diet recommendations
-    const prompt = `You are a nutrition expert specializing in Kenyan cuisine for hypertension management. Create a personalized diet plan for a patient with the following profile:
+    const prompt = `
+You are a Kenyan nutritionist specializing in hypertension management. Create a personalized daily diet plan using ONLY authentic Kenyan foods.
 
-👤 PATIENT PROFILE:
-- Gender: ${demographics.gender}
-- Weight: ${demographics.weight} kg
-- Height: ${demographics.height} cm  
-- BMI: ${bmi.toFixed(1)}
-- Daily Calorie Target: ${calorieTarget} calories
+Patient Profile:
+- Age: ${age}
+- Gender: ${gender}
+- Weight: ${weight} kg
+- Blood Pressure Status: ${bpStatus}
+- Today's Alerts: ${alerts.join(', ')}
+- Lifestyle Factors: Smoking: ${lifestyle.smoking}, Alcohol: ${lifestyle.alcohol}, Exercise: ${lifestyle.exercise}, Sleep: ${lifestyle.sleep}
 
-📊 CURRENT HEALTH STATUS:
-${alerts.join("\n")}
+IMPORTANT: The AI must FIRST read and analyze the patient's vitals and alerts before providing recommendations. The diet plan should be specifically tailored based on:
+1. Today's alert status (high BP, elevated heart rate, etc.)
+2. Patient's age, gender, and weight
+3. Current lifestyle factors
 
-🏃 LIFESTYLE FACTORS:
-- Exercise: ${lifestyle.exercise}
-- Alcohol: ${lifestyle.alcohol}
-- Smoking: ${lifestyle.smoking}
+Create a daily meal plan using ONLY these authentic Kenyan foods:
 
-Please provide a complete day's meal plan using ONLY traditional Kenyan foods that support heart health and blood pressure management. Focus on:
+STARCHES: Ugali (whole maize meal), brown ugali, arrow roots, sweet potatoes (viazi vitamu), cassava (muhogo), millet ugali, sorghum ugali
+PROTEINS: Omena (sardines), tilapia, mbuta, beef (nyama ya ng'ombe), chicken (kuku), eggs (mayai), beans (maharagwe), ndengu (green grams), njahi (black beans), kunde, githeri (maize + beans)
+VEGETABLES: Sukuma wiki (kale), managu (African nightshade), terere (amaranth), kunde leaves, spinach, cabbage (kabichi), tomatoes (nyanya), onions (vitunguu)
+FRUITS: Pawpaw (papai), guava (mapera), bananas (ndizi), oranges (machungwa), passion fruit (maracuja), avocado (parachichi), pineapple (nanasi)
+DRINKS: Uji (porridge - millet/wimbi/sorghum), mursik, chai ya tangawizi (ginger tea), water, fermented milk
 
-🍞 BREAKFAST (30% of daily calories):
-- Traditional Kenyan breakfast options
-- Low sodium, high fiber choices
-- Include portion sizes
+Provide:
+1. BREAKFAST with Kenyan foods and portion
+2. LUNCH with Kenyan foods and portion
+3. DINNER with Kenyan foods and portion
+4. SNACKS with Kenyan foods
+5. General dietary advice for hypertension management
 
-🥙 LUNCH (35% of daily calories):
-- Balanced Kenyan lunch dishes
-- Focus on lean proteins and vegetables
-- Traditional preparation methods
+DO NOT suggest: pasta, rice (unless specified), pizza, burgers, or foreign foods.
+Use Kenyan measurements: debe, bakuli, kibaba, handful (kiganja).
 
-🍽️ DINNER (25% of daily calories):
-- Light, easily digestible Kenyan dinner
-- Include traditional vegetables
-- Healthy cooking methods
+Format the response clearly with each meal section.`;
 
-🍎 SNACKS (10% of daily calories):
-- Healthy Kenyan snack options
-- Blood pressure-friendly choices
-
-💡 GENERAL ADVICE:
-Provide 3-4 sentences of specific dietary advice based on their profile and vitals. Include practical Kenyan context.
-
-CRITICAL REQUIREMENTS:
-- Use ONLY authentic Kenyan foods (no international dishes)
-- Include traditional cooking methods
-- Specify reasonable portion sizes
-- Focus on low-sodium, high-potassium, high-fiber options
-- Avoid processed foods and excessive oil
-- Consider cultural preferences and availability
-- Be specific about ingredients (e.g., "mchuzi mix" instead of just "spices")
-
-Format your response exactly as:
-BREAKFAST: [Detailed Kenyan breakfast recommendation with portions]
-LUNCH: [Detailed Kenyan lunch recommendation with portions]
-DINNER: [Detailed Kenyan dinner recommendation with portions]
-SNACKS: [Detailed Kenyan snacks recommendation]
-GENERAL ADVICE: [Specific dietary advice]`;
-
-    // Call Ollama
-    const response = await ollama.generate({
-      model: "llama3.2:3b",
-      prompt: prompt,
-      stream: false
+    const completion = await groq.chat.completions.create({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 1000,
     });
 
-    const rawResponse = response.response;
+    const rawData = completion.choices[0]?.message?.content || "";
+    
+    console.log("Raw AI diet response:", rawData); // Debug log
+    
+    // Parse the raw response into structured format
+    const dietData = parseDietResponse(rawData);
+    
+    console.log("Parsed diet data:", dietData); // Debug log
+    
+    // Save to database
+    await HypertensionLifestyle.findOneAndUpdate(
+      { userId: new mongoose.Types.ObjectId(userId) },
+      { 
+        dietData,
+        dietUpdatedAt: new Date() 
+      },
+      { new: true, upsert: true }
+    );
 
-    // Parse the response
-    const dietPlan = parseDietResponse(rawResponse);
-
-    return {
-      ...dietPlan,
-      calorieTarget
-    };
-
+    console.log("✅ Diet recommendations generated via Groq");
+    return dietData;
   } catch (error) {
     console.error("❌ Error generating diet recommendations:", error);
-    return getFallbackDietRecommendations();
+    return {
+      breakfast: "Maziwa lala with mkate wa maharage and bananas",
+      lunch: "Sukuma wiki with lean proteins and small portion of ugali",
+      dinner: "Fish with traditional vegetables",
+      snacks: "Fresh fruits or boiled maize",
+      generalAdvice: "Focus on traditional Kenyan foods with less salt and more vegetables.",
+      calorieTarget: 2000,
+    };
   }
 }
 
-// Helper function to parse diet response
+// ✅ Helper: Compute age from DOB
+function computeAge(dob: string | Date): number {
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return 0;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+// ✅ Helper: Parse diet response from AI
 function parseDietResponse(rawResponse: string) {
-  const lines = rawResponse.split('\n');
-  
-  let breakfast = "Traditional Kenyan porridge with banana and nuts";
-  let lunch = "Sukuma wiki with lean beef and ugali";
-  let dinner = "Fish with traditional vegetables and small portion of ugali";
-  let snacks = "Fruits or boiled maize";
-  let generalAdvice = "Focus on traditional Kenyan foods with less salt and more vegetables.";
+  // Default fallback
+  const defaultDiet = {
+    breakfast: "Maziwa lala with mkate wa maharage and bananas",
+    lunch: "Sukuma wiki with lean proteins and small portion of ugali",
+    dinner: "Fish with traditional vegetables",
+    snacks: "Fresh fruits or boiled maize",
+    generalAdvice: "Focus on traditional Kenyan foods with less salt and more vegetables.",
+    calorieTarget: 2000,
+  };
 
-  for (const line of lines) {
-    const trimmedLine = line.trim();
-    
-    if (trimmedLine.startsWith('BREAKFAST:')) {
-      breakfast = trimmedLine.replace('BREAKFAST:', '').trim();
-    } else if (trimmedLine.startsWith('LUNCH:')) {
-      lunch = trimmedLine.replace('LUNCH:', '').trim();
-    } else if (trimmedLine.startsWith('DINNER:')) {
-      dinner = trimmedLine.replace('DINNER:', '').trim();
-    } else if (trimmedLine.startsWith('SNACKS:')) {
-      snacks = trimmedLine.replace('SNACKS:', '').trim();
-    } else if (trimmedLine.startsWith('GENERAL ADVICE:')) {
-      generalAdvice = trimmedLine.replace('GENERAL ADVICE:', '').trim();
-    }
+  if (!rawResponse || rawResponse.trim().length === 0) {
+    console.log("No raw response received, using default diet");
+    return defaultDiet;
   }
 
-  return { breakfast, lunch, dinner, snacks, generalAdvice };
+  try {
+    console.log("Parsing diet response:", rawResponse.substring(0, 200) + "...");
+    
+    // More flexible regex patterns to catch different formats
+    const breakfastMatch = rawResponse.match(/(?:BREAKFAST|1\.?\s*BREAKFAST)[^:]*:?\s*(.*?)(?=\n\s*(?:LUNCH|2\.?\s*LUNCH|DINNER|3\.?\s*DINNER|SNACKS|4\.?\s*SNACKS)|$)/is);
+    const lunchMatch = rawResponse.match(/(?:LUNCH|2\.?\s*LUNCH)[^:]*:?\s*(.*?)(?=\n\s*(?:DINNER|3\.?\s*DINNER|SNACKS|4\.?\s*SNACKS)|$)/is);
+    const dinnerMatch = rawResponse.match(/(?:DINNER|3\.?\s*DINNER)[^:]*:?\s*(.*?)(?=\n\s*(?:SNACKS|4\.?\s*SNACKS)|$)/is);
+    const snacksMatch = rawResponse.match(/(?:SNACKS|4\.?\s*SNACKS)[^:]*:?\s*(.*?)(?=\n\s*(?:ADVICE|5\.?\s*ADVICE|General|Dietary)|$)/is);
+    const adviceMatch = rawResponse.match(/(?:ADVICE|5\.?\s*ADVICE|General.*?ADVICE|Dietary.*?ADVICE)[^:]*:?\s*(.*?)(?=\n\n|\n\n\n|$)/is);
+
+    const dietData = {
+      breakfast: breakfastMatch ? breakfastMatch[1].trim().replace(/\n/g, ' ') : defaultDiet.breakfast,
+      lunch: lunchMatch ? lunchMatch[1].trim().replace(/\n/g, ' ') : defaultDiet.lunch,
+      dinner: dinnerMatch ? dinnerMatch[1].trim().replace(/\n/g, ' ') : defaultDiet.dinner,
+      snacks: snacksMatch ? snacksMatch[1].trim().replace(/\n/g, ' ') : defaultDiet.snacks,
+      generalAdvice: adviceMatch ? adviceMatch[1].trim().replace(/\n/g, ' ') : defaultDiet.generalAdvice,
+      calorieTarget: defaultDiet.calorieTarget,
+    };
+
+    console.log("Successfully parsed diet data:", dietData);
+    return dietData;
+  } catch (error) {
+    console.error("Error parsing diet response:", error);
+    console.log("Raw response that failed to parse:", rawResponse);
+    return defaultDiet;
+  }
 }
 
-// Fallback diet recommendations if AI generation fails
-function getFallbackDietRecommendations() {
-  return {
-    breakfast: "Mandazi with unsweetened tea and banana (limit 1 mandazi)",
-    lunch: "Sukuma wiki with grilled chicken and small portion of ugali",
-    dinner: "Fish (tilapia) with traditional vegetables like mchicha",
-    snacks: "Fresh mango or boiled maize",
-    generalAdvice: "Choose traditional Kenyan foods with less salt. Focus on vegetables, fruits, and lean proteins. Limit processed foods and excessive oil.",
-    calorieTarget: 2000
-  };
-}
-
-// Function to update patient's lifestyle based on choices
+// ✅ Update Lifestyle + Regenerate AI
 export async function updateLifestyle(
   userId: string,
-  updates: {
-    alcohol?: string;
-    smoking?: string;
-    exercise?: string;
-    sleep?: string;
-  }
+  updates: { alcohol?: string; smoking?: string; exercise?: string; sleep?: string }
 ): Promise<ILifestyle | null> {
   try {
-    // Validate enums
     const validAlcohol = ["None", "Occasionally", "Frequently"];
     const validSmoking = ["None", "Light", "Heavy"];
     const validExercise = ["Daily", "Few times/week", "Rarely", "None"];
     const validSleep = ["<5 hrs", "6-7 hrs", "7-8 hrs", ">8 hrs", "Irregular"];
 
-    if (updates.alcohol && !validAlcohol.includes(updates.alcohol)) {
+    if (updates.alcohol && !validAlcohol.includes(updates.alcohol))
       throw new Error("Invalid alcohol value");
-    }
-    if (updates.smoking && !validSmoking.includes(updates.smoking)) {
+    if (updates.smoking && !validSmoking.includes(updates.smoking))
       throw new Error("Invalid smoking value");
-    }
-    if (updates.exercise && !validExercise.includes(updates.exercise)) {
+    if (updates.exercise && !validExercise.includes(updates.exercise))
       throw new Error("Invalid exercise value");
-    }
-    if (updates.sleep && !validSleep.includes(updates.sleep)) {
+    if (updates.sleep && !validSleep.includes(updates.sleep))
       throw new Error("Invalid sleep value");
-    }
 
     const updated = await HypertensionLifestyle.findOneAndUpdate(
       { userId: new mongoose.Types.ObjectId(userId) },
@@ -437,10 +407,9 @@ export async function updateLifestyle(
       { new: true, upsert: true }
     ).exec();
 
-    // Regenerate advice after update
     if (updated) {
-      console.log("🔄 Regenerating AI advice after lifestyle update...");
-      await generateLifestyleRecommendations(userId, undefined);
+      console.log("🔄 Regenerating lifestyle advice via Groq...");
+      await generateLifestyleRecommendations(userId);
     }
 
     return updated;

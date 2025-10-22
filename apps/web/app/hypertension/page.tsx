@@ -142,6 +142,10 @@ function DashboardPage() {
 
   const [aiRecommendations, setAiRecommendations] = useState({ advice: '', alerts: [], warnings: [] });
   const [loadingAI, setLoadingAI] = useState(false);
+  
+  // Regeneration loading states
+  const [regeneratingDiet, setRegeneratingDiet] = useState(false);
+  const [regeneratingLifestyle, setRegeneratingLifestyle] = useState(false);
 
   // Doctor search states
   // const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -202,90 +206,116 @@ function DashboardPage() {
     }
   };
 
-  useEffect(() => {
+  // Define functions outside useEffect to make them available throughout the component
+  const fetchVitals = async () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) return;
 
-    const fetchVitals = async () => {
-      try {
-        const res = await axios.get(`${API_URL}/api/hypertensionVitals/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true,
-        });
+    try {
+      const res = await axios.get(`${API_URL}/api/hypertensionVitals/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
 
-        const allVitals = res.data.data;
-        const threeWeeksAgo = new Date();
-        threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
+      const allVitals = res.data.data;
+      const threeWeeksAgo = new Date();
+      threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
 
-        const recentVitals = allVitals
-          .map((v: any) => ({
-            systolic: Number(v.systolic),
-            diastolic: Number(v.diastolic),
-            heartRate: Number(v.heartRate),
-            createdAt: new Date(v.timestamp || v.createdAt),
-            date: new Date(v.timestamp || v.createdAt).toLocaleDateString(),
-          }))
-          .filter((v: any) => v.createdAt >= threeWeeksAgo)
-          .sort((a: any, b: any) => a.createdAt.getTime() - b.createdAt.getTime());
+      const recentVitals = allVitals
+        .map((v: any) => ({
+          systolic: Number(v.systolic),
+          diastolic: Number(v.diastolic),
+          heartRate: Number(v.heartRate),
+          createdAt: new Date(v.timestamp || v.createdAt),
+          date: new Date(v.timestamp || v.createdAt).toLocaleDateString(),
+        }))
+        .filter((v: any) => v.createdAt >= threeWeeksAgo)
+        .sort((a: any, b: any) => a.createdAt.getTime() - b.createdAt.getTime());
 
-        console.log("Fetched vitals:", recentVitals);
-        setVitals(recentVitals);
-      } catch (err) {
-        console.error("Failed to fetch vitals", err);
-      }
-    };
-
-    const fetchAIRecommendations = async () => {
-      try {
-        setLoadingAI(true);
-        const res = await axios.get(`${API_URL}/api/hypertension/lifestyle`, {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true,
-        });
-        setAiRecommendations(res.data);
-      } catch (err) {
-        console.error("Failed to fetch AI recommendations:", err);
-      } finally {
-        setLoadingAI(false);
-      }
-    };
-
-    const fetchDietRecommendations = async () => {
-  try {
-    setDietLoading(true);
-    const token = localStorage.getItem("token");
-    const res = await axios.get(`${API_URL}/api/hypertension/diet`, {
-      headers: { Authorization: `Bearer ${token}` },
-      withCredentials: true,
-    });
-
-    // Handle both possible response shapes
-    const data = res.data.data || res.data;
-
-    if (data && data.breakfast) {
-      setDietData(data);
-    } else {
-      console.warn("Diet API returned unexpected data:", data);
-      setDietData(null);
+      console.log("Fetched vitals:", recentVitals);
+      setVitals(recentVitals);
+    } catch (err) {
+      console.error("Failed to fetch vitals", err);
     }
-  } catch (err: any) {
-    console.error("Failed to fetch diet recommendations:", err?.response?.data || err);
-    if (err?.response?.status === 401) {
-      console.warn("User not authenticated — token invalid or missing");
+  };
+
+  const fetchAIRecommendations = async () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) return;
+
+    try {
+      setLoadingAI(true);
+      const res = await axios.get(`${API_URL}/api/hypertension/lifestyle`, {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
+      setAiRecommendations(res.data);
+    } catch (err) {
+      console.error("Failed to fetch AI recommendations:", err);
+    } finally {
+      setLoadingAI(false);
     }
-    // Fallback default
-    setDietData({
-      breakfast: "Maziwa lala with mkate wa maharage and bananas",
-      lunch: "Sukuma wiki with lean proteins and small portion of ugali",
-      dinner: "Fish with traditional vegetables",
-      snacks: "Fresh fruits or boiled maize",
-      generalAdvice: "Focus on traditional Kenyan foods with less salt and more vegetables.",
-      calorieTarget: 2000,
-    });
-  } finally {
-    setDietLoading(false);
-  }
-};
+  };
+
+  const fetchDietRecommendations = async () => {
+    try {
+      setRegeneratingDiet(true);
+      setDietLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("No token found - cannot fetch diet recommendations");
+        return;
+      }
+      
+      const res = await axios.get(`${API_URL}/api/hypertension/diet`, {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
+
+      // Handle API response format with data wrapper
+      const data = res.data?.data || res.data;
+
+      if (data && data.breakfast) {
+        setDietData(data);
+      } else {
+        console.warn("Diet API returned unexpected data:", data);
+        // Set fallback if no valid data
+        setDietData({
+          breakfast: "Maziwa lala with mkate wa maharage and bananas",
+          lunch: "Sukuma wiki with lean proteins and small portion of ugali",
+          dinner: "Fish with traditional vegetables",
+          snacks: "Fresh fruits or boiled maize",
+          generalAdvice: "Focus on traditional Kenyan foods with less salt and more vegetables.",
+          calorieTarget: 2000,
+        });
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch diet recommendations:", err?.response?.data || err);
+      if (err?.response?.status === 401) {
+        console.warn("User not authenticated — token invalid or missing");
+      } else if (err?.response?.status === 500) {
+        console.error("Server error fetching diet recommendations");
+      }
+      // Only set fallback if there's no existing data
+      if (!dietData) {
+        setDietData({
+          breakfast: "Maziwa lala with mkate wa maharage and bananas",
+          lunch: "Sukuma wiki with lean proteins and small portion of ugali",
+          dinner: "Fish with traditional vegetables",
+          snacks: "Fresh fruits or boiled maize",
+          generalAdvice: "Focus on traditional Kenyan foods with less salt and more vegetables.",
+          calorieTarget: 2000,
+        });
+      }
+    } finally {
+      setDietLoading(false);
+      setRegeneratingDiet(false);
+    }
+  };
+
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) return;
 
     fetchVitals();
     fetchAIRecommendations();
@@ -466,15 +496,78 @@ function DashboardPage() {
           todayVitals={{ systolic: todayAlert.systolic, diastolic: todayAlert.diastolic, heartRate: todayAlert.heartRate }}
           aiRecommendations={aiRecommendations}
           loadingAI={loadingAI}
+          onRegenerateLifestyle={async () => {
+            if (!patient) return;
+            
+            setRegeneratingLifestyle(true);
+            const token = localStorage.getItem("token");
+            if (!token) {
+              console.warn("No token found - cannot regenerate lifestyle");
+              setRegeneratingLifestyle(false);
+              return;
+            }
+            
+            try {
+              // Fetch latest alerts for the patient
+              const alertsRes = await fetch(`${API_URL}/api/hypertensionVitals/me`, {
+                headers: { Authorization: `Bearer ${token}` },
+                credentials: 'include',
+              });
+              const alertsData = await alertsRes.json();
+              const todayVitals = Array.isArray(alertsData?.data) 
+                ? alertsData.data.filter((v: any) => {
+                    const vDate = new Date(v.timestamp || v.createdAt);
+                    const today = new Date();
+                    return vDate.toDateString() === today.toDateString();
+                  })
+                : [];
+
+              // Get lifestyle data
+              const lifestylePayload = {
+                smoking: lifestyle.smoking ? "Heavy" : "None",
+                alcohol: lifestyle.alcohol ? "Frequently" : "None",
+                exercise: lifestyle.exercise === "high" ? "Daily" : 
+                         lifestyle.exercise === "moderate" ? "Few times/week" : 
+                         lifestyle.exercise === "low" ? "Rarely" : "None",
+                sleep: "7-8 hrs"
+              };
+
+              // Call the lifestyle update API which will regenerate AI advice
+              const updateRes = await axios.post(`${API_URL}/api/hypertension/lifestyle/update`, lifestylePayload, {
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                withCredentials: true,
+              });
+
+              // Fetch updated AI recommendations
+              const aiRes = await axios.get(`${API_URL}/api/hypertension/lifestyle`, {
+                headers: { Authorization: `Bearer ${token}` },
+                withCredentials: true,
+              });
+              
+              setAiRecommendations(aiRes.data);
+            } catch (error) {
+              console.error("Failed to regenerate lifestyle recommendations:", error);
+            } finally {
+              setRegeneratingLifestyle(false);
+            }
+          }}
+          loadingRegenerate={regeneratingLifestyle}
         />
 
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Utensils className="text-green-600" size={20} />
-            <h3 className="text-lg font-semibold text-gray-800">AI Diet Recommendations</h3>
-          </div>
-
-          <DietRecommendations dietData={dietData} loading={dietLoading} />
+          <DietRecommendations 
+            dietData={dietData} 
+            loading={dietLoading} 
+            onRegenerate={fetchDietRecommendations}
+            patient={patient ? {
+              age: Number(computeAge(patient?.dob)) || undefined,
+              weight: patient?.weight,
+              gender: patient?.gender
+            } : undefined}
+          />
         </div>
 
         <HealthTrends vitals={vitals} />

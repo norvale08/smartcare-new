@@ -16,7 +16,8 @@ router.get(
       const userId = req.user.userId;
       const result = await generateDietRecommendations(userId);
 
-      res.json(result);
+      // Wrap the result in a data property to match expected format
+      res.json({ data: result });
     } catch (err) {
       next(err);
     }
