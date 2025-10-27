@@ -43,6 +43,13 @@ export interface FoodAdviceInput extends VitalsData {
   allergies?: string[];
 }
 
+export interface FoodAdviceResponse {
+  breakfast: string;
+  lunch: string;
+  snacks: string;
+  dinner: string;
+}
+
 export class SmartCareAI {
   private groq: Groq | null = null;
   private model = "llama-3.3-70b-versatile";
@@ -51,7 +58,6 @@ export class SmartCareAI {
   constructor() {
     const apiKey = process.env.GROQ_API_KEY;
     
-    // Enhanced logging for debugging
     console.log("🔍 SmartCareAI Initialization:");
     console.log("- NODE_ENV:", process.env.NODE_ENV);
     console.log("- API Key exists:", !!apiKey);
@@ -62,7 +68,6 @@ export class SmartCareAI {
       this.apiKeyError = "GROQ_API_KEY not found in environment variables";
       console.error("❌", this.apiKeyError);
       console.error("Available env vars:", Object.keys(process.env).filter(k => !k.includes("SECRET") && !k.includes("KEY")));
-      // Don't throw - allow graceful degradation
       return;
     }
     
@@ -87,7 +92,6 @@ export class SmartCareAI {
     return true;
   }
 
-  // ✅ Summarize glucose reading
   async generateSummary(data: GlucoseData): Promise<string> {
     if (!this.checkApiKey()) {
       return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
@@ -118,23 +122,10 @@ ${data.language === "sw" ? "Respond in Kiswahili." : ""}`;
         code: err.code,
         type: err.type
       });
-      
-      // Return user-friendly errors
-      if (err.status === 401) {
-        return "❌ Invalid API key. Please contact support.";
-      }
-      if (err.status === 429) {
-        return "❌ Rate limit exceeded. Please try again in a few minutes.";
-      }
-      if (err.code === "ENOTFOUND" || err.code === "ECONNREFUSED") {
-        return "❌ Network error. Cannot reach AI service.";
-      }
-      
-      return `❌ AI Error: ${err.message}`;
+      return this.handleAIError(err);
     }
   }
 
-  // ✅ Provide glucose feedback
   async generateGlucoseFeedback(data: GlucoseData): Promise<string> {
     if (!this.checkApiKey()) {
       return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
@@ -164,7 +155,6 @@ ${data.language === "sw" ? "Kiswahili." : ""}`;
     }
   }
 
-  // ✅ Lifestyle-based AI advice
   async generateLifestyleFeedback(data: LifestyleAIInput): Promise<string> {
     if (!this.checkApiKey()) {
       return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
@@ -202,14 +192,14 @@ ${data.language === "sw" ? "Kiswahili." : ""}`;
     }
   }
 
-  // ✅ Kenyan food advice
-  async generateKenyanFoodAdvice(data: FoodAdviceInput): Promise<string> {
+  // ✅ UPDATED: Returns structured JSON
+  async generateKenyanFoodAdvice(data: FoodAdviceInput): Promise<FoodAdviceResponse> {
     if (!this.checkApiKey()) {
-      return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
+      throw new Error(`AI temporarily unavailable: ${this.apiKeyError}`);
     }
 
     try {
-      console.log("🍽️ Generating Kenyan food advice");
+      console.log("🍽️ Generating Kenyan food advice for glucose:", data.glucose);
       
       const bmi =
         data.weight && data.height
@@ -251,36 +241,68 @@ VEGETABLES: Sukuma wiki (kale), managu (African nightshade), terere (amaranth), 
 FRUITS: Pawpaw (papai), guava (mapera), bananas (ndizi), oranges (machungwa), passion fruit (maracuja), avocado (parachichi), pineapple (nanasi)
 DRINKS: Uji (porridge - millet/wimbi/sorghum), mursik, chai ya tangawizi (ginger tea), water, fermented milk
 
-Provide:
-1. BREAKFAST with Kenyan foods and portion
-2. MID-MORNING SNACK (Kenyan fruits/nuts)
-3. LUNCH with Kenyan foods and portion
-4. AFTERNOON SNACK 
-5. DINNER with Kenyan foods and portion
-6. Foods to COMPLETELY AVOID
-7. Kenyan cooking methods (boil, steam, roast on jiko)
+YOU MUST respond in VALID JSON format with this EXACT structure:
+{
+  "breakfast": "Detailed breakfast recommendation with specific Kenyan foods and portions. Include main dish, drink, and benefits.",
+  "lunch": "Detailed lunch recommendation with specific Kenyan foods and portions. Include protein, vegetables, starch, and cooking method.",
+  "snacks": "Mid-morning and afternoon snack recommendations using Kenyan fruits, nuts, or healthy options.",
+  "dinner": "Detailed dinner recommendation with specific Kenyan foods and portions. Should be lighter than lunch."
+}
 
-DO NOT suggest: pasta, rice (unless specified), pizza, burgers, or foreign foods.
-Use Kenyan measurements: debe, bakuli, kibaba, handful (kiganja).
-${data.language === "sw" ? "Jibu kwa Kiswahili. Tumia chakula cha Kikenya tu." : "Use ONLY Kenyan foods."}`;
+IMPORTANT RULES:
+- Each meal description should be 2-4 sentences
+- Mention specific portions (e.g., "half a debe of ugali", "2 handfuls of sukuma wiki")
+- Include cooking methods (boil, steam, roast on jiko)
+- DO NOT include any text outside the JSON
+- DO NOT suggest: pasta, rice (unless brown rice), pizza, burgers, or foreign foods
+- Use Kenyan measurements: debe, bakuli, kibaba, handful (kiganja)
+${data.language === "sw" ? "Jibu kwa Kiswahili. Tumia chakula cha Kikenya tu." : "Use ONLY Kenyan foods and respond in English."}`;
 
+      console.log("📤 Sending request to Groq API...");
+      
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
         model: this.model,
         temperature: 0.7,
         max_tokens: 1500,
+        response_format: { type: "json_object" }
       });
 
-      const text = completion.choices[0]?.message?.content || "";
-      console.log("✅ Food advice generated successfully");
-      return text.trim() || "⚠️ No food advice available.";
+      const text = completion.choices[0]?.message?.content || "{}";
+      console.log("📥 Raw AI response:", text.substring(0, 200) + "...");
+      
+      const parsedAdvice = JSON.parse(text);
+      console.log("✅ Parsed advice structure:", Object.keys(parsedAdvice));
+      
+      // Validate the response has all required fields
+      if (!parsedAdvice.breakfast || !parsedAdvice.lunch || !parsedAdvice.snacks || !parsedAdvice.dinner) {
+        console.warn("⚠️ Missing fields in AI response, using fallback");
+        return {
+          breakfast: parsedAdvice.breakfast || "Millet uji (porridge) with a banana and boiled egg",
+          lunch: parsedAdvice.lunch || "Brown ugali with sukuma wiki and omena",
+          snacks: parsedAdvice.snacks || "Papai (pawpaw) or handful of groundnuts",
+          dinner: parsedAdvice.dinner || "Githeri with managu and a side of avocado"
+        };
+      }
+      
+      return parsedAdvice as FoodAdviceResponse;
     } catch (err: any) {
-      console.error("❌ AI error (food advice):", err);
-      return this.handleAIError(err);
+      console.error("❌ AI error (food advice):", {
+        message: err.message,
+        status: err.status,
+        type: err.type
+      });
+      
+      // Return fallback advice instead of throwing
+      return {
+        breakfast: "Millet uji (porridge) with a ripe banana. Rich in fiber and provides steady energy.",
+        lunch: "Half debe of brown ugali with sukuma wiki and omena. High in protein and essential nutrients.",
+        snacks: "Fresh papai (pawpaw) or a handful of njugu karanga (groundnuts). Natural and diabetes-friendly.",
+        dinner: "Githeri (maize and beans) with steamed managu. Light, nutritious, and helps regulate blood sugar."
+      };
     }
   }
 
-  // ✅ Quick Kenyan food tips
   async generateQuickFoodTips(data: {
     glucose: number;
     context: string;
@@ -346,7 +368,6 @@ ${data.language === "sw" ? "Jibu kwa Kiswahili." : ""}`;
     }
   }
 
-  // Helper method for consistent error handling
   private handleAIError(err: any): string {
     if (err.status === 401) {
       return "❌ Invalid API key. Please contact support.";
