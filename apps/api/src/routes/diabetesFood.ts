@@ -17,28 +17,18 @@ const calculateAge = (dob: Date | string | undefined): number => {
   return age > 0 ? age : 0;
 };
 
-// ✅ UPDATED: GET latest food advice
+// ✅ GET latest food advice for logged-in user
 router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    console.log("🔍 User ID:", userId);
-    
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const patient = await Patient.findOne({ userId });
-    console.log("👤 Patient found:", patient ? "Yes" : "No");
-    
     if (!patient) return res.status(404).json({ message: "Patient not found" });
 
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
-    console.log("📊 Latest vitals found:", latestVitals ? "Yes" : "No");
-    
     if (!latestVitals) {
-      return res.status(200).json({
-        success: true,
-        data: null,
-        message: "No recent glucose data found",
-      });
+      return res.status(200).json({ success: true, data: null, message: "No recent glucose data found" });
     }
 
     const age = calculateAge(patient.dob);
@@ -66,11 +56,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
     };
 
     console.log("🍽️ Food input prepared:", JSON.stringify(foodInput, null, 2));
-    console.log("🤖 Calling AI service...");
-    
     const advice = await aiService.generateKenyanFoodAdvice(foodInput);
-    
-    console.log("✅ AI advice received:", Object.keys(advice));
 
     res.status(200).json({
       success: true,
@@ -89,7 +75,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
       },
     });
   } catch (error: any) {
-    console.error("❌ Full error details:", error);
+    console.error("❌ Error fetching latest food advice:", error);
     res.status(500).json({
       success: false,
       message: "Server error fetching food advice",
@@ -98,7 +84,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
   }
 });
 
-// ✅ UPDATED: POST generate new food advice
+// ✅ POST generate new food advice manually
 router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -106,13 +92,9 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
 
     const input: FoodAdviceInput = req.body;
 
-    if (!input.context) input.context = "Random";
-
-    if (input.allergies && !Array.isArray(input.allergies)) {
-      input.allergies = [String(input.allergies)];
-    } else if (!input.allergies) {
-      input.allergies = [];
-    }
+    // Ensure defaults
+    input.context = input.context as "Fasting" | "Post-meal" | "Random" || "Random";
+    input.language = input.language as "en" | "sw" || "en";
 
     input.lifestyle = {
       alcohol: input.lifestyle?.alcohol || "Unknown",
@@ -121,12 +103,18 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
       sleep: input.lifestyle?.sleep || "Unknown",
     };
 
-    console.log("🤖 Generating advice for manual input");
+    input.allergies = Array.isArray(input.allergies)
+      ? input.allergies
+      : input.allergies
+      ? [String(input.allergies)]
+      : [];
+
+    console.log("🤖 Generating advice for manual input:", JSON.stringify(input, null, 2));
     const advice = await aiService.generateKenyanFoodAdvice(input);
 
     res.status(200).json({ success: true, advice });
   } catch (error: any) {
-    console.error("❌ Error generating food advice:", error.message);
+    console.error("❌ Error generating food advice:", error);
     res.status(500).json({
       success: false,
       message: "Server error generating food advice",
