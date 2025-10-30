@@ -22,6 +22,7 @@ import adminPatientsRoutes from "./routes/admin";
 import doctorDashboardRouter from './routes/doctorDashboardRoutes';
 import logoutRoute from "./routes/logout";
 import verifyTokenRoute from "./routes/verifyTokenRoute";
+import diabetesFoodRoute from "./routes/diabetesFood"
 dotenv.config();
 
 const app = express();
@@ -110,7 +111,7 @@ app.use("/api/admin/patients", adminPatientsRoutes);
 app.use('/api/doctorDashboard', doctorDashboardRouter);
 app.use('/api/logout', logoutRoute);
 app.use("/api/verifyToken", verifyTokenRoute);
-
+app.use( "/api/diabeticFood", diabetesFoodRoute)
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 
