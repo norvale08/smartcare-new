@@ -6,13 +6,11 @@ import { Pill, AlertCircle, CheckCircle } from 'lucide-react';
 export default function MedicationAnalysisPage() {
   const [medications, setMedications] = useState<string[]>([]);
   const [newMedication, setNewMedication] = useState('');
-  const [age, setAge] = useState('');
-  const [conditions, setConditions] = useState('');
-  const [language, setLanguage] = useState<'en' | 'sw'>('en');
+  
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   const addMedication = () => {
     const trimmed = newMedication.trim();
@@ -32,15 +30,17 @@ export default function MedicationAnalysisPage() {
     setErrorMsg('');
 
     try {
-      const response = await fetch(`${API_URL}/api/medications`, {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (!token) {
+        setErrorMsg('Please log in to analyze medications.');
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/api/medications/analyze`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          medications,
-          patientAge: age ? parseInt(age) : undefined,
-          conditions: conditions ? conditions.split(',').map(c => c.trim()) : [],
-          language,
-        }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ medications }),
       });
 
       const data = await response.json();
@@ -109,31 +109,7 @@ export default function MedicationAnalysisPage() {
           </div>
         )}
 
-        {/* Age, Conditions, Language */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <input
-            type="text"
-            placeholder="Patient Age"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2"
-          />
-          <input
-            type="text"
-            placeholder="Conditions (optional)"
-            value={conditions}
-            onChange={(e) => setConditions(e.target.value)}
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2"
-          />
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as 'en' | 'sw')}
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2"
-          >
-            <option value="en">English</option>
-            <option value="sw">Swahili</option>
-          </select>
-        </div>
+        {/* No extra inputs needed; age and condition are auto-read from profile */}
 
         <button
           onClick={handleSubmit}

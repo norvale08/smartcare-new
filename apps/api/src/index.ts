@@ -12,7 +12,7 @@ import userStatusRouter from './routes/userStatus';
 import profileRoutes from './routes/patient';
 import uploadRoute from "./routes/upload";
 import hypertensionRoutes from './routes/hypertensionVitals';
-//import medicationsRoutes from './routes/medications';
+import medicationsRoutes from './routes/medications';
 import doctorsRoutes from "./routes/doctors"
 import diabetesAiRoutes from "./routes/diabetesAi";
 import LifestyleRoutes from "./routes/diabetesLifestyle";
@@ -100,7 +100,7 @@ app.use('/api/profile', profileRoutes);
 app.use("/api/upload", uploadRoute);
 app.use('/api/diabetesVitals', diabetesRoutes);
 app.use('/api/hypertensionVitals', hypertensionRoutes);
-//app.use('/api/medications', medicationsRoutes);
+app.use('/api/medications', medicationsRoutes);
 app.use('/api/userStatus', userStatusRouter);
 app.use ('/api/doctors',doctorsRoutes);
 app.use("/api/diabetesAi", diabetesAiRoutes);
