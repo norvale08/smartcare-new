@@ -192,18 +192,18 @@ function extractWarnings(lifestyle: any, alerts: string[]): string[] {
 function getFallbackAdvice(): string {
   return `💡 KEY INSIGHTS:
 
-We’re here to support your heart health journey. While we couldn’t generate personalized AI recommendations now, here are essential tips:
+We're here to support your heart health journey. While we couldn't generate personalized AI recommendations now, here are essential tips:
 
 🎯 TODAY'S ACTION PLAN:
 • Monitor BP daily at the same time
-• Stay hydrated (6–8 glasses/day)
+• Stay hydrated (6-8 glasses/day)
 • Take medications as prescribed
 • Practice deep breathing or light meditation
 
 🌟 LIFESTYLE GOALS:
 • Reduce salt intake
 • Exercise at least 30 mins daily
-• Sleep 7–8 hours
+• Sleep 7-8 hours
 • Limit alcohol, avoid smoking
 
 Consistency brings progress 💪`;
@@ -247,7 +247,7 @@ export async function generateDietRecommendations(userId: string) {
     const weight = patient?.weight || "Not specified";
     const age = patient?.dob ? computeAge(patient.dob) : "Not specified";
 
-    // Create prompt for diet recommendations
+    // Create prompt for diet recommendations (concise output)
     const prompt = `
 You are a Kenyan nutritionist specializing in hypertension management. Create a personalized daily diet plan using ONLY authentic Kenyan foods.
 
@@ -272,23 +272,22 @@ VEGETABLES: Sukuma wiki (kale), managu (African nightshade), terere (amaranth), 
 FRUITS: Pawpaw (papai), guava (mapera), bananas (ndizi), oranges (machungwa), passion fruit (maracuja), avocado (parachichi), pineapple (nanasi)
 DRINKS: Uji (porridge - millet/wimbi/sorghum), mursik, chai ya tangawizi (ginger tea), water, fermented milk
 
-Provide:
-1. BREAKFAST with Kenyan foods and portion
-2. LUNCH with Kenyan foods and portion
-3. DINNER with Kenyan foods and portion
-4. SNACKS with Kenyan foods
-5. General dietary advice for hypertension management
+Provide, with brevity:
+1. BREAKFAST: 1-2 items max, short portions
+2. LUNCH: 1-2 items max, short portions
+3. DINNER: 1-2 items max, short portions
+4. SNACKS: up to 2 items
+5. General dietary advice: 2 short sentences max
 
-DO NOT suggest: pasta, rice (unless specified), pizza, burgers, or foreign foods.
-Use Kenyan measurements: debe, bakuli, kibaba, handful (kiganja).
+Avoid: pasta, pizza, burgers, foreign foods. Use Kenyan measures (debe, bakuli, kibaba, handful).
 
-Format the response clearly with each meal section.`;
+Keep each section under 40 words. Format clearly with each meal section.`;
 
     const completion = await groq.chat.completions.create({
       model,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
-      max_tokens: 1000,
+      max_tokens: 450,
     });
 
     const rawData = completion.choices[0]?.message?.content || "";
@@ -297,6 +296,17 @@ Format the response clearly with each meal section.`;
     
     // Parse the raw response into structured format
     const dietData = parseDietResponse(rawData);
+
+    // Enforce brevity safeguards
+    const limit = (t: string, n = 220) => (t && t.length > n ? t.slice(0, n).trimEnd() + '…' : t);
+    const conciseDiet = {
+      breakfast: limit(dietData.breakfast),
+      lunch: limit(dietData.lunch),
+      dinner: limit(dietData.dinner),
+      snacks: limit(dietData.snacks),
+      generalAdvice: limit(dietData.generalAdvice, 200),
+      calorieTarget: dietData.calorieTarget,
+    };
     
     console.log("Parsed diet data:", dietData); // Debug log
     
@@ -304,14 +314,14 @@ Format the response clearly with each meal section.`;
     await HypertensionLifestyle.findOneAndUpdate(
       { userId: new mongoose.Types.ObjectId(userId) },
       { 
-        dietData,
+        dietData: conciseDiet,
         dietUpdatedAt: new Date() 
       },
       { new: true, upsert: true }
     );
 
     console.log("✅ Diet recommendations generated via Groq");
-    return dietData;
+    return conciseDiet;
   } catch (error) {
     console.error("❌ Error generating diet recommendations:", error);
     return {
@@ -354,21 +364,83 @@ function parseDietResponse(rawResponse: string) {
   }
 
   try {
-    console.log("Parsing diet response:", rawResponse.substring(0, 200) + "...");
+    console.log("Parsing diet response:", rawResponse.substring(0, 300) + "...");
+
+    // Handle inline headers like "content **LUNCH**: more content"
+    // First, identify and mark all section headers, then extract content between them
     
-    // More flexible regex patterns to catch different formats
-    const breakfastMatch = rawResponse.match(/(?:BREAKFAST|1\.?\s*BREAKFAST)[^:]*:?\s*(.*?)(?=\n\s*(?:LUNCH|2\.?\s*LUNCH|DINNER|3\.?\s*DINNER|SNACKS|4\.?\s*SNACKS)|$)/is);
-    const lunchMatch = rawResponse.match(/(?:LUNCH|2\.?\s*LUNCH)[^:]*:?\s*(.*?)(?=\n\s*(?:DINNER|3\.?\s*DINNER|SNACKS|4\.?\s*SNACKS)|$)/is);
-    const dinnerMatch = rawResponse.match(/(?:DINNER|3\.?\s*DINNER)[^:]*:?\s*(.*?)(?=\n\s*(?:SNACKS|4\.?\s*SNACKS)|$)/is);
-    const snacksMatch = rawResponse.match(/(?:SNACKS|4\.?\s*SNACKS)[^:]*:?\s*(.*?)(?=\n\s*(?:ADVICE|5\.?\s*ADVICE|General|Dietary)|$)/is);
-    const adviceMatch = rawResponse.match(/(?:ADVICE|5\.?\s*ADVICE|General.*?ADVICE|Dietary.*?ADVICE)[^:]*:?\s*(.*?)(?=\n\n|\n\n\n|$)/is);
+    // Normalize text first
+    let normalizedText = rawResponse
+      .replace(/\bSUPPER\b/gi, 'DINNER')
+      .replace(/\d+\.?\s*/gi, ''); // Remove numbering
+    
+    const result: { [key: string]: string } = {};
+    
+    // Find all section markers and their positions
+    const sectionPattern = /\*\*\s*(BREAKFAST|LUNCH|DINNER|SUPPER|SNACKS|ADVICE|GENERAL\s*ADVICE)\s*\*\*/gi;
+    const sections: Array<{name: string, pos: number, length: number}> = [];
+    let match;
+    
+    while ((match = sectionPattern.exec(normalizedText)) !== null) {
+      if (match && match[1]) {
+        const name = match[1].toUpperCase().replace('SUPPER', 'DINNER').replace(/\s*ADVICE/i, 'ADVICE');
+        sections.push({ name, pos: match.index, length: match[0].length });
+      }
+    }
+    
+    // If no bold headers found, try plain headers
+    if (sections.length === 0) {
+      const plainPattern = /\b(BREAKFAST|LUNCH|DINNER|SUPPER|SNACKS|ADVICE|GENERAL\s*ADVICE)\s*:?/gi;
+      while ((match = plainPattern.exec(normalizedText)) !== null) {
+        if (match && match[1]) {
+          const name = match[1].toUpperCase().replace('SUPPER', 'DINNER').replace(/\s*ADVICE/i, 'ADVICE');
+          sections.push({ name, pos: match.index, length: match[0].length });
+        }
+      }
+    }
+    
+    // Extract content between sections
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i];
+      const nextSection = sections[i + 1];
+      const startPos = section.pos + section.length;
+      const endPos = nextSection ? nextSection.pos : normalizedText.length;
+      
+      let content = normalizedText.substring(startPos, endPos)
+        .replace(/\*\*\s*(BREAKFAST|LUNCH|DINNER|SNACKS|ADVICE)\s*\*\*/gi, '')
+        .replace(/\b(BREAKFAST|LUNCH|DINNER|SNACKS|ADVICE)\s*:?\s*/gi, '')
+        .trim();
+      
+      // Remove any trailing header markers that might have been included
+      content = content.replace(/^\*\*.*?\*\*\s*/, '').trim();
+      
+      if (content && content.length > 0) {
+        const key = section.name === 'ADVICE' || section.name.includes('ADVICE') ? 'generalAdvice' : section.name.toLowerCase();
+        if (!result[key]) {
+          result[key] = content.replace(/\s+/g, ' ');
+        }
+      }
+    }
+    
+    // Special case: content before first header (usually BREAKFAST)
+    if (sections.length > 0 && !result.breakfast) {
+      const firstSection = sections[0];
+      const beforeFirst = normalizedText.substring(0, firstSection.pos)
+        .replace(/\*\*\s*BREAKFAST\s*\*\*\s*:?/gi, '')
+        .replace(/\bBREAKFAST\s*:?\s*/gi, '')
+        .trim();
+      
+      if (beforeFirst && beforeFirst.length > 5 && !beforeFirst.match(/\*\*(LUNCH|DINNER|SNACKS|ADVICE)\*\*/i)) {
+        result.breakfast = beforeFirst.replace(/\s+/g, ' ');
+      }
+    }
 
     const dietData = {
-      breakfast: breakfastMatch ? breakfastMatch[1].trim().replace(/\n/g, ' ') : defaultDiet.breakfast,
-      lunch: lunchMatch ? lunchMatch[1].trim().replace(/\n/g, ' ') : defaultDiet.lunch,
-      dinner: dinnerMatch ? dinnerMatch[1].trim().replace(/\n/g, ' ') : defaultDiet.dinner,
-      snacks: snacksMatch ? snacksMatch[1].trim().replace(/\n/g, ' ') : defaultDiet.snacks,
-      generalAdvice: adviceMatch ? adviceMatch[1].trim().replace(/\n/g, ' ') : defaultDiet.generalAdvice,
+      breakfast: result.breakfast || defaultDiet.breakfast,
+      lunch: result.lunch || defaultDiet.lunch,
+      dinner: result.dinner || defaultDiet.dinner,
+      snacks: result.snacks || defaultDiet.snacks,
+      generalAdvice: result.generalAdvice || defaultDiet.generalAdvice,
       calorieTarget: defaultDiet.calorieTarget,
     };
 
@@ -416,5 +488,73 @@ export async function updateLifestyle(
   } catch (error) {
     console.error("❌ Error updating lifestyle:", error);
     return null;
+  }
+}
+
+// ✅ Generate medication interactions
+export async function generateMedicationInteractions(
+  medications: Array<{ name: string; dosage: string; frequency: string }>,
+  context?: { age?: number; condition?: string }
+) {
+  try {
+    // Create prompt for medication interaction analysis
+    const medicationList = medications.map(med => 
+      `${med.name} (${med.dosage} - ${med.frequency})`
+    ).join(", ");
+    
+    const conditionText = context?.condition || "Hypertension";
+    const ageText = context?.age ? `Patient Age: ${context.age}` : "";
+
+    const prompt = `
+You are a healthcare AI assistant specializing in medication safety. Analyze the following medications for potential interactions, side effects, and safety concerns:
+
+MEDICATIONS TO ANALYZE:
+${medicationList}
+
+Clinical Context:
+- Primary condition: ${conditionText}
+${ageText ? `- ${ageText}` : ""}
+
+Please provide a comprehensive analysis covering:
+1. Major interactions between medications
+2. Common side effects
+3. Safety precautions
+4. When to seek medical attention
+5. Recommendations for monitoring
+
+Format your response clearly with these sections:
+🔍 INTERACTION ANALYSIS:
+[Details about medication interactions]
+
+⚠️ POTENTIAL SIDE EFFECTS:
+[Common side effects to watch for]
+
+🛡️ SAFETY PRECAUTIONS:
+[Important safety measures]
+
+🆘 WHEN TO SEEK HELP:
+[Red flags requiring medical attention]
+
+📊 MONITORING RECOMMENDATIONS:
+[What to monitor and how often]
+
+Keep your response professional, evidence-based, and easy to understand for patients.
+`;
+
+    const completion = await groq.chat.completions.create({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 800,
+    });
+
+    const analysis = completion.choices[0]?.message?.content || 
+      "Unable to analyze medication interactions at this time. Please consult with your healthcare provider.";
+
+    console.log("✅ Medication interactions generated via Groq");
+    return analysis;
+  } catch (error) {
+    console.error("❌ Error generating medication interactions:", error);
+    return "Unable to analyze medication interactions due to a technical error. Please contact your healthcare provider for medication safety information.";
   }
 }
