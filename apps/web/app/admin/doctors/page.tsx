@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import DoctorManagement from "@/app/components/admin/DoctorsMangement";
+
 import DoctorsRegistration from "@/app/components/admin/doctorsRegistration";
 
 export default function Page() {
@@ -15,7 +15,7 @@ export default function Page() {
 
   return (
     <div className="p-6">
-      <DoctorManagement doctors={doctors} onAdd={handleAddDoctor} />
+      
       <DoctorsRegistration/>
     </div>
   );

@@ -1,4 +1,3 @@
-//models/user.ts
 import mongoose, { Schema, model, models } from "mongoose";
 
 const userSchema = new Schema(
@@ -43,6 +42,8 @@ const userSchema = new Schema(
     },
     
     // CRITICAL: Disease boolean fields (for login redirect logic)
+    // For Patients: indicates their conditions
+    // For Doctors: indicates conditions they treat
     diabetes: {
       type: Boolean,
       default: false,
@@ -56,7 +57,7 @@ const userSchema = new Schema(
       default: false,
     },
     
-    // Disease array (for display/reference)
+    // Disease array (for display/reference) - mainly for patients
     selectedDiseases: [
       {
         type: String,
@@ -126,6 +127,10 @@ const userSchema = new Schema(
       default: null,
     },
     licenseNumber: {
+      type: String,
+      default: null,
+    },
+    hospital: {
       type: String,
       default: null,
     },

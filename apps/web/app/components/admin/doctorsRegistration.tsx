@@ -5,7 +5,7 @@ import { Button, Input, Label } from "@repo/ui";
 import { authValidationRules, getConfirmPasswordRule } from "@repo/ui";
 import { toast } from "react-hot-toast";
 import CustomToaster from "../ui/CustomToaster";
-import { Mail, Lock, User, Phone, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, Phone, Eye, EyeOff, Stethoscope, Heart, Activity, Building, IdCard } from "lucide-react";
 
 type DoctorRegisterType = {
   firstName: string;
@@ -15,6 +15,11 @@ type DoctorRegisterType = {
   password: string;
   confirmPassword: string;
   role?: string;
+  specialization: string;
+  treatsDiabetes: boolean;
+  treatsHypertension: boolean;
+  licenseNumber: string;
+  hospital: string;
 };
 
 const DoctorsRegistration = () => {
@@ -25,16 +30,27 @@ const DoctorsRegistration = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const password = watch("password");
 
-  const API_URL =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  // IMPORTANT: Update this to match your backend server port
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
   const handleFormSubmit = async (data: DoctorRegisterType) => {
     setIsLoading(true);
     try {
       const { confirmPassword, ...submitData } = data;
 
+      // DEBUG: Check what's being sent
+      console.log("Form data being sent:", submitData);
+      
       // force role as doctor
-      const payload = { ...submitData, role: "doctor" };
+      const payload = { 
+        ...submitData, 
+        role: "doctor",
+        treatsDiabetes: Boolean(submitData.treatsDiabetes),
+        treatsHypertension: Boolean(submitData.treatsHypertension)
+      };
+
+      console.log("Final payload:", payload);
+      console.log("Sending to:", `${API_URL}/api/doctors/create`);
 
       const response = await fetch(`${API_URL}/api/doctors/create`, {
         method: "POST",
@@ -43,11 +59,16 @@ const DoctorsRegistration = () => {
       });
 
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Failed to register doctor");
+      
+      if (!response.ok) {
+        console.error("Server response error:", result);
+        throw new Error(result.message || "Failed to register doctor");
+      }
 
       toast.success("Doctor registered successfully!");
       reset();
     } catch (err) {
+      console.error("Registration error:", err);
       const errorMessage =
         err instanceof Error
           ? err.message
@@ -163,6 +184,130 @@ const DoctorsRegistration = () => {
                 {formState.errors.phoneNumber.message}
               </p>
             )}
+          </div>
+
+          {/* License Number */}
+          <div>
+            <Label htmlFor="licenseNumber">Professional License Number</Label>
+            <div className="relative">
+              <IdCard
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+              <Input
+                id="licenseNumber"
+                type="text"
+                placeholder="e.g., MD123456"
+                className="pl-10"
+                {...register("licenseNumber", { 
+                  required: "License number is required",
+                  minLength: {
+                    value: 3,
+                    message: "License number must be at least 3 characters"
+                  }
+                })}
+              />
+            </div>
+            {formState.errors.licenseNumber && (
+              <p className="text-red-500 text-sm mt-1">
+                {formState.errors.licenseNumber.message}
+              </p>
+            )}
+          </div>
+
+          {/* Hospital/Affiliation */}
+          <div>
+            <Label htmlFor="hospital">Hospital/Clinic Affiliation</Label>
+            <div className="relative">
+              <Building
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+              <Input
+                id="hospital"
+                type="text"
+                placeholder="e.g., City General Hospital"
+                className="pl-10"
+                {...register("hospital", { 
+                  required: "Hospital/Clinic name is required",
+                  minLength: {
+                    value: 2,
+                    message: "Please enter a valid hospital name"
+                  }
+                })}
+              />
+            </div>
+            {formState.errors.hospital && (
+              <p className="text-red-500 text-sm mt-1">
+                {formState.errors.hospital.message}
+              </p>
+            )}
+          </div>
+
+          {/* Specialization Field */}
+          <div>
+            <Label htmlFor="specialization">Specialization</Label>
+            <div className="relative">
+              <Stethoscope
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+              <select
+                id="specialization"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
+                {...register("specialization", { 
+                  required: "Specialization is required" 
+                })}
+              >
+                <option value="">Select Specialization</option>
+                <option value="general-practice">General Practice / Family Medicine</option>
+                <option value="endocrinology">Endocrinology</option>
+                <option value="cardiology">Cardiology</option>
+                <option value="nephrology">Nephrology</option>
+                <option value="internal-medicine">Internal Medicine</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            {formState.errors.specialization && (
+              <p className="text-red-500 text-sm mt-1">
+                {formState.errors.specialization.message}
+              </p>
+            )}
+          </div>
+
+          {/* Conditions They Treat */}
+          <div>
+            <Label>Conditions They Treat</Label>
+            <div className="space-y-3 mt-2 p-3 border border-gray-200 rounded-md">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="treatsDiabetes"
+                  {...register("treatsDiabetes")}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <Label htmlFor="treatsDiabetes" className="flex items-center">
+                  <Activity className="mr-2 text-green-600" size={16} />
+                  Diabetes Mellitus
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="treatsHypertension"
+                  {...register("treatsHypertension")}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <Label htmlFor="treatsHypertension" className="flex items-center">
+                  <Heart className="mr-2 text-red-600" size={16} />
+                  Hypertension (High Blood Pressure)
+                </Label>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 mt-1">
+              Select all conditions this doctor treats
+            </p>
           </div>
 
           {/* Password */}
