@@ -128,5 +128,29 @@ router.get("/by-specialization", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
+// Add this to your routes/doctors.ts
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await connectMongoDB();
+    
+    const doctor = await User.findById(id);
+    
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+    
+    if (doctor.role !== "doctor") {
+      return res.status(400).json({ message: "User is not a doctor" });
+    }
+    
+    await User.findByIdAndDelete(id);
+    
+    res.status(200).json({ message: "Doctor deleted successfully" });
+  } catch (err: any) {
+    console.error("Delete doctor error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
 export default router;
