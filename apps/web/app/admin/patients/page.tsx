@@ -52,6 +52,7 @@ export default function AdminPatientsPage() {
   const [diseaseFilter, setDiseaseFilter] = useState("all");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [downloadingCSV, setDownloadingCSV] = useState(false);
   const [pagination, setPagination] = useState<PaginationInfo>({
     currentPage: 1,
     totalPages: 1,
@@ -214,6 +215,99 @@ export default function AdminPatientsPage() {
     return patient.fullName;
   };
 
+  // CSV Download Function
+  const downloadCSV = async () => {
+    try {
+      setDownloadingCSV(true);
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      // Fetch all patients for CSV (without pagination)
+      const queryParams = new URLSearchParams({
+        limit: "1000", // Large limit to get all patients
+        ...(searchTerm && { search: searchTerm }),
+        ...(diseaseFilter !== "all" && { disease: diseaseFilter }),
+      });
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/patients?${queryParams}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        const patientsData = data.data.patients;
+        
+        // Create CSV headers
+        const headers = [
+          'Patient Name',
+          'Patient Email',
+          'Patient Phone',
+          'Age',
+          'Gender',
+          'Diabetes',
+          'Hypertension',
+          'Emergency Contact Name',
+          'Emergency Contact Relationship',
+          'Emergency Contact Phone',
+          'Registration Date'
+        ];
+
+        // Create CSV rows
+        const csvRows = patientsData.map((patient: Patient) => [
+          `"${getPatientFullName(patient)}"`,
+          `"${patient.patientEmail}"`,
+          `"${patient.patientPhone}"`,
+          `"${patient.dob ? calculateAge(patient.dob) + ' years' : 'N/A'}"`,
+          `"${patient.gender || 'N/A'}"`,
+          `"${patient.diabetes ? 'Yes' : 'No'}"`,
+          `"${patient.hypertension ? 'Yes' : 'No'}"`,
+          `"${getEmergencyContactName(patient)}"`,
+          `"${formatRelationship(patient.relationship)}"`,
+          `"${patient.phoneNumber}"`,
+          `"${formatDate(patient.createdAt)}"`
+        ]);
+
+        // Combine headers and rows
+        const csvContent = [
+          headers.join(','),
+          ...csvRows.map((row: string[]) => row.join(','))
+        ].join('\n');
+
+        // Create and download file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `patients_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setError("");
+      } else {
+        setError("Failed to download patient data");
+      }
+    } catch (err) {
+      console.error("Error downloading CSV:", err);
+      setError("Failed to download CSV file");
+    } finally {
+      setDownloadingCSV(false);
+    }
+  };
+
   if (loading && patients.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -332,6 +426,33 @@ export default function AdminPatientsPage() {
                 className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 Clear
+              </button>
+
+              {/* Download CSV Button */}
+              <button
+                onClick={downloadCSV}
+                disabled={downloadingCSV || patients.length === 0}
+                className={`px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 ${
+                  downloadingCSV || patients.length === 0
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {downloadingCSV ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m8-10h-4M6 12H2m16.364-6.364l-2.828 2.828M7.464 17.536l-2.828 2.828m0-11.314l2.828 2.828m11.314 0l2.828 2.828" />
+                    </svg>
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export CSV
+                  </>
+                )}
               </button>
             </div>
           </div>
