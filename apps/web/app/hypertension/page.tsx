@@ -13,12 +13,12 @@ import Header from "./components/Header";
 import PatientProfile from "./components/PatientProfile";
 import EditProfileModal from "./components/EditProfileModal";
 import HypertensionAlert from "../components/hypertension/alert";
-import VitalsInput from "./components/VitalsInput";
+import VitalsWithActivityInput from "./components/VitalsWithActivityInput";
 import LifestyleAssessment from "./components/LifestyleAssessment";
-import DietRecommendations from "./components/DietRecommendations";
 import type { LifestyleData } from "./components/LifestyleAssessment";
 import HealthTrends from "./components/HealthTrends";
 import NearbyClinics from "./components/NearbyClinics";
+import DietRecommendations from "./components/DietRecommendations";
 // import { Doctor } from "@/types/doctor";
 import { Button, Input, Card, CardHeader, CardContent, CardDescription, CardTitle } from "@repo/ui";
 import {
@@ -463,26 +463,7 @@ function DashboardPage() {
 
         <HypertensionAlert refreshToken={alertRefreshToken} />
 
-        <VitalsInput
-          systolic={systolic}
-          diastolic={diastolic}
-          heartRate={heartRate}
-          message={message}
-          hasToken={hasToken}
-          status={status}
-          listening={listening}
-          transcript={transcript}
-          error={error}
-          language={language}
-          onSystolicChange={setSystolic}
-          onDiastolicChange={setDiastolic}
-          onHeartRateChange={setHeartRate}
-          onStartListening={(field: "systolic" | "diastolic" | "heartRate") => {
-            setListeningField(field);
-            startListening(language);
-          }}
-          onSubmit={handleSubmit}
-        />
+        <VitalsWithActivityInput onAfterSave={() => setAlertRefreshToken(Date.now())} />
 
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
           <MedicationAnalysisPage />

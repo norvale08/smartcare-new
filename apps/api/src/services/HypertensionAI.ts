@@ -209,6 +209,65 @@ We're here to support your heart health journey. While we couldn't generate pers
 Consistency brings progress 💪`;
 }
 
+export async function analyzeVitalsWithAI(input: { vitals: any; activity: any }): Promise<any> {
+    const { vitals, activity } = input;
+
+    const prompt = `
+        You are an AI medical assistant. Analyze the following patient data to determine if their blood pressure reading is a cause for concern or a normal reaction to their recent activity.
+
+        Patient's Vitals:
+        - Systolic: ${vitals.systolic} mmHg
+        - Diastolic: ${vitals.diastolic} mmHg
+        - Heart Rate: ${vitals.heartRate} bpm
+
+        Patient's Recent Activity:
+        - Activity Type: ${activity.activityType}
+        - Duration: ${activity.duration} minutes
+        - Intensity: ${activity.intensity}
+        - Time Since Activity: ${activity.timeSinceActivity} minutes ago
+        - Notes: ${activity.notes || "None"}
+
+        Based on this data, provide a JSON response with the following structure:
+        {
+          "severity": "green" | "yellow" | "red",
+          "title": "A short, descriptive title for the analysis",
+          "description": "A brief explanation of the situation",
+          "recommendation": "A clear, actionable recommendation for the patient",
+          "activityInfluence": "How the recent activity is likely influencing the vitals",
+          "shouldNotifyDoctor": boolean,
+          "confidence": number (from 0 to 100)
+        }
+
+        - Use "green" for normal readings.
+        - Use "yellow" for readings that are slightly elevated but likely due to activity, or require monitoring.
+        - Use "red" for readings that are dangerously high or require immediate attention.
+    `;
+
+    try {
+        const completion = await groq.chat.completions.create({
+            model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.7,
+            max_tokens: 500,
+            response_format: { type: "json_object" },
+        });
+
+        const analysis = JSON.parse(completion.choices[0]?.message?.content || "{}");
+        return analysis;
+    } catch (error) {
+        console.error("Error calling Groq API for vitals analysis:", error);
+        // Fallback to a default response in case of an error
+        return {
+            severity: "yellow",
+            title: "Could not analyze vitals",
+            description: "There was an error analyzing the vitals data with the AI. Please consult a doctor.",
+            recommendation: "Please consult a healthcare professional.",
+            activityInfluence: "Unknown",
+            shouldNotifyDoctor: true,
+            confidence: 0,
+        };
+    }
+}
 // ✅ Generate diet recommendations
 export async function generateDietRecommendations(userId: string) {
   try {
