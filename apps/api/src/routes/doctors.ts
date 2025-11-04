@@ -1,6 +1,9 @@
 import express from "express";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import User from "../models/user";
+import PasswordResetToken from "../models/resetToken";
+import { emailService } from "../lib/emailService";
 import { connectMongoDB } from "../lib/mongodb";
 
 const router = express.Router();
@@ -333,6 +336,259 @@ router.delete("/:id", async (req: express.Request, res: express.Response) => {
   } catch (err: any) {
     console.error("Delete doctor error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Send password reset email to doctor
+router.post("/:id/send-reset-email", async (req: express.Request, res: express.Response) => {
+  try {
+    const { id } = req.params;
+    
+    console.log("=== SEND RESET EMAIL REQUEST ===");
+    console.log("Doctor ID:", id);
+
+    await connectMongoDB();
+
+    // Find doctor
+    const doctor = await User.findById(id);
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    if (doctor.role !== "doctor") {
+      return res.status(400).json({ message: "User is not a doctor" });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Create reset token document
+    const passwordResetToken = new PasswordResetToken({
+      email: doctor.email,
+      token: resetToken,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+    });
+
+    await passwordResetToken.save();
+
+    // Send email
+    const emailSent = await emailService.sendPasswordResetEmail(
+      doctor.email,
+      resetToken,
+      `${doctor.firstName} ${doctor.lastName}`
+    );
+
+    if (emailSent) {
+      console.log("Password reset email sent successfully to:", doctor.email);
+      res.json({ 
+        message: 'Password reset email sent successfully',
+        doctorEmail: doctor.email
+      });
+    } else {
+      console.log("Failed to send email to:", doctor.email);
+      res.status(500).json({ message: 'Failed to send password reset email' });
+    }
+  } catch (error: any) {
+    console.error("Send reset email error:", error);
+    res.status(500).json({ 
+      message: "Error sending reset email",
+      error: error.message 
+    });
+  }
+});
+
+// Send communication to multiple doctors
+router.post("/send-communication", async (req: express.Request, res: express.Response) => {
+  try {
+    const { doctorIds, subject, message } = req.body;
+
+    console.log("=== SEND COMMUNICATION REQUEST ===");
+    console.log("Doctor IDs:", doctorIds);
+    console.log("Subject:", subject);
+
+    if (!doctorIds || !Array.isArray(doctorIds) || doctorIds.length === 0) {
+      return res.status(400).json({ message: "No doctors selected" });
+    }
+
+    if (!subject || !message) {
+      return res.status(400).json({ message: "Subject and message are required" });
+    }
+
+    await connectMongoDB();
+
+    // Find all selected doctors
+    const doctors = await User.find({ 
+      _id: { $in: doctorIds },
+      role: "doctor" 
+    });
+
+    if (doctors.length === 0) {
+      return res.status(404).json({ message: "No doctors found" });
+    }
+
+    let successfulEmails = 0;
+    let failedEmails = 0;
+
+    // Send email to each doctor
+    for (const doctor of doctors) {
+      try {
+        const emailSent = await emailService.sendGeneralCommunication(
+          doctor.email,
+          `${doctor.firstName} ${doctor.lastName}`,
+          subject,
+          message
+        );
+
+        if (emailSent) {
+          successfulEmails++;
+          console.log(`Email sent successfully to: ${doctor.email}`);
+        } else {
+          failedEmails++;
+          console.log(`Failed to send email to: ${doctor.email}`);
+        }
+      } catch (error) {
+        failedEmails++;
+        console.error(`Error sending email to ${doctor.email}:`, error);
+      }
+    }
+
+    const resultMessage = `Communication sent to ${successfulEmails} doctor(s). ${failedEmails} failed.`;
+    console.log(resultMessage);
+
+    res.json({ 
+      message: resultMessage,
+      successful: successfulEmails,
+      failed: failedEmails
+    });
+  } catch (error: any) {
+    console.error("Send communication error:", error);
+    res.status(500).json({ 
+      message: "Error sending communication",
+      error: error.message 
+    });
+  }
+});
+
+// NEW: Test Gmail connection route
+router.post("/test-gmail-connection", async (req: express.Request, res: express.Response) => {
+  try {
+    console.log("🧪 Testing Gmail connection...");
+    console.log("📧 SMTP_USER:", process.env.SMTP_USER);
+    console.log("🔑 SMTP_PASS length:", process.env.SMTP_PASS?.length);
+    console.log("🔑 SMTP_PASS sample:", process.env.SMTP_PASS ? 
+      `${process.env.SMTP_PASS.substring(0, 4)}...${process.env.SMTP_PASS.substring(process.env.SMTP_PASS.length - 4)}` : 
+      "No password");
+
+    // Check if environment variables are set
+    if (!process.env.SMTP_USER) {
+      console.log("❌ SMTP_USER is not set in environment variables");
+      return res.status(500).json({ 
+        success: false, 
+        message: "SMTP_USER is not configured" 
+      });
+    }
+
+    if (!process.env.SMTP_PASS) {
+      console.log("❌ SMTP_PASS is not set in environment variables");
+      return res.status(500).json({ 
+        success: false, 
+        message: "SMTP_PASS is not configured" 
+      });
+    }
+
+    // Test direct email sending - use the SMTP_USER as recipient
+    const testEmail = process.env.SMTP_USER; // This is now guaranteed to be a string
+    const testToken = "test-token-" + Date.now();
+    const testName = "Test Doctor";
+
+    console.log("📤 Attempting to send test email to:", testEmail);
+    
+    const emailSent = await emailService.sendPasswordResetEmail(
+      testEmail,
+      testToken,
+      testName
+    );
+
+    if (emailSent) {
+      console.log("✅ Gmail test successful! Check your inbox at:", testEmail);
+      res.json({ 
+        success: true, 
+        message: "Gmail test successful! Check your email inbox.",
+        sentTo: testEmail
+      });
+    } else {
+      console.log("❌ Gmail test failed - email service returned false");
+      res.status(500).json({ 
+        success: false, 
+        message: "Gmail test failed - email service returned false" 
+      });
+    }
+    
+  } catch (error: any) {
+    console.error("💥 Gmail test error:", error);
+    console.error("📝 Error details:", error.message);
+    
+    res.status(500).json({ 
+      success: false, 
+      message: "Gmail test failed",
+      error: error.message,
+      code: error.code 
+    });
+  }
+});
+
+// NEW: Test email with custom recipient
+router.post("/test-email-custom", async (req: express.Request, res: express.Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Email is required in request body" 
+      });
+    }
+
+    console.log("🧪 Testing email to custom address:", email);
+    console.log("📧 SMTP_USER:", process.env.SMTP_USER);
+    console.log("🔑 SMTP_PASS configured:", !!process.env.SMTP_PASS);
+
+    const testToken = "test-token-" + Date.now();
+    const testName = "Test Doctor";
+
+    console.log("📤 Attempting to send test email to:", email);
+    
+    const emailSent = await emailService.sendPasswordResetEmail(
+      email,
+      testToken,
+      testName
+    );
+
+    if (emailSent) {
+      console.log("✅ Email test successful! Check inbox at:", email);
+      res.json({ 
+        success: true, 
+        message: "Email test successful! Check your email inbox.",
+        sentTo: email
+      });
+    } else {
+      console.log("❌ Email test failed - email service returned false");
+      res.status(500).json({ 
+        success: false, 
+        message: "Email test failed - email service returned false" 
+      });
+    }
+    
+  } catch (error: any) {
+    console.error("💥 Email test error:", error);
+    console.error("📝 Error details:", error.message);
+    
+    res.status(500).json({ 
+      success: false, 
+      message: "Email test failed",
+      error: error.message,
+      code: error.code 
+    });
   }
 });
 
