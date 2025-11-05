@@ -15,6 +15,7 @@ import RealTimeNotifications from './components/RealTimeNotifications';
 
 interface Patient {
   id: string;
+  userId?: string;
   fullName: string;
   age: number;
   gender: string;
@@ -78,15 +79,6 @@ const CaretakerDashboard = () => {
     }
   }, []);
 
-  // Real-time updates simulation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchAssignedPatients();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
-
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token');
@@ -137,15 +129,28 @@ const CaretakerDashboard = () => {
 
       const data = await response.json();
       
+      console.log("🔄 ASSIGNED PATIENTS RAW DATA:", data);
+      
+      let patientsData: Patient[] = [];
+      
       if (Array.isArray(data)) {
-        setPatients(data);
+        patientsData = data;
       } else if (data.patients) {
-        setPatients(data.patients);
+        patientsData = data.patients;
       } else if (data.data) {
-        setPatients(data.data);
-      } else {
-        setPatients([]);
+        patientsData = data.data;
       }
+      
+      // Log patient IDs for debugging
+      console.log("👥 PROCESSED PATIENTS:", patientsData.map(p => ({
+        id: p.id,
+        userId: p.userId,
+        name: p.fullName,
+        condition: p.condition
+      })));
+      
+      setPatients(patientsData);
+      
     } catch (error: any) {
       console.error("Failed to fetch assigned patients:", error);
       setError(error.message);
@@ -154,97 +159,166 @@ const CaretakerDashboard = () => {
     }
   };
 
-  const handlePatientAssign = (patientId: string) => {
-    fetchAssignedPatients();
-    setMessage(`Patient assigned successfully!`);
-  };
-
-  const refreshAssignedPatients = () => {
-    setRefreshTrigger(prev => prev + 1);
-    fetchAssignedPatients();
-  };
-
   const fetchPatientVitals = async (patientId: string) => {
     try {
       setIsLoading(true);
+      setPatientVitals([]);
       const token = localStorage.getItem("token");
       
+      console.log("🩺 ===== FETCHING PATIENT VITALS =====");
+      console.log("👤 Patient ID:", patientId);
+      console.log("🔑 Token exists:", !!token);
+
       if (!token) {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`/api/patient/${patientId}/vitals`, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      });
+      // Try multiple possible API endpoints
+      const apiEndpoints = [
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/patient/vitals/${patientId}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/patient/${patientId}/vitals`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/vitals/patient/${patientId}`,
+      ];
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          await loadMockVitals(patientId);
-          return;
+      let response = null;
+      let lastError = null;
+
+      // Try each endpoint until one works
+      for (const apiUrl of apiEndpoints) {
+        console.log("🌐 Trying API endpoint:", apiUrl);
+        
+        try {
+          response = await fetch(apiUrl, {
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+          });
+
+          console.log("📡 Response status:", response.status);
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log("✅ SUCCESS with endpoint:", apiUrl);
+            console.log("📊 Vitals data received:", {
+              success: result.success,
+              count: result.count,
+              dataLength: result.data?.length,
+              data: result.data
+            });
+
+            if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+              const validatedVitals = result.data.map((vital: any) => ({
+                ...vital,
+                patientId: patientId,
+                timestamp: vital.timestamp || vital.createdAt || vital.date || new Date().toISOString()
+              }));
+              
+              setPatientVitals(validatedVitals);
+              console.log(`✅ Loaded ${validatedVitals.length} vitals`);
+              return;
+            } else {
+              console.log("⚠️ No vitals data in response");
+              setPatientVitals([]);
+              return;
+            }
+          } else if (response.status !== 404) {
+            // If it's not 404, continue to next endpoint
+            continue;
+          }
+        } catch (err) {
+          console.log(`❌ Endpoint ${apiUrl} failed:`, err);
+          lastError = err;
+          continue;
         }
-        throw new Error(`Failed to fetch vitals: ${response.status}`);
       }
 
-      const data = await response.json();
+      // If we get here, no endpoint worked
+      console.log("❌ All API endpoints failed");
+      setPatientVitals([]);
       
-      if (Array.isArray(data)) {
-        setPatientVitals(data);
-      } else if (data.vitals) {
-        setPatientVitals(data.vitals);
-      } else if (data.data) {
-        setPatientVitals(data.data);
-      } else {
-        await loadMockVitals(patientId);
-      }
     } catch (error: any) {
-      console.error("Failed to fetch patient vitals:", error);
-      await loadMockVitals(patientId);
+      console.error("❌ Failed to fetch patient vitals:", error);
+      setPatientVitals([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Mock vitals data fallback
-  const loadMockVitals = async (patientId: string) => {
-    const patient = patients.find(p => p.id === patientId);
-    const now = new Date();
-    
-    const mockVitals: VitalSigns[] = [
-      {
-        id: "1",
-        systolic: patient?.condition === "diabetes" ? undefined : 145,
-        diastolic: patient?.condition === "diabetes" ? undefined : 92,
-        heartRate: patient?.condition === "diabetes" ? undefined : 88,
-        glucose: patient?.condition === "hypertension" ? undefined : 165,
-        timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
-        patientId: patientId
-      },
-      {
-        id: "2",
-        systolic: patient?.condition === "diabetes" ? undefined : 138,
-        diastolic: patient?.condition === "diabetes" ? undefined : 85,
-        heartRate: patient?.condition === "diabetes" ? undefined : 82,
-        glucose: patient?.condition === "hypertension" ? undefined : 142,
-        timestamp: new Date(now.getTime() - 26 * 60 * 60 * 1000).toISOString(),
-        patientId: patientId
-      },
-    ].filter(vital => 
-      (patient?.condition === "hypertension" && (vital.systolic || vital.heartRate)) ||
-      (patient?.condition === "diabetes" && vital.glucose) ||
-      (patient?.condition === "both" && (vital.systolic || vital.glucose))
-    );
-
-    setPatientVitals(mockVitals);
-  };
-
   const handlePatientSelect = (patient: Patient) => {
+    console.log("🔄 ===== PATIENT SELECTED =====");
+    console.log("👤 Selected Patient:", {
+      id: patient.id,
+      userId: patient.userId,
+      name: patient.fullName,
+      condition: patient.condition
+    });
+    
+    // Try userId first, then fall back to id
+    const patientIdentifier = patient.userId || patient.id;
+    console.log("🔍 Using patient identifier:", patientIdentifier);
+    
     setSelectedPatient(patient);
-    fetchPatientVitals(patient.id);
+    setPatientVitals([]); // Clear previous vitals
+    
+    fetchPatientVitals(patientIdentifier);
   };
 
+  // Add this function to test the API directly
+  const testVitalsAPI = async (patientId: string) => {
+    const token = localStorage.getItem("token");
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/patient/vitals/${patientId}`;
+    
+    console.log("🧪 TESTING API DIRECTLY:", apiUrl);
+    
+    try {
+      const response = await fetch(apiUrl, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
+      
+      console.log("🧪 TEST RESPONSE:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+      
+      const text = await response.text();
+      console.log("🧪 TEST RESPONSE TEXT:", text);
+      
+      try {
+        const json = JSON.parse(text);
+        console.log("🧪 TEST RESPONSE JSON:", json);
+      } catch (e) {
+        console.log("🧪 Response is not JSON");
+      }
+    } catch (error) {
+      console.error("🧪 TEST ERROR:", error);
+    }
+  };
+
+  // Call test function when patient is selected
+  useEffect(() => {
+    if (selectedPatient) {
+      const patientIdentifier = selectedPatient.userId || selectedPatient.id;
+      testVitalsAPI(patientIdentifier);
+    }
+  }, [selectedPatient]);
+
+  const refreshAssignedPatients = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  const refreshVitals = () => {
+    if (selectedPatient) {
+      const patientIdentifier = selectedPatient.userId || selectedPatient.id;
+      fetchPatientVitals(patientIdentifier);
+    }
+  };
+
+  // Rest of your existing functions (handleSignInPatient, updatePatientLastVisit, etc.)
   const handleSignInPatient = async (patientId: string) => {
     try {
       const token = localStorage.getItem("token");
@@ -322,35 +396,25 @@ const CaretakerDashboard = () => {
     }
   };
 
-  // Add refresh function for vitals
-  const refreshVitals = () => {
-    if (selectedPatient) {
-      fetchPatientVitals(selectedPatient.id);
-    }
-  };
+  // Debug effect to log vitals changes
+  useEffect(() => {
+    console.log("📊 PATIENT VITALS STATE UPDATED:", {
+      count: patientVitals.length,
+      vitals: patientVitals
+    });
+  }, [patientVitals]);
 
-  // CONDITIONAL RENDERS MUST COME AFTER ALL HOOKS
+  // Conditional renders...
   if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    return <div className="min-h-screen bg-gray-100 flex items-center justify-center">Loading...</div>;
   }
 
-  // Check access based on token role instead of session role
   if ((status === "unauthenticated" && !hasToken) || (hasToken && userRole !== "doctor")) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
           <p className="text-gray-600">This dashboard is for doctors only.</p>
-          {userRole && (
-            <p className="text-sm text-gray-500 mt-2">Your role: {userRole}</p>
-          )}
         </div>
       </div>
     );
@@ -371,29 +435,17 @@ const CaretakerDashboard = () => {
         {error && (
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 w-full max-w-7xl">
             <div className="flex">
-              <div className="flex-shrink-0">
-                <AlertTriangle className="h-5 w-5 text-yellow-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-yellow-700">
-                  {error}
-                </p>
-              </div>
+              <AlertTriangle className="h-5 w-5 text-yellow-400" />
+              <p className="ml-3 text-sm text-yellow-700">{error}</p>
             </div>
           </div>
         )}
 
         <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Sidebar */}
+          {/* Left Sidebar - Patients List */}
           <div className="lg:col-span-1 space-y-6">
-            <PatientRequests onRequestUpdate={() => {
-              refreshAssignedPatients();
-            }} />
-            
-            <PatientSearch 
-              onPatientAssign={handlePatientAssign}
-              assignedPatients={patients.map(p => p.id)}
-            />
+            <PatientRequests onRequestUpdate={refreshAssignedPatients} />
+            <PatientSearch onPatientAssign={refreshAssignedPatients} assignedPatients={patients.map(p => p.id)} />
             
             {/* Assigned Patients Card */}
             <Card className="shadow-lg">
@@ -401,11 +453,6 @@ const CaretakerDashboard = () => {
                 <CardTitle className="flex items-center space-x-2">
                   <Users className="w-5 h-5" />
                   <span>Assigned Patients</span>
-                  {patientsLoading && (
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                      Loading...
-                    </span>
-                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -418,145 +465,53 @@ const CaretakerDashboard = () => {
                       className="w-full pl-10"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      disabled={patientsLoading}
                     />
                   </div>
                   
-                  <div className="flex space-x-2">
-                    <select
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
-                      value={filterCondition}
-                      onChange={(e) => setFilterCondition(e.target.value as any)}
-                      disabled={patientsLoading}
-                    >
-                      <option value="all">All Conditions</option>
-                      <option value="hypertension">Hypertension</option>
-                      <option value="diabetes">Diabetes</option>
-                      <option value="both">Both</option>
-                    </select>
-                    <Filter className={`w-5 h-5 mt-2 ${patientsLoading ? 'text-gray-300' : 'text-gray-400'}`} />
-                  </div>
+                  <select
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    value={filterCondition}
+                    onChange={(e) => setFilterCondition(e.target.value as any)}
+                  >
+                    <option value="all">All Conditions</option>
+                    <option value="hypertension">Hypertension</option>
+                    <option value="diabetes">Diabetes</option>
+                    <option value="both">Both</option>
+                  </select>
                 </div>
 
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {patientsLoading ? (
-                    // Loading skeleton
-                    <div className="space-y-2">
-                      {[1, 2, 3].map((i) => (
-                        <div
-                          key={i}
-                          className="p-3 rounded-lg border bg-white animate-pulse"
+                  {filteredPatients.map((patient) => (
+                    <div
+                      key={patient.id}
+                      className={`p-3 rounded-lg border cursor-pointer ${
+                        selectedPatient?.id === patient.id ? "bg-blue-50 border-blue-200" : "bg-white border-gray-200"
+                      }`}
+                      onClick={() => handlePatientSelect(patient)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-medium text-gray-900">{patient.fullName}</h3>
+                            {getStatusIcon(patient.status)}
+                          </div>
+                          <p className="text-sm text-gray-500">{patient.age}y • {patient.gender}</p>
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${getConditionColor(patient.condition)}`}>
+                            {patient.condition}
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSignInPatient(patient.id);
+                          }}
                         >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <div className="h-4 bg-gray-200 rounded w-24"></div>
-                                <div className="w-4 h-4 bg-gray-200 rounded"></div>
-                              </div>
-                              <div className="h-3 bg-gray-200 rounded w-16 mb-2"></div>
-                              <div className="h-6 bg-gray-200 rounded w-20"></div>
-                            </div>
-                            <div className="ml-2">
-                              <div className="h-6 bg-gray-200 rounded w-16"></div>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-1 mt-2">
-                            <div className="w-3 h-3 bg-gray-200 rounded"></div>
-                            <div className="h-3 bg-gray-200 rounded w-20"></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : filteredPatients.length > 0 ? (
-                    filteredPatients.map((patient) => (
-                      <div
-                        key={patient.id}
-                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                          selectedPatient?.id === patient.id
-                            ? "bg-blue-50 border-blue-200"
-                            : "bg-white border-gray-200 hover:bg-gray-50"
-                        }`}
-                        onClick={() => handlePatientSelect(patient)}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <h3 className="font-medium text-gray-900">{patient.fullName}</h3>
-                              {getStatusIcon(patient.status)}
-                            </div>
-                            <p className="text-sm text-gray-500">
-                              {patient.age}y • {patient.gender}
-                            </p>
-                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${getConditionColor(patient.condition)}`}>
-                              {patient.condition}
-                            </span>
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSignInPatient(patient.id);
-                            }}
-                          >
-                            Sign In
-                          </Button>
-                        </div>
-                        <div className="flex items-center space-x-1 text-xs text-gray-400 mt-2">
-                          <Clock className="w-3 h-3" />
-                          <span>Last: {new Date(patient.lastVisit).toLocaleDateString()}</span>
-                        </div>
+                          Sign In
+                        </Button>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-gray-500 py-8">
-                      {patients.length === 0 ? (
-                        <div>
-                          <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                          <p className="font-medium text-gray-900 mb-1">No patients assigned yet</p>
-                          <p className="text-sm">Patients will appear here when they request you and you accept them</p>
-                        </div>
-                      ) : (
-                        <div>
-                          <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                          <p className="font-medium text-gray-900 mb-1">No patients found</p>
-                          <p className="text-sm">Try adjusting your search or filter criteria</p>
-                        </div>
-                      )}
                     </div>
-                  )}
-                </div>
-
-                {/* Patient Count */}
-                {!patientsLoading && filteredPatients.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 text-center">
-                      Showing {filteredPatients.length} of {patients.length} assigned patients
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Today's Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Patients</span>
-                  <span className="font-medium">{patients.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Signed In</span>
-                  <span className="font-medium text-green-600">
-                    {patients.filter(p => new Date(p.lastVisit).toDateString() === new Date().toDateString()).length}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Needs Attention</span>
-                  <span className="font-medium text-red-600">
-                    {patients.filter(p => p.status === "critical").length}
-                  </span>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -566,50 +521,39 @@ const CaretakerDashboard = () => {
           <div className="lg:col-span-3 space-y-6">
             {selectedPatient ? (
               <>
-                {/* Patient Header */}
                 <Card className="shadow-lg">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h2 className="text-2xl font-bold text-gray-900">
-                          {selectedPatient.fullName}
-                        </h2>
+                        <h2 className="text-2xl font-bold text-gray-900">{selectedPatient.fullName}</h2>
                         <p className="text-gray-600">
                           {selectedPatient.age} years • {selectedPatient.gender} • {selectedPatient.condition}
                         </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          Patient ID: {selectedPatient.id} {selectedPatient.userId && `• User ID: ${selectedPatient.userId}`}
+                        </p>
                       </div>
                       <div className="flex space-x-3">
-                        <Button variant="outline" className="flex items-center space-x-2">
-                          <MessageSquare className="w-4 h-4" />
-                          <span>Message</span>
-                        </Button>
-                        <Button className="flex items-center space-x-2 bg-green-600 hover:bg-green-700">
-                          <Phone className="w-4 h-4" />
-                          <span>Call</span>
-                        </Button>
+                        <Button variant="outline">Message</Button>
+                        <Button className="bg-green-600 hover:bg-green-700">Call</Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Patient Tabs - This replaces all the individual components */}
                 <PatientTabs
                   patient={selectedPatient}
                   patientVitals={patientVitals}
                   isLoading={isLoading}
-                  
+                  // onRefreshVitals={refreshVitals}
                 />
               </>
             ) : (
               <Card className="shadow-lg">
                 <CardContent className="text-center py-12">
                   <Users className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    No Patient Selected
-                  </h3>
-                  <p className="text-gray-500">
-                    Select a patient from the list to view their details and vitals
-                  </p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Patient Selected</h3>
+                  <p className="text-gray-500">Select a patient from the list to view their details</p>
                 </CardContent>
               </Card>
             )}

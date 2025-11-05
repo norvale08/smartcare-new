@@ -4,67 +4,91 @@ import { X, Bell, Phone, MessageSquare, Activity } from 'lucide-react';
 
 interface Notification {
   id: string;
-  type: 'vital_alert' | 'message' | 'call' | 'system';
+  type: 'vital_alert' | 'message' | 'call' | 'system' | 'appointment';
   title: string;
   message: string;
   patientId?: string;
   patientName?: string;
   timestamp: Date;
   read: boolean;
+  priority: 'low' | 'medium' | 'high' | 'critical';
 }
 
 const RealTimeNotifications: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isVisible, setIsVisible] = useState(false);
 
-  // Simulate real-time notifications
-  useEffect(() => {
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        type: 'vital_alert',
-        title: 'Critical Vitals Alert',
-        message: 'Blood pressure reading critically high',
-        patientId: '123',
-        patientName: 'John Doe',
-        timestamp: new Date(),
-        read: false
-      },
-      {
-        id: '2',
-        type: 'message',
-        title: 'New Message',
-        message: 'Patient sent a new message',
-        patientId: '124',
-        patientName: 'Jane Smith',
-        timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-        read: false
+  // Fetch real notifications from API
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/notifications?limit=10&read=false`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          const realNotifications: Notification[] = result.data.map((notification: any) => ({
+            id: notification._id,
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            patientId: notification.patientId,
+            patientName: notification.patientName,
+            timestamp: new Date(notification.createdAt),
+            read: notification.read,
+            priority: notification.priority,
+          }));
+          
+          setNotifications(realNotifications);
+          if (realNotifications.length > 0) {
+            setIsVisible(true);
+          }
+        }
       }
-    ];
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  };
 
-    setNotifications(mockNotifications);
-    setIsVisible(true);
+  // Setup polling for new notifications
+  useEffect(() => {
+    // Initial fetch
+    fetchNotifications();
 
-    // Simulate incoming notifications
-    const interval = setInterval(() => {
-      // In real app, this would come from WebSocket
-      const newNotification: Notification = {
-        id: Date.now().toString(),
-        type: 'vital_alert',
-        title: 'New Vitals Data',
-        message: 'Patient submitted new readings',
-        patientId: '125',
-        patientName: 'Mike Johnson',
-        timestamp: new Date(),
-        read: false
-      };
-
-      setNotifications(prev => [newNotification, ...prev.slice(0, 4)]);
-      setIsVisible(true);
-    }, 30000); // Every 30 seconds
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
 
     return () => clearInterval(interval);
   }, []);
+
+  // Mark notification as read
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/notifications/${notificationId}/read`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  };
 
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
@@ -79,28 +103,50 @@ const RealTimeNotifications: React.FC = () => {
     }
   };
 
-  const getNotificationColor = (type: Notification['type']) => {
-    switch (type) {
-      case 'vital_alert':
-        return 'border-red-200 bg-red-50';
-      case 'message':
-        return 'border-blue-200 bg-blue-50';
-      case 'call':
-        return 'border-green-200 bg-green-50';
-      default:
-        return 'border-gray-200 bg-gray-50';
-    }
+  const getNotificationColor = (notification: Notification) => {
+    const baseColors = {
+      vital_alert: 'border-red-200 bg-red-50',
+      message: 'border-blue-200 bg-blue-50',
+      call: 'border-green-200 bg-green-50',
+      system: 'border-gray-200 bg-gray-50',
+      appointment: 'border-purple-200 bg-purple-50',
+    };
+
+    const priorityBorders = {
+      critical: 'border-l-4 border-l-red-500',
+      high: 'border-l-4 border-l-orange-500',
+      medium: 'border-l-4 border-l-yellow-500',
+      low: 'border-l-4 border-l-green-500',
+    };
+
+    return `${baseColors[notification.type]} ${priorityBorders[notification.priority]}`;
   };
 
-  const dismissNotification = (id: string) => {
+  const dismissNotification = async (id: string) => {
+    await markAsRead(id);
     setNotifications(prev => prev.filter(n => n.id !== id));
     if (notifications.length === 1) {
       setIsVisible(false);
     }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/notifications/read-all`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
   };
 
   if (!isVisible || notifications.length === 0) {
@@ -139,7 +185,7 @@ const RealTimeNotifications: React.FC = () => {
         {notifications.map((notification) => (
           <div
             key={notification.id}
-            className={`p-3 rounded-lg shadow-lg border transform transition-all duration-300 ${getNotificationColor(notification.type)} ${
+            className={`p-3 rounded-lg shadow-lg transform transition-all duration-300 ${getNotificationColor(notification)} ${
               notification.read ? 'opacity-75' : 'opacity-100'
             }`}
           >

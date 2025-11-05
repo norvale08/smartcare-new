@@ -1,6 +1,7 @@
 // app/caretaker/types/index.ts
 export interface Patient {
   id: string;
+  userId?: string;
   fullName: string;
   age: number;
   gender: string;
