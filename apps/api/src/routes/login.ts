@@ -85,7 +85,7 @@ router.post("/", async (req, res) => {
         break;
 
       case "doctor":
-        redirectTo = "/doctors";
+        redirectTo = "/caretaker";
         message = "Welcome Doctor, here are your patients.";
         console.log("➡️ Doctor redirect:", redirectTo);
         break;

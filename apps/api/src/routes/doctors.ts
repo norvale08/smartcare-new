@@ -64,12 +64,12 @@ router.post("/create", async (req: express.Request, res: express.Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Keep phoneNumber as string to avoid formatting issues
+    // Create doctor with all necessary fields
     const doctor = await User.create({
       firstName,
       lastName,
       email,
-      phoneNumber: phoneNumber.toString(), // Keep as string
+      phoneNumber: phoneNumber.toString(),
       password: hashedPassword,
       role: "doctor",
       specialization,
@@ -78,6 +78,9 @@ router.post("/create", async (req: express.Request, res: express.Response) => {
       diabetes: Boolean(treatsDiabetes),
       hypertension: Boolean(treatsHypertension),
       conditions: `Treats: ${treatsDiabetes ? 'Diabetes' : ''}${treatsDiabetes && treatsHypertension ? ', ' : ''}${treatsHypertension ? 'Hypertension' : ''}`.trim(),
+      // Initialize arrays for patient management
+      pendingRequests: [],
+      assignedPatients: []
     });
 
     console.log("Doctor created successfully:", doctor._id);
@@ -93,7 +96,9 @@ router.post("/create", async (req: express.Request, res: express.Response) => {
         licenseNumber: doctor.licenseNumber,
         hospital: doctor.hospital,
         treatsDiabetes: doctor.diabetes,
-        treatsHypertension: doctor.hypertension
+        treatsHypertension: doctor.hypertension,
+        pendingRequests: doctor.pendingRequests,
+        assignedPatients: doctor.assignedPatients
       }
     });
   } catch (err: any) {
@@ -114,16 +119,19 @@ router.get("/", async (req: express.Request, res: express.Response) => {
     console.log("Connected to MongoDB");
     
     const doctors = await User.find({ role: "doctor" })
-      .select("firstName lastName email phoneNumber specialization licenseNumber hospital diabetes hypertension conditions createdAt")
+      .select("firstName lastName email phoneNumber specialization licenseNumber hospital diabetes hypertension conditions pendingRequests assignedPatients createdAt")
       .sort({ createdAt: -1 });
     
     console.log(`Found ${doctors.length} doctors`);
     
-    // Log phone numbers for debugging
+    // Enhanced logging for debugging
     doctors.forEach((doctor: any) => {
       console.log(`Doctor ${doctor.firstName} ${doctor.lastName}:`, {
         phoneNumber: doctor.phoneNumber,
-        type: typeof doctor.phoneNumber
+        pendingRequests: doctor.pendingRequests?.length || 0,
+        assignedPatients: doctor.assignedPatients?.length || 0,
+        hasPendingRequestsField: doctor.pendingRequests !== undefined,
+        hasAssignedPatientsField: doctor.assignedPatients !== undefined
       });
     });
     
@@ -154,7 +162,7 @@ router.get("/by-specialization", async (req: express.Request<{}, {}, {}, Special
     if (treatsHypertension === 'true') query.hypertension = true;
     
     const doctors = await User.find(query)
-      .select("firstName lastName email phoneNumber specialization licenseNumber hospital diabetes hypertension conditions");
+      .select("firstName lastName email phoneNumber specialization licenseNumber hospital diabetes hypertension conditions pendingRequests assignedPatients");
     
     res.status(200).json({ doctors });
   } catch (err: any) {
@@ -193,6 +201,8 @@ router.get("/:id", async (req: express.Request, res: express.Response) => {
         diabetes: doctor.diabetes,
         hypertension: doctor.hypertension,
         conditions: doctor.conditions,
+        pendingRequests: doctor.pendingRequests || [],
+        assignedPatients: doctor.assignedPatients || [],
         createdAt: doctor.createdAt
       }
     });
@@ -266,14 +276,14 @@ router.put("/:id", async (req: express.Request, res: express.Response) => {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    // Update doctor - keep phoneNumber as string
+    // Update doctor
     const updatedDoctor = await User.findByIdAndUpdate(
       id,
       {
         firstName,
         lastName,
         email,
-        phoneNumber: phoneNumber.toString(), // Keep as string
+        phoneNumber: phoneNumber.toString(),
         specialization,
         licenseNumber,
         hospital,
@@ -298,7 +308,9 @@ router.put("/:id", async (req: express.Request, res: express.Response) => {
         hospital: updatedDoctor?.hospital,
         diabetes: updatedDoctor?.diabetes,
         hypertension: updatedDoctor?.hypertension,
-        conditions: updatedDoctor?.conditions
+        conditions: updatedDoctor?.conditions,
+        pendingRequests: updatedDoctor?.pendingRequests,
+        assignedPatients: updatedDoctor?.assignedPatients
       }
     });
   } catch (err: any) {
@@ -332,6 +344,103 @@ router.delete("/:id", async (req: express.Request, res: express.Response) => {
     res.status(200).json({ message: "Doctor deleted successfully" });
   } catch (err: any) {
     console.error("Delete doctor error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Get doctor's pending requests
+router.get("/:id/pending-requests", async (req: express.Request, res: express.Response) => {
+  try {
+    const { id } = req.params;
+    
+    await connectMongoDB();
+    
+    const doctor = await User.findById(id).populate('pendingRequests.patientId');
+    
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+    
+    if (doctor.role !== "doctor") {
+      return res.status(400).json({ message: "User is not a doctor" });
+    }
+    
+    const pendingRequests = (doctor.pendingRequests || [])
+      .filter((req: any) => req.status === 'pending')
+      .map((req: any) => ({
+        requestId: req._id,
+        patientId: req.patientId?._id,
+        patientName: req.patientName || `${req.patientId?.firstName} ${req.patientId?.lastName}`,
+        requestedAt: req.requestedAt,
+        status: req.status
+      }));
+    
+    res.status(200).json({ 
+      pendingRequests,
+      count: pendingRequests.length
+    });
+  } catch (err: any) {
+    console.error("Get pending requests error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Get doctor's assigned patients
+router.get("/:id/assigned-patients", async (req: express.Request, res: express.Response) => {
+  try {
+    const { id } = req.params;
+    
+    await connectMongoDB();
+    
+    const doctor = await User.findById(id).populate('assignedPatients');
+    
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+    
+    if (doctor.role !== "doctor") {
+      return res.status(400).json({ message: "User is not a doctor" });
+    }
+    
+    const assignedPatients = (doctor.assignedPatients || []).map((patient: any) => ({
+      id: patient._id.toString(),
+      fullName: patient.fullName || `${patient.firstName} ${patient.lastName}`,
+      age: patient.age || calculateAge(patient.dob),
+      gender: patient.gender,
+      condition: getPatientCondition(patient),
+      lastVisit: patient.lastVisit || new Date().toISOString(),
+      status: 'stable',
+      phoneNumber: patient.phoneNumber,
+      email: patient.email
+    }));
+
+    // Helper function to calculate age from DOB
+    function calculateAge(dob: Date): number {
+      if (!dob) return 0;
+      const today = new Date();
+      const birthDate = new Date(dob);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    }
+
+    // Helper function to determine patient condition
+    function getPatientCondition(patient: any): "hypertension" | "diabetes" | "both" {
+      if (patient.hypertension && patient.diabetes) return "both";
+      if (patient.hypertension) return "hypertension";
+      if (patient.diabetes) return "diabetes";
+      return "hypertension"; // default
+    }
+    
+    res.status(200).json({ 
+      assignedPatients,
+      count: assignedPatients.length
+    });
+  } catch (err: any) {
+    console.error("Get assigned patients error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
