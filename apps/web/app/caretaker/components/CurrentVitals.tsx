@@ -7,8 +7,8 @@ interface CurrentVitalsProps {
   patient: Patient;
   patientVitals: VitalSigns[];
   isLoading: boolean;
-  onRefresh?: () => void; // Add refresh callback
-  lastUpdated?: string; // Add explicit last updated prop
+  onRefresh?: () => void;
+  lastUpdated?: string;
 }
 
 const CurrentVitals: React.FC<CurrentVitalsProps> = ({
@@ -21,18 +21,30 @@ const CurrentVitals: React.FC<CurrentVitalsProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [localTimestamp, setLocalTimestamp] = useState<string>('');
 
+  // Filter vitals to only include data for the current patient
+  const getPatientSpecificVitals = (vitals: VitalSigns[], currentPatient: Patient) => {
+  if (!vitals || !currentPatient) return [];
+  const patientKey = currentPatient.userId || currentPatient.id; // support both
+  return vitals.filter(vital => vital.patientId === patientKey);
+};
+
+
   // Ensure we always get the latest vitals by sorting by timestamp
-  const getLatestVitals = (vitals: VitalSigns[]): VitalSigns | null => {
-    if (!vitals || vitals.length === 0) return null;
+  const getLatestVitals = (vitals: VitalSigns[], currentPatient: Patient): VitalSigns | null => {
+    if (!vitals || vitals.length === 0 || !currentPatient) return null;
+    
+    // Filter to only this patient's vitals
+    const patientVitals = getPatientSpecificVitals(vitals, currentPatient);
+    if (patientVitals.length === 0) return null;
     
     // Sort by timestamp descending and take the first one
-    const sorted = [...vitals].sort((a, b) => 
+    const sorted = [...patientVitals].sort((a, b) => 
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
-    return sorted[0] ||null;
+    return sorted[0] || null;
   };
 
-  const latestVitals = getLatestVitals(patientVitals);
+  const latestVitals = getLatestVitals(patientVitals, patient);
 
   // Handle manual refresh
   const handleRefresh = async () => {
@@ -52,6 +64,8 @@ const CurrentVitals: React.FC<CurrentVitalsProps> = ({
       setLocalTimestamp(new Date(latestVitals.timestamp).toLocaleString());
     } else if (lastUpdated) {
       setLocalTimestamp(new Date(lastUpdated).toLocaleString());
+    } else {
+      setLocalTimestamp('');
     }
   }, [latestVitals, lastUpdated]);
 
@@ -72,6 +86,18 @@ const CurrentVitals: React.FC<CurrentVitalsProps> = ({
     return 'text-green-600';
   };
 
+  // Add debug logging to see what's happening
+  useEffect(() => {
+    console.log('🩺 CurrentVitals Debug:', {
+      patientId: patient?.id,
+      patientName: patient?.fullName,
+      totalVitalsCount: patientVitals?.length,
+      patientSpecificVitals: getPatientSpecificVitals(patientVitals, patient)?.length,
+      latestVitals: latestVitals,
+    });
+  }, [patient, patientVitals, latestVitals]);// In CurrentVitals.tsx - add this useEffect
+
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg border p-4">
@@ -85,6 +111,22 @@ const CurrentVitals: React.FC<CurrentVitalsProps> = ({
           <div className="h-4 bg-gray-200 rounded w-3/4"></div>
           <div className="h-4 bg-gray-200 rounded w-1/2"></div>
           <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <div className="bg-white rounded-lg border p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <Activity className="w-5 h-5 text-gray-400" />
+            <h3 className="font-semibold text-gray-900">Current Vitals</h3>
+          </div>
+        </div>
+        <div className="text-center text-gray-500 py-4">
+          No patient selected
         </div>
       </div>
     );
@@ -111,7 +153,7 @@ const CurrentVitals: React.FC<CurrentVitalsProps> = ({
           )}
         </div>
         <div className="text-center text-gray-500 py-4">
-          No vitals data available
+          No vitals data available for {patient.fullName}
         </div>
       </div>
     );
