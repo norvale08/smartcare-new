@@ -1,6 +1,5 @@
-// app/hypertension/components/AssignedDoctors.tsx
 import React, { useState, useEffect } from 'react';
-import { User, Phone, Mail, MapPin, Calendar, Stethoscope, MessageSquare, PhoneCall } from 'lucide-react';
+import { User, Phone, Mail, MapPin, Calendar, Stethoscope, MessageSquare, PhoneCall, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui';
 
 interface Doctor {
@@ -15,6 +14,32 @@ interface Doctor {
   createdAt?: string;
 }
 
+interface Message {
+  _id: string;
+  senderId: {
+    _id: string;
+    fullName: string;
+    profilePicture?: string;
+  };
+  receiverId: {
+    _id: string;
+    fullName: string;
+    profilePicture?: string;
+  };
+  patientId?: {
+    _id: string;
+    fullName: string;
+  };
+  content: string;
+  type: 'text' | 'call' | 'system';
+  read: boolean;
+  metadata?: {
+    callDuration?: number;
+    callType?: 'incoming' | 'outgoing' | 'missed';
+  };
+  createdAt: string;
+}
+
 interface AssignedDoctorsProps {
   className?: string;
   refreshTrigger?: number; // Add prop to trigger refresh from parent
@@ -24,6 +49,10 @@ const AssignedDoctors: React.FC<AssignedDoctorsProps> = ({ className, refreshTri
   const [assignedDoctor, setAssignedDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMessaging, setIsMessaging] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
   const getApiBaseUrl = () => {
     return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -84,6 +113,93 @@ const AssignedDoctors: React.FC<AssignedDoctorsProps> = ({ className, refreshTri
 
     return () => clearInterval(interval);
   }, []);
+
+  const fetchMessages = async (doctorId: string) => {
+    try {
+      setMessagesLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`${getApiBaseUrl()}/api/messages/conversation?otherUserId=${doctorId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setMessages(result.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    } finally {
+      setMessagesLoading(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !assignedDoctor) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`${getApiBaseUrl()}/api/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          receiverId: assignedDoctor.id,
+          content: newMessage.trim(),
+          type: 'text'
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setMessages(prev => [...prev, result.data]);
+          setNewMessage('');
+        }
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const handleMessageClick = () => {
+    if (assignedDoctor) {
+      setIsMessaging(true);
+      fetchMessages(assignedDoctor.id);
+    }
+  };
+
+  const handleCallClick = () => {
+    if (assignedDoctor?.phoneNumber) {
+      window.open(`tel:${assignedDoctor.phoneNumber}`, '_blank');
+    } else {
+      alert('Phone number not available for this doctor');
+    }
+  };
 
   const formatDateTime = (dateString?: string) => {
     if (!dateString) return 'Not specified';
@@ -159,6 +275,85 @@ const AssignedDoctors: React.FC<AssignedDoctorsProps> = ({ className, refreshTri
               className="mt-3 text-blue-600 text-sm hover:underline"
             >
               Refresh
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isMessaging) {
+    return (
+      <Card className={`shadow-lg ${className}`}>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <button
+              onClick={() => setIsMessaging(false)}
+              className="mr-3 p-1 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <MessageSquare className="w-5 h-5 text-blue-600" />
+            <span>Messaging with {assignedDoctor.fullName}</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Messages Area */}
+          <div className="h-64 overflow-y-auto space-y-3 p-2 bg-gray-50 rounded-lg">
+            {messagesLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No messages yet</p>
+                <p className="text-xs">Start the conversation</p>
+              </div>
+            ) : (
+              messages.map((message) => {
+                const isOwnMessage = message.senderId._id === JSON.parse(localStorage.getItem('user') || '{}')?.userId;
+                return (
+                  <div
+                    key={message._id}
+                    className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-xs px-3 py-2 rounded-lg ${
+                        isOwnMessage
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-900 border'
+                      }`}
+                    >
+                      <p className="text-sm">{message.content}</p>
+                      <p className={`text-xs mt-1 ${
+                        isOwnMessage ? 'text-blue-100' : 'text-gray-500'
+                      }`}>
+                        {formatTime(message.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Message Input */}
+          <div className="flex space-x-2">
+            <textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type your message..."
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              rows={2}
+            />
+            <button
+              onClick={sendMessage}
+              disabled={!newMessage.trim()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Send
             </button>
           </div>
         </CardContent>
@@ -246,11 +441,17 @@ const AssignedDoctors: React.FC<AssignedDoctorsProps> = ({ className, refreshTri
 
         {/* Action Buttons */}
         <div className="flex space-x-3 pt-4 border-t border-gray-200">
-          <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition-colors">
+          <button 
+            onClick={handleMessageClick}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition-colors"
+          >
             <MessageSquare className="w-4 h-4" />
             <span>Message</span>
           </button>
-          <button className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition-colors">
+          <button 
+            onClick={handleCallClick}
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition-colors"
+          >
             <PhoneCall className="w-4 h-4" />
             <span>Call</span>
           </button>

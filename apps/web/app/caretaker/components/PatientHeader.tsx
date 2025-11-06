@@ -1,13 +1,13 @@
-// app/caretaker/components/PatientHeader.tsx
 import React from 'react';
 import { Phone, MessageSquare } from 'lucide-react';
 import { Patient } from '../types';
 
 interface PatientHeaderProps {
   patient: Patient;
+  onOpenMessaging?: (patientId: string) => void;
 }
 
-const PatientHeader: React.FC<PatientHeaderProps> = ({ patient }) => {
+const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging }) => {
   const handleCall = () => {
     if (patient.phoneNumber) {
       window.open(`tel:${patient.phoneNumber}`, '_self');
@@ -15,8 +15,12 @@ const PatientHeader: React.FC<PatientHeaderProps> = ({ patient }) => {
   };
 
   const handleMessage = () => {
-    // Implement messaging logic
-    console.log('Open messaging for:', patient.id);
+    if (onOpenMessaging) {
+      onOpenMessaging(patient.id);
+    } else {
+      // Fallback: navigate to messages tab with patient selected
+      window.location.href = `/caretaker?tab=messages&patient=${patient.id}`;
+    }
   };
 
   return (
@@ -38,7 +42,12 @@ const PatientHeader: React.FC<PatientHeaderProps> = ({ patient }) => {
           </button>
           <button
             onClick={handleCall}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            disabled={!patient.phoneNumber}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+              patient.phoneNumber
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             <Phone className="w-4 h-4" />
             <span>Call</span>
