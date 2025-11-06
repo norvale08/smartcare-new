@@ -1,4 +1,3 @@
-// app/caretaker/components/RealTimeNotifications.tsx
 import React, { useState, useEffect } from 'react';
 import { X, Bell, Phone, MessageSquare, Activity } from 'lucide-react';
 
@@ -17,10 +16,12 @@ interface Notification {
 const RealTimeNotifications: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isVisible, setIsVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Fetch real notifications from API
   const fetchNotifications = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
       if (!token) return;
 
@@ -57,6 +58,8 @@ const RealTimeNotifications: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -149,12 +152,38 @@ const RealTimeNotifications: React.FC = () => {
     }
   };
 
+  const handleNotificationClick = (notification: Notification) => {
+    // Handle different notification types
+    switch (notification.type) {
+      case 'message':
+        // Navigate to messaging or open messaging modal
+        alert(`Opening conversation with ${notification.patientName || 'contact'}`);
+        break;
+      case 'call':
+        // Initiate call
+        if (notification.patientName) {
+          alert(`Initiating call with ${notification.patientName}`);
+        }
+        break;
+      case 'vital_alert':
+        // Navigate to vitals or alert details
+        alert(`Viewing vital alert for ${notification.patientName || 'patient'}`);
+        break;
+      default:
+        // Generic notification handling
+        alert('Viewing notification details');
+    }
+    
+    // Mark as read when clicked
+    markAsRead(notification.id);
+  };
+
   if (!isVisible || notifications.length === 0) {
     return null;
   }
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
+    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm w-full">
       {/* Header */}
       <div className="flex items-center justify-between bg-white p-3 rounded-lg shadow-lg border">
         <div className="flex items-center space-x-2">
@@ -182,15 +211,20 @@ const RealTimeNotifications: React.FC = () => {
 
       {/* Notifications List */}
       <div className="space-y-2 max-h-96 overflow-y-auto">
-        {notifications.map((notification) => (
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          </div>
+        ) : notifications.map((notification) => (
           <div
             key={notification.id}
-            className={`p-3 rounded-lg shadow-lg transform transition-all duration-300 ${getNotificationColor(notification)} ${
-              notification.read ? 'opacity-75' : 'opacity-100'
+            className={`p-3 rounded-lg shadow-lg transform transition-all duration-300 cursor-pointer ${getNotificationColor(notification)} ${
+              notification.read ? 'opacity-75' : 'opacity-100 hover:shadow-xl'
             }`}
+            onClick={() => handleNotificationClick(notification)}
           >
             <div className="flex items-start justify-between">
-              <div className="flex items-start space-x-3">
+              <div className="flex items-start space-x-3 flex-1">
                 <div className="flex-shrink-0 mt-0.5">
                   {getNotificationIcon(notification.type)}
                 </div>
@@ -217,14 +251,27 @@ const RealTimeNotifications: React.FC = () => {
                 </div>
               </div>
               <button
-                onClick={() => dismissNotification(notification.id)}
-                className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dismissNotification(notification.id);
+                }}
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors ml-2"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Footer */}
+      <div className="text-center py-2">
+        <button
+          onClick={() => setIsVisible(false)}
+          className="text-xs text-blue-600 hover:text-blue-800"
+        >
+          Close notifications
+        </button>
       </div>
     </div>
   );

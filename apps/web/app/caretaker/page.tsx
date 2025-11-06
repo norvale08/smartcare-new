@@ -12,6 +12,7 @@ import PatientSearch from "./components/PatientSearch"
 import PatientRequests from "./components/PatientRequests";
 import PatientTabs from './components/PatientTabs';
 import RealTimeNotifications from './components/RealTimeNotifications';
+import PatientHeader from './components/PatientHeader';
 
 interface Patient {
   id: string;
@@ -521,25 +522,13 @@ const CaretakerDashboard = () => {
           <div className="lg:col-span-3 space-y-6">
             {selectedPatient ? (
               <>
-                <Card className="shadow-lg">
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h2 className="text-2xl font-bold text-gray-900">{selectedPatient.fullName}</h2>
-                        <p className="text-gray-600">
-                          {selectedPatient.age} years • {selectedPatient.gender} • {selectedPatient.condition}
-                        </p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Patient ID: {selectedPatient.id} {selectedPatient.userId && `• User ID: ${selectedPatient.userId}`}
-                        </p>
-                      </div>
-                      <div className="flex space-x-3">
-                        <Button variant="outline">Message</Button>
-                        <Button className="bg-green-600 hover:bg-green-700">Call</Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <PatientHeader 
+                  patient={selectedPatient} 
+                  onOpenMessaging={(patientId) => {
+                    // Navigate to messages tab with patient selected
+                    window.location.href = `/caretaker?tab=messages&patient=${patientId}`;
+                  }}
+                />
 
                 <PatientTabs
                   patient={selectedPatient}
