@@ -120,8 +120,7 @@ const userSchema = new Schema(
       ref: "Patient",
       default: null,
     },
-
-    // Doctor fields
+// Doctor fields
     specialization: {
       type: String,
       default: null,
@@ -134,16 +133,77 @@ const userSchema = new Schema(
       type: String,
       default: null,
     },
+    // For patients: array of doctor IDs they've requested
+    requestedDoctors: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    }],
+    
+    // For doctors: array of patient requests
+    pendingRequests: [{
+      patientId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+      },
+      patientName: String,
+      requestedAt: {
+        type: Date,
+        default: Date.now
+      },
+      status: {
+        type: String,
+        enum: ["pending", "accepted", "rejected"],
+        default: "pending"
+         }
+    }],
+    assignedPatients: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    }],
+   assignedDoctor: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  condition: {
+    type: String,
+    enum: ['hypertension', 'diabetes', 'both', ''],
+    default: 'hypertension'
+  },
+  lastVisit: {
+    type: Date
+  }
 
-    lastLoginAt: {
-      type: Date,
-      default: Date.now,
-    },
+    
+    
+    
   },
   {
     timestamps: true, // createdAt & updatedAt
   }
 );
+// Index for faster queries
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ assignedDoctor: 1 });
+userSchema.index({ 'assignedPatients': 1 });
+
+// Virtual for full name if not set
+userSchema.virtual('displayName').get(function() {
+  if (this.fullName) return this.fullName;
+  if (this.firstName || this.lastName) {
+    return `${this.firstName || ''} ${this.lastName || ''}`.trim();
+  }
+  return this.email;
+});
+
+// Pre-save hook to ensure fullName is set
+userSchema.pre('save', function(next) {
+  if (!this.fullName && (this.firstName || this.lastName)) {
+    this.fullName = `${this.firstName || ''} ${this.lastName || ''}`.trim();
+  }
+  next();
+});
 
 const User = models.User || model("User", userSchema);
 

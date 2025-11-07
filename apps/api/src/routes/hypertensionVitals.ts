@@ -3,7 +3,7 @@ import express, { Request, Response } from 'express';
 import HypertensionVital from '../models/hypertensionVitals';
 import { verifyToken, AuthenticatedRequest } from '../middleware/verifyToken';
 import { analyzeVitalsWithAI } from "../services/HypertensionAI";
-
+import { NotificationService } from "../services/NotificationService";
 const router = express.Router();
 
 router.post('/', verifyToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -29,6 +29,11 @@ router.post('/', verifyToken, async (req: AuthenticatedRequest, res: Response): 
     });
 
     await vital.save();
+    await NotificationService.checkVitalAlerts(
+  vital.toObject(), 
+  userId, 
+  userId // or patientId if you have it
+);
 
     res.status(201).json({
       message: 'Vitals saved successfully',

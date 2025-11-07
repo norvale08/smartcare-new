@@ -24,6 +24,20 @@ import logoutRoute from "./routes/logout";
 import verifyTokenRoute from "./routes/verifyTokenRoute";
 import diabetesFoodRoute from "./routes/diabetesFood"
 import adminRoutes from './routes/admin';
+import doctorMeRoutes from './routes/doctorme';
+import patientSearchRoute from "./routes/patientSearch";
+import assignPatientRoute from "./routes/assignPatients";
+import patientRequestsRoute from './routes/patientRequests';
+import doctorSearchRoutes from "./routes/doctorSearch";
+import doctorRequestsRoute from "./routes/doctorsRequests";
+import doctorManagementRoutes from "./routes/doctorManagement";
+import patientAssignedDoctorsRoute from "./routes/patientAssignedDoctors";
+import notificationsRouter from './routes/notifications';
+import patientVitalsRouter from './routes/patientVitals';
+import messagesRouter from './routes/messages';
+
+
+
 dotenv.config();
 
 const app = express();
@@ -103,6 +117,7 @@ app.use('/api/diabetesVitals', diabetesRoutes);
 app.use('/api/hypertensionVitals', hypertensionRoutes);
 app.use('/api/medications', medicationsRoutes);
 app.use('/api/userStatus', userStatusRouter);
+app.use("/api/doctors/search", doctorSearchRoutes);
 app.use ('/api/doctors',doctorsRoutes);
 app.use("/api/diabetesAi", diabetesAiRoutes);
 app.use('/api/lifestyle', LifestyleRoutes);
@@ -114,6 +129,18 @@ app.use('/api/logout', logoutRoute);
 app.use("/api/verifyToken", verifyTokenRoute);
 app.use( "/api/diabeticFood", diabetesFoodRoute);
 app.use('/api/admin',adminRoutes);
+app.use('/api/doctor/me', doctorMeRoutes);
+app.use("/api/patients/search", patientSearchRoute);
+app.use("/api/doctor/assign-patient", assignPatientRoute);
+app.use('/api/patient', patientRequestsRoute);
+app.use('/api/doctor', doctorRequestsRoute);
+app.use('/api/doctor/manage', doctorManagementRoutes);
+app.use('/api/patient', patientAssignedDoctorsRoute);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/patient/vitals', patientVitalsRouter);
+app.use('/api/messages', messagesRouter);
+
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 
