@@ -5,7 +5,9 @@ import DoctorsFilters from "./DoctorsFilters";
 import DoctorsTable from "./DoctorsTable";
 import DoctorDetailModal from "./DoctorDetailModal";
 import EditDoctorModal from "./EditDoctorModal";
-import { Download } from "lucide-react";
+import EmailCommunication from "../EmailCommunication";
+import { Download, Mail, Key } from "lucide-react";
+
 export type Doctor = {
   _id: string;
   firstName: string;
@@ -29,6 +31,8 @@ const DoctorsManagement = () => {
   const [filterCondition, setFilterCondition] = useState("");
   const [viewingDoctor, setViewingDoctor] = useState<Doctor | null>(null);
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
+  const [selectedDoctors, setSelectedDoctors] = useState<Doctor[]>([]);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -103,6 +107,8 @@ const DoctorsManagement = () => {
 
       if (response.ok) {
         setDoctors(doctors.filter(d => d._id !== doctorId));
+        // Remove from selected doctors if present
+        setSelectedDoctors(selectedDoctors.filter(d => d._id !== doctorId));
         alert("Doctor deleted successfully!");
       } else {
         throw new Error("Failed to delete doctor");
@@ -128,6 +134,10 @@ const DoctorsManagement = () => {
         setDoctors(doctors.map(d => 
           d._id === doctorId ? { ...d, ...result.doctor } : d
         ));
+        // Update selected doctors if present
+        setSelectedDoctors(selectedDoctors.map(d => 
+          d._id === doctorId ? { ...d, ...result.doctor } : d
+        ));
         setEditingDoctor(null);
         alert("Doctor updated successfully!");
         return true;
@@ -137,6 +147,76 @@ const DoctorsManagement = () => {
     } catch (error: any) {
       alert(`Failed to update doctor: ${error.message}`);
       return false;
+    }
+  };
+
+  // Email functionality
+  const handleSendResetEmail = async (doctorId: string) => {
+    if (!confirm("Send password reset email to this doctor?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/doctors/${doctorId}/send-reset-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(`Password reset email sent successfully to ${result.doctorEmail}`);
+      } else {
+        throw new Error(result.message || "Failed to send reset email");
+      }
+    } catch (error: any) {
+      alert(`Failed to send reset email: ${error.message}`);
+    }
+  };
+
+  const handleSendCommunication = async (subject: string, message: string) => {
+    const doctorIds = selectedDoctors.map(doctor => doctor._id);
+    
+    try {
+      const response = await fetch(`${API_URL}/api/doctors/send-communication`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ doctorIds, subject, message }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert(result.message);
+        setSelectedDoctors([]);
+        setIsEmailModalOpen(false);
+      } else {
+        throw new Error(result.message || "Failed to send communication");
+      }
+    } catch (error: any) {
+      alert(`Failed to send communication: ${error.message}`);
+    }
+  };
+
+  const handleSelectDoctor = (doctor: Doctor) => {
+    const isSelected = selectedDoctors.some(d => d._id === doctor._id);
+    if (isSelected) {
+      setSelectedDoctors(selectedDoctors.filter(d => d._id !== doctor._id));
+    } else {
+      setSelectedDoctors([...selectedDoctors, doctor]);
+    }
+  };
+
+  const handleSelectAllDoctors = () => {
+    const filteredDoctors = getFilteredDoctors();
+    if (selectedDoctors.length === filteredDoctors.length) {
+      setSelectedDoctors([]);
+    } else {
+      setSelectedDoctors(filteredDoctors);
     }
   };
 
@@ -239,6 +319,15 @@ const DoctorsManagement = () => {
           </p>
         </div>
         <div className="flex items-center space-x-3 mt-4 lg:mt-0">
+          {selectedDoctors.length > 0 && (
+            <button
+              onClick={() => setIsEmailModalOpen(true)}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Mail size={18} className="mr-2" />
+              Email ({selectedDoctors.length})
+            </button>
+          )}
           <button
             onClick={exportDoctors}
             className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
@@ -248,6 +337,26 @@ const DoctorsManagement = () => {
           </button>
         </div>
       </div>
+
+      {/* Selection Info */}
+      {selectedDoctors.length > 0 && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Mail className="text-blue-600" size={20} />
+              <span className="text-blue-800 font-medium">
+                {selectedDoctors.length} doctor{selectedDoctors.length > 1 ? 's' : ''} selected
+              </span>
+            </div>
+            <button
+              onClick={() => setSelectedDoctors([])}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            >
+              Clear selection
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <DoctorsStats doctors={doctors} filteredDoctors={filteredDoctors} />
@@ -265,9 +374,13 @@ const DoctorsManagement = () => {
       {/* Doctors Table */}
       <DoctorsTable
         doctors={filteredDoctors}
+        selectedDoctors={selectedDoctors}
         onViewDoctor={handleViewDoctor}
         onEditDoctor={handleEditDoctor}
         onDeleteDoctor={handleDeleteDoctor}
+        onSendResetEmail={handleSendResetEmail}
+        onSelectDoctor={handleSelectDoctor}
+        onSelectAllDoctors={handleSelectAllDoctors}
         formatPhoneNumber={formatPhoneNumber}
         getSpecializationDisplayName={getSpecializationDisplayName}
       />
@@ -281,6 +394,7 @@ const DoctorsManagement = () => {
             setViewingDoctor(null);
             handleEditDoctor(viewingDoctor);
           }}
+          onSendResetEmail={() => handleSendResetEmail(viewingDoctor._id)}
           formatPhoneNumber={formatPhoneNumber}
           getSpecializationDisplayName={getSpecializationDisplayName}
         />
@@ -292,6 +406,15 @@ const DoctorsManagement = () => {
           onClose={() => setEditingDoctor(null)}
           onSave={handleUpdateDoctor}
           getSpecializationDisplayName={getSpecializationDisplayName}
+        />
+      )}
+
+      {isEmailModalOpen && (
+        <EmailCommunication
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          selectedDoctors={selectedDoctors}
+          onSendCommunication={handleSendCommunication}
         />
       )}
     </div>
