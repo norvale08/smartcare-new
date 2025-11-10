@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   HeartPulse, Users, Search, Phone, MessageSquare, Calendar,
-  Stethoscope, AlertTriangle, CheckCircle, Clock, Filter
+  Stethoscope, AlertTriangle, CheckCircle, Clock, Filter, Activity
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button, Input, Card, CardHeader, CardContent, CardTitle } from "@repo/ui";
@@ -14,6 +14,7 @@ import PatientTabs from './components/PatientTabs';
 import RealTimeNotifications from './components/RealTimeNotifications';
 import PatientHeader from './components/PatientHeader';
 import PatientMessages from "./components/PatientMessages";
+import QuickStats from "./components/QuickStats";
 
 interface Patient {
   id: string;
@@ -351,6 +352,22 @@ const CaretakerDashboard = () => {
     }
   };
 
+  const getConditionIcon = (condition: Patient["condition"]) => {
+    switch (condition) {
+      case "hypertension":
+        return <HeartPulse className="w-4 h-4" />;
+      case "diabetes":
+        return <Activity className="w-4 h-4" />;
+      case "both":
+        return <div className="flex space-x-1">
+          <HeartPulse className="w-4 h-4 text-blue-500" />
+          <Activity className="w-4 h-4 text-orange-500" />
+        </div>;
+      default:
+        return null;
+    }
+  };
+
   useEffect(() => {
     console.log("📊 PATIENT VITALS STATE UPDATED:", {
       count: patientVitals.length,
@@ -397,6 +414,9 @@ const CaretakerDashboard = () => {
         <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Sidebar - Patients List */}
           <div className="lg:col-span-1 space-y-6">
+            {/* Quick Stats Section */}
+            <QuickStats patients={patients} />
+
             <PatientRequests onRequestUpdate={refreshAssignedPatients} />
             <PatientSearch onPatientAssign={refreshAssignedPatients} assignedPatients={patients.map(p => p.id)} />
             
@@ -449,9 +469,12 @@ const CaretakerDashboard = () => {
                             {getStatusIcon(patient.status)}
                           </div>
                           <p className="text-sm text-gray-500">{patient.age}y • {patient.gender}</p>
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${getConditionColor(patient.condition)}`}>
-                            {patient.condition}
-                          </span>
+                          <div className="flex items-center space-x-2 mt-1">
+                            {getConditionIcon(patient.condition)}
+                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getConditionColor(patient.condition)}`}>
+                              {patient.condition}
+                            </span>
+                          </div>
                         </div>
                         <Button
                           size="sm"

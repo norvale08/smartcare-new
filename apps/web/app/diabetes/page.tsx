@@ -8,13 +8,14 @@ import LifestyleForm from "../components/diabetesPages/DiabetesLifestyle"; // âœ
 import DiabetesMedications from "../components/diabetesPages/DiabetesMedications";
 import DiabetesFoodAdvice from "../components/diabetesPages/DiabetesFoodAdvice";
 import UserProfileHeader from "../components/UserProfileHeader";
+import DoctorManagement from "../components/DoctorManagement";
 
 const Page = () => {
   const [refreshToken, setRefreshToken] = useState(0);
   const [vitalsId, setVitalsId] = useState<string | undefined>();
   const [requestAI, setRequestAI] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "vitals" | "lifestyle" | "medications" | "food" | "final"
+    "vitals" | "lifestyle" | "medications" | "food" | "final" | "doctors"
   >("vitals");
 
   const [lifestyleDone, setLifestyleDone] = useState(false);
@@ -45,7 +46,7 @@ const Page = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-8 space-y-6">
+    <div className="max-w-6xl mx-auto mt-8 space-y-6">
       {/* ðŸ†• User Profile Header */}
       <UserProfileHeader />
 
@@ -54,7 +55,7 @@ const Page = () => {
 
       {/* Tab Navigation */}
       <div className="flex gap-4 border-b">
-        {["vitals", "lifestyle", "medications", "food", "final"].map((tab) => (
+        {["vitals", "lifestyle", "medications", "food", "doctors", "final"].map((tab) => (
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
@@ -117,6 +118,10 @@ const Page = () => {
               setTimeout(() => setActiveTab("final"), 500);
             }}
           />
+        )}
+
+        {activeTab === "doctors" && (
+          <DoctorManagement condition="diabetes" />
         )}
 
         {activeTab === "final" && (

@@ -71,7 +71,7 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
           return [
             'Seek immediate medical attention!',
             'Follow emergency medical guidance.',
-            'Strictly adhere to doctor’s advice afterward.',
+            'Strictly adhere to doctor\'s advice afterward.',
           ];
         case 'Low Blood Pressure':
           return [
@@ -117,11 +117,6 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
           <Icon className={color} size={20} />
           <h4 className={`font-semibold ${color}`}>{title}</h4>
         </div>
-        <div className="text-sm text-gray-700 mb-2">
-          <p><strong>Systolic:</strong> {todayVitals.systolic} mmHg</p>
-          <p><strong>Diastolic:</strong> {todayVitals.diastolic} mmHg</p>
-          <p><strong>Heart Rate:</strong> {todayVitals.heartRate} bpm</p>
-        </div>
         <p className={`text-sm ${color}`}>
           {isAlert ? 'Monitor closely and adjust lifestyle factors.' : 'Vitals are stable today. Maintain good habits.'}
         </p>
@@ -163,6 +158,7 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
       console.error("Failed to update lifestyle:", error);
     }
   };
+  
 
   return (
     <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
