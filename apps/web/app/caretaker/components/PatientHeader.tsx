@@ -4,7 +4,7 @@ import { Patient } from '../types';
 
 interface PatientHeaderProps {
   patient: Patient;
-  onOpenMessaging?: (patientId: string) => void;
+   onOpenMessaging: () => void; 
 }
 
 const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging }) => {
@@ -15,12 +15,7 @@ const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging 
   };
 
   const handleMessage = () => {
-    if (onOpenMessaging) {
-      onOpenMessaging(patient.id);
-    } else {
-      // Fallback: navigate to messages tab with patient selected
-      window.location.href = `/caretaker?tab=messages&patient=${patient.id}`;
-    }
+    onOpenMessaging(); // Just call the function without parameters
   };
 
   return (

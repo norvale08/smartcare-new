@@ -230,6 +230,9 @@ importers:
       '@types/node':
         specifier: ^22.15.3
         version: 22.15.32
+      '@types/nodemailer':
+        specifier: ^7.0.3
+        version: 7.0.3
       '@types/react':
         specifier: ^18.2.38
         version: 18.3.23
