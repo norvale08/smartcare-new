@@ -19,8 +19,7 @@ import type { LifestyleData } from "./components/LifestyleAssessment";
 import HealthTrends from "./components/HealthTrends";
 import NearbyClinics from "./components/NearbyClinics";
 import DietRecommendations from "./components/DietRecommendations";
-import DoctorSearch from "./components/DoctorSearch";
-import AssignedDoctors from "./components/AssignedDoctors";
+import DoctorManagement from "../components/DoctorManagement";
 
 
 // import { Doctor } from "@/types/doctor";
@@ -150,16 +149,6 @@ function DashboardPage() {
   // Regeneration loading states
   const [regeneratingDiet, setRegeneratingDiet] = useState(false);
   const [regeneratingLifestyle, setRegeneratingLifestyle] = useState(false);
-
-  // Doctor search states
-  // const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchForm, setSearchForm] = useState({
-    specialization: "",
-    location: "",
-    hospitalId: "",
-    isAvailable: false
-  });
 
   const Provider = dynamic(() => import("../components/maps/ProviderMap"), {
     ssr: false,
@@ -437,20 +426,6 @@ function DashboardPage() {
       console.error("Failed to update patient profile", error);
     }
   };
-  //Doctor Searching
- const [requestedDoctorIds, setRequestedDoctorIds] = useState<string[]>([]);
-const [doctorRefreshTrigger, setDoctorRefreshTrigger] = useState(0);
-
-// Update the DoctorSearch callback:
-const handleDoctorRequest = (doctorId: string, doctorData?: any) => {
-  setRequestedDoctorIds(prev => [...prev, doctorId]);
-  setMessage(`Request sent to Dr. ${doctorData?.fullName || 'the doctor'}!`);
-  
-  // Trigger refresh after a short delay to allow backend to process
-  setTimeout(() => {
-    setDoctorRefreshTrigger(prev => prev + 1);
-  }, 1000);
-};
   
   return (
     <div className="min-h-screen bg-gray-100">
@@ -482,54 +457,9 @@ const handleDoctorRequest = (doctorId: string, doctorData?: any) => {
         <HypertensionAlert refreshToken={alertRefreshToken} />
 
         <VitalsWithActivityInput onAfterSave={() => setAlertRefreshToken(Date.now())} />
-          {/* Doctor Management Section */}
-        <section className="w-full max-w-6xl">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center">
-              <User className="w-6 h-6 mr-2 text-blue-600" />
-              Doctor Management
-            </h2>
-            <p className="text-gray-600">Find and manage your healthcare providers</p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Doctor Search Section */}
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-                <h3 className="text-lg font-semibold text-white flex items-center">
-                  <Search className="w-5 h-5 mr-2" />
-                  Find Doctors
-                </h3>
-                <p className="text-blue-100 text-sm mt-1">
-                  Search and request doctors from our network
-                </p>
-              </div>
-              <div className="p-6">
-                <DoctorSearch 
-                  onDoctorRequest={handleDoctorRequest}
-                  requestedDoctors={requestedDoctorIds}
-                />
-              </div>
-            </div>
-
-            {/* Assigned Doctors Section */}
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
-                <h3 className="text-lg font-semibold text-white flex items-center">
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Your Healthcare Team
-                </h3>
-                <p className="text-green-100 text-sm mt-1">
-                  Manage your assigned doctors and communications
-                </p>
-              </div>
-              <div className="p-6">
-                <AssignedDoctors refreshTrigger={doctorRefreshTrigger} />
-              </div>
-            </div>
-          </div>
-        </section>
-
+        
+        {/* Doctor Management Section */}
+        <DoctorManagement condition="hypertension" />
 
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
           <MedicationAnalysisPage />
