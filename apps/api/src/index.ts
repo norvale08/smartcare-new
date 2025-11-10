@@ -35,9 +35,11 @@ import patientAssignedDoctorsRoute from "./routes/patientAssignedDoctors";
 import notificationsRouter from './routes/notifications';
 import patientVitalsRouter from './routes/patientVitals';
 import messagesRouter from './routes/messages';
+import doctorsRoutes from "./routes/doctors";
 
-// ✅ Import the new modular doctor routes
-import doctorsRoutes from "./routes/doctors"; // This is now the main doctor router that combines all sub-routes
+
+
+
 
 dotenv.config();
 
@@ -140,6 +142,7 @@ app.use('/api/patient', patientAssignedDoctorsRoute);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/patient/vitals', patientVitalsRouter);
 app.use('/api/messages', messagesRouter);
+
 
 // 404 handler
 app.use('*', (req, res) => {

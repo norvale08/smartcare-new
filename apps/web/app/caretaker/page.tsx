@@ -13,10 +13,17 @@ import PatientRequests from "./components/PatientRequests";
 import PatientTabs from './components/PatientTabs';
 import RealTimeNotifications from './components/RealTimeNotifications';
 import PatientHeader from './components/PatientHeader';
+import PatientMessages from "./components/PatientMessages";
 
 interface Patient {
   id: string;
   userId?: string;
+  user?: {
+    _id: string;
+    id?: string;
+    fullName: string;
+    email: string;
+  };
   fullName: string;
   age: number;
   gender: string;
@@ -60,7 +67,8 @@ const CaretakerDashboard = () => {
   const [hasToken, setHasToken] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  
+  const [activeTab, setActiveTab] = useState<'overview' | 'messages'>('overview');
+
   // Extract role from JWT token
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -93,7 +101,7 @@ const CaretakerDashboard = () => {
     return () => clearTimeout(t);
   }, [message]);
 
-  // Update the useEffect that fetches assigned patients to include refreshTrigger
+  // Fetch assigned patients
   useEffect(() => {
     if (status === "authenticated" || hasToken) {
       fetchAssignedPatients();
@@ -142,14 +150,6 @@ const CaretakerDashboard = () => {
         patientsData = data.data;
       }
       
-      // Log patient IDs for debugging
-      console.log("👥 PROCESSED PATIENTS:", patientsData.map(p => ({
-        id: p.id,
-        userId: p.userId,
-        name: p.fullName,
-        condition: p.condition
-      })));
-      
       setPatients(patientsData);
       
     } catch (error: any) {
@@ -168,13 +168,11 @@ const CaretakerDashboard = () => {
       
       console.log("🩺 ===== FETCHING PATIENT VITALS =====");
       console.log("👤 Patient ID:", patientId);
-      console.log("🔑 Token exists:", !!token);
 
       if (!token) {
         throw new Error("No authentication token found");
       }
 
-      // Try multiple possible API endpoints
       const apiEndpoints = [
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/patient/vitals/${patientId}`,
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/patient/${patientId}/vitals`,
@@ -184,7 +182,6 @@ const CaretakerDashboard = () => {
       let response = null;
       let lastError = null;
 
-      // Try each endpoint until one works
       for (const apiUrl of apiEndpoints) {
         console.log("🌐 Trying API endpoint:", apiUrl);
         
@@ -201,12 +198,6 @@ const CaretakerDashboard = () => {
           if (response.ok) {
             const result = await response.json();
             console.log("✅ SUCCESS with endpoint:", apiUrl);
-            console.log("📊 Vitals data received:", {
-              success: result.success,
-              count: result.count,
-              dataLength: result.data?.length,
-              data: result.data
-            });
 
             if (result.success && Array.isArray(result.data) && result.data.length > 0) {
               const validatedVitals = result.data.map((vital: any) => ({
@@ -224,7 +215,6 @@ const CaretakerDashboard = () => {
               return;
             }
           } else if (response.status !== 404) {
-            // If it's not 404, continue to next endpoint
             continue;
           }
         } catch (err) {
@@ -234,7 +224,6 @@ const CaretakerDashboard = () => {
         }
       }
 
-      // If we get here, no endpoint worked
       console.log("❌ All API endpoints failed");
       setPatientVitals([]);
       
@@ -255,58 +244,24 @@ const CaretakerDashboard = () => {
       condition: patient.condition
     });
     
-    // Try userId first, then fall back to id
     const patientIdentifier = patient.userId || patient.id;
     console.log("🔍 Using patient identifier:", patientIdentifier);
     
     setSelectedPatient(patient);
-    setPatientVitals([]); // Clear previous vitals
+    setActiveTab('overview');
+    setPatientVitals([]);
     
     fetchPatientVitals(patientIdentifier);
   };
 
-  // Add this function to test the API directly
-  const testVitalsAPI = async (patientId: string) => {
-    const token = localStorage.getItem("token");
-    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/patient/vitals/${patientId}`;
-    
-    console.log("🧪 TESTING API DIRECTLY:", apiUrl);
-    
-    try {
-      const response = await fetch(apiUrl, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      });
-      
-      console.log("🧪 TEST RESPONSE:", {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
-      });
-      
-      const text = await response.text();
-      console.log("🧪 TEST RESPONSE TEXT:", text);
-      
-      try {
-        const json = JSON.parse(text);
-        console.log("🧪 TEST RESPONSE JSON:", json);
-      } catch (e) {
-        console.log("🧪 Response is not JSON");
-      }
-    } catch (error) {
-      console.error("🧪 TEST ERROR:", error);
+  const handleOpenMessaging = () => {
+    console.log("💬 Opening messaging for:", selectedPatient);
+    if (selectedPatient) {
+      setActiveTab('messages');
+    } else {
+      console.error("No patient selected for messaging");
     }
   };
-
-  // Call test function when patient is selected
-  useEffect(() => {
-    if (selectedPatient) {
-      const patientIdentifier = selectedPatient.userId || selectedPatient.id;
-      testVitalsAPI(patientIdentifier);
-    }
-  }, [selectedPatient]);
 
   const refreshAssignedPatients = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -319,7 +274,6 @@ const CaretakerDashboard = () => {
     }
   };
 
-  // Rest of your existing functions (handleSignInPatient, updatePatientLastVisit, etc.)
   const handleSignInPatient = async (patientId: string) => {
     try {
       const token = localStorage.getItem("token");
@@ -397,7 +351,6 @@ const CaretakerDashboard = () => {
     }
   };
 
-  // Debug effect to log vitals changes
   useEffect(() => {
     console.log("📊 PATIENT VITALS STATE UPDATED:", {
       count: patientVitals.length,
@@ -405,7 +358,6 @@ const CaretakerDashboard = () => {
     });
   }, [patientVitals]);
 
-  // Conditional renders...
   if (status === "loading") {
     return <div className="min-h-screen bg-gray-100 flex items-center justify-center">Loading...</div>;
   }
@@ -524,18 +476,65 @@ const CaretakerDashboard = () => {
               <>
                 <PatientHeader 
                   patient={selectedPatient} 
-                  onOpenMessaging={(patientId) => {
-                    // Navigate to messages tab with patient selected
-                    window.location.href = `/caretaker?tab=messages&patient=${patientId}`;
-                  }}
+                  onOpenMessaging={handleOpenMessaging}
                 />
 
-                <PatientTabs
-                  patient={selectedPatient}
-                  patientVitals={patientVitals}
-                  isLoading={isLoading}
-                  // onRefreshVitals={refreshVitals}
-                />
+                {/* Tab Navigation */}
+                <div className="bg-white rounded-lg shadow-sm border">
+                  <div className="border-b">
+                    <nav className="flex space-x-8 px-6">
+                      <button
+                        onClick={() => setActiveTab('overview')}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                          activeTab === 'overview'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        Patient Overview
+                      </button>
+                      <button
+                        onClick={handleOpenMessaging}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                          activeTab === 'messages'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        Messages
+                      </button>
+                    </nav>
+                  </div>
+
+                  <div className="p-6">
+                    {activeTab === 'overview' && (
+                      <PatientTabs
+                        patient={selectedPatient}
+                        patientVitals={patientVitals}
+                        isLoading={isLoading}
+                      />
+                    )}
+                    
+                    {activeTab === 'messages' && (
+                      <div>
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-lg font-medium">
+                            Messaging with {selectedPatient.fullName}
+                          </h3>
+                          <button
+                            onClick={() => setActiveTab('overview')}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            Back to Overview
+                          </button>
+                        </div>
+
+                        {/* ✅ Messaging Component */}
+                        <PatientMessages selectedPatient={selectedPatient} />
+                      </div>
+                    )}
+                  </div>
+                </div>
               </>
             ) : (
               <Card className="shadow-lg">
