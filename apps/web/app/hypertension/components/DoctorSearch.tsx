@@ -1,6 +1,6 @@
 // app/patient/components/DoctorSearch.tsx
 import React, { useState, useEffect } from 'react';
-import { Search, UserPlus, CheckCircle, X, Users, Building, Star, AlertCircle } from 'lucide-react';
+import { Search, UserPlus, CheckCircle, X, Users, Building, Star, AlertCircle,Filter} from 'lucide-react';
 import { Input, Button, Card, CardContent, CardHeader, CardTitle } from '@repo/ui';
 
 interface Doctor {
@@ -172,143 +172,188 @@ const DoctorSearch: React.FC<DoctorSearchProps> = ({ onDoctorRequest, requestedD
   };
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Users className="w-5 h-5" />
-          <span>Find Doctors</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            type="text"
-            placeholder="Search doctors by name, specialization, or hospital..."
-            className="w-full pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+  <div className="space-y-4">
+      {/* Search Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="font-semibold text-gray-900">Search Our Medical Network</h4>
+          <p className="text-sm text-gray-600">Find specialists based on your needs</p>
         </div>
+        <div className="flex items-center space-x-2 text-sm text-gray-500">
+          <Users className="w-4 h-4" />
+          <span>{searchResults.length} doctors available</span>
+        </div>
+      </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className={`px-3 py-2 rounded text-sm flex items-start space-x-2 ${
-            error.includes('Successfully') 
-              ? 'bg-green-50 border border-green-200 text-green-700'
-              : 'bg-red-50 border border-red-200 text-red-700'
-          }`}>
-            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <span>{error}</span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setError(null)} className="flex-shrink-0">
-              <X className="w-4 h-4" />
-            </Button>
+      {/* Search Input with Filters */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <Input
+          type="text"
+          placeholder="Search by name, specialization, hospital, or condition..."
+          className="w-full pl-12 pr-24 py-3 text-base border-2 border-gray-200 focus:border-blue-500 transition-colors"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+          <Button variant="outline" size="sm" className="flex items-center space-x-1">
+            <Filter className="w-4 h-4" />
+            <span>Filters</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Error/Success Messages */}
+      {error && (
+        <div className={`p-3 rounded-lg flex items-start space-x-3 ${
+          error.includes('Successfully') 
+            ? 'bg-green-50 border border-green-200 text-green-700'
+            : 'bg-red-50 border border-red-200 text-red-700'
+        }`}>
+          <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <span className="font-medium">{error}</span>
           </div>
-        )}
+          <Button variant="ghost" size="sm" onClick={() => setError(null)} className="flex-shrink-0">
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
 
-        {/* Search Results */}
-        <div className="space-y-3 max-h-80 overflow-y-auto">
-          {isLoading ? (
-            <div className="text-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-sm text-gray-500 mt-2">Searching doctors...</p>
-            </div>
-          ) : searchResults.length > 0 ? (
-            searchResults.map((doctor) => {
-              const isRequested = requestedDoctors.includes(doctor.id);
-              
-              return (
-                <div
-                  key={doctor.id}
-                  className="p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h4 className="font-semibold text-gray-900">{doctor.fullName}</h4>
-                        {isRequested && (
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                        )}
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getSpecializationColor(doctor.specialization)}`}>
+      {/* Search Results */}
+      <div className="space-y-4 max-h-96 overflow-y-auto">
+        {isLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+            <p className="text-gray-600 font-medium">Searching our database...</p>
+            <p className="text-sm text-gray-500 mt-1">Finding the best doctors for you</p>
+          </div>
+        ) : searchResults.length > 0 ? (
+          searchResults.map((doctor) => {
+            const isRequested = requestedDoctors.includes(doctor.id);
+            
+            return (
+              <div
+                key={doctor.id}
+                className="p-4 rounded-xl border-2 border-gray-100 bg-white hover:border-blue-200 hover:shadow-md transition-all duration-200"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 space-y-3">
+                    {/* Doctor Header */}
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h4 className="font-bold text-lg text-gray-900">{doctor.fullName}</h4>
+                          {isRequested && (
+                            <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Requested
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-3 text-sm text-gray-600">
+                          <span className={`inline-block px-3 py-1 rounded-full font-semibold ${getSpecializationColor(doctor.specialization)}`}>
                             {doctor.specialization}
                           </span>
-                          <span>{doctor.experience} years experience</span>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 text-sm text-gray-600">
-                          <Building className="w-4 h-4" />
-                          <span>{doctor.hospital}</span>
-                        </div>
-                        
-                        {doctor.phoneNumber && (
-                          <div className="text-sm text-gray-600">
-                            📞 {doctor.phoneNumber}
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center space-x-2">
-                          {renderStars(doctor.rating)}
+                          <span className="flex items-center">
+                            <Star className="w-4 h-4 text-yellow-400 mr-1" />
+                            {doctor.rating.toFixed(1)}
+                          </span>
+                          <span>• {doctor.experience} years</span>
                         </div>
                       </div>
                     </div>
                     
+                    {/* Hospital and Contact */}
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2 text-gray-700">
+                        <Building className="w-4 h-4 text-gray-400" />
+                        <span className="font-medium">{doctor.hospital}</span>
+                      </div>
+                      
+                      {doctor.phoneNumber && (
+                        <div className="flex items-center space-x-2 text-gray-600">
+                          <div className="w-4 h-4 flex items-center justify-center">📞</div>
+                          <span>{doctor.phoneNumber}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Conditions Treated */}
+                    <div className="flex flex-wrap gap-2">
+                      {doctor.treatsHypertension && (
+                        <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded border border-blue-200">
+                          Hypertension
+                        </span>
+                      )}
+                      {doctor.treatsDiabetes && (
+                        <span className="bg-green-50 text-green-700 text-xs px-2 py-1 rounded border border-green-200">
+                          Diabetes
+                        </span>
+                      )}
+                      {doctor.treatsCardiovascular && (
+                        <span className="bg-red-50 text-red-700 text-xs px-2 py-1 rounded border border-red-200">
+                          Cardiovascular
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Request Button */}
+                  <div className="ml-4 flex-shrink-0">
                     <Button
                       size="sm"
                       disabled={isRequested}
                       onClick={() => handleRequestDoctor(doctor.id)}
                       className={isRequested ? 
-                        'bg-green-100 text-green-800 hover:bg-green-100 border border-green-200' : 
-                        'bg-blue-600 hover:bg-blue-700'
+                        'bg-green-100 text-green-800 hover:bg-green-100 border-2 border-green-200 px-4 py-2' : 
+                        'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 shadow-sm'
                       }
                     >
                       {isRequested ? (
                         <>
-                          <CheckCircle className="w-4 h-4 mr-1" />
+                          <CheckCircle className="w-4 h-4 mr-2" />
                           Requested
                         </>
                       ) : (
                         <>
-                          <UserPlus className="w-4 h-4 mr-1" />
+                          <UserPlus className="w-4 h-4 mr-2" />
                           Request
                         </>
                       )}
                     </Button>
                   </div>
                 </div>
-              );
-            })
-          ) : searchQuery && !isLoading ? (
-            <div className="text-center py-6 text-gray-500">
-              <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p>No doctors found matching your search</p>
-              <p className="text-sm mt-1">Try adjusting your search terms</p>
-            </div>
-          ) : (
-            <div className="text-center py-6 text-gray-500">
-              <Search className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p>Search for doctors</p>
-              <p className="text-sm mt-1">Enter a name, specialization, or hospital to find doctors</p>
-            </div>
-          )}
-        </div>
-
-        {/* Requested Count */}
-        {requestedDoctors.length > 0 && (
-          <div className="text-sm text-gray-600 text-center border-t pt-3">
-            <CheckCircle className="w-4 h-4 inline mr-1 text-green-500" />
-            {requestedDoctors.length} doctor(s) requested
+              </div>
+            );
+          })
+        ) : searchQuery && !isLoading ? (
+          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+            <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <h4 className="font-semibold text-gray-700 mb-1">No doctors found</h4>
+            <p className="text-gray-500 text-sm">Try adjusting your search terms or filters</p>
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+            <Search className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <h4 className="font-semibold text-gray-700 mb-1">Ready to find your doctor?</h4>
+            <p className="text-gray-500 text-sm">Search by name, specialization, or hospital to get started</p>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Requested Count */}
+      {requestedDoctors.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+          <CheckCircle className="w-5 h-5 inline mr-2 text-blue-600" />
+          <span className="text-blue-800 font-medium">
+            You've requested {requestedDoctors.length} doctor{requestedDoctors.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
+    </div>
   );
 };
+
 
 export default DoctorSearch;

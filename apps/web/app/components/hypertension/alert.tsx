@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { TriangleAlert, CheckCircle } from "lucide-react";
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 type StatusData = {
   systolic: number;
   diastolic: number;
   heartRate: number;
+  age?: number;
   status: "alert" | "stable";
 };
 
@@ -16,6 +17,17 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const scrollToDoctorManagement = () => {
+    // Find the doctor management section by its heading or structure
+    const doctorSection = document.querySelector('section');
+    if (doctorSection) {
+      doctorSection.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchTodayVitals = async () => {
@@ -64,13 +76,14 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
         const systolic = Number(latest.systolic);
         const diastolic = Number(latest.diastolic);
         const heartRate = Number(latest.heartRate);
+        const age = latest.age ? Number(latest.age) : undefined;
 
-        const isHigh = systolic > 140 || diastolic > 90;
-        const isLow = systolic < 90 || diastolic < 60;
+        // Use consistent thresholds with your AI
+        const { isHigh, isLow } = getBloodPressureStatus(systolic, diastolic, age);
         const heartRateAlert = heartRate < 60 || heartRate > 100;
         const status: "alert" | "stable" = (isHigh || isLow || heartRateAlert) ? "alert" : "stable";
 
-        setStatusData({ systolic, diastolic, heartRate, status });
+        setStatusData({ systolic, diastolic, heartRate, age, status });
       } catch (e: any) {
         setError(e?.message || 'Failed to load alerts');
       } finally {
@@ -80,6 +93,148 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
 
     fetchTodayVitals();
   }, [refreshToken]);
+
+  // Consistent blood pressure classification matching your AI
+  function getBloodPressureStatus(systolic: number, diastolic: number, age?: number) {
+    // Standard AHA guidelines
+    let systolicHigh = 140;
+    let diastolicHigh = 90;
+    let systolicLow = 90;
+    let diastolicLow = 60;
+
+    // Age adjustments (optional - match your AI's logic)
+    if (age) {
+      if (age >= 65) {
+        systolicHigh = 150; // More lenient for elderly
+      } else if (age <= 18) {
+        systolicHigh = 130;
+        diastolicHigh = 80;
+      }
+    }
+
+    const isHigh = systolic >= systolicHigh || diastolic >= diastolicHigh;
+    const isLow = systolic <= systolicLow || diastolic <= diastolicLow;
+
+    return { isHigh, isLow, systolicHigh, diastolicHigh, systolicLow, diastolicLow };
+  }
+
+  // Updated to match your AI's categorization
+  function getBloodPressureCategory(systolic: number, diastolic: number, age?: number) {
+    const { systolicHigh, diastolicHigh, systolicLow, diastolicLow } = getBloodPressureStatus(systolic, diastolic, age);
+
+    if (systolic < systolicLow || diastolic < diastolicLow) {
+      return { 
+        level: 'Low Blood Pressure', 
+        color: 'bg-blue-50 border-blue-600', 
+        text: 'text-blue-700', 
+        title: 'Low Blood Pressure', 
+        icon: <TriangleAlert color="#2563eb" size={20} />, 
+        button: false,
+        severity: 'low'
+      };
+    } else if (systolic < 120 && diastolic < 80) {
+      return { 
+        level: 'Normal', 
+        color: 'bg-green-50 border-green-600', 
+        text: 'text-green-700', 
+        title: 'Normal Blood Pressure', 
+        icon: <CheckCircle color="#16a34a" size={20} />, 
+        button: false,
+        severity: 'normal'
+      };
+    } else if (systolic >= 120 && systolic < 130 && diastolic < 80) {
+      return { 
+        level: 'Elevated', 
+        color: 'bg-yellow-50 border-yellow-600', 
+        text: 'text-yellow-700', 
+        title: 'Elevated Blood Pressure', 
+        icon: <TriangleAlert color="#eab308" size={20} />, 
+        button: false,
+        severity: 'elevated'
+      };
+    } else if ((systolic >= 130 && systolic < 140) || (diastolic >= 80 && diastolic < 90)) {
+      return { 
+        level: 'Stage 1 Hypertension', 
+        color: 'bg-orange-50 border-orange-600', 
+        text: 'text-orange-700', 
+        title: 'Stage 1 Hypertension', 
+        icon: <TriangleAlert color="#ea580c" size={20} />, 
+        button: true,
+        severity: 'stage1'
+      };
+    } else if ((systolic >= 140 && systolic < 180) || (diastolic >= 90 && diastolic < 120)) {
+      return { 
+        level: 'Stage 2 Hypertension', 
+        color: 'bg-red-50 border-red-600', 
+        text: 'text-red-700', 
+        title: 'Stage 2 Hypertension', 
+        icon: <TriangleAlert color="#dc2626" size={20} />, 
+        button: true,
+        severity: 'stage2'
+      };
+    } else if (systolic >= 180 || diastolic >= 120) {
+      return { 
+        level: 'Hypertensive Crisis', 
+        color: 'bg-red-100 border-red-800', 
+        text: 'text-red-800', 
+        title: 'Hypertensive Crisis', 
+        icon: <TriangleAlert color="#b91c1c" size={20} />, 
+        button: true,
+        severity: 'crisis'
+      };
+    } else {
+      // This handles cases like 110/85 - should be normal or elevated, not Stage 1
+      if (systolic < 120 && diastolic >= 80 && diastolic < 90) {
+        return { 
+          level: 'Normal', 
+          color: 'bg-green-50 border-green-600', 
+          text: 'text-green-700', 
+          title: 'Normal Blood Pressure', 
+          icon: <CheckCircle color="#16a34a" size={20} />, 
+          button: false,
+          severity: 'normal'
+        };
+      }
+      return { 
+        level: 'Unknown', 
+        color: 'bg-gray-50 border-gray-400', 
+        text: 'text-gray-700', 
+        title: 'Unknown', 
+        icon: <TriangleAlert color="#6b7280" size={20} />, 
+        button: false,
+        severity: 'unknown'
+      };
+    }
+  }
+
+  function getHeartRateAlert(heartRate: number, age?: number) {
+    let lowThreshold = 60;
+    let highThreshold = 100;
+
+    if (age) {
+      if (age <= 2) {
+        lowThreshold = 80;
+        highThreshold = 130;
+      } else if (age <= 6) {
+        lowThreshold = 70;
+        highThreshold = 120;
+      } else if (age <= 12) {
+        lowThreshold = 60;
+        highThreshold = 110;
+      } else if (age <= 18) {
+        lowThreshold = 55;
+        highThreshold = 105;
+      }
+    }
+
+    if (heartRate < lowThreshold) {
+      return { message: `Bradycardia (Low Heart Rate)`, color: 'text-blue-700' };
+    } else if (heartRate > highThreshold) {
+      return { message: `Tachycardia (High Heart Rate)`, color: 'text-red-700' };
+    } else {
+      return null;
+    }
+  }
 
   if (loading) {
     return (
@@ -105,37 +260,8 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
     );
   }
 
-  // Utility to determine BP category
-  function getBloodPressureCategory(systolic: number, diastolic: number) {
-    if (systolic < 90 || diastolic < 60) {
-      return { level: 'Low Blood Pressure', color: 'bg-blue-50 border-blue-600', text: 'text-blue-700', title: 'Low Blood Pressure', icon: <TriangleAlert color="#2563eb" size={20} />, button: false };
-    } else if (systolic < 120 && diastolic < 80) {
-      return { level: 'Normal', color: 'bg-green-50 border-green-600', text: 'text-green-700', title: 'Vitals Normal', icon: <CheckCircle color="#16a34a" size={20} />, button: false };
-    } else if (systolic < 130 && diastolic < 80) {
-      return { level: 'Elevated', color: 'bg-yellow-50 border-yellow-600', text: 'text-yellow-700', title: 'Elevated Blood Pressure', icon: <TriangleAlert color="#eab308" size={20} />, button: false };
-    } else if ((systolic < 140 && diastolic < 90) || (systolic >= 130 && systolic < 140)) {
-      return { level: 'Stage 1 Hypertension', color: 'bg-orange-50 border-orange-600', text: 'text-orange-700', title: 'Stage 1 Hypertension', icon: <TriangleAlert color="#ea580c" size={20} />, button: true };
-    } else if ((systolic < 180 && diastolic < 120) || (systolic >= 140 && systolic < 180) || (diastolic >= 90 && diastolic < 120)) {
-      return { level: 'Stage 2 Hypertension', color: 'bg-red-50 border-red-600', text: 'text-red-700', title: 'Stage 2 Hypertension', icon: <TriangleAlert color="#dc2626" size={20} />, button: true };
-    } else if (systolic >= 180 || diastolic >= 120) {
-      return { level: 'Hypertensive Crisis', color: 'bg-red-100 border-red-800', text: 'text-red-800', title: 'Hypertensive Crisis', icon: <TriangleAlert color="#b91c1c" size={20} />, button: true };
-    } else {
-      return { level: 'Unknown', color: 'bg-gray-50 border-gray-400', text: 'text-gray-700', title: 'Unknown', icon: <TriangleAlert color="#6b7280" size={20} />, button: false };
-    }
-  }
-
-  function getHeartRateAlert(heartRate: number) {
-    if (heartRate < 60) {
-      return { message: 'Bradycardia (Low Heart Rate)', color: 'text-blue-700' };
-    } else if (heartRate > 100) {
-      return { message: 'Tachycardia (High Heart Rate)', color: 'text-red-700' };
-    } else {
-      return null;
-    }
-  }
-
-  const bpCategory = getBloodPressureCategory(statusData.systolic, statusData.diastolic);
-  const heartRateAlert = getHeartRateAlert(statusData.heartRate);
+  const bpCategory = getBloodPressureCategory(statusData.systolic, statusData.diastolic, statusData.age);
+  const heartRateAlert = getHeartRateAlert(statusData.heartRate, statusData.age);
 
   return (
     <div className={`bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 border-l-4 ${bpCategory.color}`}>
@@ -143,36 +269,52 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
         {bpCategory.icon}
         <h3 className={`text-lg font-bold ${bpCategory.text}`}>{bpCategory.title}</h3>
       </div>
+      
+      {statusData.age && (
+        <p className="text-sm text-gray-600 mb-1">
+          Age-based assessment for {statusData.age} years old
+        </p>
+      )}
+      
       <p className={`text-sm ${bpCategory.text} mb-4`}>
         {(() => {
           switch (bpCategory.level) {
             case 'Normal':
-              return 'Your blood pressure is within the normal range.';
+              return 'Your blood pressure reading is within the normal range, indicating no immediate cause for concern.';
             case 'Elevated':
-              return 'Your blood pressure is slightly elevated. Consider lifestyle changes.';
+              return 'Your blood pressure is slightly elevated. Consider lifestyle changes and regular monitoring.';
             case 'Stage 1 Hypertension':
-              return 'You are in Stage 1 Hypertension. Please monitor your blood pressure and consult your doctor if this persists.';
+              return 'You are in Stage 1 Hypertension. Please monitor your blood pressure regularly and consult your doctor if this persists.';
             case 'Stage 2 Hypertension':
-              return 'You are in Stage 2 Hypertension. It is recommended to consult your doctor soon.';
+              return 'You are in Stage 2 Hypertension. It is recommended to consult your doctor soon for proper management.';
             case 'Hypertensive Crisis':
               return 'Hypertensive Crisis! Seek immediate medical attention.';
             case 'Low Blood Pressure':
-              return 'Your blood pressure is low. If you feel unwell, contact your healthcare provider.';
+              return 'Your blood pressure is low. If you experience dizziness or feel unwell, contact your healthcare provider.';
             default:
-              return 'Unable to determine blood pressure status.';
+              return 'Continue to monitor blood pressure regularly and maintain a healthy lifestyle.';
           }
         })()}
       </p>
+      
       {heartRateAlert && (
-        <p className={`text-sm font-semibold mb-2 ${heartRateAlert.color}`}>{heartRateAlert.message}</p>
+        <p className={`text-sm font-semibold mb-2 ${heartRateAlert.color}`}>
+          {heartRateAlert.message}
+        </p>
       )}
+      
       <div className="text-sm mb-2">
         <p><strong>Systolic:</strong> {statusData.systolic} mmHg</p>
         <p><strong>Diastolic:</strong> {statusData.diastolic} mmHg</p>
         <p><strong>Heart Rate:</strong> {statusData.heartRate} bpm</p>
+        {statusData.age && <p><strong>Age:</strong> {statusData.age} years</p>}
       </div>
+      
       {bpCategory.button && (
-        <button className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition">
+        <button 
+          onClick={scrollToDoctorManagement}
+          className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition"
+        >
           Find Doctor Nearby
         </button>
       )}

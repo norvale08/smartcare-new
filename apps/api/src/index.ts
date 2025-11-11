@@ -1,9 +1,10 @@
-//index.ts
+
 import express from 'express';
 import cors from 'cors'; 
 import session from "express-session";
 import { connectMongoDB } from './lib/mongodb';
 import dotenv from "dotenv";
+
 import authRoute from "./routes/auth";
 import loginRoute from './routes/login';
 import emergencyRoutes from './routes/emergency';
@@ -13,7 +14,6 @@ import profileRoutes from './routes/patient';
 import uploadRoute from "./routes/upload";
 import hypertensionRoutes from './routes/hypertensionVitals';
 import medicationsRoutes from './routes/medications';
-import doctorsRoutes from "./routes/doctors"
 import diabetesAiRoutes from "./routes/diabetesAi";
 import LifestyleRoutes from "./routes/diabetesLifestyle";
 import hypertensionLifestyle from "./routes/hypertensionLifestyle";
@@ -35,6 +35,9 @@ import patientAssignedDoctorsRoute from "./routes/patientAssignedDoctors";
 import notificationsRouter from './routes/notifications';
 import patientVitalsRouter from './routes/patientVitals';
 import messagesRouter from './routes/messages';
+import doctorsRoutes from "./routes/doctors";
+
+
 
 
 
@@ -107,7 +110,7 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// ✅ ROUTES
+// ✅ ROUTES - Keep your existing routes as they are
 app.use('/api/auth', authRoute);
 app.use('/api/login', loginRoute);
 app.use('/api/emergency', emergencyRoutes);
@@ -118,7 +121,7 @@ app.use('/api/hypertensionVitals', hypertensionRoutes);
 app.use('/api/medications', medicationsRoutes);
 app.use('/api/userStatus', userStatusRouter);
 app.use("/api/doctors/search", doctorSearchRoutes);
-app.use ('/api/doctors',doctorsRoutes);
+app.use('/api/doctors', doctorsRoutes); // ✅ This now uses the modular doctor routes
 app.use("/api/diabetesAi", diabetesAiRoutes);
 app.use('/api/lifestyle', LifestyleRoutes);
 app.use('/api/hypertension/lifestyle', hypertensionLifestyle);

@@ -19,8 +19,7 @@ import type { LifestyleData } from "./components/LifestyleAssessment";
 import HealthTrends from "./components/HealthTrends";
 import NearbyClinics from "./components/NearbyClinics";
 import DietRecommendations from "./components/DietRecommendations";
-import DoctorSearch from "./components/DoctorSearch";
-import AssignedDoctors from "./components/AssignedDoctors";
+import DoctorManagement from "../components/DoctorManagement";
 
 
 // import { Doctor } from "@/types/doctor";
@@ -150,16 +149,6 @@ function DashboardPage() {
   // Regeneration loading states
   const [regeneratingDiet, setRegeneratingDiet] = useState(false);
   const [regeneratingLifestyle, setRegeneratingLifestyle] = useState(false);
-
-  // Doctor search states
-  // const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchForm, setSearchForm] = useState({
-    specialization: "",
-    location: "",
-    hospitalId: "",
-    isAvailable: false
-  });
 
   const Provider = dynamic(() => import("../components/maps/ProviderMap"), {
     ssr: false,
@@ -437,25 +426,6 @@ function DashboardPage() {
       console.error("Failed to update patient profile", error);
     }
   };
-  //Doctor Searching
-  const [requestedDoctorIds, setRequestedDoctorIds] = useState<string[]>([]);
-
-// const handleDoctorRequest = (doctorId: string, doctorData?: any) => {
-//   setRequestedDoctorIds(prev => [...prev, doctorId]);
-//   setMessage(`Request sent to Dr. ${doctorData?.fullName || 'the doctor'}!`);
-// };
-const [doctorRefreshTrigger, setDoctorRefreshTrigger] = useState(0);
-
-// Update the DoctorSearch callback:
-const handleDoctorRequest = (doctorId: string, doctorData?: any) => {
-  setRequestedDoctorIds(prev => [...prev, doctorId]);
-  setMessage(`Request sent to Dr. ${doctorData?.fullName || 'the doctor'}!`);
-  
-  // Trigger refresh after a short delay to allow backend to process
-  setTimeout(() => {
-    setDoctorRefreshTrigger(prev => prev + 1);
-  }, 1000);
-};
   
   return (
     <div className="min-h-screen bg-gray-100">
@@ -483,22 +453,13 @@ const handleDoctorRequest = (doctorId: string, doctorData?: any) => {
             onChange={handleEditChange}
           />
         )}
-        
-        {/* Doctor Search Section */}
-        <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
-          <DoctorSearch 
-            onDoctorRequest={handleDoctorRequest}
-            requestedDoctors={requestedDoctorIds}
-          />
-        </div>
-
-        {/* Assigned Doctors Section */}
-        <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
-  <AssignedDoctors refreshTrigger={doctorRefreshTrigger} />
-</div>
+              
         <HypertensionAlert refreshToken={alertRefreshToken} />
 
         <VitalsWithActivityInput onAfterSave={() => setAlertRefreshToken(Date.now())} />
+        
+        {/* Doctor Management Section */}
+        <DoctorManagement condition="hypertension" />
 
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
           <MedicationAnalysisPage />

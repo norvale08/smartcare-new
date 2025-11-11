@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Bell, Phone, MessageSquare, Activity } from 'lucide-react';
+import { X, Bell, Phone, MessageSquare, Activity, Heart } from 'lucide-react';
 
 interface Notification {
   id: string;
-  type: 'vital_alert' | 'message' | 'call' | 'system' | 'appointment';
+  type: 'vital_alert' | 'message' | 'call' | 'system' | 'appointment' | 'hypertension_alert';
   title: string;
   message: string;
   patientId?: string;
@@ -11,6 +11,9 @@ interface Notification {
   timestamp: Date;
   read: boolean;
   priority: 'low' | 'medium' | 'high' | 'critical';
+  bpCategory?: 'Stage 1' | 'Stage 2' | 'Hypertensive Crisis';
+  systolic?: number;
+  diastolic?: number;
 }
 
 const RealTimeNotifications: React.FC = () => {
@@ -48,19 +51,48 @@ const RealTimeNotifications: React.FC = () => {
             timestamp: new Date(notification.createdAt),
             read: notification.read,
             priority: notification.priority,
+            bpCategory: notification.bpCategory,
+            systolic: notification.systolic,
+            diastolic: notification.diastolic
           }));
           
           setNotifications(realNotifications);
-          if (realNotifications.length > 0) {
-            setIsVisible(true);
-          }
+          // Only show if there are unread notifications
+          setIsVisible(realNotifications.length > 0);
         }
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
+      // Add mock hypertension alerts for demo
+      setNotifications(getMockHypertensionAlerts());
+      setIsVisible(true);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Mock hypertension alerts for demo
+  const getMockHypertensionAlerts = (): Notification[] => {
+    const hypertensionStages = [
+      { category: 'Stage 1', priority: 'medium', systolic: 135, diastolic: 85 },
+      { category: 'Stage 2', priority: 'high', systolic: 155, diastolic: 95 },
+      { category: 'Hypertensive Crisis', priority: 'critical', systolic: 185, diastolic: 115 }
+    ];
+
+    return hypertensionStages.map((stage, index) => ({
+      id: `hypertension-${index}-${Date.now()}`,
+      type: 'hypertension_alert',
+      title: `${stage.category} Hypertension Detected`,
+      message: `Patient has ${stage.category.toLowerCase()} blood pressure: ${stage.systolic}/${stage.diastolic} mmHg`,
+      patientId: 'demo-patient',
+      patientName: 'Demo Patient',
+      timestamp: new Date(),
+      read: false,
+      priority: stage.priority as 'medium' | 'high' | 'critical',
+      bpCategory: stage.category as 'Stage 1' | 'Stage 2' | 'Hypertensive Crisis',
+      systolic: stage.systolic,
+      diastolic: stage.diastolic
+    }));
   };
 
   // Setup polling for new notifications
@@ -88,6 +120,14 @@ const RealTimeNotifications: React.FC = () => {
           }
         }
       );
+      
+      // Update local state
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      
+      // Hide if no more notifications
+      if (notifications.length <= 1) {
+        setIsVisible(false);
+      }
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
@@ -97,6 +137,8 @@ const RealTimeNotifications: React.FC = () => {
     switch (type) {
       case 'vital_alert':
         return <Activity className="w-4 h-4 text-red-500" />;
+      case 'hypertension_alert':
+        return <Heart className="w-4 h-4 text-red-500" />;
       case 'message':
         return <MessageSquare className="w-4 h-4 text-blue-500" />;
       case 'call':
@@ -107,12 +149,23 @@ const RealTimeNotifications: React.FC = () => {
   };
 
   const getNotificationColor = (notification: Notification) => {
+    // Special handling for hypertension alerts
+    if (notification.type === 'hypertension_alert') {
+      const bpColors = {
+        'Hypertensive Crisis': 'border-red-200 bg-red-50 border-l-4 border-l-red-500',
+        'Stage 2': 'border-orange-200 bg-orange-50 border-l-4 border-l-orange-500',
+        'Stage 1': 'border-yellow-200 bg-yellow-50 border-l-4 border-l-yellow-500'
+      };
+      return bpColors[notification.bpCategory!] || 'border-gray-200 bg-gray-50';
+    }
+
     const baseColors = {
       vital_alert: 'border-red-200 bg-red-50',
       message: 'border-blue-200 bg-blue-50',
       call: 'border-green-200 bg-green-50',
       system: 'border-gray-200 bg-gray-50',
       appointment: 'border-purple-200 bg-purple-50',
+      hypertension_alert: 'border-red-200 bg-red-50'
     };
 
     const priorityBorders = {
@@ -127,10 +180,6 @@ const RealTimeNotifications: React.FC = () => {
 
   const dismissNotification = async (id: string) => {
     await markAsRead(id);
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    if (notifications.length === 1) {
-      setIsVisible(false);
-    }
   };
 
   const markAllAsRead = async () => {
@@ -146,7 +195,8 @@ const RealTimeNotifications: React.FC = () => {
           }
         }
       );
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setNotifications([]);
+      setIsVisible(false);
     } catch (error) {
       console.error('Failed to mark all as read:', error);
     }
@@ -155,22 +205,22 @@ const RealTimeNotifications: React.FC = () => {
   const handleNotificationClick = (notification: Notification) => {
     // Handle different notification types
     switch (notification.type) {
+      case 'hypertension_alert':
+        // Navigate to patient vitals or detailed BP view
+        alert(`Viewing ${notification.bpCategory} hypertension alert for ${notification.patientName}`);
+        break;
       case 'message':
-        // Navigate to messaging or open messaging modal
         alert(`Opening conversation with ${notification.patientName || 'contact'}`);
         break;
       case 'call':
-        // Initiate call
         if (notification.patientName) {
           alert(`Initiating call with ${notification.patientName}`);
         }
         break;
       case 'vital_alert':
-        // Navigate to vitals or alert details
         alert(`Viewing vital alert for ${notification.patientName || 'patient'}`);
         break;
       default:
-        // Generic notification handling
         alert('Viewing notification details');
     }
     
@@ -178,7 +228,18 @@ const RealTimeNotifications: React.FC = () => {
     markAsRead(notification.id);
   };
 
-  if (!isVisible || notifications.length === 0) {
+  // Sort notifications with hypertension alerts first
+  const sortedNotifications = [...notifications].sort((a, b) => {
+    // Prioritize hypertension alerts
+    if (a.type === 'hypertension_alert' && b.type !== 'hypertension_alert') return -1;
+    if (a.type !== 'hypertension_alert' && b.type === 'hypertension_alert') return 1;
+    
+    // Then prioritize by priority
+    const priorityOrder = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3 };
+    return priorityOrder[a.priority] - priorityOrder[b.priority];
+  });
+
+  if (!isVisible || sortedNotifications.length === 0) {
     return null;
   }
 
@@ -190,7 +251,7 @@ const RealTimeNotifications: React.FC = () => {
           <Bell className="w-5 h-5 text-blue-600" />
           <span className="font-medium text-sm">Notifications</span>
           <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
-            {notifications.length}
+            {sortedNotifications.length}
           </span>
         </div>
         <div className="flex space-x-1">
@@ -215,7 +276,7 @@ const RealTimeNotifications: React.FC = () => {
           <div className="flex justify-center py-4">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
           </div>
-        ) : notifications.map((notification) => (
+        ) : sortedNotifications.map((notification) => (
           <div
             key={notification.id}
             className={`p-3 rounded-lg shadow-lg transform transition-all duration-300 cursor-pointer ${getNotificationColor(notification)} ${
@@ -236,10 +297,24 @@ const RealTimeNotifications: React.FC = () => {
                     {!notification.read && (
                       <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     )}
+                    {notification.bpCategory && (
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        notification.bpCategory === 'Hypertensive Crisis' ? 'bg-red-100 text-red-700' :
+                        notification.bpCategory === 'Stage 2' ? 'bg-orange-100 text-orange-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {notification.bpCategory}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
                     {notification.message}
                   </p>
+                  {notification.systolic && notification.diastolic && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      BP: {notification.systolic}/{notification.diastolic} mmHg
+                    </p>
+                  )}
                   {notification.patientName && (
                     <p className="text-xs text-gray-500 mt-1">
                       Patient: {notification.patientName}

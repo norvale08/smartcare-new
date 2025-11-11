@@ -120,7 +120,8 @@ const userSchema = new Schema(
       ref: "Patient",
       default: null,
     },
-// Doctor fields
+
+    // Doctor fields
     specialization: {
       type: String,
       default: null,
@@ -133,6 +134,33 @@ const userSchema = new Schema(
       type: String,
       default: null,
     },
+
+    // NEW: Doctor Profile Fields (filled by doctor themselves)
+    bio: {
+      type: String,
+      default: "",
+    },
+    yearsOfExperience: {
+      type: Number,
+      default: null,
+      min: 0,
+      max: 60
+    },
+    contactInfo: {
+      alternateEmail: {
+        type: String,
+        default: ""
+      },
+      emergencyContact: {
+        type: String,
+        default: ""
+      }
+    },
+    profileUpdatedAt: {
+      type: Date,
+      default: null
+    },
+
     // For patients: array of doctor IDs they've requested
     requestedDoctors: [{
       type: mongoose.Schema.Types.ObjectId,
@@ -155,38 +183,41 @@ const userSchema = new Schema(
         type: String,
         enum: ["pending", "accepted", "rejected"],
         default: "pending"
-         }
+      }
     }],
+    
     assignedPatients: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     }],
-   assignedDoctor: {
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  condition: {
-    type: String,
-    enum: ['hypertension', 'diabetes', 'both', ''],
-    default: 'hypertension'
-  },
-  lastVisit: {
-    type: Date
-  }
-
     
+    assignedDoctor: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    },
     
+    condition: {
+      type: String,
+      enum: ['hypertension', 'diabetes', 'both', ''],
+      default: 'hypertension'
+    },
     
+    lastVisit: {
+      type: Date
+    }
   },
   {
     timestamps: true, // createdAt & updatedAt
   }
 );
+
 // Index for faster queries
 userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ assignedDoctor: 1 });
 userSchema.index({ 'assignedPatients': 1 });
+userSchema.index({ specialization: 1 }); // For doctor searches
+userSchema.index({ yearsOfExperience: -1 }); // For sorting by experience
 
 // Virtual for full name if not set
 userSchema.virtual('displayName').get(function() {
@@ -197,11 +228,32 @@ userSchema.virtual('displayName').get(function() {
   return this.email;
 });
 
+// Virtual for doctor's experience level
+userSchema.virtual('experienceLevel').get(function() {
+  if (!this.yearsOfExperience) return "Not specified";
+  if (this.yearsOfExperience < 3) return "Junior";
+  if (this.yearsOfExperience < 8) return "Mid-Level";
+  if (this.yearsOfExperience < 15) return "Senior";
+  return "Expert";
+});
+
 // Pre-save hook to ensure fullName is set
 userSchema.pre('save', function(next) {
   if (!this.fullName && (this.firstName || this.lastName)) {
     this.fullName = `${this.firstName || ''} ${this.lastName || ''}`.trim();
   }
+  
+  // Update profileUpdatedAt when profile fields change
+  if (this.isModified('bio') || this.isModified('yearsOfExperience') || this.isModified('contactInfo')) {
+    this.profileUpdatedAt = new Date();
+  }
+  
+  // Set profileCompleted for doctors based on required fields
+  if (this.role === 'doctor') {
+    const hasRequiredProfileFields = Boolean(this.bio && this.bio.length > 0 && this.yearsOfExperience !== null);
+    this.profileCompleted = hasRequiredProfileFields;
+  }
+  
   next();
 });
 

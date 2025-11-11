@@ -14,7 +14,6 @@ const Login = () => {
   const { register, handleSubmit, formState, reset } = useForm<UserLoginType>();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
   const router = useRouter();
 
   const handleFormSubmit = async (data: UserLoginType) => {
@@ -40,10 +39,6 @@ const Login = () => {
 
       const { token, user, redirectTo } = loginData;
 
-      console.log("✅ Login successful");
-      console.log("User role:", user.role);
-      console.log("Redirect URL from backend:", redirectTo);
-
       // Save in localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
@@ -52,20 +47,23 @@ const Login = () => {
       toast.success("Login successful!");
       reset();
 
-      // Redirect according to backend OR fallback by role
+      // ✅ Redirect logic for each role
       if (redirectTo) {
-        console.log("Redirecting to backend-provided URL:", redirectTo);
         router.replace(redirectTo);
       } else {
-        switch (user.role) {
-          case "admin":
-            router.replace("/admin-dashboard");
-            break;
-          case "doctor":
-            router.replace("/doctor-dashboard");
-            break;
-          default:
-            router.replace("/patient-dashboard");
+        if (user.role === "admin") {
+          router.replace("/admin");
+        } else if (user.role === "doctor") {
+          if (!user.profileCompleted || user.isFirstLogin) {
+            toast("Please complete your profile to continue.", { icon: "🩺" });
+            router.replace("/doctor/profile");
+          } else {
+            router.replace("/doctor/dashboard");
+          }
+        } else if (user.role === "patient") {
+          router.replace("/patient/dashboard");
+        } else {
+          toast.error("Unknown user role");
         }
       }
     } catch (error) {

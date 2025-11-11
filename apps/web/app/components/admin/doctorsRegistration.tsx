@@ -34,7 +34,7 @@ const DoctorsRegistration = () => {
   const [showSuccess, setShowSuccess] = useState(false);
 
   const password = watch("password");
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   const handleFormSubmit = async (data: DoctorRegisterType) => {
     setIsLoading(true);
@@ -48,7 +48,7 @@ const DoctorsRegistration = () => {
         treatsHypertension: Boolean(submitData.treatsHypertension)
       };
 
-      const response = await fetch(`${API_URL}/api/doctors/create`, {
+      const response = await fetch(`${API_URL}/api/doctors/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

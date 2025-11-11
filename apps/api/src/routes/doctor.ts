@@ -83,7 +83,9 @@ router.post("/create", async (req: express.Request, res: express.Response) => {
       conditions: `Treats: ${treatsDiabetes ? 'Diabetes' : ''}${treatsDiabetes && treatsHypertension ? ', ' : ''}${treatsHypertension ? 'Hypertension' : ''}`.trim(),
       // Initialize arrays for patient management
       pendingRequests: [],
-      assignedPatients: []
+      assignedPatients: [],
+      profileCompleted: false, // Add this field
+      isFirstLogin: true // Add this field
     });
 
     console.log("Doctor created successfully:", doctor._id);
@@ -101,7 +103,9 @@ router.post("/create", async (req: express.Request, res: express.Response) => {
         treatsDiabetes: doctor.diabetes,
         treatsHypertension: doctor.hypertension,
         pendingRequests: doctor.pendingRequests,
-        assignedPatients: doctor.assignedPatients
+        assignedPatients: doctor.assignedPatients,
+        profileCompleted: doctor.profileCompleted,
+        isFirstLogin: doctor.isFirstLogin
       }
     });
   } catch (err: any) {
@@ -122,7 +126,7 @@ router.get("/", async (req: express.Request, res: express.Response) => {
     console.log("Connected to MongoDB");
     
     const doctors = await User.find({ role: "doctor" })
-      .select("firstName lastName email phoneNumber specialization licenseNumber hospital diabetes hypertension conditions pendingRequests assignedPatients createdAt")
+      .select("firstName lastName email phoneNumber specialization licenseNumber hospital diabetes hypertension conditions pendingRequests assignedPatients profileCompleted isFirstLogin createdAt")
       .sort({ createdAt: -1 });
     
     console.log(`Found ${doctors.length} doctors`);
@@ -133,6 +137,8 @@ router.get("/", async (req: express.Request, res: express.Response) => {
         phoneNumber: doctor.phoneNumber,
         pendingRequests: doctor.pendingRequests?.length || 0,
         assignedPatients: doctor.assignedPatients?.length || 0,
+        profileCompleted: doctor.profileCompleted,
+        isFirstLogin: doctor.isFirstLogin,
         hasPendingRequestsField: doctor.pendingRequests !== undefined,
         hasAssignedPatientsField: doctor.assignedPatients !== undefined
       });
@@ -165,7 +171,7 @@ router.get("/by-specialization", async (req: express.Request<{}, {}, {}, Special
     if (treatsHypertension === 'true') query.hypertension = true;
     
     const doctors = await User.find(query)
-      .select("firstName lastName email phoneNumber specialization licenseNumber hospital diabetes hypertension conditions pendingRequests assignedPatients");
+      .select("firstName lastName email phoneNumber specialization licenseNumber hospital diabetes hypertension conditions pendingRequests assignedPatients profileCompleted isFirstLogin");
     
     res.status(200).json({ doctors });
   } catch (err: any) {
@@ -206,6 +212,8 @@ router.get("/:id", async (req: express.Request, res: express.Response) => {
         conditions: doctor.conditions,
         pendingRequests: doctor.pendingRequests || [],
         assignedPatients: doctor.assignedPatients || [],
+        profileCompleted: doctor.profileCompleted || false,
+        isFirstLogin: doctor.isFirstLogin || false,
         createdAt: doctor.createdAt
       }
     });
@@ -313,7 +321,9 @@ router.put("/:id", async (req: express.Request, res: express.Response) => {
         hypertension: updatedDoctor?.hypertension,
         conditions: updatedDoctor?.conditions,
         pendingRequests: updatedDoctor?.pendingRequests,
-        assignedPatients: updatedDoctor?.assignedPatients
+        assignedPatients: updatedDoctor?.assignedPatients,
+        profileCompleted: updatedDoctor?.profileCompleted,
+        isFirstLogin: updatedDoctor?.isFirstLogin
       }
     });
   } catch (err: any) {
@@ -349,6 +359,8 @@ router.delete("/:id", async (req: express.Request, res: express.Response) => {
     console.error("Delete doctor error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
+});
+
 // Send password reset email to doctor
 router.post("/:id/send-reset-email", async (req: express.Request, res: express.Response) => {
   try {
@@ -479,7 +491,7 @@ router.post("/send-communication", async (req: express.Request, res: express.Res
   }
 });
 
-// NEW: Test Gmail connection route
+// Test Gmail connection route
 router.post("/test-gmail-connection", async (req: express.Request, res: express.Response) => {
   try {
     console.log("🧪 Testing Gmail connection...");
@@ -547,7 +559,7 @@ router.post("/test-gmail-connection", async (req: express.Request, res: express.
   }
 });
 
-// NEW: Test email with custom recipient
+// Test email with custom recipient
 router.post("/test-email-custom", async (req: express.Request, res: express.Response) => {
   try {
     const { email } = req.body;
@@ -599,6 +611,8 @@ router.post("/test-email-custom", async (req: express.Request, res: express.Resp
       error: error.message,
       code: error.code 
     });
+  }
+});
 
 // Get doctor's pending requests
 router.get("/:id/pending-requests", async (req: express.Request, res: express.Response) => {
@@ -637,6 +651,27 @@ router.get("/:id/pending-requests", async (req: express.Request, res: express.Re
   }
 });
 
+// Helper function to calculate age from DOB
+function calculateAge(dob: Date): number {
+  if (!dob) return 0;
+  const today = new Date();
+  const birthDate = new Date(dob);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+// Helper function to determine patient condition
+function getPatientCondition(patient: any): "hypertension" | "diabetes" | "both" {
+  if (patient.hypertension && patient.diabetes) return "both";
+  if (patient.hypertension) return "hypertension";
+  if (patient.diabetes) return "diabetes";
+  return "hypertension"; // default
+}
+
 // Get doctor's assigned patients
 router.get("/:id/assigned-patients", async (req: express.Request, res: express.Response) => {
   try {
@@ -665,27 +700,6 @@ router.get("/:id/assigned-patients", async (req: express.Request, res: express.R
       phoneNumber: patient.phoneNumber,
       email: patient.email
     }));
-
-    // Helper function to calculate age from DOB
-    function calculateAge(dob: Date): number {
-      if (!dob) return 0;
-      const today = new Date();
-      const birthDate = new Date(dob);
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      return age;
-    }
-
-    // Helper function to determine patient condition
-    function getPatientCondition(patient: any): "hypertension" | "diabetes" | "both" {
-      if (patient.hypertension && patient.diabetes) return "both";
-      if (patient.hypertension) return "hypertension";
-      if (patient.diabetes) return "diabetes";
-      return "hypertension"; // default
-    }
     
     res.status(200).json({ 
       assignedPatients,
@@ -694,7 +708,6 @@ router.get("/:id/assigned-patients", async (req: express.Request, res: express.R
   } catch (err: any) {
     console.error("Get assigned patients error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
-
   }
 });
 
