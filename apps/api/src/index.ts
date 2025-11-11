@@ -36,7 +36,7 @@ import notificationsRouter from './routes/notifications';
 import patientVitalsRouter from './routes/patientVitals';
 import messagesRouter from './routes/messages';
 import doctorsRoutes from "./routes/doctors";
-
+import comprehensiveFeedbackRoutes from "./routes/comprehensiveFeedback";
 
 
 
@@ -142,6 +142,7 @@ app.use('/api/patient', patientAssignedDoctorsRoute);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/patient/vitals', patientVitalsRouter);
 app.use('/api/messages', messagesRouter);
+app.use("/api", comprehensiveFeedbackRoutes);
 
 
 // 404 handler

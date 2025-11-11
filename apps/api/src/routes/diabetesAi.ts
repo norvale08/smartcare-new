@@ -80,6 +80,8 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     }
 
     console.log(`📊 Vitals found - Glucose: ${vitals.glucose} mg/dL (${vitals.context})`);
+    console.log(`💓 Additional data - BP: ${vitals.systolic || 'N/A'}/${vitals.diastolic || 'N/A'}, HR: ${vitals.heartRate || 'N/A'}`);
+    console.log(`🏃 Exercise: ${vitals.exerciseRecent || 'N/A'} (${vitals.exerciseIntensity || 'N/A'})`);
 
     // ✅ 2. Check if we have a VALID cached summary
     if (isValidSummary(vitals.summary)) {
@@ -116,7 +118,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     const age = calculateAge(patient.dob);
     console.log(`👤 Patient found - Age: ${age}, Gender: ${patient.gender}`);
 
-    // ✅ 4. Prepare glucose data
+    // ✅ 4. Prepare COMPLETE glucose data with all available context
     const glucoseData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -125,9 +127,24 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       gender: patient.gender,
       weight: patient.weight,
       height: patient.height,
+      // ✅ ADDITIONAL CONTEXT: Blood pressure, heart rate, exercise data
+      systolic: vitals.systolic,
+      diastolic: vitals.diastolic,
+      heartRate: vitals.heartRate,
+      exerciseRecent: vitals.exerciseRecent,
+      exerciseIntensity: vitals.exerciseIntensity,
+      lastMealTime: vitals.lastMealTime,
+      mealType: vitals.mealType,
     };
 
-    console.log("📋 Glucose data prepared:", JSON.stringify(glucoseData, null, 2));
+    console.log("📋 Complete glucose data prepared:", {
+      glucose: glucoseData.glucose,
+      context: glucoseData.context,
+      bp: `${glucoseData.systolic || 'N/A'}/${glucoseData.diastolic || 'N/A'}`,
+      hr: glucoseData.heartRate || 'N/A',
+      exercise: `${glucoseData.exerciseRecent || 'N/A'} (${glucoseData.exerciseIntensity || 'N/A'})`,
+      meal: glucoseData.lastMealTime ? `${glucoseData.mealType} (${glucoseData.lastMealTime} ago)` : 'N/A'
+    });
 
     // ✅ 5. Check if GROQ_API_KEY exists
     if (!process.env.GROQ_API_KEY) {
@@ -145,8 +162,8 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
 
     console.log("✅ GROQ_API_KEY is configured");
 
-    // ✅ 6. Generate AI summary
-    console.log("🤖 Calling SmartCareAI.generateSummary()...");
+    // ✅ 6. Generate AI summary with ALL context
+    console.log("🤖 Calling SmartCareAI.generateSummary() with complete context...");
     const aiStartTime = Date.now();
     
     const ai = getAIService();
@@ -167,7 +184,13 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
         details: {
           groqConfigured: !!process.env.GROQ_API_KEY,
           vitalId,
-          glucoseData
+          glucoseData: {
+            glucose: glucoseData.glucose,
+            context: glucoseData.context,
+            hasBP: !!(glucoseData.systolic && glucoseData.diastolic),
+            hasHR: !!glucoseData.heartRate,
+            hasExercise: !!(glucoseData.exerciseRecent && glucoseData.exerciseIntensity)
+          }
         }
       });
     }
@@ -189,7 +212,17 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       aiFeedback, 
       cached: false,
       generationTime: aiDuration,
-      totalTime: totalDuration
+      totalTime: totalDuration,
+      contextUsed: {
+        glucose: glucoseData.glucose,
+        context: glucoseData.context,
+        bloodPressure: glucoseData.systolic && glucoseData.diastolic ? 
+          `${glucoseData.systolic}/${glucoseData.diastolic}` : 'Not provided',
+        heartRate: glucoseData.heartRate || 'Not provided',
+        exercise: glucoseData.exerciseRecent && glucoseData.exerciseIntensity ? 
+          `${glucoseData.exerciseRecent} (${glucoseData.exerciseIntensity})` : 'Not provided',
+        mealTiming: glucoseData.lastMealTime ? `${glucoseData.mealType} (${glucoseData.lastMealTime} ago)` : 'Not provided'
+      }
     });
 
   } catch (error: any) {
@@ -210,6 +243,81 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
         timestamp: new Date().toISOString(),
         groqConfigured: !!process.env.GROQ_API_KEY
       }
+    });
+  }
+});
+
+// ✅ Food Advice Endpoint - Updated to use all context
+router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const vitalId = req.params.id;
+    console.log(`🍽️ Food advice request for vital: ${vitalId}`);
+
+    // Fetch vitals and patient data
+    const vitals = await Diabetes.findById(vitalId);
+    if (!vitals) {
+      return res.status(404).json({ success: false, message: "Vitals not found" });
+    }
+
+    const patient = await Patient.findOne({ userId });
+    if (!patient) {
+      return res.status(404).json({ success: false, message: "Patient profile not found" });
+    }
+
+    const age = calculateAge(patient.dob);
+
+    // Prepare complete data for food advice
+    const foodAdviceData = {
+      glucose: vitals.glucose,
+      context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
+      systolic: vitals.systolic,
+      diastolic: vitals.diastolic,
+      heartRate: vitals.heartRate,
+      weight: patient.weight,
+      height: patient.height,
+      age,
+      gender: patient.gender,
+      language: (patient.language as "en" | "sw") || "en",
+      exerciseRecent: vitals.exerciseRecent,
+      exerciseIntensity: vitals.exerciseIntensity,
+      lastMealTime: vitals.lastMealTime,
+      mealType: vitals.mealType,
+    };
+
+    console.log("🍽️ Food advice data:", {
+      glucose: foodAdviceData.glucose,
+      context: foodAdviceData.context,
+      bp: `${foodAdviceData.systolic || 'N/A'}/${foodAdviceData.diastolic || 'N/A'}`,
+      exercise: `${foodAdviceData.exerciseRecent || 'N/A'} (${foodAdviceData.exerciseIntensity || 'N/A'})`
+    });
+
+    const ai = getAIService();
+    const foodAdvice = await ai.generateKenyanFoodAdvice(foodAdviceData);
+
+    res.status(200).json({
+      success: true,
+      foodAdvice,
+      contextUsed: {
+        glucose: foodAdviceData.glucose,
+        context: foodAdviceData.context,
+        bloodPressure: foodAdviceData.systolic && foodAdviceData.diastolic ? 
+          `${foodAdviceData.systolic}/${foodAdviceData.diastolic}` : 'Not provided',
+        exercise: foodAdviceData.exerciseRecent && foodAdviceData.exerciseIntensity ? 
+          `${foodAdviceData.exerciseRecent} (${foodAdviceData.exerciseIntensity})` : 'Not provided'
+      }
+    });
+
+  } catch (error: any) {
+    console.error("❌ Food advice error:", error.message);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to generate food advice", 
+      error: error.message 
     });
   }
 });

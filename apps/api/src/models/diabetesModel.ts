@@ -28,19 +28,17 @@ const DiabetesSchema = new Schema(
     },
     systolic: {
       type: Number,
-      required: true,
-      min: 70,
+       min: 70,
       max: 250,
     },
     diastolic: {
       type: Number,
-      required: true,
-      min: 40,
+       min: 40,
       max: 150,
     },
     heartRate: {
       type: Number,
-      required: true,
+      
       min: 40,
       max: 200,
     },
@@ -89,7 +87,6 @@ const DiabetesSchema = new Schema(
   { timestamps: true }
 );
 
-// Custom validation: If context is "Post-meal", require meal fields
 DiabetesSchema.pre("save", function (next) {
   if (this.context === "Post-meal") {
     if (!this.lastMealTime || !this.mealType) {

@@ -1,3 +1,4 @@
+// components/FinalFeedback.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { Button } from "@repo/ui";
@@ -5,13 +6,42 @@ import { toast } from "react-hot-toast";
 import { FaHeart, FaRedo } from "react-icons/fa";
 import { MdCheckCircle } from "react-icons/md";
 
+interface FoodAdvice {
+  breakfast: string;
+  lunch: string;
+  supper: string;
+  foods_to_avoid: string;
+}
+
+interface ComprehensiveFeedbackData {
+  comprehensiveFeedback: string;
+  components: {
+    summary: string;
+    foodAdvice: FoodAdvice;
+    quickTips: string;
+    lifestyleFeedback: string;
+  };
+  context: {
+    glucose: number;
+    context: string;
+    bloodPressure: string;
+    heartRate: string;
+    exercise: string;
+    lifestyleRecorded: boolean;
+  };
+  recommendations: {
+    recordBloodPressure: boolean;
+    recordHeartRate: boolean;
+    completeLifestyle: boolean;
+  };
+}
+
 interface FinalFeedbackProps {
-  // Props can be passed from parent component if needed
   onFeedbackGenerated?: (feedback: string) => void;
 }
 
 const FinalFeedback: React.FC<FinalFeedbackProps> = ({ onFeedbackGenerated }) => {
-  const [feedback, setFeedback] = useState<string>("💪 Your motivational feedback will appear here once generated.");
+  const [feedback, setFeedback] = useState<string>("💪 Your comprehensive health feedback will appear here once generated.");
   const [loading, setLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -21,42 +51,32 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({ onFeedbackGenerated }) =>
 
   const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
 
-  // Load existing feedback on mount
   useEffect(() => {
-    loadExistingFeedback();
+    checkForExistingData();
   }, []);
 
-  const loadExistingFeedback = async () => {
+  const checkForExistingData = async () => {
     try {
       const token = getAuthToken();
       if (!token) return;
 
-      // Try to get the latest glucose reading with all data
-      const response = await fetch(`${API_URL}/api/glucose/latest`, {
+      const response = await fetch(`${API_URL}/api/diabetesVitals/glucose/latest`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.data) {
-          setHasData(true);
-          
-          // Check if final feedback exists
-          if (data.data.finalFeedback) {
-            setFeedback(data.data.finalFeedback);
-            setLastUpdated(data.data.updatedAt);
-          }
-        }
+        setHasData(data.success && data.data);
       }
     } catch (error) {
-      console.error("Error loading existing feedback:", error);
+      console.error("Error checking for data:", error);
     }
   };
 
-  const generateFinalFeedback = async () => {
+  const generateComprehensiveFeedback = async () => {
     setLoading(true);
     setIsGenerating(true);
-    setFeedback("💪 Generating your personalized motivational feedback...");
+    setFeedback("💪 Generating your comprehensive health feedback...");
 
     try {
       const token = getAuthToken();
@@ -65,93 +85,32 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({ onFeedbackGenerated }) =>
         return;
       }
 
-      // Get latest glucose data
-      const glucoseResponse = await fetch(`${API_URL}/api/glucose/latest`, {
+      const response = await fetch(`${API_URL}/api/latest-comprehensive-feedback`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!glucoseResponse.ok) {
-        toast.error("Please add glucose data first");
-        return;
-      }
-
-      const glucoseData = await glucoseResponse.json();
-      if (!glucoseData.success || !glucoseData.data) {
-        toast.error("No glucose data found. Please add a reading first.");
-        return;
-      }
-
-      const latestReading = glucoseData.data;
-
-      // Get lifestyle data if available
-      let lifestyleData = null;
-      try {
-        const lifestyleResponse = await fetch(`${API_URL}/api/lifestyle/latest`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (lifestyleResponse.ok) {
-          const lifestyle = await lifestyleResponse.json();
-          if (lifestyle.success && lifestyle.data) {
-            lifestyleData = {
-              exercise: lifestyle.data.exercise,
-              sleep: lifestyle.data.sleep,
-              alcohol: lifestyle.data.alcohol,
-              smoking: lifestyle.data.smoking,
-            };
-          }
-        }
-      } catch (error) {
-        console.log("No lifestyle data available");
-      }
-
-      // Prepare request body for final feedback
-      const requestBody: any = {
-        glucose: latestReading.glucose,
-        context: latestReading.context,
-        language: latestReading.language || "en",
-      };
-
-      // Add optional fields if available
-      if (latestReading.bloodPressure) {
-        requestBody.bloodPressure = latestReading.bloodPressure;
-      }
-      if (latestReading.weight) requestBody.weight = latestReading.weight;
-      if (latestReading.height) requestBody.height = latestReading.height;
-      if (latestReading.age) requestBody.age = latestReading.age;
-      if (latestReading.gender) requestBody.gender = latestReading.gender;
-      if (lifestyleData) requestBody.lifestyle = lifestyleData;
-
-      // Call final feedback API
-      const response = await fetch(`${API_URL}/api/final-feedback`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        toast.error(data.error || "Failed to generate feedback");
-        setFeedback("💪 Failed to generate feedback. Please try again.");
-        return;
+        throw new Error(data.message || "Failed to generate feedback");
       }
 
-      if (data.success && data.feedback) {
-        setFeedback(data.feedback);
+      if (data.success && data.data) {
+        // ✅ Extract just the comprehensive feedback string from the full object
+        const feedbackText = data.data.comprehensiveFeedback;
+        setFeedback(feedbackText);
         setLastUpdated(new Date().toISOString());
-        toast.success("Motivational feedback generated!");
-        onFeedbackGenerated?.(data.feedback);
+        toast.success("Comprehensive feedback generated!");
+        
+        // ✅ Pass only the string to the parent component
+        onFeedbackGenerated?.(feedbackText);
       } else {
-        toast.error("No feedback received");
-        setFeedback("💪 Unable to generate feedback at this time.");
+        throw new Error("No feedback data received");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating feedback:", error);
-      toast.error("Network error. Please check your connection.");
-      setFeedback("💪 Network error. Please try again.");
+      toast.error(error.message || "Failed to generate feedback");
+      setFeedback("💪 Failed to generate feedback. Please try again.");
     } finally {
       setLoading(false);
       setIsGenerating(false);
@@ -160,7 +119,7 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({ onFeedbackGenerated }) =>
 
   const handleRefresh = async () => {
     if (!isGenerating) {
-      await generateFinalFeedback();
+      await generateComprehensiveFeedback();
     } else {
       toast("Feedback is already being generated", { icon: "ℹ️" });
     }
@@ -168,12 +127,12 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({ onFeedbackGenerated }) =>
 
   return (
     <div className="bg-white shadow-lg rounded-2xl p-6 space-y-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center">
           <FaHeart className="text-3xl text-red-500 mr-3" />
           <div>
-            <h3 className="text-2xl font-bold text-gray-800">Final Motivational Feedback</h3>
-            <p className="text-sm text-gray-600">Get personalized encouragement based on your health data</p>
+            <h3 className="text-2xl font-bold text-gray-800">AI Health Analysis</h3>
+            <p className="text-sm text-gray-600">Comprehensive feedback based on your health data</p>
           </div>
         </div>
       </div>
@@ -199,7 +158,7 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({ onFeedbackGenerated }) =>
                   : "text-green-700"
               }
             >
-              {isGenerating ? "Generating..." : "Your Motivation"}
+              {isGenerating ? "Generating..." : "Your Health Report"}
             </span>
           </h4>
 
@@ -227,16 +186,6 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({ onFeedbackGenerated }) =>
         )}
       </div>
 
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h4 className="text-sm font-semibold text-gray-700 mb-2">ℹ️ How it works:</h4>
-        <ul className="text-xs text-gray-600 space-y-1">
-          <li>• Uses your latest glucose reading</li>
-          <li>• Considers your blood pressure (if available)</li>
-          <li>• Factors in your lifestyle habits</li>
-          <li>• Provides brief, actionable, and motivating feedback</li>
-        </ul>
-      </div>
-
       {!hasData && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-sm text-yellow-800">
@@ -246,9 +195,9 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({ onFeedbackGenerated }) =>
       )}
 
       <Button
-        onClick={generateFinalFeedback}
-        disabled={loading || isGenerating}
-        className="w-full font-semibold py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white transition-colors duration-200 flex items-center justify-center gap-2"
+        onClick={generateComprehensiveFeedback}
+        disabled={loading || isGenerating || !hasData}
+        className="w-full font-semibold py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transition-colors duration-200 flex items-center justify-center gap-2"
       >
         {loading ? (
           <>
@@ -258,7 +207,7 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({ onFeedbackGenerated }) =>
         ) : (
           <>
             <FaHeart />
-            Generate Motivational Feedback
+            Generate Health Report
           </>
         )}
       </Button>

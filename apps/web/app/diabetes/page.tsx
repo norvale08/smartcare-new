@@ -3,8 +3,8 @@ import React, { useState } from "react";
 import DiabetesAlerts from "../components/diabetesPages/DiabetesAlerts";
 import DiabetesVitalsForm from "../components/diabetesPages/diabetesVitals";
 import DiabetesAISummary from "../components/diabetesPages/DiabetesAISummary";
-import DiabetesAIFeedback from "../components/diabetesPages/DiabetesAIFeedback";
-import LifestyleForm from "../components/diabetesPages/DiabetesLifestyle"; // ✅ Using LifestyleForm directly
+import FinalFeedback from "../components/diabetesPages/DiabetesAIFeedback";
+import LifestyleForm from "../components/diabetesPages/DiabetesLifestyle";
 import DiabetesMedications from "../components/diabetesPages/DiabetesMedications";
 import DiabetesFoodAdvice from "../components/diabetesPages/DiabetesFoodAdvice";
 import UserProfileHeader from "../components/UserProfileHeader";
@@ -21,6 +21,7 @@ const Page = () => {
   const [lifestyleDone, setLifestyleDone] = useState(false);
   const [medicationsDone, setMedicationsDone] = useState(false);
   const [foodDone, setFoodDone] = useState(false);
+  const [finalFeedback, setFinalFeedback] = useState<string>("");
 
   const handleVitalsSubmit = (id: string, aiRequested: boolean) => {
     setRefreshToken((prev) => prev + 1);
@@ -29,6 +30,10 @@ const Page = () => {
   };
 
   const handleTabChange = (tab: string) => setActiveTab(tab as any);
+
+  const handleFeedbackGenerated = (feedback: string) => {
+    setFinalFeedback(feedback);
+  };
 
   const isTabDisabled = (tab: string) => {
     switch (tab) {
@@ -39,7 +44,7 @@ const Page = () => {
       case "food":
         return !medicationsDone;
       case "final":
-        return !foodDone;
+        return !foodDone || !requestAI;
       default:
         return false;
     }
@@ -47,26 +52,26 @@ const Page = () => {
 
   return (
     <div className="max-w-6xl mx-auto mt-8 space-y-6">
-      {/* 🆕 User Profile Header */}
+      {/* User Profile Header */}
       <UserProfileHeader />
 
       {/* Alerts */}
       <DiabetesAlerts refreshToken={refreshToken} />
 
       {/* Tab Navigation */}
-      <div className="flex gap-4 border-b">
+      <div className="flex gap-4 border-b overflow-x-auto">
         {["vitals", "lifestyle", "medications", "food", "doctors", "final"].map((tab) => (
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
             disabled={isTabDisabled(tab)}
-            className={`px-4 py-2 font-medium capitalize transition-colors ${
+            className={`px-4 py-2 font-medium capitalize transition-colors whitespace-nowrap ${
               activeTab === tab
                 ? "border-b-2 border-blue-600 text-blue-600"
                 : "text-gray-600 hover:text-blue-500"
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            {tab}
+            {tab === "final" ? "AI Report" : tab}
             {(tab === "lifestyle" && lifestyleDone) ||
             (tab === "medications" && medicationsDone) ||
             (tab === "food" && foodDone) ? (
@@ -77,7 +82,7 @@ const Page = () => {
       </div>
 
       {/* Tab Content */}
-      <div>
+      <div className="min-h-[400px]">
         {activeTab === "vitals" && (
           <div className="space-y-6">
             <DiabetesVitalsForm onVitalsSubmitted={handleVitalsSubmit} />
@@ -86,38 +91,45 @@ const Page = () => {
         )}
 
         {activeTab === "lifestyle" && (
-          <div>
+          <div className="space-y-4">
             <LifestyleForm />
             <button
               onClick={() => {
                 setLifestyleDone(true);
                 setTimeout(() => setActiveTab("medications"), 500);
               }}
-              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Continue
+              Continue to Medications
             </button>
           </div>
         )}
 
         {activeTab === "medications" && (
-          <DiabetesMedications
-            onSubmit={() => {
-              setMedicationsDone(true);
-              setTimeout(() => setActiveTab("food"), 500);
-            }}
-          />
+          <div className="space-y-4">
+            <DiabetesMedications />
+            <button
+              onClick={() => {
+                setMedicationsDone(true);
+                setTimeout(() => setActiveTab("food"), 500);
+              }}
+              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Continue to Food Advice
+            </button>
+          </div>
         )}
 
         {activeTab === "food" && (
-          <DiabetesFoodAdvice
-            vitalsId={vitalsId}
-            enabled={requestAI}
-            onComplete={() => {
-              setFoodDone(true);
-              setTimeout(() => setActiveTab("final"), 500);
-            }}
-          />
+          <div className="space-y-4">
+            <DiabetesFoodAdvice 
+              enabled={requestAI}
+              onComplete={() => {
+                setFoodDone(true);
+                setTimeout(() => setActiveTab("final"), 500);
+              }}
+            />
+          </div>
         )}
 
         {activeTab === "doctors" && (
@@ -126,23 +138,19 @@ const Page = () => {
 
         {activeTab === "final" && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-blue-600">
-              📊 Final AI Feedback
-            </h3>
-            <DiabetesAIFeedback vitalsId={vitalsId} enabled={requestAI} />
+            {/* Simple Final Feedback Component */}
+            <FinalFeedback onFeedbackGenerated={handleFeedbackGenerated} />
 
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h4 className="font-semibold text-green-800 mb-2">
-                ✅ Completed Actions
-              </h4>
-              <ul className="space-y-1 text-sm text-green-700">
-                <li>• Vitals recorded successfully</li>
-                {lifestyleDone && <li>• Lifestyle assessment completed</li>}
-                {medicationsDone && <li>• Medications reviewed</li>}
-                {foodDone && <li>• Food recommendations received</li>}
-                {requestAI && <li>• AI health analysis generated</li>}
-              </ul>
-            </div>
+            {finalFeedback && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-semibold text-green-800 mb-2">
+                  ✅ Latest Report Generated
+                </h4>
+                <p className="text-sm text-green-700">
+                  Your comprehensive health analysis has been successfully generated and is displayed above.
+                </p>
+              </div>
+            )}
 
             <button
               onClick={() => {
@@ -152,6 +160,7 @@ const Page = () => {
                 setLifestyleDone(false);
                 setMedicationsDone(false);
                 setFoodDone(false);
+                setFinalFeedback("");
                 setRefreshToken((prev) => prev + 1);
               }}
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
