@@ -3,24 +3,24 @@ import React, { useState } from "react";
 import DiabetesAlerts from "../components/diabetesPages/DiabetesAlerts";
 import DiabetesVitalsForm from "../components/diabetesPages/diabetesVitals";
 import DiabetesAISummary from "../components/diabetesPages/DiabetesAISummary";
-import DiabetesAIFeedback from "../components/diabetesPages/DiabetesAIFeedback";
-import LifestyleForm from "../components/diabetesPages/DiabetesLifestyle"; // ✅ Using LifestyleForm directly
+import FinalFeedback from "../components/diabetesPages/DiabetesAIFeedback";
+import LifestyleForm from "../components/diabetesPages/DiabetesLifestyle";
 import DiabetesMedications from "../components/diabetesPages/DiabetesMedications";
 import DiabetesFoodAdvice from "../components/diabetesPages/DiabetesFoodAdvice";
 import UserProfileHeader from "../components/UserProfileHeader";
-import DoctorManagement from "../components/DoctorManagement";
 
 const Page = () => {
   const [refreshToken, setRefreshToken] = useState(0);
   const [vitalsId, setVitalsId] = useState<string | undefined>();
   const [requestAI, setRequestAI] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "vitals" | "lifestyle" | "medications" | "food" | "final" | "doctors"
+    "vitals" | "lifestyle" | "medications" | "food" | "final"
   >("vitals");
 
   const [lifestyleDone, setLifestyleDone] = useState(false);
   const [medicationsDone, setMedicationsDone] = useState(false);
   const [foodDone, setFoodDone] = useState(false);
+  const [finalFeedback, setFinalFeedback] = useState<string>("");
 
   const handleVitalsSubmit = (id: string, aiRequested: boolean) => {
     setRefreshToken((prev) => prev + 1);
@@ -29,6 +29,10 @@ const Page = () => {
   };
 
   const handleTabChange = (tab: string) => setActiveTab(tab as any);
+
+  const handleFeedbackGenerated = (feedback: string) => {
+    setFinalFeedback(feedback);
+  };
 
   const isTabDisabled = (tab: string) => {
     switch (tab) {
@@ -39,127 +43,134 @@ const Page = () => {
       case "food":
         return !medicationsDone;
       case "final":
-        return !foodDone;
+        return !foodDone || !requestAI;
       default:
         return false;
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto mt-8 space-y-6">
-      {/* 🆕 User Profile Header */}
-      <UserProfileHeader />
-
-      {/* Alerts */}
-      <DiabetesAlerts refreshToken={refreshToken} />
-
-      {/* Tab Navigation */}
-      <div className="flex gap-4 border-b">
-        {["vitals", "lifestyle", "medications", "food", "doctors", "final"].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => handleTabChange(tab)}
-            disabled={isTabDisabled(tab)}
-            className={`px-4 py-2 font-medium capitalize transition-colors ${
-              activeTab === tab
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-blue-500"
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            {tab}
-            {(tab === "lifestyle" && lifestyleDone) ||
-            (tab === "medications" && medicationsDone) ||
-            (tab === "food" && foodDone) ? (
-              <span className="ml-1 text-green-500">✓</span>
-            ) : null}
-          </button>
-        ))}
+    <div className="min-h-screen bg-gray-50">
+      {/* User Profile Header - Full Width */}
+      <div className="w-full bg-white shadow-sm">
+        <UserProfileHeader />
       </div>
 
-      {/* Tab Content */}
-      <div>
-        {activeTab === "vitals" && (
-          <div className="space-y-6">
-            <DiabetesVitalsForm onVitalsSubmitted={handleVitalsSubmit} />
-            {vitalsId && requestAI && <DiabetesAISummary vitalsId={vitalsId} />}
+      {/* Main Content Container */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+        {/* Alerts */}
+        <DiabetesAlerts refreshToken={refreshToken} />
+
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {["vitals", "lifestyle", "medications", "food", "final"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => handleTabChange(tab)}
+                disabled={isTabDisabled(tab)}
+                className={`px-4 py-2 font-medium capitalize transition-colors whitespace-nowrap rounded-lg ${
+                  activeTab === tab
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:text-blue-500 hover:bg-gray-50"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {tab === "final" ? "AI Report" : tab}
+                {(tab === "lifestyle" && lifestyleDone) ||
+                (tab === "medications" && medicationsDone) ||
+                (tab === "food" && foodDone) ? (
+                  <span className="ml-1 text-green-300">✓</span>
+                ) : null}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
-        {activeTab === "lifestyle" && (
-          <div>
-            <LifestyleForm />
-            <button
-              onClick={() => {
-                setLifestyleDone(true);
-                setTimeout(() => setActiveTab("medications"), 500);
-              }}
-              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Continue
-            </button>
-          </div>
-        )}
-
-        {activeTab === "medications" && (
-          <DiabetesMedications
-            onSubmit={() => {
-              setMedicationsDone(true);
-              setTimeout(() => setActiveTab("food"), 500);
-            }}
-          />
-        )}
-
-        {activeTab === "food" && (
-          <DiabetesFoodAdvice
-            vitalsId={vitalsId}
-            enabled={requestAI}
-            onComplete={() => {
-              setFoodDone(true);
-              setTimeout(() => setActiveTab("final"), 500);
-            }}
-          />
-        )}
-
-        {activeTab === "doctors" && (
-          <DoctorManagement condition="diabetes" />
-        )}
-
-        {activeTab === "final" && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-blue-600">
-              📊 Final AI Feedback
-            </h3>
-            <DiabetesAIFeedback vitalsId={vitalsId} enabled={requestAI} />
-
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h4 className="font-semibold text-green-800 mb-2">
-                ✅ Completed Actions
-              </h4>
-              <ul className="space-y-1 text-sm text-green-700">
-                <li>• Vitals recorded successfully</li>
-                {lifestyleDone && <li>• Lifestyle assessment completed</li>}
-                {medicationsDone && <li>• Medications reviewed</li>}
-                {foodDone && <li>• Food recommendations received</li>}
-                {requestAI && <li>• AI health analysis generated</li>}
-              </ul>
+        {/* Tab Content */}
+        <div className="min-h-[400px]">
+          {activeTab === "vitals" && (
+            <div className="space-y-6">
+              <DiabetesVitalsForm onVitalsSubmitted={handleVitalsSubmit} />
+              {vitalsId && requestAI && <DiabetesAISummary vitalsId={vitalsId} />}
             </div>
+          )}
 
-            <button
-              onClick={() => {
-                setActiveTab("vitals");
-                setVitalsId(undefined);
-                setRequestAI(false);
-                setLifestyleDone(false);
-                setMedicationsDone(false);
-                setFoodDone(false);
-                setRefreshToken((prev) => prev + 1);
-              }}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              🔄 Start New Assessment
-            </button>
-          </div>
-        )}
+          {activeTab === "lifestyle" && (
+            <div className="space-y-4">
+              <LifestyleForm />
+              <button
+                onClick={() => {
+                  setLifestyleDone(true);
+                  setTimeout(() => setActiveTab("medications"), 500);
+                }}
+                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Continue to Medications
+              </button>
+            </div>
+          )}
+
+          {activeTab === "medications" && (
+            <div className="space-y-4">
+              <DiabetesMedications />
+              <button
+                onClick={() => {
+                  setMedicationsDone(true);
+                  setTimeout(() => setActiveTab("food"), 500);
+                }}
+                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Continue to Food Advice
+              </button>
+            </div>
+          )}
+
+          {activeTab === "food" && (
+            <div className="space-y-4">
+              <DiabetesFoodAdvice 
+                enabled={requestAI}
+                onComplete={() => {
+                  setFoodDone(true);
+                  setTimeout(() => setActiveTab("final"), 500);
+                }}
+              />
+            </div>
+          )}
+
+          {activeTab === "final" && (
+            <div className="space-y-6">
+              {/* Simple Final Feedback Component */}
+              <FinalFeedback onFeedbackGenerated={handleFeedbackGenerated} />
+
+              {finalFeedback && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-green-800 mb-2">
+                    ✅ Latest Report Generated
+                  </h4>
+                  <p className="text-sm text-green-700">
+                    Your comprehensive health analysis has been successfully generated and is displayed above.
+                  </p>
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  setActiveTab("vitals");
+                  setVitalsId(undefined);
+                  setRequestAI(false);
+                  setLifestyleDone(false);
+                  setMedicationsDone(false);
+                  setFoodDone(false);
+                  setFinalFeedback("");
+                  setRefreshToken((prev) => prev + 1);
+                }}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                🔄 Start New Assessment
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-// routes/lifestyle.ts
 import express, { Request, Response } from "express";
 import Lifestyle from "../models/lifestyleModel";
 import Patient from "../models/patient";
@@ -7,7 +6,17 @@ import { SmartCareAI, LifestyleAIInput } from "../services/SmartCareAI";
 import { verifyToken, AuthenticatedRequest } from "../middleware/verifyToken";
 
 const router = express.Router();
-const smartCareAI = new SmartCareAI();
+
+// ✅ Create ONE shared instance instead of per-request
+let smartCareAI: SmartCareAI | null = null;
+
+const getAIService = () => {
+  if (!smartCareAI) {
+    console.log("🤖 Initializing SmartCareAI service for lifestyle...");
+    smartCareAI = new SmartCareAI();
+  }
+  return smartCareAI;
+};
 
 // Utility: calculate age from DOB
 const calculateAge = (dob: Date | string | undefined): number => {
@@ -55,7 +64,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
 
     const age = calculateAge(patient.dob);
 
-    // Get latest glucose reading
+    // Get latest glucose reading with ALL context
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
     const glucose = latestVitals?.glucose || 0;
     const context = (latestVitals?.context as "Fasting" | "Post-meal" | "Random") || "Random";
@@ -75,8 +84,14 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
     });
     await lifestyleDoc.save();
 
-    // Prepare input for AI
-    const aiInput: LifestyleAIInput = {
+    // Prepare COMPLETE input for AI with all available context
+    const aiInput: LifestyleAIInput & {
+      systolic?: number;
+      diastolic?: number;
+      heartRate?: number;
+      exerciseRecent?: string;
+      exerciseIntensity?: string;
+    } = {
       glucose,
       context,
       language: patient.language as "en" | "sw" || "en",
@@ -85,13 +100,42 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       weight: patient.weight,
       height: patient.height,
       lifestyle: { alcohol, smoking, exercise, sleep },
+      // ✅ ADDITIONAL CONTEXT from latest vitals
+      systolic: latestVitals?.systolic,
+      diastolic: latestVitals?.diastolic,
+      heartRate: latestVitals?.heartRate,
+      exerciseRecent: latestVitals?.exerciseRecent,
+      exerciseIntensity: latestVitals?.exerciseIntensity,
     };
 
-    const aiAdvice = await smartCareAI.generateLifestyleFeedback(aiInput);
+    console.log("🤖 Generating lifestyle feedback with context:", {
+      glucose: aiInput.glucose,
+      context: aiInput.context,
+      bp: `${aiInput.systolic || 'N/A'}/${aiInput.diastolic || 'N/A'}`,
+      hr: aiInput.heartRate || 'N/A',
+      exercise: `${aiInput.exerciseRecent || 'N/A'} (${aiInput.exerciseIntensity || 'N/A'})`
+    });
+
+    const ai = getAIService();
+    const aiAdvice = await ai.generateLifestyleFeedback(aiInput);
+    
     lifestyleDoc.aiAdvice = aiAdvice;
     await lifestyleDoc.save();
 
-    res.status(200).json({ success: true, recordId: lifestyleDoc._id, aiAdvice });
+    res.status(200).json({ 
+      success: true, 
+      recordId: lifestyleDoc._id, 
+      aiAdvice,
+      contextUsed: {
+        glucose,
+        context,
+        bloodPressure: aiInput.systolic && aiInput.diastolic ? 
+          `${aiInput.systolic}/${aiInput.diastolic}` : 'Not provided',
+        heartRate: aiInput.heartRate || 'Not provided',
+        exercise: aiInput.exerciseRecent && aiInput.exerciseIntensity ? 
+          `${aiInput.exerciseRecent} (${aiInput.exerciseIntensity})` : 'Not provided'
+      }
+    });
   } catch (error: any) {
     console.error("❌ Save lifestyle error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });

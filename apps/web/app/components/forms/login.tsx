@@ -47,7 +47,7 @@ const Login = () => {
       toast.success("Login successful!");
       reset();
 
-      // ✅ Redirect logic for each role
+
       if (redirectTo) {
         router.replace(redirectTo);
       } else {

@@ -33,29 +33,53 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
 
     const age = calculateAge(patient.dob);
 
+    // ✅ UPDATED: Use the correct interface structure
     const foodInput: FoodAdviceInput = {
       glucose: latestVitals.glucose,
       context: (latestVitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
+      // ✅ CORRECT: Use systolic/diastolic directly instead of bloodPressure object
+      systolic: latestVitals.systolic,
+      diastolic: latestVitals.diastolic,
+      heartRate: latestVitals.heartRate,
       weight: patient.weight,
       height: patient.height,
       age,
       gender: patient.gender,
-      bloodPressure: latestVitals.bloodPressure || undefined,
       language: (patient.language as "en" | "sw") || "en",
-      lifestyle: {
-        alcohol: patient.lifestyle?.alcohol || "Unknown",
-        smoking: patient.lifestyle?.smoking || "Unknown",
-        exercise: patient.lifestyle?.exercise || "Unknown",
-        sleep: patient.lifestyle?.sleep || "Unknown",
-      },
+      // ✅ ADD: Exercise context from vitals
+      exerciseRecent: latestVitals.exerciseRecent,
+      exerciseIntensity: latestVitals.exerciseIntensity,
+      // ✅ ADD: Meal timing context for post-meal readings
+      lastMealTime: latestVitals.lastMealTime,
+      mealType: latestVitals.mealType,
+      // Lifestyle data (optional)
+      lifestyle: patient.lifestyle ? {
+        alcohol: patient.lifestyle.alcohol || "Unknown",
+        smoking: patient.lifestyle.smoking || "Unknown",
+        exercise: patient.lifestyle.exercise || "Unknown",
+        sleep: patient.lifestyle.sleep || "Unknown",
+      } : undefined,
       allergies: Array.isArray(patient.allergies)
         ? patient.allergies
         : patient.allergies
         ? [String(patient.allergies)]
         : [],
+      medicalHistory: Array.isArray(patient.medicalHistory)
+        ? patient.medicalHistory
+        : patient.medicalHistory
+        ? [String(patient.medicalHistory)]
+        : [],
     };
 
-    console.log("🍽️ Food input prepared:", JSON.stringify(foodInput, null, 2));
+    console.log("🍽️ Food input prepared:", {
+      glucose: foodInput.glucose,
+      context: foodInput.context,
+      bp: `${foodInput.systolic || 'N/A'}/${foodInput.diastolic || 'N/A'}`,
+      hr: foodInput.heartRate || 'N/A',
+      exercise: `${foodInput.exerciseRecent || 'N/A'} (${foodInput.exerciseIntensity || 'N/A'})`,
+      meal: foodInput.lastMealTime ? `${foodInput.mealType} (${foodInput.lastMealTime} ago)` : 'N/A'
+    });
+
     const advice = await aiService.generateKenyanFoodAdvice(foodInput);
 
     res.status(200).json({
@@ -70,8 +94,22 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
           gender: patient.gender,
           weight: patient.weight,
           height: patient.height,
-          bloodPressure: latestVitals.bloodPressure,
+          bloodPressure: latestVitals.systolic && latestVitals.diastolic 
+            ? `${latestVitals.systolic}/${latestVitals.diastolic}`
+            : 'Not recorded',
+          heartRate: latestVitals.heartRate || 'Not recorded',
+          exercise: latestVitals.exerciseRecent && latestVitals.exerciseIntensity
+            ? `${latestVitals.exerciseRecent} (${latestVitals.exerciseIntensity})`
+            : 'Not recorded'
         },
+        contextUsed: {
+          bloodPressure: foodInput.systolic && foodInput.diastolic ? 
+            `${foodInput.systolic}/${foodInput.diastolic}` : 'Not provided',
+          heartRate: foodInput.heartRate || 'Not provided',
+          exercise: foodInput.exerciseRecent && foodInput.exerciseIntensity ? 
+            `${foodInput.exerciseRecent} (${foodInput.exerciseIntensity})` : 'Not provided',
+          mealTiming: foodInput.lastMealTime ? `${foodInput.mealType} (${foodInput.lastMealTime} ago)` : 'Not provided'
+        }
       },
     });
   } catch (error: any) {
@@ -90,31 +128,149 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const input: FoodAdviceInput = req.body;
-
-    // Ensure defaults
-    input.context = input.context as "Fasting" | "Post-meal" | "Random" || "Random";
-    input.language = input.language as "en" | "sw" || "en";
-
-    input.lifestyle = {
-      alcohol: input.lifestyle?.alcohol || "Unknown",
-      smoking: input.lifestyle?.smoking || "Unknown",
-      exercise: input.lifestyle?.exercise || "Unknown",
-      sleep: input.lifestyle?.sleep || "Unknown",
+    // ✅ UPDATED: Use the correct input structure
+    const input: FoodAdviceInput = {
+      ...req.body,
+      context: (req.body.context as "Fasting" | "Post-meal" | "Random") || "Random",
+      language: (req.body.language as "en" | "sw") || "en",
+      // Ensure optional fields are properly set
+      systolic: req.body.systolic || undefined,
+      diastolic: req.body.diastolic || undefined,
+      heartRate: req.body.heartRate || undefined,
+      exerciseRecent: req.body.exerciseRecent || undefined,
+      exerciseIntensity: req.body.exerciseIntensity || undefined,
+      lastMealTime: req.body.lastMealTime || undefined,
+      mealType: req.body.mealType || undefined,
+      lifestyle: req.body.lifestyle ? {
+        alcohol: req.body.lifestyle.alcohol || "Unknown",
+        smoking: req.body.lifestyle.smoking || "Unknown",
+        exercise: req.body.lifestyle.exercise || "Unknown",
+        sleep: req.body.lifestyle.sleep || "Unknown",
+      } : undefined,
+      allergies: Array.isArray(req.body.allergies)
+        ? req.body.allergies
+        : req.body.allergies
+        ? [String(req.body.allergies)]
+        : [],
+      medicalHistory: Array.isArray(req.body.medicalHistory)
+        ? req.body.medicalHistory
+        : req.body.medicalHistory
+        ? [String(req.body.medicalHistory)]
+        : [],
     };
 
-    input.allergies = Array.isArray(input.allergies)
-      ? input.allergies
-      : input.allergies
-      ? [String(input.allergies)]
-      : [];
+    console.log("🤖 Generating advice for manual input:", {
+      glucose: input.glucose,
+      context: input.context,
+      bp: `${input.systolic || 'N/A'}/${input.diastolic || 'N/A'}`,
+      hr: input.heartRate || 'N/A',
+      exercise: `${input.exerciseRecent || 'N/A'} (${input.exerciseIntensity || 'N/A'})`
+    });
 
-    console.log("🤖 Generating advice for manual input:", JSON.stringify(input, null, 2));
     const advice = await aiService.generateKenyanFoodAdvice(input);
 
-    res.status(200).json({ success: true, advice });
+    res.status(200).json({ 
+      success: true, 
+      advice,
+      contextUsed: {
+        bloodPressure: input.systolic && input.diastolic ? 
+          `${input.systolic}/${input.diastolic}` : 'Not provided',
+        heartRate: input.heartRate || 'Not provided',
+        exercise: input.exerciseRecent && input.exerciseIntensity ? 
+          `${input.exerciseRecent} (${input.exerciseIntensity})` : 'Not provided',
+        mealTiming: input.lastMealTime ? `${input.mealType} (${input.lastMealTime} ago)` : 'Not provided'
+      }
+    });
   } catch (error: any) {
     console.error("❌ Error generating food advice:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error generating food advice",
+      error: error.message,
+    });
+  }
+});
+
+// ✅ NEW: GET food advice by specific vital ID
+router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const vitalId = req.params.id;
+    
+    // Fetch specific vital record
+    const vital = await Diabetes.findOne({ _id: vitalId, userId });
+    if (!vital) {
+      return res.status(404).json({ success: false, message: "Vital record not found" });
+    }
+
+    const patient = await Patient.findOne({ userId });
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+
+    const age = calculateAge(patient.dob);
+
+    const foodInput: FoodAdviceInput = {
+      glucose: vital.glucose,
+      context: (vital.context as "Fasting" | "Post-meal" | "Random") || "Random",
+      systolic: vital.systolic,
+      diastolic: vital.diastolic,
+      heartRate: vital.heartRate,
+      weight: patient.weight,
+      height: patient.height,
+      age,
+      gender: patient.gender,
+      language: (patient.language as "en" | "sw") || "en",
+      exerciseRecent: vital.exerciseRecent,
+      exerciseIntensity: vital.exerciseIntensity,
+      lastMealTime: vital.lastMealTime,
+      mealType: vital.mealType,
+      lifestyle: patient.lifestyle ? {
+        alcohol: patient.lifestyle.alcohol || "Unknown",
+        smoking: patient.lifestyle.smoking || "Unknown",
+        exercise: patient.lifestyle.exercise || "Unknown",
+        sleep: patient.lifestyle.sleep || "Unknown",
+      } : undefined,
+      allergies: Array.isArray(patient.allergies)
+        ? patient.allergies
+        : patient.allergies
+        ? [String(patient.allergies)]
+        : [],
+      medicalHistory: Array.isArray(patient.medicalHistory)
+        ? patient.medicalHistory
+        : patient.medicalHistory
+        ? [String(patient.medicalHistory)]
+        : [],
+    };
+
+    console.log(`🍽️ Food advice for vital ${vitalId}:`, {
+      glucose: foodInput.glucose,
+      context: foodInput.context,
+      bp: `${foodInput.systolic || 'N/A'}/${foodInput.diastolic || 'N/A'}`,
+      exercise: `${foodInput.exerciseRecent || 'N/A'} (${foodInput.exerciseIntensity || 'N/A'})`
+    });
+
+    const advice = await aiService.generateKenyanFoodAdvice(foodInput);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        vitalId: vital._id,
+        glucose: vital.glucose,
+        context: vital.context,
+        advice,
+        contextUsed: {
+          bloodPressure: foodInput.systolic && foodInput.diastolic ? 
+            `${foodInput.systolic}/${foodInput.diastolic}` : 'Not provided',
+          heartRate: foodInput.heartRate || 'Not provided',
+          exercise: foodInput.exerciseRecent && foodInput.exerciseIntensity ? 
+            `${foodInput.exerciseRecent} (${foodInput.exerciseIntensity})` : 'Not provided',
+          mealTiming: foodInput.lastMealTime ? `${foodInput.mealType} (${foodInput.lastMealTime} ago)` : 'Not provided'
+        }
+      },
+    });
+  } catch (error: any) {
+    console.error("❌ Error generating food advice for vital:", error);
     res.status(500).json({
       success: false,
       message: "Server error generating food advice",
