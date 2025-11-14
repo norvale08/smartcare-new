@@ -211,7 +211,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ doctorName }) => {
             <div className="flex items-center space-x-3">
               <Stethoscope className="w-8 h-8 text-blue-600" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Caretaker</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Doctor Dashboard</h1>
                 <p className="text-sm text-gray-500">Doctor Dashboard</p>
               </div>
             </div>
@@ -244,8 +244,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ doctorName }) => {
           <div className="flex items-center space-x-3">
             <Stethoscope className="w-8 h-8 text-blue-600" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Caretaker</h1>
-              <p className="text-sm text-gray-500">Doctor Dashboard</p>
+              <h1 className="text-2xl font-bold text-gray-900">Doctor Dashboard</h1>
+              {/* <p className="text-sm text-gray-500">Doctor Dashboard</p> */}
             </div>
           </div>
 

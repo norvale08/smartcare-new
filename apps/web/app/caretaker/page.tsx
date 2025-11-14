@@ -418,7 +418,7 @@ const CaretakerDashboard = () => {
             <QuickStats patients={patients} />
 
             <PatientRequests onRequestUpdate={refreshAssignedPatients} />
-            <PatientSearch onPatientAssign={refreshAssignedPatients} assignedPatients={patients.map(p => p.id)} />
+            {/* <PatientSearch onPatientAssign={refreshAssignedPatients} assignedPatients={patients.map(p => p.id)} /> */}
             
             {/* Assigned Patients Card */}
             <Card className="shadow-lg">

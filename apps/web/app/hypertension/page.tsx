@@ -112,7 +112,7 @@ function DashboardPage() {
         },
         withCredentials: true,
       });
-      setMessage('✅ Vitals saved successfully');
+      setMessage(' Vitals saved successfully');
       setSystolic('');
       setDiastolic('');
       setHeartRate('');
@@ -129,7 +129,7 @@ function DashboardPage() {
         console.error("Failed to refresh AI recommendations:", err);
       }
     } catch (error: any) {
-      setMessage(error?.response?.data?.message || '❌ Failed to save vitals');
+      setMessage(error?.response?.data?.message || ' Failed to save vitals');
       console.error(error);
     }
   };
