@@ -92,19 +92,19 @@ const DietRecommendations: React.FC<DietRecommendationsProps> = ({ dietData, loa
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-medium text-blue-800 mb-2">🌅 Breakfast</h4>
+              <h4 className="font-medium text-blue-800 mb-2">Breakfast</h4>
               <p className="text-sm text-blue-700">{dietData.breakfast}</p>
             </div>
             <div className="bg-yellow-50 p-4 rounded-lg">
-              <h4 className="font-medium text-yellow-800 mb-2">🌞 Lunch</h4>
+              <h4 className="font-medium text-yellow-800 mb-2">Lunch</h4>
               <p className="text-sm text-yellow-700">{dietData.lunch}</p>
             </div>
             <div className="bg-orange-50 p-4 rounded-lg">
-              <h4 className="font-medium text-orange-800 mb-2">🌙 Dinner</h4>
+              <h4 className="font-medium text-orange-800 mb-2">Dinner</h4>
               <p className="text-sm text-orange-700">{dietData.dinner}</p>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg">
-              <h4 className="font-medium text-purple-800 mb-2">🍎 Snacks</h4>
+              <h4 className="font-medium text-purple-800 mb-2">Snacks</h4>
               <p className="text-sm text-purple-700">{dietData.snacks}</p>
             </div>
           </div>
@@ -118,7 +118,7 @@ const DietRecommendations: React.FC<DietRecommendationsProps> = ({ dietData, loa
 
           {dietData.calorieTarget && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h4 className="font-medium text-green-800 mb-2">🎯 Daily Calorie Target</h4>
+              <h4 className="font-medium text-green-800 mb-2">Daily Calorie Target</h4>
               <p className="text-sm text-green-700">{dietData.calorieTarget} calories per day</p>
             </div>
           )}

@@ -56,7 +56,7 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
         case 'Stage 1 Hypertension':
           return [
             'Lower sodium intake significantly.',
-            'Exercise 30–60 minutes, 5 days a week.',
+            'Exercise 30-60 minutes, 5 days a week.',
             'Maintain a healthy body weight.',
             'Manage stress through relaxation or meditation.',
           ];
@@ -86,15 +86,15 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
 
     const personalized: string[] = [];
     if (status === 'alert') {
-      if (lifestyle.smoking) personalized.push('🚨 Alert: Quit smoking immediately to reduce hypertension risk.');
-      if (lifestyle.alcohol) personalized.push('🚨 Alert: Avoid alcohol today to stabilize blood pressure.');
-      if (lifestyle.caffeine > 3) personalized.push('🚨 Alert: Reduce caffeine intake below 3 cups to avoid elevating heart rate.');
-      if (lifestyle.exercise === 'none' || lifestyle.exercise === '') personalized.push('🚨 Alert: Start light exercise today, like walking, to improve circulation.');
+      if (lifestyle.smoking) personalized.push('Alert: Quit smoking immediately to reduce hypertension risk.');
+      if (lifestyle.alcohol) personalized.push('Alert: Avoid alcohol today to stabilize blood pressure.');
+      if (lifestyle.caffeine > 3) personalized.push('Alert: Reduce caffeine intake below 3 cups to avoid elevating heart rate.');
+      if (lifestyle.exercise === 'none' || lifestyle.exercise === '') personalized.push('Alert: Start light exercise today, like walking, to improve circulation.');
     } else if (status === 'stable') {
-      if (lifestyle.smoking) personalized.push('✅ Good day: Consider reducing smoking for long-term heart health.');
-      if (lifestyle.alcohol) personalized.push('✅ Stable: Limit alcohol to moderate levels.');
-      if (lifestyle.caffeine > 2) personalized.push('✅ Stable: Keep caffeine to 2 cups or less for optimal BP.');
-      if (lifestyle.exercise === 'low') personalized.push('✅ Stable: Aim to increase exercise to moderate frequency.');
+      if (lifestyle.smoking) personalized.push('Good day: Consider reducing smoking for long-term heart health.');
+      if (lifestyle.alcohol) personalized.push('Stable: Limit alcohol to moderate levels.');
+      if (lifestyle.caffeine > 2) personalized.push('Stable: Keep caffeine to 2 cups or less for optimal BP.');
+      if (lifestyle.exercise === 'low') personalized.push('Stable: Aim to increase exercise to moderate frequency.');
     }
 
     return [...baseRecs, ...personalized];
@@ -313,16 +313,16 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
                 weatherTips: ''
               };
 
-              // Parse sections based on emojis and headers
-              const keyInsightsMatch = advice.match(/💡[^🎯🌟🌤️]*/s);
-              const actionPlanMatch = advice.match(/🎯[^💡🌟🌤️]*/s);
-              const lifestyleGoalsMatch = advice.match(/🌟[^💡🎯🌤️]*/s);
-              const weatherTipsMatch = advice.match(/🌤️[^💡🎯🌟]*/s);
+              // Parse sections based on headers
+              const keyInsightsMatch = advice.match(/KEY INSIGHTS:[^]*?(?=TODAY'S ACTION PLAN:|ACTION PLAN:|LIFESTYLE GOALS:|WEATHER TIPS:|$)/s);
+              const actionPlanMatch = advice.match(/TODAY'S ACTION PLAN:[^]*?(?=LIFESTYLE GOALS:|WEATHER TIPS:|$)/s);
+              const lifestyleGoalsMatch = advice.match(/LIFESTYLE GOALS:[^]*?(?=WEATHER TIPS:|$)/s);
+              const weatherTipsMatch = advice.match(/WEATHER TIPS:[^]*?(?=$)/s);
 
-              if (keyInsightsMatch) sections.keyInsights = keyInsightsMatch[0].replace(/💡\s*(KEY INSIGHTS:|PERSONALIZED INSIGHTS:)?/i, '').trim();
-              if (actionPlanMatch) sections.actionPlan = actionPlanMatch[0].replace(/🎯\s*(TODAY'S ACTION PLAN:|ACTION PLAN:)?/i, '').trim();
-              if (lifestyleGoalsMatch) sections.lifestyleGoals = lifestyleGoalsMatch[0].replace(/🌟\s*(LIFESTYLE GOALS:|IMPROVEMENTS:)?/i, '').trim();
-              if (weatherTipsMatch) sections.weatherTips = weatherTipsMatch[0].replace(/🌤️\s*(WEATHER TIPS:|WEATHER CONSIDERATIONS:)?/i, '').trim();
+              if (keyInsightsMatch) sections.keyInsights = keyInsightsMatch[0].replace(/KEY INSIGHTS:\s*/i, '').trim();
+              if (actionPlanMatch) sections.actionPlan = actionPlanMatch[0].replace(/TODAY'S ACTION PLAN:\s*/i, '').trim();
+              if (lifestyleGoalsMatch) sections.lifestyleGoals = lifestyleGoalsMatch[0].replace(/LIFESTYLE GOALS:\s*/i, '').trim();
+              if (weatherTipsMatch) sections.weatherTips = weatherTipsMatch[0].replace(/WEATHER TIPS:\s*/i, '').trim();
 
               return sections;
             };
@@ -335,7 +335,6 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
                 {sections.keyInsights && (
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border-l-4 border-blue-500 shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="text-2xl">💡</span>
                       <h4 className="font-bold text-blue-900 text-lg">Key Insights</h4>
                     </div>
                     <p className="text-gray-800 leading-relaxed text-sm">{sections.keyInsights}</p>
@@ -346,7 +345,6 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
                 {sections.actionPlan && (
                   <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-5 rounded-xl border-l-4 border-green-500 shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="text-2xl">🎯</span>
                       <h4 className="font-bold text-green-900 text-lg">Today's Action Plan</h4>
                     </div>
                     <div className="text-gray-800 leading-relaxed text-sm whitespace-pre-line">{sections.actionPlan}</div>
@@ -357,7 +355,6 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
                 {sections.lifestyleGoals && (
                   <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-xl border-l-4 border-purple-500 shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="text-2xl">🌟</span>
                       <h4 className="font-bold text-purple-900 text-lg">Lifestyle Goals</h4>
                     </div>
                     <div className="text-gray-800 leading-relaxed text-sm whitespace-pre-line">{sections.lifestyleGoals}</div>
@@ -368,7 +365,6 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
                 {sections.weatherTips && (
                   <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-xl border-l-4 border-amber-500 shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="text-2xl">🌤️</span>
                       <h4 className="font-bold text-amber-900 text-lg">Weather Tips</h4>
                     </div>
                     <p className="text-gray-800 leading-relaxed text-sm">{sections.weatherTips}</p>
@@ -388,7 +384,6 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
               <div className="space-y-2">
                 {aiRecommendations.warnings.map((warning, index) => (
                   <div key={index} className="flex items-start gap-3 bg-white/70 p-3 rounded-lg">
-                    <span className="text-yellow-600 font-bold text-lg mt-0.5">⚠️</span>
                     <p className="text-sm text-yellow-900 flex-1 leading-relaxed">{warning}</p>
                   </div>
                 ))}
@@ -406,7 +401,6 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
               <div className="space-y-2">
                 {aiRecommendations.alerts.map((alert, index) => (
                   <div key={index} className="flex items-start gap-3 bg-white/70 p-3 rounded-lg">
-                    <span className="text-red-600 font-bold text-lg mt-0.5">🚨</span>
                     <p className="text-sm text-red-900 flex-1 leading-relaxed">{alert}</p>
                   </div>
                 ))}
