@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { ChevronLeft, ChevronRight, } from 'lucide-react'
 import Header from './components/ui/header'
 import Link from 'next/link'
-
 import Footer from './components/ui/footer'
+
 const Home = () => {
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0)
   const [isVisible, setIsVisible] = useState(false);
@@ -26,20 +26,20 @@ const Home = () => {
     {
       title: "Easy Vital Tracking",
       description: "Utilize our user-friendly interface to effortlessly log your vital signs. Whether through manual input or voice commands, tracking your health has never been simpler.",
-      image: "/assets/laptop.png",
-      alt: "Diabetes management system"
+      video: "/assets/doctorVideo2.mp4",
+      alt: "Easy vital tracking demonstration"
     },
     {
       title: "Google Maps Integration",
       description: "Quickly locate nearby healthcare providers with our integrated Google Maps feature. Find the support you need, right when you need it, ensuring you are never far from care.",
-      image: "/assets/laptop.png",
-      alt: "Diabetes management system"
+      video: "/assets/doctorVideo2.mp4",
+      alt: "Google Maps integration demonstration"
     },
     {
       title: "Timely Alerts",
       description: "Receive immediate notifications for abnormal readings and risky health patterns. Stay informed and proactive about your health with our timely alerts.",
-      image: "/assets/laptop.png",
-      alt: "Diabetes management system"
+      video: "/assets/doctorVideo2.mp4",
+      alt: "Alert system demonstration"
     }
   ]
 
@@ -61,11 +61,8 @@ const Home = () => {
     }
   ]
 
-
-
   const hasFeatures = features && features.length > 0;
   const feature = features[currentFeature]!;
-
 
   const steps = [
     { step: 1, title: "Input Vitals", desc: "Record blood pressure, glucose & heart rate manually or by voice." },
@@ -76,9 +73,22 @@ const Home = () => {
 
   return (
     <div className='bg-slate-400 min-h-screen'>
-      <Header></Header>
-      {/* Hero Section */}
-      <div className="relative bg-cover bg-center text-white p-10 h-[400px] bg-[url('/assets/laptop.png')]">
+      <Header />
+      
+      {/* Hero Section with Video Background */}
+      <div className="relative text-white p-10 h-[400px] overflow-hidden">
+        {/* Video Background */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover z-0"
+        >
+          <source src="/assets/doctorVideo.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        
         {/* Semi-transparent gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-emerald-400 opacity-60 z-0"></div>
 
@@ -89,14 +99,20 @@ const Home = () => {
           <h2 className="text-2xl font-bold mb-6">
             Welcome to the future of Chronic Disease Management
           </h2>
-          <Link href="/registration">
-            <button className="bg-emerald-400 text-black rounded-md px-3 lg:px-4 py-2 hover:bg-emerald-400 transition-colors duration-200 text-sm lg:text-base">
-              Get Started
-            </button>
-          </Link>
+          <div className="flex gap-4">
+            <Link href="/registration">
+              <button className="bg-emerald-400 text-black rounded-md px-3 lg:px-4 py-2 hover:bg-emerald-300 transition-colors duration-200 text-sm lg:text-base">
+                Get Started
+              </button>
+            </Link>
+            <Link href="/login">
+              <button className="bg-white text-blue-600 rounded-md px-3 lg:px-4 py-2 hover:bg-gray-100 transition-colors duration-200 text-sm lg:text-base font-medium">
+                Login
+              </button>
+            </Link>
+          </div>
         </div>
       </div>
-
 
       {/* Features Section */}
       <div className="p-8">
@@ -127,13 +143,19 @@ const Home = () => {
                         </p>
                       </div>
 
-                      {/* Image Section */}
+                      {/* Video Section */}
                       <div className="w-full lg:w-1/2 relative min-h-[200px] sm:min-h-[250px] lg:min-h-[300px]">
-                        <img
-                          src={feature.image}
-                          alt={feature.alt}
+                        <video
+                          src={feature.video}
                           className="w-full h-full object-cover rounded-b-md lg:rounded-r-md lg:rounded-bl-none"
-                        />
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          aria-label={feature.alt}
+                        >
+                          Your browser does not support the video tag.
+                        </video>
                       </div>
                     </div>
                   </CardContent>
@@ -155,7 +177,6 @@ const Home = () => {
         </div>
       </div>
 
-
       {/* Understanding Section */}
       <div className='py-16 px-6 md:px-12 bg-gradient-to-r from-blue-950 to-emerald-700 text-white'>
         <div className="mb-8 text-center">
@@ -173,9 +194,7 @@ const Home = () => {
               <h3 className="font-bold text-lg mb-2">{item.title}</h3>
               <p className="text-gray-600">{item.desc}</p>
             </div>
-
           ))}
-
         </div>
       </div>
 

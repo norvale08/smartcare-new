@@ -1,5 +1,19 @@
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
+"use client";
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import DoctorManagement from "./DoctorManagement";
+import { 
+  User, 
+  Stethoscope, 
+  X, 
+  Calendar,
+  Activity,
+  AlertCircle,
+  RefreshCw,
+  Plus,
+  Shield,
+  Clock
+} from "lucide-react";
 
 interface UserProfile {
   _id: string;
@@ -21,375 +35,400 @@ interface UserProfile {
   age?: number;
 }
 
+interface UserProfileHeaderProps {
+  onDoctorsToggle?: (show: boolean) => void;
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-const UserProfileHeader: React.FC = () => {
+const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }) => {
+  const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showDoctors, setShowDoctors] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getAuthToken = (): string | null => {
+  const getAuthToken = useCallback((): string | null => {
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-
-      if (token && typeof token === "string") {
-        console.log("✅ Token found");
-
-        try {
-          const tokenParts = token.split(".");
-          if (tokenParts.length === 3 && tokenParts[1]) {
-            const payload = JSON.parse(atob(tokenParts[1]));
-            const currentTime = Math.floor(Date.now() / 1000);
-
-            if (payload.exp && payload.exp < currentTime) {
-              console.log("❌ Token expired");
-              localStorage.removeItem("token");
-              sessionStorage.removeItem("token");
-              return null;
-            }
-          }
-        } catch (e) {
-          console.log("⚠️ Non-JWT token or parsing error");
-        }
-
-        return token;
+      if (typeof window !== "undefined") {
+        return localStorage.getItem("token") || sessionStorage.getItem("token");
       }
       return null;
     } catch (error) {
-      console.error("❌ Storage access error:", error);
+      console.error("Error accessing storage:", error);
       return null;
     }
-  };
+  }, []);
 
-  const calculateAge = (dob: string): number => {
-    const today = new Date();
-    const birthDate = new Date(dob);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+  const calculateAge = useCallback((dob: string): number => {
+    try {
+      const today = new Date();
+      const birthDate = new Date(dob);
+      
+      if (isNaN(birthDate.getTime())) {
+        console.warn("Invalid date of birth:", dob);
+        return 0;
+      }
+      
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      return age;
+    } catch (error) {
+      console.error("Error calculating age:", error);
+      return 0;
     }
+  }, []);
 
-    return age;
-  };
-
-  const calculateBMI = (weight: number, height: number): string => {
-    if (!weight || !height) return "N/A";
-    const bmi = weight / Math.pow(height / 100, 2);
-    return bmi.toFixed(1);
-  };
-
-  const getBMIStatus = (bmi: string): { status: string; color: string } => {
-    const bmiValue = parseFloat(bmi);
-    if (isNaN(bmiValue)) return { status: "Unknown", color: "text-gray-500" };
-
-    if (bmiValue < 18.5) return { status: "Underweight", color: "text-blue-600" };
-    if (bmiValue < 25) return { status: "Normal", color: "text-green-600" };
-    if (bmiValue < 30) return { status: "Overweight", color: "text-yellow-600" };
-    return { status: "Obese", color: "text-red-600" };
-  };
-
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     setLoading(true);
     setError(null);
-
+    
     try {
       const token = getAuthToken();
       if (!token) {
-        setError("No authentication token found. Please log in.");
+        setError("Authentication required");
         setLoading(false);
         return;
       }
 
-      console.log("🔍 Fetching profile from:", `${API_URL}/api/profile/me`);
-
       const response = await fetch(`${API_URL}/api/profile/me`, {
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
+        credentials: 'include',
       });
 
-      console.log("📡 Response status:", response.status);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch profile: ${response.status}`);
+      }
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log("📋 Profile data received:", result);
-
-        if (result.success && result.data) {
-          const profileData = result.data;
-          const age = profileData.dob ? calculateAge(profileData.dob) : undefined;
-
-          setUserProfile({
-            ...profileData,
-            age,
-          });
-          console.log("✅ Profile loaded successfully");
-        } else {
-          setError("Invalid response format from server");
-        }
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        const profileData = result.data;
+        const age = profileData.dob ? calculateAge(profileData.dob) : undefined;
+        setUserProfile({ ...profileData, age });
       } else {
-        const errorData = await response.json().catch(() => ({ message: "Server error" }));
-        console.error("❌ Error response:", errorData);
-
-        if (errorData.code === "PROFILE_NOT_FOUND") {
-          setError("Profile not found. Please complete your profile setup.");
-        } else {
-          setError(errorData.message || `Server error: ${response.status}`);
-        }
+        throw new Error("Invalid response format");
       }
     } catch (err) {
-      console.error("❌ Network error:", err);
-
-      if (err instanceof TypeError && err.message.includes("fetch")) {
-        setError("Unable to connect to server. Please check your connection.");
-      } else {
-        setError("Network error while fetching profile");
-      }
+      console.error("Error fetching profile:", err);
+      setError(err instanceof Error ? err.message : "Failed to load profile");
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthToken, calculateAge]);
+
+  const handleEscapeKey = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Escape' && showDoctors) {
+      handleShowDoctors();
+    }
+  }, [showDoctors]);
+
+  const handleBackdropClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      handleShowDoctors();
+    }
+  }, []);
 
   useEffect(() => {
     fetchUserProfile();
-  }, []);
+  }, [fetchUserProfile]);
 
+  useEffect(() => {
+    if (showDoctors) {
+      document.addEventListener('keydown', handleEscapeKey);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.removeEventListener('keydown', handleEscapeKey);
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+      document.body.style.overflow = 'unset';
+    };
+  }, [showDoctors, handleEscapeKey]);
+
+  const handleViewProfile = () => {
+    router.push("/profile?step=5");
+  };
+
+  const handleShowDoctors = () => {
+    const newShowDoctors = !showDoctors;
+    setShowDoctors(newShowDoctors);
+    if (onDoctorsToggle) {
+      onDoctorsToggle(newShowDoctors);
+    }
+  };
+
+  const handleRetry = () => {
+    fetchUserProfile();
+  };
+
+  // Loading state
   if (loading) {
     return (
-      <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
-        <div className="animate-pulse">
-          <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 bg-gray-300 rounded-full"></div>
-            <div className="space-y-2 flex-1">
-              <div className="h-6 bg-gray-300 rounded w-48"></div>
-              <div className="h-4 bg-gray-300 rounded w-32"></div>
+      <div className="bg-gradient-to-r from-blue-950/10 via-cyan-950/10 to-blue-950/5 border-b shadow-sm">
+        <div className="px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-800 to-cyan-600 rounded-full animate-pulse" />
+              <div className="flex items-center gap-6">
+                <div className="space-y-2">
+                  <div className="h-4 bg-gradient-to-r from-blue-800 to-cyan-600 rounded w-32 animate-pulse" />
+                  <div className="h-3 bg-gradient-to-r from-blue-800 to-cyan-600 rounded w-40 animate-pulse" />
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="h-20 bg-gray-300 rounded"></div>
-            <div className="h-20 bg-gray-300 rounded"></div>
-            <div className="h-20 bg-gray-300 rounded"></div>
-            <div className="h-20 bg-gray-300 rounded"></div>
+            <div className="flex gap-2">
+              <div className="h-8 bg-gradient-to-r from-blue-800 to-cyan-600 rounded w-28 animate-pulse" />
+              <div className="h-8 bg-gradient-to-r from-blue-800 to-cyan-600 rounded w-32 animate-pulse" />
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  // Error state
+  if (error && !userProfile) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-        <div className="flex items-center">
-          <div className="text-red-600 mr-3 text-2xl">⚠️</div>
-          <div className="flex-1">
-            <h3 className="text-red-800 font-semibold">Profile Error</h3>
-            <p className="text-red-700 text-sm">{error}</p>
+      <div className="bg-gradient-to-r from-blue-950/10 via-cyan-950/10 to-blue-950/5 border-b shadow-sm">
+        <div className="px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center border border-red-200">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Profile Error</h3>
+                <p className="text-xs text-gray-600 mt-1">{error}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleRetry}
+                className="bg-gradient-to-r from-cyan-600 to-blue-800 text-white px-3 py-2 rounded-lg hover:from-cyan-700 hover:to-blue-900 transition-all duration-200 font-medium shadow-sm flex items-center gap-2 text-sm"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Retry
+              </button>
+              <button
+                onClick={handleViewProfile}
+                className="bg-gradient-to-r from-blue-800 to-cyan-600 text-white px-3 py-2 rounded-lg hover:from-blue-900 hover:to-cyan-700 transition-all duration-200 font-medium shadow-sm flex items-center gap-2 text-sm"
+              >
+                <User className="w-3 h-3" />
+                Create Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // No profile state
+  if (!userProfile) {
+    return (
+      <div className="bg-gradient-to-r from-blue-950/10 via-cyan-950/10 to-blue-950/5 border-b shadow-sm">
+        <div className="px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-800 to-cyan-600 rounded-full flex items-center justify-center shadow-md">
+                <User className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">No Profile Found</h3>
+                <p className="text-xs text-gray-600 mt-1">Complete your profile to get started</p>
+              </div>
+            </div>
             <button
-              onClick={fetchUserProfile}
-              className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+              onClick={handleViewProfile}
+              className="bg-gradient-to-r from-cyan-600 to-blue-800 text-white px-4 py-2 rounded-lg hover:from-cyan-700 hover:to-blue-900 transition-all duration-200 font-medium shadow-sm hover:shadow-md transform hover:-translate-y-0.5 flex items-center gap-2 text-sm"
             >
-              Try again
+              <User className="w-3 h-3" />
+              Create Profile
             </button>
           </div>
         </div>
       </div>
     );
   }
-
-  if (!userProfile) {
-    return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-        <div className="flex items-center">
-          <div className="text-yellow-600 mr-3 text-2xl">ℹ️</div>
-          <div>
-            <h3 className="text-yellow-800 font-semibold">Profile Not Found</h3>
-            <p className="text-yellow-700 text-sm">
-              Please complete your profile to get personalized health
-              recommendations.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const bmi = calculateBMI(userProfile.weight, userProfile.height);
-  const bmiStatus = getBMIStatus(bmi);
-
   
   const healthConditions = [];
   if (userProfile.diabetes) healthConditions.push("Diabetes");
   if (userProfile.hypertension) healthConditions.push("Hypertension");
-  
+  if (userProfile.cardiovascular) healthConditions.push("Cardiovascular");
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md rounded-xl p-6 mb-6">
-      
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-6">
-        {/* Profile Picture */}
-        <div className="relative">
-          {userProfile.picture ? (
-            <img
-              src={userProfile.picture}
-              alt="Profile"
-              className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-            />
-          ) : (
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center border-4 border-white shadow-lg">
-              <span className="text-white text-3xl font-bold">
-                {userProfile.fullName.charAt(0).toUpperCase()}
+    <div className="bg-gradient-to-r from-blue-950/10 via-cyan-950/10 to-blue-950/5 border-b shadow-sm">
+      {/* Header Section */}
+      <div className="px-6 py-3">
+        <div className="flex items-center justify-between">
+          {/* Left side - User info */}
+          <div className="flex items-center gap-4">
+            {/* Profile picture */}
+            {userProfile.picture ? (
+              <img
+                src={userProfile.picture}
+                alt={`${userProfile.fullName}'s profile`}
+                className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-800 to-cyan-600 flex items-center justify-center shadow-md border-2 border-white">
+                <User className="w-5 h-5 text-white" />
+              </div>
+            )}
+
+            {/* User details */}
+            <div className="flex items-center gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  {userProfile.fullName}
+                </h3>
+                <div className="flex items-center gap-3 text-xs text-gray-700 mt-1">
+                  <div className="flex items-center gap-1 bg-blue-100 px-2 py-1 rounded-lg">
+                    <Calendar className="w-3 h-3 text-blue-800" />
+                    <span className="font-semibold text-blue-900">{userProfile.age || "N/A"}</span>
+                    <span className="text-blue-800">yrs</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-cyan-100 px-2 py-1 rounded-lg">
+                    <Activity className="w-3 h-3 text-cyan-700" />
+                    <span className="font-semibold text-cyan-800">{userProfile.weight || "N/A"}</span>
+                    <span className="text-cyan-700">kg</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-blue-100 px-2 py-1 rounded-lg">
+                    <Activity className="w-3 h-3 text-blue-800" />
+                    <span className="font-semibold text-blue-900">{userProfile.height || "N/A"}</span>
+                    <span className="text-blue-800">cm</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Health conditions */}
+              {healthConditions.length > 0 && (
+                <div className="flex gap-2">
+                  {healthConditions.map((condition) => (
+                    <span
+                      key={condition}
+                      className="px-2 py-1 bg-gradient-to-r from-red-100 to-orange-100 text-red-700 text-xs font-semibold rounded-full border border-red-200 shadow-sm flex items-center gap-1"
+                    >
+                      <Shield className="w-3 h-3" />
+                      {condition}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right side - Buttons */}
+          <div className="flex items-center gap-3">
+            {/* Doctor Management Button */}
+            <button
+              onClick={handleShowDoctors}
+              className={`px-4 py-2.5 rounded-xl transition-all duration-200 text-sm font-semibold flex items-center gap-2 shadow-lg ${
+                showDoctors 
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-800 text-white transform scale-105 shadow-xl' 
+                  : 'bg-gradient-to-r from-blue-800 to-cyan-600 text-white hover:from-blue-900 hover:to-cyan-700 hover:shadow-xl hover:transform hover:-translate-y-0.5'
+              }`}
+            >
+              <Stethoscope className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {showDoctors ? 'Managing Doctors' : 'Manage Doctors'}
               </span>
-            </div>
-          )}
-          <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-2 border-white"></div>
-        </div>
+            </button>
 
-        {/* Name and Info */}
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold text-gray-800 mb-1">
-            {userProfile.fullName}
-          </h2>
-          <p className="text-gray-600 text-sm mb-2">{userProfile.phoneNumber}</p>
-
-          {/* Health Conditions Badge */}
-          {healthConditions.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {healthConditions.map((condition) => (
-                <span
-                  key={condition}
-                  className="px-3 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"
-                >
-                  {condition}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Edit Button */}
-        <Link
-  href="/profile?step=5"
-  className="inline-block px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm border border-blue-200 font-medium text-sm"
->
-  Edit Profile
-</Link>
-
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        {/* Age */}
-        <div className="bg-white rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-3xl font-bold text-blue-600 mb-1">
-            {userProfile.age || "N/A"}
-          </div>
-          <div className="text-xs text-gray-600 font-medium uppercase tracking-wide">
-            Age (years)
-          </div>
-        </div>
-
-        {/* Weight */}
-        <div className="bg-white rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-3xl font-bold text-green-600 mb-1">
-            {userProfile.weight || "N/A"}
-          </div>
-          <div className="text-xs text-gray-600 font-medium uppercase tracking-wide">
-            Weight (kg)
-          </div>
-        </div>
-
-        {/* Height */}
-        <div className="bg-white rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-3xl font-bold text-purple-600 mb-1">
-            {userProfile.height || "N/A"}
-          </div>
-          <div className="text-xs text-gray-600 font-medium uppercase tracking-wide">
-            Height (cm)
-          </div>
-        </div>
-
-        {/* BMI */}
-        <div className="bg-white rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-          <div className={`text-3xl font-bold mb-1 ${bmiStatus.color}`}>
-            {bmi}
-          </div>
-          <div
-            className={`text-xs font-medium uppercase tracking-wide ${bmiStatus.color}`}
-          >
-            BMI ({bmiStatus.status})
+            {/* View Profile Button */}
+            <button
+              onClick={handleViewProfile}
+              className="bg-gradient-to-r from-cyan-600 to-blue-800 text-white px-4 py-2.5 rounded-xl hover:from-cyan-700 hover:to-blue-900 transition-all duration-200 font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl hover:transform hover:-translate-y-0.5 text-sm"
+            >
+              <User className="w-4 h-4" />
+              <span className="hidden sm:inline">View Profile</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Additional Details */}
-      <div className="bg-white rounded-lg p-4 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center">
-            <span className="text-gray-500 mr-2">👤</span>
-            <span className="text-gray-600 font-medium mr-2">Gender:</span>
-            <span className="text-gray-800 capitalize">
-              {userProfile.gender || "Not specified"}
-            </span>
-          </div>
-
-          {userProfile.dob && (
-            <div className="flex items-center">
-              <span className="text-gray-500 mr-2">🎂</span>
-              <span className="text-gray-600 font-medium mr-2">
-                Date of Birth:
-              </span>
-              <span className="text-gray-800">
-                {userProfile.dob
-                  ? new Date(userProfile.dob).toLocaleDateString()
-                  : "Not specified"}
-              </span>
+      {/* Enhanced Doctor Management Modal */}
+      {showDoctors && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={handleBackdropClick}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-[95vh] overflow-hidden flex flex-col transform scale-100">
+            {/* Enhanced Modal Header */}
+            <div className="flex justify-between items-center p-8 border-b border-gray-200 bg-gradient-to-r from-blue-800 via-blue-700 to-cyan-600 text-white">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <Stethoscope className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-3xl font-bold">Doctor Management</h3>
+                  <p className="text-blue-100 text-lg mt-1">
+                    Manage your healthcare providers, appointments, and medical team
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleShowDoctors}
+                className="p-3 text-white hover:bg-white hover:bg-opacity-20 rounded-xl transition-all duration-200 backdrop-blur-sm"
+                aria-label="Close doctor management"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
-          )}
-
-          <div className="flex items-center">
-            <span className="text-gray-500 mr-2">👥</span>
-            <span className="text-gray-600 font-medium mr-2">
-              Relationship:
-            </span>
-            <span className="text-gray-800 capitalize">
-              {userProfile.relationship || "Not specified"}
-            </span>
-          </div>
-
-          {userProfile.allergies && (
-            <div className="flex items-center">
-              <span className="text-gray-500 mr-2">⚠️</span>
-              <span className="text-gray-600 font-medium mr-2">Allergies:</span>
-              <span className="text-gray-800">{userProfile.allergies}</span>
+            
+            {/* Enhanced Modal Content */}
+            <div className="flex-1 overflow-y-auto p-0 bg-gradient-to-br from-blue-50 to-cyan-50">
+              <div className="p-8">
+                <DoctorManagement condition="diabetes" />
+              </div>
             </div>
-          )}
+            
+            {/* Enhanced Modal Footer */}
+            <div className="border-t border-gray-200 p-6 bg-gradient-to-r from-blue-100 to-cyan-100">
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-cyan-800 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <p>Your healthcare team is important for managing your condition</p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleShowDoctors}
+                    className="px-6 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl flex items-center gap-2"
+                  >
+                    <X className="w-4 h-4" />
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Add functionality to add new doctor
+                      console.log("Add new doctor clicked");
+                    }}
+                    className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-800 text-white rounded-xl hover:from-cyan-700 hover:to-blue-900 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add New Doctor
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-
-      {/* Health Tip Banner */}
-      {userProfile.weight &&
-        userProfile.height &&
-        !isNaN(parseFloat(bmi)) && (
-          <div className="mt-4 p-4 bg-blue-100 rounded-lg border-l-4 border-blue-500">
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold text-blue-700">
-                💡 Health Tip:{" "}
-              </span>
-              {parseFloat(bmi) < 18.5 &&
-                "Consider consulting with a nutritionist about healthy weight gain strategies."}
-              {parseFloat(bmi) >= 18.5 &&
-                parseFloat(bmi) < 25 &&
-                "Excellent! You're in a healthy weight range. Maintain your current lifestyle!"}
-              {parseFloat(bmi) >= 25 &&
-                parseFloat(bmi) < 30 &&
-                "Focus on portion control and regular physical activity to reach optimal weight."}
-              {parseFloat(bmi) >= 30 &&
-                "Consider working with a healthcare team for comprehensive weight management support."}
-            </p>
-          </div>
-        )}
+      )}
     </div>
   );
 };

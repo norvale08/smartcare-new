@@ -1,312 +1,149 @@
-import React, { useState, useEffect, useRef } from "react";
+"use client";
+import React, { useEffect, useState } from "react";
+import { Coffee, Sun, Moon, Loader2, RefreshCw, LucideIcon } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-interface Props {
-  onComplete?: () => void;
+interface MealCardProps {
+  meal: { title: string; content: string };
+  icon: LucideIcon;
+  color: string;
+  gradient: string;
+  image: string;
 }
 
-interface HistoryItem {
-  _id: string;
-  foodAdvice: string;
-  createdAt: string;
-  updatedAt: string;
+interface Advice {
+  breakfast?: string;
+  lunch?: string;
+  supper?: string; // backend uses supper
+  foods_to_avoid?: string;
+  [key: string]: string | undefined;
 }
 
-const DiabetesFoodAdvice: React.FC<Props> = ({ onComplete }) => {
-  const [foodAdvice, setFoodAdvice] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+interface ApiResponse {
+  success: boolean;
+  data: {
+    glucose: number;
+    context: string;
+    advice: Advice;
+    patient: { name: string; age: number; gender: string; weight?: number; height?: number; bloodPressure?: string };
+  } | null;
+  message?: string;
+}
+
+interface DiabeticFoodAdviceProps {
+  vitalsId?: string;
+  enabled: boolean;
+  onComplete: () => void;
+}
+
+const MealCard: React.FC<MealCardProps> = ({ meal, icon: Icon, color, gradient, image }) => (
+  <div className={`${gradient} p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}>
+    <div className="flex items-center gap-3 mb-4">
+      <div className={`${color} p-3 rounded-full bg-white bg-opacity-90`}>
+        <Icon size={28} />
+      </div>
+      <h3 className="text-xl font-bold text-gray-800">{meal.title}</h3>
+    </div>
+    <div className="bg-white rounded-xl overflow-hidden shadow-md mb-4">
+      <img src={image} alt={meal.title} className="w-full h-48 object-cover" />
+    </div>
+    <div className="bg-white bg-opacity-90 p-4 rounded-xl">
+      <p className="text-gray-700 leading-relaxed">{meal.content}</p>
+    </div>
+  </div>
+);
+
+const DiabeticFoodAdvice: React.FC<DiabeticFoodAdviceProps> = ({ vitalsId, enabled, onComplete }) => {
+  const [advice, setAdvice] = useState<Advice | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [recordId, setRecordId] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
 
-  const pollingInterval = useRef<NodeJS.Timeout | null>(null);
-  const pollAttempts = useRef(0);
-  const maxPollAttempts = 40;
-
-  const getAuthToken = () =>
-    typeof window !== "undefined"
-      ? localStorage.getItem("token") || sessionStorage.getItem("token")
-      : null;
-
-  const stopPolling = () => {
-    if (pollingInterval.current) {
-      clearInterval(pollingInterval.current);
-      pollingInterval.current = null;
-    }
-  };
-
-  const pollFoodStatus = async (id: string) => {
+  const fetchAdvice = async () => {
     try {
-      const token = getAuthToken();
-      if (!token) return;
+      setLoading(true);
+      setError(null);
 
-      const res = await fetch(`${API_URL}/api/food/recommendation/status/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return;
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/diabeticFood/latest`, { headers: { Authorization: `Bearer ${token}` } });
+      const data: ApiResponse = await response.json();
 
-      const data = await res.json();
-      if (data.success) {
-        setLastUpdated(data.lastUpdated);
-
-        if (data.isGenerating) {
-          pollAttempts.current++;
-          const dots = ".".repeat((pollAttempts.current % 3) + 1);
-          setFoodAdvice(`🍽️ Generating personalized Kenyan food recommendations${dots}`);
-          setIsGenerating(true);
-
-          if (pollAttempts.current >= maxPollAttempts) {
-            stopPolling();
-            setError("Generation is taking longer than expected. Please refresh.");
-            setIsGenerating(false);
-          }
-        } else {
-          setFoodAdvice(data.foodAdvice || "⚠️ No food recommendations available.");
-          setIsGenerating(false);
-          pollAttempts.current = 0;
-          stopPolling();
-          onComplete?.();
-          loadHistory(); // refresh history
-        }
-      }
+      if (response.ok && data?.data?.advice) setAdvice(data.data.advice);
+      else setError(data.message || "No food recommendations available");
     } catch (err) {
-      console.error("Polling error:", err);
-    }
-  };
-
-  const startPolling = (id: string) => {
-    stopPolling();
-    pollAttempts.current = 0;
-    pollingInterval.current = setInterval(() => pollFoodStatus(id), 2000);
-  };
-
-  // Load latest recommendation and history
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        const token = getAuthToken();
-        if (!token) return;
-
-        // Latest recommendation
-        const latestRes = await fetch(`${API_URL}/api/food/recommendation/latest`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (latestRes.ok) {
-          const data = await latestRes.json();
-          if (data.success && data.data) {
-            setRecordId(data.data._id);
-            setFoodAdvice(data.data.foodAdvice || null);
-            setLastUpdated(data.data.updatedAt);
-            if (data.data.isGenerating) {
-              setIsGenerating(true);
-              startPolling(data.data._id);
-            }
-          }
-        }
-
-        // History
-        await loadHistory();
-      } catch (err) {
-        console.error("Error loading initial recommendations:", err);
-      }
-    };
-
-    loadInitialData();
-    return () => stopPolling();
-  }, []);
-
-  const loadHistory = async () => {
-    try {
-      const token = getAuthToken();
-      if (!token) return;
-
-      const res = await fetch(`${API_URL}/api/food/recommendation/history`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) setHistory(data.history || []);
-    } catch (err) {
-      console.error("Failed to load history:", err);
-    }
-  };
-
-  const handleGenerate = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = getAuthToken();
-      if (!token) {
-        setError("Please log in to get food recommendations");
-        return;
-      }
-
-      const res = await fetch(`${API_URL}/api/food/recommendation`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Failed to generate recommendations");
-        return;
-      }
-
-      if (data.recordId) {
-        setRecordId(data.recordId);
-        setFoodAdvice("🍽️ Generating personalized Kenyan food recommendations...");
-        setIsGenerating(true);
-        pollAttempts.current = 0;
-        startPolling(data.recordId);
-      }
-    } catch (err) {
-      console.error("Generate error:", err);
-      setError("Failed to generate food recommendations. Please try again.");
+      console.error(err);
+      setError("AI temporarily unavailable");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRefresh = () => {
-    if (recordId && !isGenerating) {
-      setIsGenerating(true);
-      pollAttempts.current = 0;
-      setFoodAdvice("🍽️ Refreshing food recommendations...");
-      startPolling(recordId);
-    }
-  };
+  useEffect(() => {
+    fetchAdvice();
+  }, []);
+
+  const meals = [
+    { key: "breakfast" as keyof Advice, title: "Breakfast", icon: Coffee, color: "text-amber-600", gradient: "bg-gradient-to-br from-amber-100 to-orange-100", image: "/images/breakfast.jpg" },
+    { key: "lunch" as keyof Advice, title: "Lunch", icon: Sun, color: "text-green-600", gradient: "bg-gradient-to-br from-green-100 to-emerald-100", image: "/images/lunch.jpg" },
+    { key: "supper" as keyof Advice, title: "Dinner", icon: Moon, color: "text-indigo-600", gradient: "bg-gradient-to-br from-indigo-100 to-purple-100", image: "/images/dinner.jpg" }
+  ];
 
   return (
-    <div className="bg-gradient-to-br from-green-50 to-yellow-50 shadow-lg rounded-2xl p-6 space-y-4 border-2 border-green-200">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold text-gray-800 flex items-center">
-          <span className="text-3xl mr-2">🇰🇪</span>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <div className="text-lg">Kenyan Food Plan</div>
-            <div className="text-xs text-gray-600 font-normal">Personalized diabetes-friendly meals</div>
+            <h1 className="text-4xl font-bold text-gray-800 mb-3">Your Personalized Meal Plan</h1>
+            <p className="text-gray-600 text-lg">Diabetes-friendly recommendations tailored just for you</p>
           </div>
-        </h3>
-        {recordId && !isGenerating && (
-          <button
-            onClick={handleRefresh}
-            className="text-sm px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2"
-          >
-            <span>🔄</span> Refresh
+          <button onClick={fetchAdvice} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full shadow hover:bg-blue-700 transition">
+            <RefreshCw size={18} />
+            Refresh
           </button>
-        )}
-      </div>
+        </div>
 
-      {/* Generate Button */}
-      {!foodAdvice && !loading && (
-        <div className="space-y-3">
-          <div className="bg-white p-4 rounded-lg border border-green-200">
-            <p className="text-sm text-gray-700 mb-3">
-              Get a personalized meal plan with authentic Kenyan foods like:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {["Ugali", "Sukuma Wiki", "Githeri", "Omena", "Ndengu", "Managu", "Arrow Roots"].map(food => (
-                <span key={food} className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                  {food}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <button
-            onClick={handleGenerate}
-            disabled={loading}
-            className="w-full py-4 px-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:scale-[1.02]"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                Loading...
-              </span>
-            ) : (
-              <span className="flex items-center justify-center gap-2">
-                <span>🍽️</span> Generate My Kenyan Food Plan
-              </span>
+        <div className="shadow-2xl rounded-3xl bg-white bg-opacity-80 backdrop-blur-sm border border-gray-200">
+          <div className="p-8">
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="animate-spin text-blue-600 mb-4" size={48} />
+                <div className="text-gray-600 text-lg">Loading your personalized meal plan...</div>
+              </div>
             )}
-          </button>
-        </div>
-      )}
 
-      {/* Error */}
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-          <p className="text-red-700 text-sm font-medium">{error}</p>
-        </div>
-      )}
+            {error && <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-600 font-semibold text-lg">{error}</div>}
 
-      {/* Latest Recommendation */}
-      {(foodAdvice || isGenerating) && (
-        <div
-          className={`p-6 rounded-xl border-2 transition-all duration-300 ${
-            isGenerating 
-              ? "bg-blue-50 border-blue-400 animate-pulse" 
-              : "bg-white border-green-300 shadow-sm"
-          }`}
-        >
-          <div className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-            {foodAdvice}
-          </div>
+            {!loading && advice && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {meals.map(meal => advice[meal.key] && (
+                    <MealCard key={meal.key} meal={{ title: meal.title, content: advice[meal.key]! }} icon={meal.icon} color={meal.color} gradient={meal.gradient} image={meal.image} />
+                  ))}
+                </div>
 
-          {lastUpdated && !isGenerating && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-              <div className="text-xs text-gray-500">
-                📅 {new Date(lastUpdated).toLocaleDateString('en-KE', { 
-                  weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
-                  hour: '2-digit', minute: '2-digit'
-                })}
-              </div>
-              <div className="flex gap-2">
-                <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">🇰🇪 Kenyan Foods</span>
-                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">Diabetes-Friendly</span>
-              </div>
+                {advice.foods_to_avoid && (
+                  <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                    <h3 className="text-red-700 font-bold text-lg mb-2">Foods to Avoid</h3>
+                    <p className="text-red-600">{advice.foods_to_avoid}</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="mt-8 flex justify-center">
+              <button
+                onClick={onComplete}
+                disabled={!advice}
+                className={`px-8 py-3 text-lg font-semibold rounded-full transition-all duration-300 transform ${advice ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-105" : "bg-gray-300 cursor-not-allowed text-gray-500"}`}
+              >
+                Continue to Dashboard →
+              </button>
             </div>
-          )}
-        </div>
-      )}
-
-      {isGenerating && (
-        <div className="flex flex-col items-center justify-center space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="flex items-center space-x-2">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span className="text-sm font-medium text-blue-700">
-              Preparing your personalized Kenyan meal plan...
-            </span>
           </div>
-          <div className="text-xs text-gray-600 flex items-center gap-2">
-            <span>⏱️</span> This may take 10-20 seconds
-          </div>
-        </div>
-      )}
-
-      {/* History */}
-      <div className="mt-6">
-        <h4 className="font-bold mb-2">📜 Previous Recommendations</h4>
-        {history.length === 0 && <p className="text-sm text-gray-500">No previous recommendations.</p>}
-        <div className="space-y-4">
-          {history.map(rec => (
-            <div key={rec._id} className="p-4 border rounded-lg bg-gray-50">
-              <div className="text-xs text-gray-400 mb-2">
-                {new Date(rec.createdAt).toLocaleString("en-KE")}
-              </div>
-              <div className="whitespace-pre-wrap text-sm text-gray-700">
-                {rec.foodAdvice || "⚠️ Not generated yet."}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
   );
 };
 
-export default DiabetesFoodAdvice;
+export default DiabeticFoodAdvice;
