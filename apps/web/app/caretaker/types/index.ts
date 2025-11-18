@@ -22,11 +22,18 @@ export interface VitalSigns {
   patientId: string;
 }
 
+
 export interface Notification {
   id: string;
-  type: "info" | "warning" | "critical";
+  type: 'vital_alert' | 'message' | 'call' | 'system' | 'appointment' | 'hypertension_alert';
+  title: string;
   message: string;
-  timestamp: string;
   patientId?: string;
+  patientName?: string;
+  timestamp: string;
   read: boolean;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  bpCategory?: 'Stage 1' | 'Stage 2' | 'Hypertensive Crisis';
+  systolic?: number;
+  diastolic?: number;
 }

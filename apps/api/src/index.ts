@@ -38,7 +38,12 @@ import messagesRouter from './routes/messages';
 import doctorsRoutes from "./routes/doctors";
 import comprehensiveFeedbackRoutes from "./routes/comprehensiveFeedback";
 
-
+import medicationPrescriptionRoutes from './routes/medicationPrescription';
+import medicationReminderRoutes from './routes/medicationReminders';
+import patientMedicationsRoutes from './routes/patientMedications';
+import medicineRoutes from './routes/medicine';
+import appointmentRoutes from "./routes/appointments";
+import reportRoutes from "./routes/reports";
 
 
 dotenv.config();
@@ -143,6 +148,13 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/patient/vitals', patientVitalsRouter);
 app.use('/api/messages', messagesRouter);
 app.use("/api", comprehensiveFeedbackRoutes);
+
+app.use('/api/medications/prescribe', medicationPrescriptionRoutes);
+app.use('/api/medications/reminders', medicationReminderRoutes);
+app.use('/api/medications/patient', patientMedicationsRoutes);
+app.use('/api/medicine', medicineRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/reports', reportRoutes);
 
 
 // 404 handler

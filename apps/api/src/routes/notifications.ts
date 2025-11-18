@@ -4,6 +4,59 @@ import Notification from "../models/notifications";
 import { verifyToken, AuthenticatedRequest } from "../middleware/verifyToken";
 
 const router = express.Router();
+// Add this route to your notifications.ts file
+router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const {
+      type,
+      title,
+      message,
+      patientId,
+      patientName,
+      priority = 'medium',
+      metadata = {}
+    } = req.body;
+
+    // Validate required fields
+    if (!type || !title || !message) {
+      return res.status(400).json({
+        success: false,
+        message: "Type, title, and message are required"
+      });
+    }
+
+    const notification = new Notification({
+      userId,
+      type,
+      title,
+      message,
+      patientId,
+      patientName,
+      priority,
+      metadata,
+      read: false
+    });
+
+    await notification.save();
+
+    res.status(201).json({
+      success: true,
+      data: notification,
+      message: "Notification created successfully"
+    });
+  } catch (error: any) {
+    console.error("❌ Error creating notification:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to create notification" 
+    });
+  }
+});
 
 // Get all notifications for the current user
 router.get("/", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
