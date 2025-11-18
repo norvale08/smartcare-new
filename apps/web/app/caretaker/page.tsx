@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   HeartPulse, Users, Search, Phone, MessageSquare, Calendar,
-  Stethoscope, AlertTriangle, CheckCircle, Clock, Filter, Activity
+  Stethoscope, AlertTriangle, CheckCircle, Clock, Filter, Activity, Pill
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button, Input, Card, CardHeader, CardContent, CardTitle } from "@repo/ui";
@@ -15,7 +15,8 @@ import RealTimeNotifications from './components/RealTimeNotifications';
 import PatientHeader from './components/PatientHeader';
 import PatientMessages from "./components/PatientMessages";
 import QuickStats from "./components/QuickStats";
-
+import DoctorMedicationManagement from './components/DoctorMedicationManagement';
+import AppointmentsView from './components/AppointmentsView';
 interface Patient {
   id: string;
   userId?: string;
@@ -68,8 +69,9 @@ const CaretakerDashboard = () => {
   const [hasToken, setHasToken] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [activeTab, setActiveTab] = useState<'overview' | 'messages'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'messages' | 'medications' | 'appointments'>('overview');
 
+  
   // Extract role from JWT token
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -139,7 +141,7 @@ const CaretakerDashboard = () => {
 
       const data = await response.json();
       
-      console.log("🔄 ASSIGNED PATIENTS RAW DATA:", data);
+      // console.log("🔄 ASSIGNED PATIENTS RAW DATA:", data);
       
       let patientsData: Patient[] = [];
       
@@ -167,8 +169,8 @@ const CaretakerDashboard = () => {
       setPatientVitals([]);
       const token = localStorage.getItem("token");
       
-      console.log("🩺 ===== FETCHING PATIENT VITALS =====");
-      console.log("👤 Patient ID:", patientId);
+      // console.log("🩺 ===== FETCHING PATIENT VITALS =====");
+      // console.log("👤 Patient ID:", patientId);
 
       if (!token) {
         throw new Error("No authentication token found");
@@ -237,13 +239,13 @@ const CaretakerDashboard = () => {
   };
 
   const handlePatientSelect = (patient: Patient) => {
-    console.log("🔄 ===== PATIENT SELECTED =====");
-    console.log("👤 Selected Patient:", {
-      id: patient.id,
-      userId: patient.userId,
-      name: patient.fullName,
-      condition: patient.condition
-    });
+    // console.log("🔄 ===== PATIENT SELECTED =====");
+    // console.log("👤 Selected Patient:", {
+    //   id: patient.id,
+    //   userId: patient.userId,
+    //   name: patient.fullName,
+    //   condition: patient.condition
+    // });
     
     const patientIdentifier = patient.userId || patient.id;
     console.log("🔍 Using patient identifier:", patientIdentifier);
@@ -418,7 +420,6 @@ const CaretakerDashboard = () => {
             <QuickStats patients={patients} />
 
             <PatientRequests onRequestUpdate={refreshAssignedPatients} />
-            {/* <PatientSearch onPatientAssign={refreshAssignedPatients} assignedPatients={patients.map(p => p.id)} /> */}
             
             {/* Assigned Patients Card */}
             <Card className="shadow-lg">
@@ -517,6 +518,28 @@ const CaretakerDashboard = () => {
                         Patient Overview
                       </button>
                       <button
+                        onClick={() => setActiveTab('medications')}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                          activeTab === 'medications'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <Pill className="w-4 h-4 inline mr-1" />
+                        Medications
+                      </button>
+                          <button
+        onClick={() => setActiveTab('appointments')}
+        className={`py-4 px-1 border-b-2 font-medium text-sm ${
+          activeTab === 'appointments'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+        }`}
+      >
+        <Calendar className="w-4 h-4 inline mr-1" />
+        Appointments
+      </button>
+                      <button
                         onClick={handleOpenMessaging}
                         className={`py-4 px-1 border-b-2 font-medium text-sm ${
                           activeTab === 'messages'
@@ -531,12 +554,22 @@ const CaretakerDashboard = () => {
 
                   <div className="p-6">
                     {activeTab === 'overview' && (
-                      <PatientTabs
-                        patient={selectedPatient}
-                        patientVitals={patientVitals}
-                        isLoading={isLoading}
-                      />
+                      <div className="space-y-6">
+                    
+                        <PatientTabs
+                          patient={selectedPatient}
+                          patientVitals={patientVitals}
+                          isLoading={isLoading}
+                        />
+                      </div>
                     )}
+                    
+                    {activeTab === 'medications' && (
+                      <DoctorMedicationManagement patient={selectedPatient} />
+                    )}
+                     {activeTab === 'appointments' && (
+                            <AppointmentsView patient={selectedPatient} />
+                          )}
                     
                     {activeTab === 'messages' && (
                       <div>

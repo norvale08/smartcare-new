@@ -20,7 +20,7 @@ import HealthTrends from "./components/HealthTrends";
 import NearbyClinics from "./components/NearbyClinics";
 import DietRecommendations from "./components/DietRecommendations";
 import DoctorManagement from "../components/DoctorManagement";
-
+import MedicationReminders from "./components/MedicationReminders";
 
 // import { Doctor } from "@/types/doctor";
 import { Button, Input, Card, CardHeader, CardContent, CardDescription, CardTitle } from "@repo/ui";
@@ -463,6 +463,10 @@ function DashboardPage() {
 
         <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
           <MedicationAnalysisPage />
+        </div>
+
+        <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
+          <MedicationReminders />
         </div>
 
         <LifestyleAssessment

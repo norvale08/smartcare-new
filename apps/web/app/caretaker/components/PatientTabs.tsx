@@ -38,12 +38,12 @@ const PatientTabs: React.FC<PatientTabsProps> = ({
       icon: TrendingUp,
       component: <VitalsTab patientVitals={patientVitals} />,
     },
-    {
-      id: 'messages',
-      label: 'Messages',
-      icon: MessageSquare,
-      component: <MessagesTab patient={patient} />,
-    },
+    // {
+    //   id: 'messages',
+    //   label: 'Messages',
+    //   icon: MessageSquare,
+    //   component: <MessagesTab patient={patient} />,
+    // },
   ];
 
   return (
