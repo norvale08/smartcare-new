@@ -53,7 +53,6 @@ export interface FoodAdviceResponse {
   foods_to_avoid: string;
 }
 
-// ✅ ADD THIS MISSING INTERFACE
 export interface ComprehensiveFeedbackInput {
   summary: string;
   foodAdvice: FoodAdviceResponse;
@@ -64,6 +63,30 @@ export interface ComprehensiveFeedbackInput {
   hasBloodPressure: boolean;
   hasHeartRate: boolean;
   language: "en" | "sw";
+}
+
+// ✅ Helper function to categorize glucose levels
+function getGlucoseCategory(glucose: number, context: "Fasting" | "Post-meal" | "Random") {
+  if (glucose < 70) {
+    return { status: "LOW", severity: "CRITICAL", needsAction: true };
+  }
+  
+  if (context === "Fasting") {
+    return glucose <= 125
+      ? { status: "NORMAL", severity: "GOOD", needsAction: false }
+      : { status: "HIGH", severity: "WARNING", needsAction: true };
+  }
+  
+  if (context === "Post-meal") {
+    return glucose <= 180
+      ? { status: "NORMAL", severity: "GOOD", needsAction: false }
+      : { status: "HIGH", severity: "WARNING", needsAction: true };
+  }
+  
+  // Random
+  return glucose <= 200
+    ? { status: "NORMAL", severity: "GOOD", needsAction: false }
+    : { status: "HIGH", severity: "WARNING", needsAction: true };
 }
 
 export class SmartCareAI {
@@ -115,13 +138,16 @@ export class SmartCareAI {
     return true;
   }
 
-  // ✅ ADD THIS MISSING METHOD
   async generateComprehensiveFeedback(data: ComprehensiveFeedbackInput): Promise<string> {
     if (!this.checkApiKey()) {
       return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
     }
 
     try {
+      const languageInstruction = data.language === "sw"
+        ? "\n\nCRITICAL: You MUST respond ONLY in Kiswahili language. Do NOT use any English words except medical terms. Tumia Kiswahili tu!"
+        : "\n\nRespond in clear English.";
+
       const prompt = `You are a compassionate medical assistant providing comprehensive diabetes management feedback.
 
 PATIENT SUMMARY:
@@ -152,9 +178,7 @@ Combine all this information into a comprehensive, compassionate final feedback 
 5. Ends with motivational closing and next steps
 6. Is written in a warm, supportive tone
 
-Make it flow naturally as one cohesive message. Focus on what they CAN do to improve their health.
-
-${data.language === "sw" ? "Tumia lugha ya Kiswahili na uwe na huruma." : "Use English and be compassionate."}`;
+Make it flow naturally as one cohesive message. Focus on what they CAN do to improve their health.${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
@@ -176,7 +200,9 @@ ${data.language === "sw" ? "Tumia lugha ya Kiswahili na uwe na huruma." : "Use E
     }
 
     try {
-      // Build blood pressure information with context
+      // ✅ Get accurate glucose category
+      const category = getGlucoseCategory(data.glucose, data.context);
+
       let bpInfo = "No blood pressure recorded";
       if (data.systolic && data.diastolic) {
         const bpStatus = data.systolic >= 140 || data.diastolic >= 90 ? "High" :
@@ -184,7 +210,6 @@ ${data.language === "sw" ? "Tumia lugha ya Kiswahili na uwe na huruma." : "Use E
         bpInfo = `${data.systolic}/${data.diastolic} mmHg (${bpStatus})`;
       }
 
-      // Build heart rate information with context
       let hrInfo = "No heart rate recorded";
       if (data.heartRate) {
         const hrStatus = data.heartRate > 100 ? "Elevated" :
@@ -192,22 +217,30 @@ ${data.language === "sw" ? "Tumia lugha ya Kiswahili na uwe na huruma." : "Use E
         hrInfo = `${data.heartRate} bpm (${hrStatus})`;
       }
 
-      // Build exercise context
       let exerciseInfo = "";
       if (data.exerciseRecent && data.exerciseIntensity) {
         exerciseInfo = `Recent exercise: ${data.exerciseRecent} (${data.exerciseIntensity} intensity).`;
       }
 
-      // Build meal context for Post-meal readings
       let mealContext = "";
       if (data.context === "Post-meal" && data.lastMealTime && data.mealType) {
         mealContext = `Meal: ${data.mealType} (${data.lastMealTime} ago).`;
       }
 
-      const prompt = `You are a medical assistant. Provide a comprehensive 2-3 sentence summary of these vital signs, considering all available context.
+      const languageInstruction = data.language === "sw"
+        ? "\n\nCRITICAL: You MUST respond ONLY in Kiswahili language. Do NOT use English. Tumia Kiswahili pekee!"
+        : "\n\nRespond in English.";
+
+      const prompt = `You are a medical assistant. Provide a comprehensive 2-3 sentence summary of these vital signs.
+
+CRITICAL GLUCOSE THRESHOLDS (MUST USE THESE):
+- LOW: < 70 mg/dL (CRITICAL - needs immediate action)
+- FASTING Normal: ≤ 125 mg/dL, High: > 125 mg/dL
+- POST-MEAL Normal: ≤ 180 mg/dL, High: > 180 mg/dL  
+- RANDOM Normal: ≤ 200 mg/dL, High: > 200 mg/dL
 
 PATIENT DATA:
-- Glucose: ${data.glucose} mg/dL (${data.context} reading)
+- Glucose: ${data.glucose} mg/dL (${data.context} reading) - STATUS: ${category.status}
 - Blood Pressure: ${bpInfo}
 - Heart Rate: ${hrInfo}
 ${data.age ? `- Age: ${data.age}` : ""}
@@ -217,13 +250,13 @@ ${data.height ? `- Height: ${data.height} cm` : ""}
 ${exerciseInfo ? `- ${exerciseInfo}` : ""}
 ${mealContext ? `- ${mealContext}` : ""}
 
-Provide a brief medical summary that:
-1. Comments on the glucose level in context of ${data.context}
+Based on the STATUS (${category.status}), provide a brief medical summary that:
+1. Clearly states if glucose is LOW, NORMAL, or HIGH for ${data.context} context
 2. Mentions blood pressure and heart rate if available
 3. Considers exercise and meal timing if provided
 4. Gives one key observation
 
-${data.language === "sw" ? "Respond in Kiswahili." : "Respond in English."}`;
+IMPORTANT: Use the exact thresholds above to determine if glucose is normal or high.${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
@@ -245,7 +278,9 @@ ${data.language === "sw" ? "Respond in Kiswahili." : "Respond in English."}`;
     }
 
     try {
-      // Build context for blood pressure and heart rate
+      // ✅ Get accurate glucose category
+      const category = getGlucoseCategory(data.glucose, data.context);
+
       let additionalContext = "";
       if (data.systolic && data.diastolic) {
         additionalContext += ` Blood pressure: ${data.systolic}/${data.diastolic} mmHg.`;
@@ -257,16 +292,30 @@ ${data.language === "sw" ? "Respond in Kiswahili." : "Respond in English."}`;
         additionalContext += ` Recent exercise: ${data.exerciseRecent} (${data.exerciseIntensity}).`;
       }
 
-      const prompt = `Medical assistant: Analyze glucose ${data.glucose} mg/dL (${data.context} reading).${additionalContext}
+      const languageInstruction = data.language === "sw"
+        ? "\n\nIMPORTANT: Jibu kwa Kiswahili PEKEE. Usitumie Kiingereza kabisa!"
+        : "\n\nRespond in English.";
+
+      const prompt = `Medical assistant: Analyze glucose reading with EXACT clinical thresholds.
+
+CRITICAL GLUCOSE THRESHOLDS (FOLLOW THESE EXACTLY):
+- LOW (HYPOGLYCEMIA): < 70 mg/dL → Needs immediate sugar/food
+- FASTING: Normal ≤ 125 mg/dL, High > 125 mg/dL
+- POST-MEAL: Normal ≤ 180 mg/dL, High > 180 mg/dL
+- RANDOM: Normal ≤ 200 mg/dL, High > 200 mg/dL
+
+PATIENT DATA:
+Glucose: ${data.glucose} mg/dL (${data.context} reading) - CLASSIFIED AS: ${category.status}
+${additionalContext}
 Patient: Age ${data.age ?? "N/A"}, ${data.gender ?? "N/A"}, ${data.weight ?? "N/A"} kg
 
-Provide 3-4 sentence analysis covering:
-1. Glucose level assessment (normal/high/low for ${data.context})
-2. Impact of any additional vital signs provided
-3. Consider exercise context if available
-4. One key recommendation
+Provide 3-4 sentence analysis:
+1. State if glucose is ${category.status} for ${data.context} context based on thresholds above
+2. ${category.needsAction ? "Explain what action is needed" : "Confirm the reading is within normal range"}
+3. Impact of any additional vital signs provided
+4. One key personalized recommendation
 
-${data.language === "sw" ? "Jibu kwa Kiswahili." : ""}`;
+CRITICAL: Must use the exact thresholds listed above.${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
@@ -288,7 +337,9 @@ ${data.language === "sw" ? "Jibu kwa Kiswahili." : ""}`;
     }
 
     try {
-      // Build comprehensive context
+      // ✅ Get accurate glucose category
+      const category = getGlucoseCategory(data.glucose, data.context);
+
       let vitalContext = "";
       if (data.systolic && data.diastolic) {
         vitalContext += `BP: ${data.systolic}/${data.diastolic} mmHg. `;
@@ -300,20 +351,31 @@ ${data.language === "sw" ? "Jibu kwa Kiswahili." : ""}`;
         vitalContext += `Exercise: ${data.exerciseRecent} (${data.exerciseIntensity}).`;
       }
 
+      const languageInstruction = data.language === "sw"
+        ? "\n\nMUHIMU: Jibu kwa lugha ya Kiswahili TU. Usitumie Kiingereza!"
+        : "\n\nRespond in English.";
+
       const prompt = `Medical assistant for diabetes management.
 
-Patient: Age ${data.age ?? "N/A"}, ${data.gender ?? "N/A"}, ${data.weight ?? "N/A"} kg
-Glucose: ${data.glucose} mg/dL (${data.context})
+GLUCOSE THRESHOLDS (USE THESE):
+- LOW: < 70 mg/dL
+- FASTING: Normal ≤ 125, High > 125
+- POST-MEAL: Normal ≤ 180, High > 180
+- RANDOM: Normal ≤ 200, High > 200
+
+PATIENT DATA:
+Age ${data.age ?? "N/A"}, ${data.gender ?? "N/A"}, ${data.weight ?? "N/A"} kg
+Glucose: ${data.glucose} mg/dL (${data.context}) - STATUS: ${category.status}
 ${vitalContext}
 Lifestyle: Alcohol: ${data.lifestyle.alcohol ?? "N/A"}, Smoking: ${data.lifestyle.smoking ?? "N/A"}, Exercise: ${data.lifestyle.exercise ?? "N/A"}, Sleep: ${data.lifestyle.sleep ?? "N/A"}
 
 Provide 4-5 sentences:
-1. Glucose status in context of ${data.context}
+1. Glucose status (${category.status}) in context of ${data.context} using exact thresholds
 2. How lifestyle factors interact with glucose levels
 3. Impact of vital signs if provided
 4. Two key personalized recommendations
 
-${data.language === "sw" ? "Jibu kwa Kiswahili." : ""}`;
+Must follow the exact glucose thresholds listed above.${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
@@ -335,12 +397,13 @@ ${data.language === "sw" ? "Jibu kwa Kiswahili." : ""}`;
     }
 
     try {
-      // Calculate BMI
+      // ✅ Get accurate glucose category
+      const category = getGlucoseCategory(data.glucose, data.context);
+
       const bmi = data.weight && data.height 
         ? (data.weight / Math.pow(data.height / 100, 2)).toFixed(1)
         : null;
 
-      // Blood pressure assessment
       let bpStatus = "Not recorded";
       let bpContext = "";
       if (data.systolic && data.diastolic) {
@@ -349,19 +412,16 @@ ${data.language === "sw" ? "Jibu kwa Kiswahili." : ""}`;
         bpContext = ` Consider both diabetes and hypertension management.`;
       }
 
-      // Heart rate context
       let hrContext = "";
       if (data.heartRate) {
         hrContext = ` Heart rate: ${data.heartRate} bpm.`;
       }
 
-      // Exercise context for meal planning
       let exerciseContext = "";
       if (data.exerciseRecent && data.exerciseIntensity) {
         exerciseContext = ` Recent ${data.exerciseIntensity} exercise: ${data.exerciseRecent}.`;
       }
 
-      // Meal timing context
       let mealTimingContext = "";
       if (data.context === "Post-meal" && data.lastMealTime && data.mealType) {
         mealTimingContext = ` Current reading is ${data.lastMealTime} after ${data.mealType} meal.`;
@@ -375,12 +435,22 @@ ${data.language === "sw" ? "Jibu kwa Kiswahili." : ""}`;
         ? `Allergies: ${data.allergies.join(", ")}`
         : "";
 
+      const languageInstruction = data.language === "sw"
+        ? "\n\nKUMBUKA: Jibu kwa Kiswahili PEKEE. Hakuna Kiingereza!"
+        : "\n\nUse clear English.";
+
       const prompt = `You are a Kenyan nutritionist specializing in diabetes and hypertension management. 
 Use ONLY authentic Kenyan foods and meals that are affordable and easy to prepare.
 
-PATIENT PROFILE FOR MEAL PLANNING:
+CRITICAL GLUCOSE THRESHOLDS FOR MEAL PLANNING:
+- LOW (< 70): Needs quick energy foods
+- FASTING: Normal ≤ 125, High > 125
+- POST-MEAL: Normal ≤ 180, High > 180
+- RANDOM: Normal ≤ 200, High > 200
+
+PATIENT PROFILE:
 - Age: ${data.age ?? "N/A"}, Gender: ${data.gender ?? "N/A"}
-- Glucose: ${data.glucose} mg/dL (${data.context} reading)${mealTimingContext}
+- Glucose: ${data.glucose} mg/dL (${data.context}) - CLASSIFIED AS: ${category.status}${mealTimingContext}
 - Blood Pressure: ${data.systolic && data.diastolic ? `${data.systolic}/${data.diastolic} mmHg (${bpStatus})` : "Not recorded"}
 - BMI: ${bmi ?? "N/A"}
 - Weight: ${data.weight ?? "N/A"} kg, Height: ${data.height ?? "N/A"} cm
@@ -388,12 +458,13 @@ ${hrContext}${exerciseContext}
 ${lifestyleInfo}
 ${allergiesInfo}
 
-SPECIAL CONSIDERATIONS:${bpContext}
-- ${data.context === "Fasting" ? "Focus on sustained energy release foods" : 
-    data.context === "Post-meal" ? "Consider post-meal glucose control foods" : 
-    "Provide balanced nutrition for random glucose levels"}
-- ${data.exerciseIntensity === "High" ? "Include adequate protein and carbs for recovery" :
-    data.exerciseIntensity === "Moderate" ? "Balance nutrients for active lifestyle" :
+MEAL PLANNING BASED ON GLUCOSE STATUS (${category.status}):
+${category.status === "LOW" ? "- Focus on immediate energy foods with sustained release" :
+  category.status === "HIGH" ? "- Focus on low glycemic index foods, high fiber, portion control" :
+  "- Maintain balanced nutrition with moderate portions"}
+${bpContext}
+- ${data.exerciseIntensity === "vigorous" ? "Include adequate protein and carbs for recovery" :
+    data.exerciseIntensity === "moderate" ? "Balance nutrients for active lifestyle" :
     "Standard diabetic meal planning"}
 
 Create a balanced daily meal plan using ONLY these authentic Kenyan foods:
@@ -413,13 +484,13 @@ You MUST respond in VALID JSON format with this EXACT structure:
 }
 
 IMPORTANT RULES:
-- Each meal description should be 2–4 sentences.
-- Mention portions (e.g., 'half a plate', '1 kiganja', '1 bakuli').
-- Include several affordable options for each meal.
-- Use Kenyan cooking methods (boil, steam, roast on jiko, etc.).
-- Avoid foreign foods (pizza, chips, sausages, white bread, etc.).
-- Consider blood pressure status for salt and fat content.
-- ${data.language === "sw" ? "Jibu kwa Kiswahili." : "Use clear English."}`;
+- Each meal description should be 2–4 sentences
+- Mention portions (e.g., 'half a plate', '1 kiganja', '1 bakuli')
+- Include several affordable options for each meal
+- Use Kenyan cooking methods (boil, steam, roast on jiko, etc.)
+- Avoid foreign foods (pizza, chips, sausages, white bread, etc.)
+- Consider blood pressure status for salt and fat content
+- Tailor recommendations to glucose status: ${category.status}${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
@@ -435,20 +506,36 @@ IMPORTANT RULES:
 
       if (!parsedAdvice.breakfast || !parsedAdvice.lunch || !parsedAdvice.supper || !parsedAdvice.foods_to_avoid) {
         return {
-          breakfast: "Millet porridge with a boiled egg or sweet potato. Add a banana for energy.",
-          lunch: "Brown ugali with sukuma wiki and omena or ndengu. Drink water or sugar-free juice.",
-          supper: "Light githeri with steamed managu or kunde. Can include a small avocado.",
-          foods_to_avoid: "Avoid white bread, chapati, mandazi, soda, fatty meat, and deep-fried foods.",
+          breakfast: data.language === "sw" 
+            ? "Uji wa wimbi na yai la kuchemsha au viazi vitamu. Ongeza ndizi kwa nguvu."
+            : "Millet porridge with a boiled egg or sweet potato. Add a banana for energy.",
+          lunch: data.language === "sw"
+            ? "Ugali wa mahindi ngano na sukuma wiki pamoja na omena au ndengu. Kunywa maji au juice bila sukari."
+            : "Brown ugali with sukuma wiki and omena or ndengu. Drink water or sugar-free juice.",
+          supper: data.language === "sw"
+            ? "Githeri yenye managu au kunde wa kusteam. Unaweza ongeza parachichi kidogo."
+            : "Light githeri with steamed managu or kunde. Can include a small avocado.",
+          foods_to_avoid: data.language === "sw"
+            ? "Epuka mkate mweupe, chapati, mandazi, soda, nyama yenye mafuta mengi, na vyakula vilivyokaangwa."
+            : "Avoid white bread, chapati, mandazi, soda, fatty meat, and deep-fried foods.",
         };
       }
 
       return parsedAdvice as FoodAdviceResponse;
     } catch (err: any) {
       return {
-        breakfast: "Millet porridge with ripe banana or boiled egg.",
-        lunch: "Brown ugali with sukuma wiki and omena.",
-        supper: "Githeri with steamed kunde or managu.",
-        foods_to_avoid: "Avoid sugary foods, chapati, mandazi, soda, and fried items.",
+        breakfast: data.language === "sw" 
+          ? "Uji wa wimbi na ndizi au yai la kuchemsha."
+          : "Millet porridge with ripe banana or boiled egg.",
+        lunch: data.language === "sw"
+          ? "Ugali wa mahindi ngano na sukuma wiki pamoja na omena."
+          : "Brown ugali with sukuma wiki and omena.",
+        supper: data.language === "sw"
+          ? "Githeri na kunde au managu wa kusteam."
+          : "Githeri with steamed kunde or managu.",
+        foods_to_avoid: data.language === "sw"
+          ? "Epuka vyakula vyenye sukari nyingi, chapati, mandazi, soda, na vyakula vilivyokaangwa."
+          : "Avoid sugary foods, chapati, mandazi, soda, and fried items.",
       };
     }
   }
@@ -459,7 +546,9 @@ IMPORTANT RULES:
     }
 
     try {
-      // Build context for the tips
+      // ✅ Get accurate glucose category
+      const category = getGlucoseCategory(data.glucose, data.context);
+
       let additionalContext = "";
       if (data.systolic && data.diastolic) {
         additionalContext += ` BP ${data.systolic}/${data.diastolic}.`;
@@ -471,43 +560,62 @@ IMPORTANT RULES:
         additionalContext += ` Recent exercise: ${data.exerciseRecent} (${data.exerciseIntensity}).`;
       }
 
-      let status = "";
       let advice = "";
-
-      if (data.context === "Fasting") {
-        if (data.glucose < 70) {
-          status = "LOW";
-          advice = "Eat IMMEDIATELY: ripe banana, sweet potato (viazi vitamu), or sukari kidogo na maji";
-        } else if (data.glucose > 126) {
-          status = "HIGH";
-          advice = "AVOID: ugali mweupe, chapati, mandazi, soda. EAT: sukuma wiki, managu, terere na maharagwe";
-        } else {
-          status = "NORMAL";
-          advice = "MAINTAIN: githeri, ndengu, arrow roots, kunde, omena na sukuma wiki";
-        }
+      if (data.glucose < 70) {
+        advice = data.language === "sw"
+          ? "Kula SASA HIVI: ndizi mbivu, viazi vitamu, au sukari kidogo na maji"
+          : "Eat IMMEDIATELY: ripe banana, sweet potato (viazi vitamu), or sugar with water";
+      } else if (data.context === "Fasting") {
+        advice = data.glucose > 125
+          ? (data.language === "sw"
+              ? "EPUKA: ugali mweupe, chapati, mandazi, soda. KULA: sukuma wiki, managu, terere na maharagwe"
+              : "AVOID: white ugali, chapati, mandazi, soda. EAT: sukuma wiki, managu, terere and beans")
+          : (data.language === "sw"
+              ? "ENDELEA: githeri, ndengu, arrow roots, kunde, omena na sukuma wiki"
+              : "MAINTAIN: githeri, ndengu, arrow roots, kunde, omena and sukuma wiki");
       } else if (data.context === "Post-meal") {
-        if (data.glucose < 100) {
-          status = "LOW";
-          advice = "Eat snack: ndizi, papai, or handful of njugu karanga (groundnuts)";
-        } else if (data.glucose > 180) {
-          status = "HIGH";
-          advice = "Walk 15 mins. Next meal: reduce ugali, add sukuma wiki na mboga";
-        } else {
-          status = "NORMAL";
-          advice = "Good! Continue with: whole maize ugali, vegetables, and lean proteins";
-        }
+        advice = data.glucose > 180
+          ? (data.language === "sw"
+              ? "Tembea dakika 15. Mlo ujao: punguza ugali, ongeza sukuma wiki na mboga"
+              : "Walk 15 mins. Next meal: reduce ugali, add more sukuma wiki and vegetables")
+          : (data.language === "sw"
+              ? "Vizuri! Endelea na: ugali wa mahindi ngano, mboga, na protini zenye mafuta machache"
+              : "Good! Continue with: whole maize ugali, vegetables, and lean proteins");
+      } else {
+        // Random
+        advice = data.glucose > 200
+          ? (data.language === "sw"
+              ? "Punguza vyakula vya sukari. Ongeza mboga na maji mengi"
+              : "Reduce sugary foods. Increase vegetables and water intake")
+          : (data.language === "sw"
+              ? "Endelea vizuri! Kula chakula kilichochanganyika na mboga nyingi"
+              : "Doing well! Continue with balanced meals with plenty of vegetables");
       }
 
-      const prompt = `Kenyan nutritionist. Glucose ${data.glucose} mg/dL (${data.context} reading) - ${status}.${additionalContext}
+      const languageInstruction = data.language === "sw"
+        ? "\n\nMUHIMU SANA: Jibu kwa Kiswahili PEKEE. Hakuna maneno ya Kiingereza!"
+        : "\n\nRespond in English.";
+
+      const prompt = `Kenyan nutritionist. 
+
+GLUCOSE THRESHOLDS (FOLLOW EXACTLY):
+- LOW: < 70 mg/dL → Immediate action needed
+- FASTING: Normal ≤ 125, High > 125
+- POST-MEAL: Normal ≤ 180, High > 180
+- RANDOM: Normal ≤ 200, High > 200
+
+PATIENT DATA:
+Glucose ${data.glucose} mg/dL (${data.context} reading) - STATUS: ${category.status}${additionalContext}
+
+IMMEDIATE ACTION NEEDED: ${advice}
 
 Give 3-4 IMMEDIATE Kenyan food tips considering:
-${advice}
 ${data.systolic && data.diastolic ? 'Also consider blood pressure in recommendations.' : ''}
 
 Use ONLY: ugali, sukuma wiki, managu, githeri, ndengu, omena, tilapia, viazi vitamu, arrow roots, kunde, maharagwe, fruits (papai, ndizi, mapera).
 
 Mention Kenyan measurements and cooking (boil, steam, roast).
-${data.language === "sw" ? "Jibu kwa Kiswahili." : ""}`;
+Base recommendations on the STATUS: ${category.status} for ${data.context} context.${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],

@@ -33,6 +33,10 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
 
     const age = calculateAge(patient.dob);
 
+    // ✅ FIXED: Get language from vitals, not patient
+    const language = (latestVitals.language as "en" | "sw") || "en";
+    console.log(`🌐 Using language from vitals: ${language}`);
+
     // ✅ UPDATED: Use the correct interface structure
     const foodInput: FoodAdviceInput = {
       glucose: latestVitals.glucose,
@@ -45,7 +49,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
       height: patient.height,
       age,
       gender: patient.gender,
-      language: (patient.language as "en" | "sw") || "en",
+      language, // ✅ FROM VITALS!
       // ✅ ADD: Exercise context from vitals
       exerciseRecent: latestVitals.exerciseRecent,
       exerciseIntensity: latestVitals.exerciseIntensity,
@@ -74,6 +78,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
     console.log("🍽️ Food input prepared:", {
       glucose: foodInput.glucose,
       context: foodInput.context,
+      language: foodInput.language, // ✅ LOG IT
       bp: `${foodInput.systolic || 'N/A'}/${foodInput.diastolic || 'N/A'}`,
       hr: foodInput.heartRate || 'N/A',
       exercise: `${foodInput.exerciseRecent || 'N/A'} (${foodInput.exerciseIntensity || 'N/A'})`,
@@ -87,6 +92,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
       data: {
         glucose: latestVitals.glucose,
         context: latestVitals.context,
+        language, // ✅ RETURN THE LANGUAGE
         advice,
         patient: {
           name: patient.name,
@@ -103,6 +109,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
             : 'Not recorded'
         },
         contextUsed: {
+          language,
           bloodPressure: foodInput.systolic && foodInput.diastolic ? 
             `${foodInput.systolic}/${foodInput.diastolic}` : 'Not provided',
           heartRate: foodInput.heartRate || 'Not provided',
@@ -132,7 +139,7 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
     const input: FoodAdviceInput = {
       ...req.body,
       context: (req.body.context as "Fasting" | "Post-meal" | "Random") || "Random",
-      language: (req.body.language as "en" | "sw") || "en",
+      language: (req.body.language as "en" | "sw") || "en", // ✅ This one is OK since it's from request body
       // Ensure optional fields are properly set
       systolic: req.body.systolic || undefined,
       diastolic: req.body.diastolic || undefined,
@@ -162,6 +169,7 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
     console.log("🤖 Generating advice for manual input:", {
       glucose: input.glucose,
       context: input.context,
+      language: input.language, // ✅ LOG IT
       bp: `${input.systolic || 'N/A'}/${input.diastolic || 'N/A'}`,
       hr: input.heartRate || 'N/A',
       exercise: `${input.exerciseRecent || 'N/A'} (${input.exerciseIntensity || 'N/A'})`
@@ -172,7 +180,9 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
     res.status(200).json({ 
       success: true, 
       advice,
+      language: input.language, // ✅ RETURN IT
       contextUsed: {
+        language: input.language,
         bloodPressure: input.systolic && input.diastolic ? 
           `${input.systolic}/${input.diastolic}` : 'Not provided',
         heartRate: input.heartRate || 'Not provided',
@@ -210,6 +220,10 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
 
     const age = calculateAge(patient.dob);
 
+    // ✅ FIXED: Get language from vitals, not patient
+    const language = (vital.language as "en" | "sw") || "en";
+    console.log(`🌐 Using language from vital ${vitalId}: ${language}`);
+
     const foodInput: FoodAdviceInput = {
       glucose: vital.glucose,
       context: (vital.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -220,7 +234,7 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
       height: patient.height,
       age,
       gender: patient.gender,
-      language: (patient.language as "en" | "sw") || "en",
+      language, // ✅ FROM VITALS!
       exerciseRecent: vital.exerciseRecent,
       exerciseIntensity: vital.exerciseIntensity,
       lastMealTime: vital.lastMealTime,
@@ -246,6 +260,7 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
     console.log(`🍽️ Food advice for vital ${vitalId}:`, {
       glucose: foodInput.glucose,
       context: foodInput.context,
+      language: foodInput.language, // ✅ LOG IT
       bp: `${foodInput.systolic || 'N/A'}/${foodInput.diastolic || 'N/A'}`,
       exercise: `${foodInput.exerciseRecent || 'N/A'} (${foodInput.exerciseIntensity || 'N/A'})`
     });
@@ -258,8 +273,10 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
         vitalId: vital._id,
         glucose: vital.glucose,
         context: vital.context,
+        language, // ✅ RETURN IT
         advice,
         contextUsed: {
+          language,
           bloodPressure: foodInput.systolic && foodInput.diastolic ? 
             `${foodInput.systolic}/${foodInput.diastolic}` : 'Not provided',
           heartRate: foodInput.heartRate || 'Not provided',
