@@ -6,7 +6,6 @@ import { verifyToken } from "../middleware/verifyToken";
 
 const router = express.Router();
 
-// ✅ Create ONE shared instance instead of per-request
 let smartCareAI: SmartCareAI | null = null;
 
 const getAIService = () => {
@@ -38,11 +37,9 @@ const calculateAge = (dob: Date | string | undefined): number => {
   return age > 0 ? age : 0;
 };
 
-// ✅ Helper function to check if summary is valid
 const isValidSummary = (summary: string | undefined): boolean => {
   if (!summary || summary.trim() === "") return false;
   
-  // Check for error messages
   const errorIndicators = ["❌", "⚠️", "Error:", "unavailable", "failed"];
   return !errorIndicators.some(indicator => 
     summary.includes(indicator)
@@ -80,30 +77,32 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     }
 
     console.log(`📊 Vitals found - Glucose: ${vitals.glucose} mg/dL (${vitals.context})`);
+    console.log(`🌐 Language preference: ${vitals.language || 'en'}`); // ✅ Log the language
     console.log(`💓 Additional data - BP: ${vitals.systolic || 'N/A'}/${vitals.diastolic || 'N/A'}, HR: ${vitals.heartRate || 'N/A'}`);
     console.log(`🏃 Exercise: ${vitals.exerciseRecent || 'N/A'} (${vitals.exerciseIntensity || 'N/A'})`);
 
     // ✅ 2. Check if we have a VALID cached summary
-    if (isValidSummary(vitals.summary)) {
+    if (isValidSummary(vitals.aiFeedback)) {
       const age = Date.now() - new Date(vitals.updatedAt).getTime();
       const ageMinutes = Math.floor(age / 60000);
       
       console.log(`✅ Valid cached summary found (${ageMinutes} minutes old)`);
-      console.log(`📝 Summary: ${vitals.summary?.substring(0, 100)}...`);
+      console.log(`📝 Summary: ${vitals.aiFeedback?.substring(0, 100)}...`);
       console.log(`⏱️  Response time: ${Date.now() - startTime}ms`);
       console.log("=".repeat(60));
       
       return res.status(200).json({ 
         success: true,
-        aiFeedback: vitals.summary, 
+        aiFeedback: vitals.aiFeedback, 
         cached: true,
-        cacheAge: ageMinutes
+        cacheAge: ageMinutes,
+        language: vitals.language
       });
     }
 
     console.log("🔄 No valid cached summary - generating new one");
 
-    // ✅ 3. Fetch patient profile
+    // ✅ 3. Fetch patient profile (for demographics only)
     console.log(`🔍 Fetching patient profile for userId: ${userId}`);
     const patient = await Patient.findOne({ userId });
     
@@ -118,16 +117,15 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     const age = calculateAge(patient.dob);
     console.log(`👤 Patient found - Age: ${age}, Gender: ${patient.gender}`);
 
-    // ✅ 4. Prepare COMPLETE glucose data with all available context
+    // ✅ 4. Prepare COMPLETE glucose data with CORRECT language from vitals
     const glucoseData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
-      language: (patient.language as "en" | "sw") || "en",
+      language: (vitals.language as "en" | "sw") || "en", // ✅ GET LANGUAGE FROM VITALS, NOT PATIENT!
       age,
       gender: patient.gender,
       weight: patient.weight,
       height: patient.height,
-      // ✅ ADDITIONAL CONTEXT: Blood pressure, heart rate, exercise data
       systolic: vitals.systolic,
       diastolic: vitals.diastolic,
       heartRate: vitals.heartRate,
@@ -140,6 +138,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     console.log("📋 Complete glucose data prepared:", {
       glucose: glucoseData.glucose,
       context: glucoseData.context,
+      language: glucoseData.language, // ✅ LOG THE LANGUAGE BEING USED
       bp: `${glucoseData.systolic || 'N/A'}/${glucoseData.diastolic || 'N/A'}`,
       hr: glucoseData.heartRate || 'N/A',
       exercise: `${glucoseData.exerciseRecent || 'N/A'} (${glucoseData.exerciseIntensity || 'N/A'})`,
@@ -163,7 +162,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     console.log("✅ GROQ_API_KEY is configured");
 
     // ✅ 6. Generate AI summary with ALL context
-    console.log("🤖 Calling SmartCareAI.generateSummary() with complete context...");
+    console.log(`🤖 Calling SmartCareAI.generateSummary() with language: ${glucoseData.language}...`);
     const aiStartTime = Date.now();
     
     const ai = getAIService();
@@ -171,7 +170,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     
     const aiDuration = Date.now() - aiStartTime;
     console.log(`🤖 AI responded in ${aiDuration}ms`);
-    console.log(`📝 Generated feedback: ${aiFeedback?.substring(0, 150)}...`);
+    console.log(`📝 Generated feedback (${glucoseData.language}): ${aiFeedback?.substring(0, 150)}...`);
 
     // ✅ 7. Check if AI generation failed
     if (!isValidSummary(aiFeedback)) {
@@ -184,6 +183,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
         details: {
           groqConfigured: !!process.env.GROQ_API_KEY,
           vitalId,
+          language: glucoseData.language,
           glucoseData: {
             glucose: glucoseData.glucose,
             context: glucoseData.context,
@@ -197,7 +197,6 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
 
     // ✅ 8. Save to database
     console.log("💾 Saving summary to database...");
-    vitals.summary = aiFeedback;
     vitals.aiFeedback = aiFeedback;
     await vitals.save();
     console.log("✅ Summary saved successfully");
@@ -211,11 +210,13 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       success: true,
       aiFeedback, 
       cached: false,
+      language: glucoseData.language, // ✅ Return the language used
       generationTime: aiDuration,
       totalTime: totalDuration,
       contextUsed: {
         glucose: glucoseData.glucose,
         context: glucoseData.context,
+        language: glucoseData.language,
         bloodPressure: glucoseData.systolic && glucoseData.diastolic ? 
           `${glucoseData.systolic}/${glucoseData.diastolic}` : 'Not provided',
         heartRate: glucoseData.heartRate || 'Not provided',
@@ -247,7 +248,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
   }
 });
 
-// ✅ Food Advice Endpoint - Updated to use all context
+// ✅ Food Advice Endpoint - Updated to use language from vitals
 router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
@@ -258,7 +259,6 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
     const vitalId = req.params.id;
     console.log(`🍽️ Food advice request for vital: ${vitalId}`);
 
-    // Fetch vitals and patient data
     const vitals = await Diabetes.findById(vitalId);
     if (!vitals) {
       return res.status(404).json({ success: false, message: "Vitals not found" });
@@ -271,7 +271,7 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
 
     const age = calculateAge(patient.dob);
 
-    // Prepare complete data for food advice
+    // ✅ Get language from vitals
     const foodAdviceData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -282,7 +282,7 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
       height: patient.height,
       age,
       gender: patient.gender,
-      language: (patient.language as "en" | "sw") || "en",
+      language: (vitals.language as "en" | "sw") || "en", // ✅ FROM VITALS!
       exerciseRecent: vitals.exerciseRecent,
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
@@ -292,6 +292,7 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
     console.log("🍽️ Food advice data:", {
       glucose: foodAdviceData.glucose,
       context: foodAdviceData.context,
+      language: foodAdviceData.language, // ✅ LOG IT
       bp: `${foodAdviceData.systolic || 'N/A'}/${foodAdviceData.diastolic || 'N/A'}`,
       exercise: `${foodAdviceData.exerciseRecent || 'N/A'} (${foodAdviceData.exerciseIntensity || 'N/A'})`
     });
@@ -302,9 +303,11 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
     res.status(200).json({
       success: true,
       foodAdvice,
+      language: foodAdviceData.language,
       contextUsed: {
         glucose: foodAdviceData.glucose,
         context: foodAdviceData.context,
+        language: foodAdviceData.language,
         bloodPressure: foodAdviceData.systolic && foodAdviceData.diastolic ? 
           `${foodAdviceData.systolic}/${foodAdviceData.diastolic}` : 'Not provided',
         exercise: foodAdviceData.exerciseRecent && foodAdviceData.exerciseIntensity ? 
@@ -322,7 +325,6 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
   }
 });
 
-// ✅ Separate endpoint to check if summary is ready
 router.get("/summary-status/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const vitals = await Diabetes.findById(req.params.id);
@@ -334,12 +336,13 @@ router.get("/summary-status/:id", verifyToken, async (req: Request, res: Respons
       });
     }
 
-    const hasSummary = isValidSummary(vitals.summary);
+    const hasSummary = isValidSummary(vitals.aiFeedback);
 
     res.status(200).json({
       success: true,
       isGenerating: !hasSummary,
-      aiFeedback: hasSummary ? vitals.summary : null,
+      aiFeedback: hasSummary ? vitals.aiFeedback : null,
+      language: vitals.language,
       lastUpdated: vitals.updatedAt,
     });
   } catch (error: any) {
@@ -352,7 +355,6 @@ router.get("/summary-status/:id", verifyToken, async (req: Request, res: Respons
   }
 });
 
-// ✅ Force regenerate summary (bypass cache)
 router.post("/summary/:id/regenerate", verifyToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
@@ -365,8 +367,7 @@ router.post("/summary/:id/regenerate", verifyToken, async (req: Request, res: Re
       return res.status(404).json({ success: false, message: "Vitals not found" });
     }
 
-    // Clear existing summary to force regeneration
-    vitals.summary = "";
+    vitals.aiFeedback = "";
     await vitals.save();
 
     console.log("🔄 Summary cleared, triggering regeneration");

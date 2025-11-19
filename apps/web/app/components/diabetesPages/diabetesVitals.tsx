@@ -9,7 +9,7 @@ import CustomToaster from "../ui/CustomToaster";
 import VoiceInput from "../ui/VoiceInput";
 import { wordsToNumbers } from "words-to-numbers";
 import { swahiliToNumber } from "../utils/swahiliParser";
-import { Heart, Activity, Droplet, MessageSquare, CheckCircle2, Utensils, Dumbbell, Clock, Zap } from "lucide-react";
+import { Heart, Activity, Droplet, MessageSquare, CheckCircle2, Utensils, Dumbbell, Clock, Zap, Menu, X } from "lucide-react";
 
 interface Props {
   onVitalsSubmitted?: (id: string, requestAI: boolean) => void;
@@ -81,192 +81,247 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
     }
   };
 
+  const handleVoiceInput = (field: keyof diabetesType, value: string) => {
+    const normalizedValue = normalizeNumber(value);
+    if (normalizedValue !== null) {
+      setValue(field, normalizedValue.toString());
+    } else {
+      setValue(field, value);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-3 sm:p-4 md:p-6 lg:p-8">
       <CustomToaster />
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-4xl mx-auto">
 
         {/* Header */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full -mr-32 -mt-32"></div>
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 sm:w-40 sm:h-40 md:w-48 md:h-48 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full -mr-12 -mt-12 sm:-mr-20 sm:-mt-20 md:-mr-24 md:-mt-24"></div>
           <div className="relative z-10 text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl mb-4 shadow-lg transform hover:scale-105 transition-transform">
-              <Activity className="text-white" size={40} />
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-xl mb-2 sm:mb-3 shadow-md">
+              <Activity className="text-white" size={20} />
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-1 sm:mb-2">
               Health Vitals Tracker
             </h1>
-            <p className="text-gray-600 text-lg">Monitor your glucose levels and vital signs with precision</p>
+            <p className="text-xs sm:text-sm md:text-base text-gray-600 px-2">Monitor your glucose levels and vital signs with precision</p>
           </div>
         </div>
 
         {/* Success Message */}
         {submitSuccess && (
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-5 mb-6 rounded-2xl shadow-lg">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                <CheckCircle2 className="text-white" size={28} />
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-3 sm:p-4 mb-4 sm:mb-6 rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="text-white" size={16} />
               </div>
-              <div>
-                <h3 className="font-bold text-green-800 text-lg">Data Saved Successfully!</h3>
-                <p className="text-sm text-green-700">Your vitals have been securely recorded.</p>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-green-800 text-sm sm:text-base">Data Saved Successfully!</h3>
+                <p className="text-xs sm:text-sm text-green-700">Your vitals have been securely recorded.</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-5 md:space-y-6">
           
           {/* Glucose Level */}
-          <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-shadow">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <Droplet className="text-white" size={28} />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-5 md:p-6 lg:p-8 hover:shadow-xl transition-shadow">
+            <div className="flex items-center gap-3 mb-4 sm:mb-5">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                <Droplet className="text-white" size={18} />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Glucose Level</h2>
-                <p className="text-sm text-gray-500">Primary diabetes indicator</p>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">Glucose Level</h2>
+                <p className="text-xs sm:text-sm text-gray-500">Primary diabetes indicator</p>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-100">
-              <Label htmlFor="glucose" className="text-sm font-semibold text-gray-700 mb-2">
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-3 sm:p-4 md:p-5 border-2 border-blue-100">
+              <Label htmlFor="glucose" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
                 Blood Glucose (mg/dL) <span className="text-red-500">*</span>
               </Label>
-              <Input
-                type="text"
-                id="glucose"
-                placeholder="e.g., 120"
-                className="w-full border-2 border-gray-200 rounded-xl p-4 text-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                {...register("glucose", diabetesValidationRules.glucose)}
-              />
-              {formState.errors.glucose && (
-                <p className="text-red-600 text-sm mt-2 font-medium">{formState.errors.glucose.message}</p>
-              )}
               
+              {/* Updated layout for responsive voice input */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex-1">
+                  <Input
+                    type="text"
+                    id="glucose"
+                    placeholder="e.g., 120"
+                    className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 md:p-3.5 text-sm sm:text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                    {...register("glucose", diabetesValidationRules.glucose)}
+                  />
+                  {formState.errors.glucose && (
+                    <p className="text-red-600 text-xs sm:text-sm mt-1 sm:mt-2 font-medium">{formState.errors.glucose.message}</p>
+                  )}
+                </div>
+                <div className="sm:w-auto w-full">
+                  <VoiceInput
+                    onResult={(result) => handleVoiceInput("glucose", result)}
+                    size="sm"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Cardiovascular Vitals */}
-          <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-shadow">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <Heart className="text-white" size={28} />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-5 md:p-6 lg:p-8 hover:shadow-xl transition-shadow">
+            <div className="flex items-center gap-3 mb-4 sm:mb-5">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-red-500 to-pink-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                <Heart className="text-white" size={18} />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Cardiovascular Vitals</h2>
-                <p className="text-sm text-gray-500">Heart and circulation metrics</p>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">Cardiovascular Vitals</h2>
+                <p className="text-xs sm:text-sm text-gray-500">Heart and circulation metrics</p>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-2xl p-6 border-2 border-red-100 mb-4">
-              <div className="flex items-start gap-3 mb-4">
-                <Clock className="text-red-500 mt-1 flex-shrink-0" size={20} />
-                <p className="text-sm text-gray-700">
-                  <strong>Pro Tip:</strong> Regular monitoring (weekly or monthly) helps protect your heart and kidneys from diabetes complications.
+            <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-3 sm:p-4 md:p-5 border-2 border-red-100 mb-3 sm:mb-4">
+              <div className="flex items-start gap-2 mb-3 sm:mb-4">
+                <Clock className="text-red-500 mt-0.5 flex-shrink-0" size={14} />
+                <p className="text-xs sm:text-sm text-gray-700 flex-1">
+                  <strong>Pro Tip:</strong> Regular monitoring helps protect your heart and kidneys.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-3 sm:space-y-4">
+                {/* Systolic */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-2">
-                    Systolic 
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-600 mb-2">
+                    Systolic Blood Pressure
                   </label>
-                  <Input 
-                    type="number" 
-                    placeholder="120" 
-                    className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-red-500 focus:ring-2 focus:ring-red-200 transition-all"
-                    {...register("systolic", diabetesValidationRules.systolic)} 
-                  />
-                  {formState.errors.systolic && (
-                    <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.systolic.message}</p>
-                  )}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex-1">
+                      <Input 
+                        type="number" 
+                        placeholder="120" 
+                        className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-red-500 focus:ring-2 focus:ring-red-200 transition-all"
+                        {...register("systolic", diabetesValidationRules.systolic)} 
+                      />
+                      {formState.errors.systolic && (
+                        <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.systolic.message}</p>
+                      )}
+                    </div>
+                    <div className="sm:w-auto w-full">
+                      <VoiceInput
+                        onResult={(result) => handleVoiceInput("systolic", result)}
+                        size="sm"
+                      />
+                    </div>
+                  </div>
                 </div>
+
+                {/* Diastolic */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-2">
-                    Diastolic 
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-600 mb-2">
+                    Diastolic Blood Pressure
                   </label>
-                  <Input 
-                    type="number" 
-                    placeholder="80" 
-                    className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-red-500 focus:ring-2 focus:ring-red-200 transition-all"
-                    {...register("diastolic", diabetesValidationRules.diastolic)} 
-                  />
-                  {formState.errors.diastolic && (
-                    <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.diastolic.message}</p>
-                  )}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex-1">
+                      <Input 
+                        type="number" 
+                        placeholder="80" 
+                        className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-red-500 focus:ring-2 focus:ring-red-200 transition-all"
+                        {...register("diastolic", diabetesValidationRules.diastolic)} 
+                      />
+                      {formState.errors.diastolic && (
+                        <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.diastolic.message}</p>
+                      )}
+                    </div>
+                    <div className="sm:w-auto w-full">
+                      <VoiceInput
+                        onResult={(result) => handleVoiceInput("diastolic", result)}
+                        size="sm"
+                      />
+                    </div>
+                  </div>
                 </div>
+
+                {/* Heart Rate */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-2">
-                    Heart Rate (bpm) 
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-600 mb-2">
+                    Heart Rate (bpm)
                   </label>
-                  <Input 
-                    type="number" 
-                    placeholder="72" 
-                    className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-red-500 focus:ring-2 focus:ring-red-200 transition-all"
-                    {...register("heartRate", diabetesValidationRules.heartRate)} 
-                  />
-                  {formState.errors.heartRate && (
-                    <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.heartRate.message}</p>
-                  )}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex-1">
+                      <Input 
+                        type="number" 
+                        placeholder="72" 
+                        className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-red-500 focus:ring-2 focus:ring-red-200 transition-all"
+                        {...register("heartRate", diabetesValidationRules.heartRate)} 
+                      />
+                      {formState.errors.heartRate && (
+                        <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.heartRate.message}</p>
+                      )}
+                    </div>
+                    <div className="sm:w-auto w-full">
+                      <VoiceInput
+                        onResult={(result) => handleVoiceInput("heartRate", result)}
+                        size="sm"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Measurement Context */}
-          <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-shadow">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <Clock className="text-white" size={28} />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-5 md:p-6 lg:p-8 hover:shadow-xl transition-shadow">
+            <div className="flex items-center gap-3 mb-4 sm:mb-5">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                <Clock className="text-white" size={18} />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Measurement Context</h2>
-                <p className="text-sm text-gray-500">When did you measure?</p>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">Measurement Context</h2>
+                <p className="text-xs sm:text-sm text-gray-500">When did you measure?</p>
               </div>
             </div>
 
-            <Label htmlFor="context" className="text-sm font-semibold text-gray-700 mb-2">
+            <Label htmlFor="context" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
               Measurement Context <span className="text-red-500">*</span>
             </Label>
             <select
               id="context"
               {...register("context", diabetesValidationRules.context)}
-              className="w-full border-2 border-gray-200 rounded-xl p-4 text-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+              className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 md:p-3.5 text-sm sm:text-base focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
             >
               <option value="">Select measurement context</option>
-              <option value="Fasting"> Fasting (8+ hours without food)</option>
+              <option value="Fasting">Fasting (8+ hours without food)</option>
               <option value="Post-meal">Post-Meal (after eating)</option>
               <option value="Random">Random (any time)</option>
             </select>
             {formState.errors.context && (
-              <p className="text-red-600 text-sm mt-2 font-medium">{formState.errors.context.message}</p>
+              <p className="text-red-600 text-xs sm:text-sm mt-1 sm:mt-2 font-medium">{formState.errors.context.message}</p>
             )}
           </div>
 
           {/* Meal Details - Conditional */}
           {contextValue === "Post-meal" && (
-            <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-shadow">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Utensils className="text-white" size={28} />
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-5 md:p-6 lg:p-8 hover:shadow-xl transition-shadow animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center gap-3 mb-4 sm:mb-5">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                  <Utensils className="text-white" size={18} />
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800">Meal Details</h2>
-                  <p className="text-sm text-gray-500">What did you eat?</p>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">Meal Details</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">What did you eat?</p>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-2xl p-6 border-2 border-orange-100">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl p-3 sm:p-4 md:p-5 border-2 border-orange-100">
+                <div className="space-y-3 sm:space-y-4">
                   <div>
-                    <Label htmlFor="lastMealTime" className="text-sm font-semibold text-gray-700 mb-2">
+                    <Label htmlFor="lastMealTime" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
                       When did you last eat? <span className="text-red-500">*</span>
                     </Label>
                     <select 
                       {...register("lastMealTime", diabetesValidationRules.lastMealTime)} 
-                      className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
+                      className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
                     >
                       <option value="">Select time</option>
                       <option value="2_hours">Last 2 hours</option>
@@ -280,12 +335,12 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                   </div>
 
                   <div>
-                    <Label htmlFor="mealType" className="text-sm font-semibold text-gray-700 mb-2">
+                    <Label htmlFor="mealType" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
                       Meal Type <span className="text-red-500">*</span>
                     </Label>
                     <select 
                       {...register("mealType", diabetesValidationRules.mealType)} 
-                      className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
+                      className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
                     >
                       <option value="">Select type</option>
                       <option value="carbohydrates">🍞 Carbohydrates</option>
@@ -304,33 +359,33 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
           )}
 
           {/* Exercise Section */}
-          <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-shadow">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <Dumbbell className="text-white" size={28} />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-5 md:p-6 lg:p-8 hover:shadow-xl transition-shadow">
+            <div className="flex items-center gap-3 mb-4 sm:mb-5">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                <Dumbbell className="text-white" size={18} />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Physical Activity</h2>
-                <p className="text-sm text-gray-500">Recent exercise impacts glucose</p>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">Physical Activity</h2>
+                <p className="text-xs sm:text-sm text-gray-500">Recent exercise impacts glucose</p>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border-2 border-green-100">
-              <div className="flex items-start gap-3 mb-4">
-                <Zap className="text-green-500 mt-1 flex-shrink-0" size={20} />
-                <p className="text-sm text-gray-700">
-                  <strong>Important:</strong> Exercise can lower blood glucose levels for up to 24 hours after activity. Track it for accurate readings!
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-3 sm:p-4 md:p-5 border-2 border-green-100">
+              <div className="flex items-start gap-2 mb-3 sm:mb-4">
+                <Zap className="text-green-500 mt-0.5 flex-shrink-0" size={14} />
+                <p className="text-xs sm:text-sm text-gray-700 flex-1">
+                  <strong>Important:</strong> Exercise can lower blood glucose levels.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <Label htmlFor="exerciseRecent" className="text-sm font-semibold text-gray-700 mb-2">
+                  <Label htmlFor="exerciseRecent" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
                     Recent Exercise? <span className="text-red-500">*</span>
                   </Label>
                   <select
                     {...register("exerciseRecent", diabetesValidationRules.exerciseRecent)}
-                    className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                    className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
                   >
                     <option value="">Select option</option>
                     <option value="none">❌ No recent exercise</option>
@@ -344,12 +399,12 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                 </div>
 
                 <div>
-                  <Label htmlFor="exerciseIntensity" className="text-sm font-semibold text-gray-700 mb-2">
+                  <Label htmlFor="exerciseIntensity" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
                     Exercise Intensity <span className="text-red-500">*</span>
                   </Label>
                   <select
                     {...register("exerciseIntensity", diabetesValidationRules.exerciseIntensity)}
-                    className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                    className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
                   >
                     <option value="">Select intensity</option>
                     <option value="light">🚶 Light (Walking, stretching)</option>
@@ -365,34 +420,32 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
           </div>
 
           {/* Settings */}
-          <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-shadow">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-5 md:p-6 lg:p-8 hover:shadow-xl transition-shadow">
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <Label htmlFor="language" className="text-sm font-semibold text-gray-700 mb-2">
+                <Label htmlFor="language" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
                   Language Preference
                 </Label>
                 <select 
                   {...register("language")} 
-                  className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                  className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
                 >
                   <option value="en">🇬🇧 English</option>
                   <option value="sw">🇰🇪 Kiswahili</option>
                 </select>
               </div>
 
-              <div className="flex items-center">
-                <label className="flex items-center gap-3 cursor-pointer bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border-2 border-purple-100 hover:border-purple-300 transition-all w-full">
-                  <input
-                    type="checkbox"
-                    checked={requestAI}
-                    onChange={(e) => setRequestAI(e.target.checked)}
-                    className="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
-                  />
-                  <span className="text-sm font-semibold text-gray-700">
-                    🤖 Get AI Health Insights
-                  </span>
-                </label>
-              </div>
+              <label className="flex items-center gap-2 sm:gap-3 cursor-pointer bg-gradient-to-r from-purple-50 to-pink-50 p-3 sm:p-4 rounded-lg border-2 border-purple-100 hover:border-purple-300 transition-all">
+                <input
+                  type="checkbox"
+                  checked={requestAI}
+                  onChange={(e) => setRequestAI(e.target.checked)}
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                />
+                <span className="text-xs sm:text-sm font-semibold text-gray-700">
+                 Get AI Health Insights
+                </span>
+              </label>
             </div>
           </div>
 
@@ -400,12 +453,12 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
           <Button 
             type="submit" 
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white text-lg font-bold py-5 rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white text-sm sm:text-base md:text-lg font-bold py-3 sm:py-4 md:py-5 rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {isLoading ? (
-              <span className="flex items-center justify-center gap-3">
-                <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                Submitting...
+              <span className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Submitting...</span>
               </span>
             ) : (
               "Submit Vitals"
@@ -414,12 +467,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
         </form>
 
         {/* Footer */}
-        <div className="text-center mt-8 bg-white rounded-2xl p-6 shadow-lg">
-          <p className="text-gray-600 flex items-center justify-center gap-2">
-            <span className="text-2xl">🔒</span>
-            <span className="font-semibold">Your health data is private and secure</span>
-          </p>
-        </div>
+        
       </div>
     </div>
   );
