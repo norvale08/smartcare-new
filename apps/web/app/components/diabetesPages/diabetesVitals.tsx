@@ -443,7 +443,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                   className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
                 />
                 <span className="text-xs sm:text-sm font-semibold text-gray-700">
-                  🤖 Get AI Health Insights
+                 Get AI Health Insights
                 </span>
               </label>
             </div>
@@ -467,12 +467,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
         </form>
 
         {/* Footer */}
-        <div className="text-center mt-6 sm:mt-8 bg-white rounded-xl p-4 sm:p-6 shadow-md">
-          <p className="text-gray-600 flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base">
-            <span className="text-lg sm:text-xl md:text-2xl">🔒</span>
-            <span className="font-semibold">Your health data is private and secure</span>
-          </p>
-        </div>
+        
       </div>
     </div>
   );

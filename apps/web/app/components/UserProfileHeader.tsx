@@ -83,6 +83,8 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
     }
   }, []);
 
+  // Commented out BMI calculation function
+  /*
   const calculateBMI = useCallback((weight: number, height: number): string => {
     if (!weight || !height || height === 0) return "N/A";
     
@@ -90,6 +92,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
     const bmi = weight / (heightInMeters * heightInMeters);
     return bmi.toFixed(1);
   }, []);
+  */
 
   const fetchUserProfile = useCallback(async () => {
     setLoading(true);
@@ -183,7 +186,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
   // Loading state
   if (loading) {
     return (
-      <div className="w-full bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-gray-200 shadow-sm">
+      <div className="w-full bg-cyan-100 border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 sm:space-x-4">
@@ -206,7 +209,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
   // Error state
   if (error && !userProfile) {
     return (
-      <div className="w-full bg-gradient-to-r from-red-50 to-orange-50 border-b border-red-200 shadow-sm">
+      <div className="w-full bg-cyan-100 border-b border-red-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 sm:space-x-4">
@@ -236,7 +239,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
   // No profile state
   if (!userProfile) {
     return (
-      <div className="w-full bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-gray-200 shadow-sm">
+      <div className="w-full bg-cyan-100 border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 sm:space-x-4">
@@ -266,10 +269,11 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
   if (userProfile.hypertension) healthConditions.push("Hypertension");
   if (userProfile.cardiovascular) healthConditions.push("Cardiovascular");
 
-  const bmi = calculateBMI(userProfile.weight, userProfile.height);
+  // BMI calculation commented out - variable no longer used
+  // const bmi = calculateBMI(userProfile.weight, userProfile.height);
 
   return (
-    <div className="w-full bg-white border-b border-gray-200 shadow-sm">
+    <div className="w-full bg-gray-100 border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           {/* User Info Section */}
@@ -279,7 +283,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
               <img
                 src={userProfile.picture}
                 alt={`${userProfile.fullName}'s profile`}
-                className="w-10 h-10 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-blue-50 shadow-sm sm:shadow-md"
+                className="w-10 h-10 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-cyan-50 shadow-sm sm:shadow-md"
               />
             ) : (
               <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-sm sm:shadow-md">
@@ -297,11 +301,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
                       {userProfile.fullName}
                     </h1>
                     
-                    {/* BMI badge - shown next to name on mobile */}
-                    <div className="flex items-center space-x-1 bg-green-50 px-2 py-1 rounded-full">
-                      <Activity className="w-3 h-3 text-green-600" />
-                      <span className="font-medium text-green-700 text-xs">BMI: {bmi}</span>
-                    </div>
+                    {/* BMI badge removed from mobile view */}
                   </div>
                 </div>
                 
@@ -345,7 +345,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
                   )}
                 </div>
                 
-                {/* Detailed stats - Only on desktop */}
+                {/* Detailed stats - Only on desktop - BMI removed */}
                 <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
                   <div className="flex items-center space-x-1 bg-blue-50 px-3 py-1 rounded-full">
                     <Calendar className="w-4 h-4 text-blue-600" />
@@ -359,10 +359,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
                     <Activity className="w-4 h-4 text-blue-600" />
                     <span className="font-medium text-blue-700">{userProfile.height || "N/A"} cm</span>
                   </div>
-                  <div className="flex items-center space-x-1 bg-green-50 px-3 py-1 rounded-full">
-                    <Activity className="w-4 h-4 text-green-600" />
-                    <span className="font-medium text-green-700">BMI: {bmi}</span>
-                  </div>
+                  {/* BMI stat removed */}
                 </div>
               </div>
             </div>
@@ -396,7 +393,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
           </div>
         </div>
 
-        {/* Minimal mobile stats - Only show on mobile */}
+        {/* Minimal mobile stats - Only show on mobile - BMI removed */}
         <div className="sm:hidden flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1 text-xs text-gray-600">

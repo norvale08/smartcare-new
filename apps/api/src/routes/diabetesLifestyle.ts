@@ -84,6 +84,10 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
     });
     await lifestyleDoc.save();
 
+    // ✅ FIXED: Get language from vitals, not patient
+    const language = (latestVitals?.language as "en" | "sw") || "en";
+    console.log(`🌐 Using language from vitals: ${language}`);
+
     // Prepare COMPLETE input for AI with all available context
     const aiInput: LifestyleAIInput & {
       systolic?: number;
@@ -94,7 +98,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
     } = {
       glucose,
       context,
-      language: patient.language as "en" | "sw" || "en",
+      language, // ✅ FROM VITALS!
       age,
       gender: patient.gender,
       weight: patient.weight,
@@ -111,6 +115,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
     console.log("🤖 Generating lifestyle feedback with context:", {
       glucose: aiInput.glucose,
       context: aiInput.context,
+      language: aiInput.language, // ✅ LOG IT
       bp: `${aiInput.systolic || 'N/A'}/${aiInput.diastolic || 'N/A'}`,
       hr: aiInput.heartRate || 'N/A',
       exercise: `${aiInput.exerciseRecent || 'N/A'} (${aiInput.exerciseIntensity || 'N/A'})`
@@ -126,9 +131,11 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       success: true, 
       recordId: lifestyleDoc._id, 
       aiAdvice,
+      language, // ✅ RETURN THE LANGUAGE USED
       contextUsed: {
         glucose,
         context,
+        language,
         bloodPressure: aiInput.systolic && aiInput.diastolic ? 
           `${aiInput.systolic}/${aiInput.diastolic}` : 'Not provided',
         heartRate: aiInput.heartRate || 'Not provided',
