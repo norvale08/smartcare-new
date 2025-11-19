@@ -32,7 +32,7 @@ const ConditionsSelectionStep = () => {
   const conditions = [
     { id: "diabetes", label: "Diabetes" },
     { id: "hypertension", label: "Hypertension" },
-    { id: "cardiovascular", label: "Cardiovascular Disease" },
+    // { id: "cardiovascular", label: "Cardiovascular Disease" },
   ];
 
   return (
