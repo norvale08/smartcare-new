@@ -5,6 +5,7 @@ import CurrentVitals from '../CurrentVitals';
 import HealthTrends from '../HealthTrends';
 import QuickActions from '../QuickActions';
 import AlertsPanel from '../AlertsPanel';
+import VitalsPredictions from '../VitalsPredictions';
 
 interface OverviewTabProps {
   patient: Patient;
@@ -27,6 +28,16 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         />
         
         <HealthTrends patientVitals={patientVitals} />
+        
+        <VitalsPredictions 
+          patient={{
+            id: patient.id,
+            fullName: patient.fullName,
+            age: patient.age,
+            condition: patient.condition
+          }}
+          vitals={patientVitals}
+        />
         
         <QuickActions patient={patient} />
         
