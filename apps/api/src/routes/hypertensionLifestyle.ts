@@ -16,8 +16,7 @@ router.get(
       }
 
       const userId = req.user.userId; // ✅ strongly typed now
-      const weather = req.query.weather as string;
-      const result = await generateLifestyleRecommendations(userId, weather);
+      const result = await generateLifestyleRecommendations(userId);
 
       res.json(result);
     } catch (err) {

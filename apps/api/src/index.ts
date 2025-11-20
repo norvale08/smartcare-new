@@ -1,9 +1,10 @@
-//index.ts
+
 import express from 'express';
-import cors from 'cors'; 
+import cors from 'cors';
 import session from "express-session";
 import { connectMongoDB } from './lib/mongodb';
 import dotenv from "dotenv";
+
 import authRoute from "./routes/auth";
 import loginRoute from './routes/login';
 import emergencyRoutes from './routes/emergency';
@@ -12,17 +13,39 @@ import userStatusRouter from './routes/userStatus';
 import profileRoutes from './routes/patient';
 import uploadRoute from "./routes/upload";
 import hypertensionRoutes from './routes/hypertensionVitals';
-//import medicationsRoutes from './routes/medications';
-import doctorsRoutes from "./routes/doctors"
+import medicationsRoutes from './routes/medications';
 import diabetesAiRoutes from "./routes/diabetesAi";
 import LifestyleRoutes from "./routes/diabetesLifestyle";
 import hypertensionLifestyle from "./routes/hypertensionLifestyle";
+import hypertensionDiet from "./routes/hypertensionDiet";
 import adminPatientsRoutes from "./routes/admin";
 import doctorDashboardRouter from './routes/doctorDashboardRoutes';
 import logoutRoute from "./routes/logout";
 import verifyTokenRoute from "./routes/verifyTokenRoute";
-import locationUpdateRoute from "./routes/locationUpdate";
-import foodRecommendationRouter from "./routes/diabetesFood"
+import diabetesFoodRoute from "./routes/diabetesFood"
+import adminRoutes from './routes/admin';
+import doctorMeRoutes from './routes/doctorme';
+import patientSearchRoute from "./routes/patientSearch";
+import assignPatientRoute from "./routes/assignPatients";
+import patientRequestsRoute from './routes/patientRequests';
+import doctorSearchRoutes from "./routes/doctorSearch";
+import doctorRequestsRoute from "./routes/doctorsRequests";
+import doctorManagementRoutes from "./routes/doctorManagement";
+import patientAssignedDoctorsRoute from "./routes/patientAssignedDoctors";
+import notificationsRouter from './routes/notifications';
+import patientVitalsRouter from './routes/patientVitals';
+import messagesRouter from './routes/messages';
+import doctorsRoutes from "./routes/doctors";
+import comprehensiveFeedbackRoutes from "./routes/comprehensiveFeedback";
+
+import medicationPrescriptionRoutes from './routes/medicationPrescription';
+import medicationReminderRoutes from './routes/medicationReminders';
+import patientMedicationsRoutes from './routes/patientMedications';
+import medicineRoutes from './routes/medicine';
+import appointmentRoutes from "./routes/appointments";
+import reportRoutes from "./routes/reports";
+
+
 dotenv.config();
 
 const app = express();
@@ -92,7 +115,7 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// ✅ ROUTES
+// ✅ ROUTES - Keep your existing routes as they are
 app.use('/api/auth', authRoute);
 app.use('/api/login', loginRoute);
 app.use('/api/emergency', emergencyRoutes);
@@ -100,25 +123,45 @@ app.use('/api/profile', profileRoutes);
 app.use("/api/upload", uploadRoute);
 app.use('/api/diabetesVitals', diabetesRoutes);
 app.use('/api/hypertensionVitals', hypertensionRoutes);
-//app.use('/api/medications', medicationsRoutes);
+app.use('/api/medications', medicationsRoutes);
 app.use('/api/userStatus', userStatusRouter);
-app.use ('/api/doctors',doctorsRoutes);
+app.use("/api/doctors/search", doctorSearchRoutes);
+app.use('/api/doctors', doctorsRoutes); // ✅ This now uses the modular doctor routes
 app.use("/api/diabetesAi", diabetesAiRoutes);
 app.use('/api/lifestyle', LifestyleRoutes);
 app.use('/api/hypertension/lifestyle', hypertensionLifestyle);
+app.use('/api/hypertension/diet', hypertensionDiet);
 app.use("/api/admin/patients", adminPatientsRoutes);
 app.use('/api/doctorDashboard', doctorDashboardRouter);
 app.use('/api/logout', logoutRoute);
 app.use("/api/verifyToken", verifyTokenRoute);
-app.use("/api/location", locationUpdateRoute);
+app.use( "/api/diabeticFood", diabetesFoodRoute);
+app.use('/api/admin',adminRoutes);
+app.use('/api/doctor/me', doctorMeRoutes);
+app.use("/api/patients/search", patientSearchRoute);
+app.use("/api/doctor/assign-patient", assignPatientRoute);
+app.use('/api/patient', patientRequestsRoute);
+app.use('/api/doctor', doctorRequestsRoute);
+app.use('/api/doctor/manage', doctorManagementRoutes);
+app.use('/api/patient', patientAssignedDoctorsRoute);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/patient/vitals', patientVitalsRouter);
+app.use('/api/messages', messagesRouter);
+app.use("/api", comprehensiveFeedbackRoutes);
 
-app.use("/api/food/recommendation",foodRecommendationRouter );
+app.use('/api/medications/prescribe', medicationPrescriptionRoutes);
+app.use('/api/medications/reminders', medicationReminderRoutes);
+app.use('/api/medications/patient', patientMedicationsRoutes);
+app.use('/api/medicine', medicineRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/reports', reportRoutes);
+
 
 // 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     message: 'Route not found',
-    path: req.originalUrl 
+    path: req.originalUrl
   });
 });
 
