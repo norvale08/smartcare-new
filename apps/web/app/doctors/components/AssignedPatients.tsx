@@ -1,4 +1,5 @@
 // AssignedPatients.tsx
+"use client";
 import { Patient } from "@/types/doctor";
 import { getRiskColor } from "../lib/utils";
 
@@ -75,15 +76,15 @@ const PatientsTable: React.FC<PatientsTableProps> = ({ patients, setSelectedPati
                             return null;
 
                           const vital = vitalIcons[key];
-                        return (
-                          <div key={key} className="flex items-center space-x-2">
-                            {vital.icon}
-                            <span>
-                              {value} {vital.unit ?? ""}
-                            </span>
-                          </div>
-                        );
-                      })}
+                          return (
+                            <div key={key} className="flex items-center space-x-2">
+                              {vital.icon}
+                              <span>
+                                {value} {vital.unit ?? ""}
+                              </span>
+                            </div>
+                          );
+                        })}
                   </div>
                 </td>
                 <td className="px-6 py-4">

@@ -1,4 +1,6 @@
 // Header.tsx
+"use client";
+
 import {
   Stethoscope,
   Search,
@@ -94,10 +96,10 @@ const Header: React.FC<HeaderProps> = ({ searchTerm, setSearchTerm, alerts, pati
           <button className="p-2 hover:bg-gray-100 rounded-lg">
             <Settings className="w-5 h-5" />
           </button>
-          <button 
-          onClick={handleLogout}
-          className="p-2 hover:bg-gray-100 rounded-lg"
-          title="Logout">
+          <button
+            onClick={handleLogout}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+            title="Logout">
             <LogOut className="w-5 h-5" />
           </button>
         </div>
