@@ -1,40 +1,270 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Input, Label, Button } from "@repo/ui";
 import { useForm, useWatch } from "react-hook-form";
 import { diabetesValidationRules } from "@repo/ui";
 import { diabetesType } from "@/types/diabetes";
 import { toast } from "react-hot-toast";
 import CustomToaster from "../ui/CustomToaster";
-import VoiceInput from "../ui/VoiceInput";
 import { wordsToNumbers } from "words-to-numbers";
 import { swahiliToNumber } from "../utils/swahiliParser";
-import { Heart, Activity, Droplet, MessageSquare, CheckCircle2, Utensils, Dumbbell, Clock, Zap, Menu, X } from "lucide-react";
+import { Heart, Activity, Droplet, CheckCircle2, Utensils, Dumbbell, Clock, Zap } from "lucide-react";
+
+// Groq voice components
+import GroqVoiceInput from "../ui/GroqVoiceInput";
+import GroqTextToSpeech from "../ui/GroqTextToSpeech";
 
 interface Props {
   onVitalsSubmitted?: (id: string, requestAI: boolean) => void;
+  initialLanguage?: "en" | "sw";
 }
 
+// Language content
+const languageContent = {
+  en: {
+    title: "Health Vitals Tracker",
+    subtitle: "Monitor your glucose levels and vital signs with precision",
+    successTitle: "Data Saved Successfully!",
+    successMessage: "Your vitals have been securely recorded.",
+    
+    // Glucose Section
+    glucoseTitle: "Glucose Level",
+    glucoseSubtitle: "Primary diabetes indicator",
+    glucoseLabel: "Blood Glucose (mg/dL)",
+    glucosePlaceholder: "e.g., 120",
+    
+    // Cardiovascular Section
+    cardioTitle: "Cardiovascular Vitals",
+    cardioSubtitle: "Heart and circulation metrics",
+    proTip: "Pro Tip: Regular monitoring helps protect your heart and kidneys.",
+    systolicLabel: "Systolic Blood Pressure",
+    systolicPlaceholder: "120",
+    diastolicLabel: "Diastolic Blood Pressure",
+    diastolicPlaceholder: "80",
+    heartRateLabel: "Heart Rate (bpm)",
+    heartRatePlaceholder: "72",
+    
+    // Context Section
+    contextTitle: "Measurement Context",
+    contextSubtitle: "When did you measure?",
+    contextLabel: "Measurement Context",
+    contextOptions: {
+      empty: "Select measurement context",
+      fasting: "Fasting (8+ hours without food)",
+      postMeal: "Post-Meal (after eating)",
+      random: "Random (any time)"
+    },
+    
+    // Meal Details Section
+    mealTitle: "Meal Details",
+    mealSubtitle: "What did you eat?",
+    lastMealLabel: "When did you last eat?",
+    mealTypeLabel: "Meal Type",
+    lastMealOptions: {
+      empty: "Select time",
+      twoHours: "Last 2 hours",
+      fourHours: "Last 4 hours",
+      sixHours: "Last 6 hours",
+      moreThanSix: "More than 6 hours"
+    },
+    mealTypeOptions: {
+      empty: "Select type",
+      carbs: "🍞 Carbohydrates",
+      sugaryDrinks: "🥤 Sugary Drinks",
+      proteins: "🍖 Proteins",
+      vegetables: "🥗 Vegetables",
+      mixed: "🍱 Mixed Meal"
+    },
+    
+    // Exercise Section
+    exerciseTitle: "Physical Activity",
+    exerciseSubtitle: "Recent exercise impacts glucose",
+    exerciseImportant: "Important: Exercise can lower blood glucose levels.",
+    exerciseRecentLabel: "Recent Exercise?",
+    exerciseIntensityLabel: "Exercise Intensity",
+    exerciseOptions: {
+      empty: "Select option",
+      none: "❌ No recent exercise",
+      within2Hours: "⏱️ Within last 2 hours",
+      twoToSixHours: "🕐 2-6 hours ago",
+      sixTo24Hours: "📅 6-24 hours ago"
+    },
+    intensityOptions: {
+      empty: "Select intensity",
+      light: "🚶 Light (Walking, stretching)",
+      moderate: "🚴 Moderate (Brisk walk, cycling)",
+      vigorous: "🏃 Vigorous (Running, sports)"
+    },
+    
+    // Settings
+    aiInsights: "Get AI Health Insights",
+    
+    // Submit Button
+    submitting: "Submitting...",
+    submit: "Submit Vitals",
+    
+    // Voice Messages
+    glucoseSet: "Glucose level is set to",
+    glucoseNotSet: "Glucose level is not set",
+    systolicSet: "Systolic blood pressure is set to",
+    systolicNotSet: "Systolic blood pressure is not set",
+    diastolicSet: "Diastolic blood pressure is set to",
+    diastolicNotSet: "Diastolic blood pressure is not set",
+    heartRateSet: "Heart rate is set to",
+    heartRateNotSet: "Heart rate is not set",
+    
+    // Voice Input Messages
+    voiceSuccess: "Set to:",
+    voiceError: "Please speak a number value"
+  },
+  sw: {
+    title: "Kifaa cha Kufuatilia Viwango vya Afya",
+    subtitle: "Fuatilia viwango vya sukari damu na ishara muhimu za kiafya kwa usahihi",
+    successTitle: "Data Imehifadhiwa Kikamilifu!",
+    successMessage: "Viwango vyako vya kiafya vimeandikwa kwa usalama.",
+    
+    // Glucose Section
+    glucoseTitle: "Kiwango cha Sukari Damu",
+    glucoseSubtitle: "Kionyeshi kikuu cha kisukari",
+    glucoseLabel: "Sukari Damu (mg/dL)",
+    glucosePlaceholder: "mfano, 120",
+    
+    // Cardiovascular Section
+    cardioTitle: "Viwango vya Mfumo wa Moyo na Mishipa",
+    cardioSubtitle: "Vipimo vya moyo na mzunguko wa damu",
+    proTip: "Ushauri: Ufuatiliaji wa mara kwa mara husaidia kulinda moyo na figo zako.",
+    systolicLabel: "Shinikizo la Damu la Sistolic",
+    systolicPlaceholder: "120",
+    diastolicLabel: "Shinikizo la Damu la Diastolic",
+    diastolicPlaceholder: "80",
+    heartRateLabel: "Kiwango cha Mapigo ya Moyo (bpm)",
+    heartRatePlaceholder: "72",
+    
+    // Context Section
+    contextTitle: "Muktadha wa Kipimo",
+    contextSubtitle: "Ulipima lini?",
+    contextLabel: "Muktadha wa Kipimo",
+    contextOptions: {
+      empty: "Chagua muktadha wa kipimo",
+      fasting: "Kifunga (saa 8+ bila chakula)",
+      postMeal: "Baada ya chakula",
+      random: "Ovyo ovyo (wakati wowote)"
+    },
+    
+    // Meal Details Section
+    mealTitle: "Maelezo ya Chakula",
+    mealSubtitle: "Ulikula nini?",
+    lastMealLabel: "Ulimaliza kula lini?",
+    mealTypeLabel: "Aina ya Chakula",
+    lastMealOptions: {
+      empty: "Chagua muda",
+      twoHours: "Masha 2 zilizopita",
+      fourHours: "Masha 4 zilizopita",
+      sixHours: "Masha 6 zilizopita",
+      moreThanSix: "Zaidi ya masaa 6"
+    },
+    mealTypeOptions: {
+      empty: "Chagua aina",
+      carbs: "🍞 Wanga",
+      sugaryDrinks: "🥤 Vinywaji vilivyo na sukari",
+      proteins: "🍖 Protini",
+      vegetables: "🥗 Mboga mboga",
+      mixed: "🍱 Chakula mchanganyiko"
+    },
+    
+    // Exercise Section
+    exerciseTitle: "Shughuli za Mwili",
+    exerciseSubtitle: "Mazoezi ya hivi karibuni yanaathiri sukari damu",
+    exerciseImportant: "Muhimu: Mazoezi yanaweza kupunguza kiwango cha sukari damu.",
+    exerciseRecentLabel: "Mazoezi ya Hivi Karibuni?",
+    exerciseIntensityLabel: "Ukali wa Mazoezi",
+    exerciseOptions: {
+      empty: "Chagua chaguo",
+      none: "❌ Hakuna mazoezi ya hivi karibuni",
+      within2Hours: "⏱️ Ndani ya masaa 2 yaliyopita",
+      twoToSixHours: "🕐 Masha 2-6 yaliyopita",
+      sixTo24Hours: "📅 Masha 6-24 yaliyopita"
+    },
+    intensityOptions: {
+      empty: "Chagua ukali",
+      light: "🚶 Mwepesi (Kutembea, kunyoosha)",
+      moderate: "🚴 Wastani (Kutembea kwa kasi, baiskeli)",
+      vigorous: "🏃 Mizito (Kukimbia, michezo)"
+    },
+    
+    // Settings
+    aiInsights: "Pata Uchambuzi wa Afya kutoka kwa AI",
+    
+    // Submit Button
+    submitting: "Inatumwa...",
+    submit: "Wasilisha Viwango vya Kiafya",
+    
+    // Voice Messages
+    glucoseSet: "Kiwango cha sukari kimewekwa",
+    glucoseNotSet: "Kiwango cha sukari haijawekwa",
+    systolicSet: "Shinikizo la damu la systolic limewekwa",
+    systolicNotSet: "Shinikizo la damu la systolic haijawekwa",
+    diastolicSet: "Shinikizo la damu la diastolic limewekwa",
+    diastolicNotSet: "Shinikizo la damu la diastolic haijawekwa",
+    heartRateSet: "Kiwango cha mapigo ya moyo kimewekwa",
+    heartRateNotSet: "Kiwango cha mapigo ya moyo haijawekwa",
+    
+    // Voice Input Messages
+    voiceSuccess: "Imewekwa:",
+    voiceError: "Tafadhali sema nambari tu"
+  }
+};
+
+// Enhanced number validation function
 function normalizeNumber(text: string): number | null {
-  text = text.toLowerCase().trim();
-  if (!isNaN(Number(text))) return Number(text);
-  const eng = wordsToNumbers(text);
-  if (typeof eng === "number" && !isNaN(eng)) return eng;
-  const swa = swahiliToNumber(text);
-  if (swa !== null) return swa;
+  const cleanedText = text.toLowerCase()
+    .replace(/[^\w\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  console.log("Cleaned text:", cleanedText);
+  
+  const directNumber = Number(cleanedText.replace(/[^\d]/g, ''));
+  if (!isNaN(directNumber) && directNumber > 0) return directNumber;
+  
+  const eng = wordsToNumbers(cleanedText);
+  if (typeof eng === "number" && !isNaN(eng) && eng > 0) {
+    console.log("Converted from English:", eng);
+    return eng;
+  }
+  
+  const swa = swahiliToNumber(cleanedText);
+  if (swa !== null && swa > 0) {
+    console.log("Converted from Swahili:", swa);
+    return swa;
+  }
+  
+  console.log("No valid number found in:", text);
   return null;
 }
 
-const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
+const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguage = "en" }) => {
   const { register, handleSubmit, formState, reset, setValue, control } =
-    useForm<diabetesType>();
+    useForm<diabetesType>({
+      defaultValues: {
+        language: initialLanguage
+      }
+    });
   const [isLoading, setIsLoading] = useState(false);
   const [requestAI, setRequestAI] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const contextValue = useWatch({ control, name: "context" });
+  const languageValue = useWatch({ control, name: "language" }) as "en" | "sw" || initialLanguage;
+
+  const currentLanguage = languageContent[languageValue];
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+  // Sync the form language when initialLanguage changes
+  useEffect(() => {
+    setValue("language", initialLanguage);
+  }, [initialLanguage, setValue]);
 
   const handleFormSubmit = async (data: diabetesType) => {
     setIsLoading(true);
@@ -42,7 +272,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
 
     const token = localStorage.getItem("token");
     if (!token) {
-      toast.error("You must be logged in");
+      toast.error(languageValue === "sw" ? "Lazima uwe umeingia kwenye mfumo" : "You must be logged in");
       setIsLoading(false);
       return;
     }
@@ -67,7 +297,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Failed to add vitals");
 
-      toast.success("Data saved successfully");
+      toast.success(languageValue === "sw" ? "Data imehifadhiwa kikamilifu" : "Data saved successfully");
       setSubmitSuccess(true);
       reset();
       setRequestAI(false);
@@ -75,19 +305,42 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
 
       if (onVitalsSubmitted) onVitalsSubmitted(result.id, requestAI);
     } catch (error: any) {
-      toast.error(error.message || "An error occurred");
+      toast.error(error.message || (languageValue === "sw" ? "Hitilafu imetokea" : "An error occurred"));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleVoiceInput = (field: keyof diabetesType, value: string) => {
+    console.log("Voice input received:", value);
     const normalizedValue = normalizeNumber(value);
-    if (normalizedValue !== null) {
+    
+    if (normalizedValue !== null && normalizedValue > 0) {
       setValue(field, normalizedValue.toString());
+      
+      const successMessage = `${currentLanguage.voiceSuccess} ${normalizedValue}`;
+      toast.success(successMessage);
     } else {
-      setValue(field, value);
+      toast.error(currentLanguage.voiceError);
     }
+  };
+
+  const getFieldValue = (fieldName: keyof diabetesType): string => {
+    return control._formValues[fieldName] || '';
+  };
+
+  // Fixed getVoiceMessage function
+  const getVoiceMessage = (field: keyof diabetesType, value: string): string => {
+    if (field === 'glucose') {
+      return value ? `${currentLanguage.glucoseSet} ${value}` : currentLanguage.glucoseNotSet;
+    } else if (field === 'systolic') {
+      return value ? `${currentLanguage.systolicSet} ${value}` : currentLanguage.systolicNotSet;
+    } else if (field === 'diastolic') {
+      return value ? `${currentLanguage.diastolicSet} ${value}` : currentLanguage.diastolicNotSet;
+    } else if (field === 'heartRate') {
+      return value ? `${currentLanguage.heartRateSet} ${value}` : currentLanguage.heartRateNotSet;
+    }
+    return value ? `${value}` : '';
   };
 
   return (
@@ -103,9 +356,9 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
               <Activity className="text-white" size={20} />
             </div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-1 sm:mb-2">
-              Health Vitals Tracker
+              {currentLanguage.title}
             </h1>
-            <p className="text-xs sm:text-sm md:text-base text-gray-600 px-2">Monitor your glucose levels and vital signs with precision</p>
+            <p className="text-xs sm:text-sm md:text-base text-gray-600 px-2">{currentLanguage.subtitle}</p>
           </div>
         </div>
 
@@ -117,8 +370,8 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                 <CheckCircle2 className="text-white" size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-green-800 text-sm sm:text-base">Data Saved Successfully!</h3>
-                <p className="text-xs sm:text-sm text-green-700">Your vitals have been securely recorded.</p>
+                <h3 className="font-bold text-green-800 text-sm sm:text-base">{currentLanguage.successTitle}</h3>
+                <p className="text-xs sm:text-sm text-green-700">{currentLanguage.successMessage}</p>
               </div>
             </div>
           </div>
@@ -134,23 +387,22 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                 <Droplet className="text-white" size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">Glucose Level</h2>
-                <p className="text-xs sm:text-sm text-gray-500">Primary diabetes indicator</p>
+                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">{currentLanguage.glucoseTitle}</h2>
+                <p className="text-xs sm:text-sm text-gray-500">{currentLanguage.glucoseSubtitle}</p>
               </div>
             </div>
 
             <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-3 sm:p-4 md:p-5 border-2 border-blue-100">
               <Label htmlFor="glucose" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
-                Blood Glucose (mg/dL) <span className="text-red-500">*</span>
+                {currentLanguage.glucoseLabel} <span className="text-red-500">*</span>
               </Label>
               
-              {/* Updated layout for responsive voice input */}
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="flex-1">
                   <Input
                     type="text"
                     id="glucose"
-                    placeholder="e.g., 120"
+                    placeholder={currentLanguage.glucosePlaceholder}
                     className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 md:p-3.5 text-sm sm:text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
                     {...register("glucose", diabetesValidationRules.glucose)}
                   />
@@ -158,9 +410,15 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                     <p className="text-red-600 text-xs sm:text-sm mt-1 sm:mt-2 font-medium">{formState.errors.glucose.message}</p>
                   )}
                 </div>
-                <div className="sm:w-auto w-full">
-                  <VoiceInput
+                <div className="sm:w-auto w-full flex gap-2">
+                  <GroqVoiceInput
                     onResult={(result) => handleVoiceInput("glucose", result)}
+                    language={languageValue}
+                    size="sm"
+                  />
+                  <GroqTextToSpeech
+                    text={getVoiceMessage("glucose", getFieldValue("glucose"))}
+                    voice={languageValue === "sw" ? "nova" : "alloy"}
                     size="sm"
                   />
                 </div>
@@ -175,8 +433,8 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                 <Heart className="text-white" size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">Cardiovascular Vitals</h2>
-                <p className="text-xs sm:text-sm text-gray-500">Heart and circulation metrics</p>
+                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">{currentLanguage.cardioTitle}</h2>
+                <p className="text-xs sm:text-sm text-gray-500">{currentLanguage.cardioSubtitle}</p>
               </div>
             </div>
 
@@ -184,7 +442,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
               <div className="flex items-start gap-2 mb-3 sm:mb-4">
                 <Clock className="text-red-500 mt-0.5 flex-shrink-0" size={14} />
                 <p className="text-xs sm:text-sm text-gray-700 flex-1">
-                  <strong>Pro Tip:</strong> Regular monitoring helps protect your heart and kidneys.
+                  {currentLanguage.proTip}
                 </p>
               </div>
 
@@ -192,13 +450,13 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                 {/* Systolic */}
                 <div>
                   <label className="block text-xs sm:text-sm font-semibold text-gray-600 mb-2">
-                    Systolic Blood Pressure
+                    {currentLanguage.systolicLabel}
                   </label>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <div className="flex-1">
                       <Input 
                         type="number" 
-                        placeholder="120" 
+                        placeholder={currentLanguage.systolicPlaceholder}
                         className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-red-500 focus:ring-2 focus:ring-red-200 transition-all"
                         {...register("systolic", diabetesValidationRules.systolic)} 
                       />
@@ -206,9 +464,15 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                         <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.systolic.message}</p>
                       )}
                     </div>
-                    <div className="sm:w-auto w-full">
-                      <VoiceInput
+                    <div className="sm:w-auto w-full flex gap-2">
+                      <GroqVoiceInput
                         onResult={(result) => handleVoiceInput("systolic", result)}
+                        language={languageValue}
+                        size="sm"
+                      />
+                      <GroqTextToSpeech
+                        text={getVoiceMessage("systolic", getFieldValue("systolic"))}
+                        voice={languageValue === "sw" ? "nova" : "alloy"}
                         size="sm"
                       />
                     </div>
@@ -218,13 +482,13 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                 {/* Diastolic */}
                 <div>
                   <label className="block text-xs sm:text-sm font-semibold text-gray-600 mb-2">
-                    Diastolic Blood Pressure
+                    {currentLanguage.diastolicLabel}
                   </label>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <div className="flex-1">
                       <Input 
                         type="number" 
-                        placeholder="80" 
+                        placeholder={currentLanguage.diastolicPlaceholder}
                         className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-red-500 focus:ring-2 focus:ring-red-200 transition-all"
                         {...register("diastolic", diabetesValidationRules.diastolic)} 
                       />
@@ -232,9 +496,15 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                         <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.diastolic.message}</p>
                       )}
                     </div>
-                    <div className="sm:w-auto w-full">
-                      <VoiceInput
+                    <div className="sm:w-auto w-full flex gap-2">
+                      <GroqVoiceInput
                         onResult={(result) => handleVoiceInput("diastolic", result)}
+                        language={languageValue}
+                        size="sm"
+                      />
+                      <GroqTextToSpeech
+                        text={getVoiceMessage("diastolic", getFieldValue("diastolic"))}
+                        voice={languageValue === "sw" ? "nova" : "alloy"}
                         size="sm"
                       />
                     </div>
@@ -244,13 +514,13 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                 {/* Heart Rate */}
                 <div>
                   <label className="block text-xs sm:text-sm font-semibold text-gray-600 mb-2">
-                    Heart Rate (bpm)
+                    {currentLanguage.heartRateLabel}
                   </label>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <div className="flex-1">
                       <Input 
                         type="number" 
-                        placeholder="72" 
+                        placeholder={currentLanguage.heartRatePlaceholder}
                         className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-red-500 focus:ring-2 focus:ring-red-200 transition-all"
                         {...register("heartRate", diabetesValidationRules.heartRate)} 
                       />
@@ -258,9 +528,15 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                         <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.heartRate.message}</p>
                       )}
                     </div>
-                    <div className="sm:w-auto w-full">
-                      <VoiceInput
+                    <div className="sm:w-auto w-full flex gap-2">
+                      <GroqVoiceInput
                         onResult={(result) => handleVoiceInput("heartRate", result)}
+                        language={languageValue}
+                        size="sm"
+                      />
+                      <GroqTextToSpeech
+                        text={getVoiceMessage("heartRate", getFieldValue("heartRate"))}
+                        voice={languageValue === "sw" ? "nova" : "alloy"}
                         size="sm"
                       />
                     </div>
@@ -277,23 +553,23 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                 <Clock className="text-white" size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">Measurement Context</h2>
-                <p className="text-xs sm:text-sm text-gray-500">When did you measure?</p>
+                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">{currentLanguage.contextTitle}</h2>
+                <p className="text-xs sm:text-sm text-gray-500">{currentLanguage.contextSubtitle}</p>
               </div>
             </div>
 
             <Label htmlFor="context" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
-              Measurement Context <span className="text-red-500">*</span>
+              {currentLanguage.contextLabel} <span className="text-red-500">*</span>
             </Label>
             <select
               id="context"
               {...register("context", diabetesValidationRules.context)}
               className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 md:p-3.5 text-sm sm:text-base focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
             >
-              <option value="">Select measurement context</option>
-              <option value="Fasting">Fasting (8+ hours without food)</option>
-              <option value="Post-meal">Post-Meal (after eating)</option>
-              <option value="Random">Random (any time)</option>
+              <option value="">{currentLanguage.contextOptions.empty}</option>
+              <option value="Fasting">{currentLanguage.contextOptions.fasting}</option>
+              <option value="Post-meal">{currentLanguage.contextOptions.postMeal}</option>
+              <option value="Random">{currentLanguage.contextOptions.random}</option>
             </select>
             {formState.errors.context && (
               <p className="text-red-600 text-xs sm:text-sm mt-1 sm:mt-2 font-medium">{formState.errors.context.message}</p>
@@ -308,8 +584,8 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                   <Utensils className="text-white" size={18} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">Meal Details</h2>
-                  <p className="text-xs sm:text-sm text-gray-500">What did you eat?</p>
+                  <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">{currentLanguage.mealTitle}</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">{currentLanguage.mealSubtitle}</p>
                 </div>
               </div>
 
@@ -317,17 +593,17 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                 <div className="space-y-3 sm:space-y-4">
                   <div>
                     <Label htmlFor="lastMealTime" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
-                      When did you last eat? <span className="text-red-500">*</span>
+                      {currentLanguage.lastMealLabel} <span className="text-red-500">*</span>
                     </Label>
                     <select 
                       {...register("lastMealTime", diabetesValidationRules.lastMealTime)} 
                       className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
                     >
-                      <option value="">Select time</option>
-                      <option value="2_hours">Last 2 hours</option>
-                      <option value="4_hours">Last 4 hours</option>
-                      <option value="6_hours">Last 6 hours</option>
-                      <option value="more_than_6_hours">More than 6 hours</option>
+                      <option value="">{currentLanguage.lastMealOptions.empty}</option>
+                      <option value="2_hours">{currentLanguage.lastMealOptions.twoHours}</option>
+                      <option value="4_hours">{currentLanguage.lastMealOptions.fourHours}</option>
+                      <option value="6_hours">{currentLanguage.lastMealOptions.sixHours}</option>
+                      <option value="more_than_6_hours">{currentLanguage.lastMealOptions.moreThanSix}</option>
                     </select>
                     {formState.errors.lastMealTime && (
                       <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.lastMealTime.message}</p>
@@ -336,18 +612,18 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
 
                   <div>
                     <Label htmlFor="mealType" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
-                      Meal Type <span className="text-red-500">*</span>
+                      {currentLanguage.mealTypeLabel} <span className="text-red-500">*</span>
                     </Label>
                     <select 
                       {...register("mealType", diabetesValidationRules.mealType)} 
                       className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
                     >
-                      <option value="">Select type</option>
-                      <option value="carbohydrates">🍞 Carbohydrates</option>
-                      <option value="sugary_drinks">🥤 Sugary Drinks</option>
-                      <option value="proteins">🍖 Proteins</option>
-                      <option value="vegetables">🥗 Vegetables</option>
-                      <option value="mixed_meal">🍱 Mixed Meal</option>
+                      <option value="">{currentLanguage.mealTypeOptions.empty}</option>
+                      <option value="carbohydrates">{currentLanguage.mealTypeOptions.carbs}</option>
+                      <option value="sugary_drinks">{currentLanguage.mealTypeOptions.sugaryDrinks}</option>
+                      <option value="proteins">{currentLanguage.mealTypeOptions.proteins}</option>
+                      <option value="vegetables">{currentLanguage.mealTypeOptions.vegetables}</option>
+                      <option value="mixed_meal">{currentLanguage.mealTypeOptions.mixed}</option>
                     </select>
                     {formState.errors.mealType && (
                       <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.mealType.message}</p>
@@ -365,8 +641,8 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                 <Dumbbell className="text-white" size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">Physical Activity</h2>
-                <p className="text-xs sm:text-sm text-gray-500">Recent exercise impacts glucose</p>
+                <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-800">{currentLanguage.exerciseTitle}</h2>
+                <p className="text-xs sm:text-sm text-gray-500">{currentLanguage.exerciseSubtitle}</p>
               </div>
             </div>
 
@@ -374,24 +650,24 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
               <div className="flex items-start gap-2 mb-3 sm:mb-4">
                 <Zap className="text-green-500 mt-0.5 flex-shrink-0" size={14} />
                 <p className="text-xs sm:text-sm text-gray-700 flex-1">
-                  <strong>Important:</strong> Exercise can lower blood glucose levels.
+                  {currentLanguage.exerciseImportant}
                 </p>
               </div>
 
               <div className="space-y-3 sm:space-y-4">
                 <div>
                   <Label htmlFor="exerciseRecent" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
-                    Recent Exercise? <span className="text-red-500">*</span>
+                    {currentLanguage.exerciseRecentLabel} <span className="text-red-500">*</span>
                   </Label>
                   <select
                     {...register("exerciseRecent", diabetesValidationRules.exerciseRecent)}
                     className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
                   >
-                    <option value="">Select option</option>
-                    <option value="none">❌ No recent exercise</option>
-                    <option value="within_2_hours">⏱️ Within last 2 hours</option>
-                    <option value="2_to_6_hours">🕐 2-6 hours ago</option>
-                    <option value="6_to_24_hours">📅 6-24 hours ago</option>
+                    <option value="">{currentLanguage.exerciseOptions.empty}</option>
+                    <option value="none">{currentLanguage.exerciseOptions.none}</option>
+                    <option value="within_2_hours">{currentLanguage.exerciseOptions.within2Hours}</option>
+                    <option value="2_to_6_hours">{currentLanguage.exerciseOptions.twoToSixHours}</option>
+                    <option value="6_to_24_hours">{currentLanguage.exerciseOptions.sixTo24Hours}</option>
                   </select>
                   {formState.errors.exerciseRecent && (
                     <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.exerciseRecent.message}</p>
@@ -400,16 +676,16 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
 
                 <div>
                   <Label htmlFor="exerciseIntensity" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
-                    Exercise Intensity <span className="text-red-500">*</span>
+                    {currentLanguage.exerciseIntensityLabel} <span className="text-red-500">*</span>
                   </Label>
                   <select
                     {...register("exerciseIntensity", diabetesValidationRules.exerciseIntensity)}
                     className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
                   >
-                    <option value="">Select intensity</option>
-                    <option value="light">🚶 Light (Walking, stretching)</option>
-                    <option value="moderate">🚴 Moderate (Brisk walk, cycling)</option>
-                    <option value="vigorous">🏃 Vigorous (Running, sports)</option>
+                    <option value="">{currentLanguage.intensityOptions.empty}</option>
+                    <option value="light">{currentLanguage.intensityOptions.light}</option>
+                    <option value="moderate">{currentLanguage.intensityOptions.moderate}</option>
+                    <option value="vigorous">{currentLanguage.intensityOptions.vigorous}</option>
                   </select>
                   {formState.errors.exerciseIntensity && (
                     <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.exerciseIntensity.message}</p>
@@ -422,18 +698,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
           {/* Settings */}
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-5 md:p-6 lg:p-8 hover:shadow-xl transition-shadow">
             <div className="space-y-3 sm:space-y-4">
-              <div>
-                <Label htmlFor="language" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
-                  Language Preference
-                </Label>
-                <select 
-                  {...register("language")} 
-                  className="w-full border-2 border-gray-200 rounded-lg p-2.5 sm:p-3 text-sm sm:text-base focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
-                >
-                  <option value="en">🇬🇧 English</option>
-                  <option value="sw">🇰🇪 Kiswahili</option>
-                </select>
-              </div>
+              {/* Language selector removed from here - now in header */}
 
               <label className="flex items-center gap-2 sm:gap-3 cursor-pointer bg-gradient-to-r from-purple-50 to-pink-50 p-3 sm:p-4 rounded-lg border-2 border-purple-100 hover:border-purple-300 transition-all">
                 <input
@@ -443,7 +708,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
                   className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
                 />
                 <span className="text-xs sm:text-sm font-semibold text-gray-700">
-                 Get AI Health Insights
+                  {currentLanguage.aiInsights}
                 </span>
               </label>
             </div>
@@ -458,16 +723,13 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted }) => {
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <div className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Submitting...</span>
+                <span>{currentLanguage.submitting}</span>
               </span>
             ) : (
-              "Submit Vitals"
+              currentLanguage.submit
             )}
           </Button>
         </form>
-
-        {/* Footer */}
-        
       </div>
     </div>
   );
