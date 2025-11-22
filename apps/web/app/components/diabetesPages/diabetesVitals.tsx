@@ -299,7 +299,21 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
 
       toast.success(languageValue === "sw" ? "Data imehifadhiwa kikamilifu" : "Data saved successfully");
       setSubmitSuccess(true);
-      reset();
+      
+      // ✅ FIXED: Reset form while preserving current language
+      reset({
+        language: languageValue,
+        glucose: '',
+        systolic: '',
+        diastolic: '',
+        heartRate: '',
+        context: '',
+        lastMealTime: '',
+        mealType: '',
+        exerciseRecent: '',
+        exerciseIntensity: ''
+      } as any); // Type assertion to handle TypeScript strict typing
+      
       setRequestAI(false);
       setTimeout(() => setSubmitSuccess(false), 3000);
 
