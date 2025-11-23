@@ -21,6 +21,7 @@ import NearbyClinics from "./components/NearbyClinics";
 import DietRecommendations from "./components/DietRecommendations";
 import DoctorManagement from "../components/DoctorManagement";
 import MedicationReminders from "./components/MedicationReminders";
+import { TranslationProvider, useTranslation } from "../../lib/TranslationContext";
 
 // import { Doctor } from "@/types/doctor";
 import { Button, Input, Card, CardHeader, CardContent, CardDescription, CardTitle } from "@repo/ui";
@@ -64,12 +65,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Tab navigation component
 const TabNavigation = ({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: string) => void }) => {
+  const { t } = useTranslation();
   const tabs = [
-    { id: 'vitals', label: 'Vitals', icon: Activity },
-    { id: 'doctor', label: 'Doctor', icon: User },
-    { id: 'medicine', label: 'Medicine', icon: Pill },
-    { id: 'lifestyle', label: 'Lifestyle & Diet', icon: Utensils },
-    { id: 'maps', label: 'Maps', icon: Globe }
+    { id: 'vitals', label: t.common.vitals, icon: Activity },
+    { id: 'doctor', label: t.common.doctor, icon: User },
+    { id: 'medicine', label: t.common.medicine, icon: Pill },
+    { id: 'lifestyle', label: t.common.lifestyleAndDiet, icon: Utensils },
+    { id: 'maps', label: t.common.maps, icon: Globe }
   ];
 
   return (
@@ -96,6 +98,7 @@ const TabNavigation = ({ activeTab, onTabChange }: { activeTab: string; onTabCha
 };
 
 function DashboardPage() {
+   const { t, language, setLanguage } = useTranslation();
   const { data: session, status } = useSession();
   console.log("Submitting vitals with userId:", session?.user?.id);
 
@@ -106,6 +109,7 @@ function DashboardPage() {
   const [message, setMessage] = useState('');
   const [hasToken, setHasToken] = useState(false);
   const [alertRefreshToken, setAlertRefreshToken] = useState(0);
+  // const [language, setLanguage] = useState<string>("en-US");
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -122,13 +126,13 @@ function DashboardPage() {
 
   const handleSubmit = async () => {
     if (!systolic || !diastolic || !heartRate) {
-      setMessage('Please enter all vitals.');
+      setMessage(t.vitals.allFieldsRequired);
       return;
     }
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!token) {
-      setMessage('You must be logged in to save vitals.');
+      setMessage(t.vitals.failedToSave);
       return;
     }
 
@@ -144,7 +148,7 @@ function DashboardPage() {
         },
         withCredentials: true,
       });
-      setMessage(' Vitals saved successfully');
+      setMessage(t.vitals.savedSuccessfully);
       setSystolic('');
       setDiastolic('');
       setHeartRate('');
@@ -161,7 +165,7 @@ function DashboardPage() {
         console.error("Failed to refresh AI recommendations:", err);
       }
     } catch (error: any) {
-      setMessage(error?.response?.data?.message || ' Failed to save vitals');
+      setMessage(error?.response?.data?.message || t.vitals.failedToSave);
       console.error(error);
     }
   };
@@ -189,7 +193,6 @@ function DashboardPage() {
   const { listening, transcript, startListening, stopListening, setTranscript, error } =
     useVoiceInput();
 
-  const [language, setLanguage] = useState<string>("en-US");
   const [listeningField, setListeningField] = useState<
     "systolic" | "diastolic" | "heartRate" | null
   >(null);
@@ -270,7 +273,9 @@ function DashboardPage() {
 
     try {
       setLoadingAI(true);
-      const res = await axios.get(`${API_URL}/api/hypertension/lifestyle`, {
+      // Pass language parameter to API
+      const languageParam = language === "sw-TZ" ? "sw-TZ" : "en-US";
+      const res = await axios.get(`${API_URL}/api/hypertension/lifestyle?language=${languageParam}`, {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true,
       });
@@ -292,7 +297,9 @@ function DashboardPage() {
         return;
       }
       
-      const res = await axios.get(`${API_URL}/api/hypertension/diet`, {
+      // Pass language parameter to API
+      const languageParam = language === "sw-TZ" ? "sw-TZ" : "en-US";
+      const res = await axios.get(`${API_URL}/api/hypertension/diet?language=${languageParam}`, {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true,
       });
@@ -346,6 +353,15 @@ function DashboardPage() {
     fetchAIRecommendations();
     fetchDietRecommendations();
   }, [alertRefreshToken]);
+
+  // Refetch AI recommendations when language changes
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) return;
+
+    fetchAIRecommendations();
+    fetchDietRecommendations();
+  }, [language]);
 
   const todayAlert = getTodayAlertStatus(vitals);
   const currentBpLevel = todayAlert.systolic !== null && todayAlert.diastolic !== null ? getBpLevel(todayAlert.systolic, todayAlert.diastolic) : '';
@@ -629,4 +645,10 @@ function DashboardPage() {
   );
 }
 
-export default DashboardPage;
+export default function WrappedDashboardPage() {
+  return (
+    <TranslationProvider>
+      <DashboardPage />
+    </TranslationProvider>
+  );
+}
