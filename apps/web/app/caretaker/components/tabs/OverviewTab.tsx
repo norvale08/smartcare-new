@@ -5,6 +5,7 @@ import CurrentVitals from '../CurrentVitals';
 import HealthTrends from '../HealthTrends';
 import QuickActions from '../QuickActions';
 import AlertsPanel from '../AlertsPanel';
+import VitalsPredictions from '../VitalsPredictions';
 
 interface OverviewTabProps {
   patient: Patient;
@@ -17,6 +18,12 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   patientVitals,
   isLoading,
 }) => {
+  // Add age to each vital reading for predictions
+  const predictionVitals = patientVitals.map(vital => ({
+    ...vital,
+    age: patient.age // Add patient's age to each vital
+  }));
+
   return (
     <div className="p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -27,6 +34,16 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         />
         
         <HealthTrends patientVitals={patientVitals} />
+        
+        <VitalsPredictions 
+          patient={{
+            id: patient.id,
+            fullName: patient.fullName,
+            age: patient.age,
+            condition: patient.condition
+          }}
+          vitals={predictionVitals} // Use the transformed vitals with age
+        />
         
         <QuickActions patient={patient} />
         

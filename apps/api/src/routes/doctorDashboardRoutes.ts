@@ -117,12 +117,28 @@ router.get("/assignedPatients", authenticateUser, async (req: AuthRequest, res) 
                 // Risk Level
                 const riskLevel = await evaluateRiskLevel(patient.toObject(), vitals);
 
+                // Location handling with coordinates
+                const locationData = patient.location;
+                let locationDisplay = "No location data";
+                let coordinates = null;
+
+                if (locationData && locationData.lat && locationData.lng) {
+                    locationDisplay = locationData.address || `${locationData.lat.toFixed(4)}, ${locationData.lng.toFixed(4)}`;
+                    coordinates = {
+                        lat: locationData.lat,
+                        lng: locationData.lng
+                    };
+                    console.log(`📍 Patient ${patient.fullName} location:`, locationDisplay);
+                } else {
+                    console.log(`⚠️ No location data for patient ${patient.fullName}`);
+                }
+
                 return {
                     ...patient.toObject(),
                     vitals,
                     riskLevel,
-                    location: patient.location?.address || "No location data",
-                    coordinates: patient.location?.coordinates || null,
+                    location: locationDisplay,
+                    coordinates: coordinates,
                     conditions: {
                         diabetes: patient.diabetes,
                         hypertension: patient.hypertension,

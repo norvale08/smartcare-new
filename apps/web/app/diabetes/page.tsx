@@ -1,3 +1,4 @@
+// apps/web/app/diabetes/page.tsx - FIXED VERSION
 "use client";
 import React, { useState } from "react";
 import DiabetesAlerts from "../components/diabetesPages/DiabetesAlerts";

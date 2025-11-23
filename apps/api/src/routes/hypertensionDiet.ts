@@ -14,7 +14,9 @@ router.get(
       }
 
       const userId = req.user.userId;
-      const result = await generateDietRecommendations(userId);
+      // Get language from query parameter, default to "en-US"
+      const language = (req.query.language as string) || "en-US";
+      const result = await generateDietRecommendations(userId, language);
 
       // Wrap the result in a data property to match expected format
       res.json({ data: result });

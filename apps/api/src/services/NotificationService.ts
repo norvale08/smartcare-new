@@ -49,6 +49,22 @@ export class NotificationService {
   // Generate vital alerts based on vitals data
   static async checkVitalAlerts(vitalData: any, userId: string, patientId?: string) {
     const alerts = [];
+    let patientName = '';
+
+    // Get patient name
+    try {
+      const patient = await Patient.findOne({ userId });
+      if (patient) {
+        patientName = patient.fullName || `${patient.firstname} ${patient.lastname}`;
+      } else {
+        const user = await User.findById(userId);
+        if (user) {
+          patientName = user.fullName || `${user.firstname} ${user.lastname}`;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching patient name:', error);
+    }
 
     // Check blood pressure for hypertension
     if (vitalData.systolic && vitalData.diastolic) {
@@ -109,13 +125,42 @@ export class NotificationService {
 
     // Create notifications for each alert
     for (const alert of alerts) {
+      // Notify the patient
       await this.createNotification({
         userId,
         ...alert,
-        patientId,
+        patientId: patientId || userId,
+        patientName,
         vitalId: vitalData._id?.toString(),
         metadata: vitalData,
       });
+
+      // If critical, also notify assigned doctors
+      if (alert.priority === 'critical' || alert.priority === 'high') {
+        try {
+          // Find all doctors assigned to this patient
+          const doctors = await User.find({
+            role: 'doctor',
+            assignedPatients: patientId || userId
+          });
+
+          // Create notification for each assigned doctor
+          for (const doctor of doctors) {
+            await this.createNotification({
+              userId: doctor._id.toString(),
+              ...alert,
+              patientId: patientId || userId,
+              patientName,
+              vitalId: vitalData._id?.toString(),
+              metadata: vitalData,
+            });
+          }
+
+          console.log(`✅ Notified ${doctors.length} doctor(s) about critical vitals for patient ${patientName}`);
+        } catch (error) {
+          console.error('Error notifying doctors:', error);
+        }
+      }
     }
 
     return alerts;

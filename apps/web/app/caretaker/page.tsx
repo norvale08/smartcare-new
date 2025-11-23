@@ -381,12 +381,26 @@ const CaretakerDashboard = () => {
     return <div className="min-h-screen bg-gray-100 flex items-center justify-center">Loading...</div>;
   }
 
-  if ((status === "unauthenticated" && !hasToken) || (hasToken && userRole !== "doctor")) {
+  // Only show access denied if we have a token and the role is explicitly not "doctor"
+  // If userRole is null, it means we're still extracting it, so wait
+  if (hasToken && userRole !== null && userRole !== "doctor") {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
-          <p className="text-gray-600">This dashboard is for doctors only.</p>
+          <p className="text-gray-600">This dashboard is for doctors only. Please log in as a doctor.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no token and not authenticated, show login message
+  if (status === "unauthenticated" && !hasToken) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Please Log In</h2>
+          <p className="text-gray-600">You need to log in first to access this dashboard.</p>
         </div>
       </div>
     );

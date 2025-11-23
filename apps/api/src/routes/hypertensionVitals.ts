@@ -1,6 +1,9 @@
 // apps/api/src/routes/hypertensionVitals.ts
 import express, { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import HypertensionVital from '../models/hypertensionVitals';
+import Patient from '../models/patient';
+import User from '../models/user';
 import { verifyToken, AuthenticatedRequest } from '../middleware/verifyToken';
 import { analyzeVitalsWithAI } from "../services/HypertensionAI";
 import { NotificationService } from "../services/NotificationService";
@@ -61,13 +64,61 @@ router.get('/me', verifyToken, async (req: AuthenticatedRequest, res: Response):
   }
 });
 
-router.post("/analyze", verifyToken, async (req: Request, res) => {
+router.post("/analyze", verifyToken, async (req: AuthenticatedRequest, res) => {
     try {
         const { vitals, activity } = req.body;
         if (!vitals || !activity) {
             return res.status(400).json({ message: "Vitals and activity context are required." });
         }
-        const analysis = await analyzeVitalsWithAI({ vitals, activity });
+        
+        // Get language from query parameter or default to en-US
+        const language = (req.query.language as string) || 'en-US';
+        
+        const analysis = await analyzeVitalsWithAI({ vitals, activity }, language);
+        
+        // If shouldNotifyDoctor is true, send notification to assigned doctors
+        if (analysis.shouldNotifyDoctor && req.user?.userId) {
+            try {
+                const userId = req.user.userId;
+                const patient = await Patient.findOne({ userId: new mongoose.Types.ObjectId(userId) }).sort({ createdAt: -1 });
+                const patientName = patient?.fullName || `${patient?.firstname || ''} ${patient?.lastname || ''}`.trim() || 'Patient';
+                
+                // Find assigned doctors
+                const doctors = await User.find({
+                    role: 'doctor',
+                    assignedPatients: userId
+                });
+                
+                // Create notification message with AI recommendation
+                const notificationMessage = language === 'sw-TZ'
+                    ? `Arifa: Mgonjwa ${patientName} ana usomaji wa shinikizo la damu unaohitaji umakini.\n\nVitali: ${vitals.systolic}/${vitals.diastolic} mmHg, Kasi ya Moyo: ${vitals.heartRate} bpm\n\nUchambuzi: ${analysis.title}\n\nMaelezo: ${analysis.description}\n\nMapendekezo: ${analysis.recommendation}`
+                    : `Alert: Patient ${patientName} has a blood pressure reading requiring attention.\n\nVitals: ${vitals.systolic}/${vitals.diastolic} mmHg, Heart Rate: ${vitals.heartRate} bpm\n\nAnalysis: ${analysis.title}\n\nDescription: ${analysis.description}\n\nRecommendation: ${analysis.recommendation}`;
+                
+                // Send notification to each assigned doctor
+                for (const doctor of doctors) {
+                    await NotificationService.createNotification({
+                        userId: doctor._id.toString(),
+                        type: 'vital_alert',
+                        title: language === 'sw-TZ' ? 'Arifa ya Vitali' : 'Vital Alert',
+                        message: notificationMessage,
+                        patientId: userId,
+                        patientName,
+                        priority: analysis.severity === 'red' ? 'critical' : analysis.severity === 'yellow' ? 'high' : 'medium',
+                        metadata: {
+                            vitals,
+                            activity,
+                            analysis
+                        }
+                    });
+                }
+                
+                console.log(`✅ Notified ${doctors.length} doctor(s) about AI analysis for patient ${patientName}`);
+            } catch (notifError) {
+                console.error('Error notifying doctors:', notifError);
+                // Don't fail the request if notification fails
+            }
+        }
+        
         res.status(200).json(analysis);
     } catch (error) {
         console.error("Error analyzing vitals with AI:", error);

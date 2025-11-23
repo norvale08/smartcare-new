@@ -27,15 +27,33 @@ const PatientMessages: React.FC<PatientMessagesProps> = ({ selectedPatient }) =>
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  
+  // Extract current user ID from token
+  useEffect(() => {
+    if (token) {
+      try {
+        const tokenParts = token.split(".");
+        if (tokenParts.length === 3) {
+          const base64 = tokenParts[1];
+          if (base64) {
+            const payload = JSON.parse(atob(base64));
+            setCurrentUserId(payload?.userId || payload?.id || null);
+          }
+        }
+      } catch (error) {
+        console.error("Error decoding token:", error);
+      }
+    }
+  }, [token]);
 
   // Debug selected patient
   useEffect(() => {
     console.log("🩺 Selected patient for messaging:", selectedPatient);
     console.log("➡️ Patient ID:", selectedPatient?.id);
     console.log("➡️ User ID:", selectedPatient?.userId);
-  }, [selectedPatient]);
+    console.log("➡️ Current User ID:", currentUserId);
+  }, [selectedPatient, currentUserId]);
 
   // Get the receiver ID - try userId first, then fall back to patient id
   const getReceiverId = () => {
@@ -192,21 +210,34 @@ const PatientMessages: React.FC<PatientMessagesProps> = ({ selectedPatient }) =>
         ) : messages.length === 0 ? (
           <p className="text-gray-500 text-center">No messages yet. Start a conversation!</p>
         ) : (
-          messages.map((msg) => (
-            <div
-              key={msg._id}
-              className={`p-3 rounded-lg mb-3 max-w-[80%] ${
-                msg.senderId === receiverId
-                  ? "ml-auto bg-blue-100 text-blue-900 border border-blue-200"
-                  : "mr-auto bg-white text-gray-700 border border-gray-200"
-              }`}
-            >
-              <div className="text-sm">{msg.content}</div>
-              <div className="text-xs text-gray-500 mt-1">
-                {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString() : ''}
+          messages.map((msg) => {
+            // Check if message is from current user (doctor) or from patient
+            // Handle both string IDs and populated objects
+            let senderIdString: string | null = null;
+            if (typeof msg.senderId === 'string') {
+              senderIdString = msg.senderId;
+            } else if (typeof msg.senderId === 'object' && msg.senderId !== null) {
+              senderIdString = (msg.senderId as any)?._id || (msg.senderId as any)?.id || null;
+            }
+            
+            const isFromCurrentUser = senderIdString === currentUserId;
+            
+            return (
+              <div
+                key={msg._id}
+                className={`p-3 rounded-lg mb-3 max-w-[80%] ${
+                  isFromCurrentUser
+                    ? "ml-auto bg-blue-100 text-blue-900 border border-blue-200"
+                    : "mr-auto bg-white text-gray-700 border border-gray-200"
+                }`}
+              >
+                <div className="text-sm">{msg.content}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString() : ''}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

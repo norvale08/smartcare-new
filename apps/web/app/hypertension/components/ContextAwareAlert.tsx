@@ -1,5 +1,6 @@
 "use client"
 import { AlertCircle, AlertTriangle, CheckCircle, Info } from "lucide-react"
+import { useTranslation } from "../../../lib/TranslationContext"
 
 // Stand-in UI components for dev/testing (replace with real UI lib if you have it)
 const Card = (props: React.HTMLAttributes<HTMLDivElement>) => <div {...props} style={{border: '1px solid #eee', borderRadius: '8px', padding: 16, margin: 8, ...props.style}}/>;
@@ -30,6 +31,8 @@ interface ContextAwareAlertProps {
 }
 
 export default function ContextAwareAlert({ analysis, vitals }: ContextAwareAlertProps) {
+  const { t, language } = useTranslation();
+  
   const getSeverityStyles = (severity: AlertSeverity) => {
     switch (severity) {
       case "green":
@@ -80,17 +83,17 @@ export default function ContextAwareAlert({ analysis, vitals }: ContextAwareAler
         {/* Vitals Display */}
         <div className="grid grid-cols-3 gap-3 p-3 bg-background/50 rounded-lg">
           <div className="text-center">
-            <div className="text-xs text-muted-foreground">Systolic</div>
+            <div className="text-xs text-muted-foreground">{language === "sw-TZ" ? "Sistolic" : "Systolic"}</div>
             <div className="text-xl font-bold">{vitals.systolic}</div>
             <div className="text-xs text-muted-foreground">mmHg</div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-muted-foreground">Diastolic</div>
+            <div className="text-xs text-muted-foreground">{language === "sw-TZ" ? "Diastolic" : "Diastolic"}</div>
             <div className="text-xl font-bold">{vitals.diastolic}</div>
             <div className="text-xs text-muted-foreground">mmHg</div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-muted-foreground">Heart Rate</div>
+            <div className="text-xs text-muted-foreground">{language === "sw-TZ" ? "Kasi ya Moyo" : "Heart Rate"}</div>
             <div className="text-xl font-bold">{vitals.heartRate}</div>
             <div className="text-xs text-muted-foreground">bpm</div>
           </div>
@@ -98,7 +101,9 @@ export default function ContextAwareAlert({ analysis, vitals }: ContextAwareAler
 
         {/* Activity Influence */}
         <div className={`p-3 rounded-lg border ${styles.border} bg-background/50`}>
-          <div className="text-sm font-semibold mb-1">Activity Influence</div>
+          <div className="text-sm font-semibold mb-1">
+            {language === "sw-TZ" ? "Athari ya Shughuli" : "Activity Influence"}
+          </div>
           <div className="text-sm">{analysis.activityInfluence}</div>
         </div>
 
@@ -107,7 +112,9 @@ export default function ContextAwareAlert({ analysis, vitals }: ContextAwareAler
           <div className="flex gap-2">
             <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             <div>
-              <div className="text-sm font-semibold text-blue-900 dark:text-blue-100">Recommendation</div>
+              <div className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                {language === "sw-TZ" ? "Mapendekezo" : "Recommendation"}
+              </div>
               <div className="text-sm text-blue-800 dark:text-blue-200">{analysis.recommendation}</div>
             </div>
           </div>
@@ -117,7 +124,9 @@ export default function ContextAwareAlert({ analysis, vitals }: ContextAwareAler
         {analysis.shouldNotifyDoctor && (
           <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800">
             <div className="text-sm font-semibold text-red-900 dark:text-red-100">
-              ⚠️ Your doctor will be notified about this reading
+              ⚠️ {language === "sw-TZ" 
+                ? "Daktari wako atataarifiwa kuhusu usomaji huu" 
+                : "Your doctor will be notified about this reading"}
             </div>
           </div>
         )}

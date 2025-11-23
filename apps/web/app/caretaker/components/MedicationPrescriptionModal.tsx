@@ -1,6 +1,6 @@
 // app/components/MedicationPrescriptionModal.tsx
 import React, { useState } from 'react';
-import { X, Pill, Calendar, Clock, AlertCircle } from 'lucide-react';
+import { X, Pill, Calendar, Clock, AlertCircle, Upload, Image as ImageIcon } from 'lucide-react';
 
 interface MedicationPrescriptionModalProps {
   isOpen: boolean;
@@ -24,6 +24,10 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
     startDate: new Date().toISOString().split('T')[0],
     reminders: [] as string[]
   });
+  const [medicationImage, setMedicationImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [analyzingImage, setAnalyzingImage] = useState(false);
+  const [imageAnalysis, setImageAnalysis] = useState<string | null>(null);
 
   const reminderTimes = ['08:00', '12:00', '18:00', '20:00'];
 
@@ -36,13 +40,80 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
     }));
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setMedicationImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      setImageAnalysis(null);
+    }
+  };
+
+  const analyzeMedicationImage = async () => {
+    if (!medicationImage) return;
+
+    setAnalyzingImage(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to analyze medication images.");
+        setAnalyzingImage(false);
+        return;
+      }
+
+      // Convert image to base64
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Image = (reader.result as string).split(',')[1]; // Remove data:image/...;base64, prefix
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medications/analyze-image`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              image: base64Image,
+              imageType: medicationImage.type,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to analyze image');
+        }
+
+        const data = await response.json();
+        setImageAnalysis(data.analysis || data.message || 'Analysis completed');
+        
+        // Auto-fill medication name if detected
+        if (data.medicationName) {
+          setFormData(prev => ({ ...prev, medicationName: data.medicationName }));
+        }
+      };
+      reader.readAsDataURL(medicationImage);
+    } catch (error) {
+      console.error('Error analyzing medication image:', error);
+      alert('Failed to analyze medication image. Please try again.');
+    } finally {
+      setAnalyzingImage(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onPrescribe({
       ...formData,
       patientId: patient.id,
       prescribedAt: new Date().toISOString(),
-      status: 'active'
+      status: 'active',
+      medicationImage: medicationImage ? imagePreview : undefined
     });
     onClose();
     setFormData({
@@ -54,6 +125,9 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
       startDate: new Date().toISOString().split('T')[0],
       reminders: []
     });
+    setMedicationImage(null);
+    setImagePreview(null);
+    setImageAnalysis(null);
   };
 
   if (!isOpen) return null;
@@ -72,6 +146,53 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Medication Image Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Medication Photo (Optional)
+            </label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <Upload className="w-4 h-4" />
+                  <span className="text-sm">Upload Photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+                {medicationImage && (
+                  <button
+                    type="button"
+                    onClick={analyzeMedicationImage}
+                    disabled={analyzingImage}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    {analyzingImage ? 'Analyzing...' : 'Analyze with AI'}
+                  </button>
+                )}
+              </div>
+              {imagePreview && (
+                <div className="mt-2">
+                  <img
+                    src={imagePreview}
+                    alt="Medication preview"
+                    className="max-w-full h-32 object-contain border border-gray-300 rounded-lg"
+                  />
+                </div>
+              )}
+              {imageAnalysis && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-900 font-semibold mb-1">AI Analysis:</p>
+                  <p className="text-sm text-blue-800 whitespace-pre-wrap">{imageAnalysis}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Medication Name *

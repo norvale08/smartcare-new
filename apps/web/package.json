@@ -14,6 +14,7 @@
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-select": "^2.2.5",
     "@repo/ui": "workspace:*",
+    "@tensorflow/tfjs": "^4.22.0",
     "@types/geojson": "^7946.0.16",
     "@vis.gl/react-google-maps": "^1.5.5",
     "axios": "^1.10.0",
