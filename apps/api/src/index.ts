@@ -44,7 +44,7 @@ import patientMedicationsRoutes from './routes/patientMedications';
 import medicineRoutes from './routes/medicine';
 import appointmentRoutes from "./routes/appointments";
 import reportRoutes from "./routes/reports";
-
+import speechRoutes from './routes/groqSpeechRoutes';
 
 dotenv.config();
 
@@ -155,7 +155,7 @@ app.use('/api/medications/patient', patientMedicationsRoutes);
 app.use('/api/medicine', medicineRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/reports', reportRoutes);
-
+app.use('/api/speech', speechRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

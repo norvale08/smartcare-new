@@ -1,3 +1,4 @@
+// apps/web/app/diabetes/page.tsx - FIXED VERSION
 "use client";
 import React, { useState } from "react";
 import DiabetesAlerts from "../components/diabetesPages/DiabetesAlerts";
@@ -8,12 +9,12 @@ import LifestyleForm from "../components/diabetesPages/DiabetesLifestyle";
 import DiabetesMedications from "../components/diabetesPages/DiabetesMedications";
 import DiabetesFoodAdvice from "../components/diabetesPages/DiabetesFoodAdvice";
 import UserProfileHeader from "../components/UserProfileHeader";
-import {
-  Activity,
-  Heart,
-  Pill,
-  Apple,
-  Brain,
+import { 
+  Activity, 
+  Heart, 
+  Pill, 
+  Apple, 
+  Brain, 
   CheckCircle,
   RotateCcw,
   Menu,
@@ -21,6 +22,57 @@ import {
 } from "lucide-react";
 
 type TabType = "vitals" | "lifestyle" | "medications" | "food" | "final";
+type LanguageType = "en" | "sw";
+
+// Language content for the main page
+const languageContent = {
+  en: {
+    title: "Diabetes Health Assessment",
+    alerts: "Alerts",
+    vitals: "Vitals",
+    lifestyle: "Lifestyle",
+    medications: "Medications",
+    food: "Food",
+    final: "AI Report",
+    continueToMeds: "Continue to Medications",
+    continueToFood: "Continue to Food Advice",
+    startNew: "Start New Assessment",
+    latestReport: "Latest Report Generated",
+    reportSuccess: "Your comprehensive health analysis has been successfully generated and is displayed above.",
+    step: "Step",
+    of: "of",
+    mobileLabels: {
+      vitals: "Vitals",
+      lifestyle: "Lifestyle", 
+      medications: "Meds",
+      food: "Food",
+      final: "Report"
+    }
+  },
+  sw: {
+    title: "Tathmini ya Afya ya Kisukari",
+    alerts: "Taarifa",
+    vitals: "Viwango",
+    lifestyle: "Mtindo wa Maisha",
+    medications: "Dawa",
+    food: "Chakula",
+    final: "Ripoti ya AI",
+    continueToMeds: "Endelea kwa Dawa",
+    continueToFood: "Endelea kwa Ushauri wa Chakula",
+    startNew: "Anza Tathmini Mpya",
+    latestReport: "Ripoti ya Hivi Karibuni Imetengenezwa",
+    reportSuccess: "Uchambuzi wako wa kina wa afya umeundwa kikamilifu na unaonyeshwa hapo juu.",
+    step: "Hatua",
+    of: "ya",
+    mobileLabels: {
+      vitals: "Viwango",
+      lifestyle: "Maisha",
+      medications: "Dawa",
+      food: "Chakula",
+      final: "Ripoti"
+    }
+  }
+};
 
 const Page = () => {
   const [refreshToken, setRefreshToken] = useState<number>(0);
@@ -28,11 +80,14 @@ const Page = () => {
   const [requestAI, setRequestAI] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<TabType>("vitals");
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [language, setLanguage] = useState<LanguageType>("en");
 
   const [lifestyleDone, setLifestyleDone] = useState<boolean>(false);
   const [medicationsDone, setMedicationsDone] = useState<boolean>(false);
   const [foodDone, setFoodDone] = useState<boolean>(false);
   const [finalFeedback, setFinalFeedback] = useState<string>("");
+
+  const currentLanguage = languageContent[language];
 
   const handleVitalsSubmit = (id: string, aiRequested: boolean): void => {
     setRefreshToken((prev) => prev + 1);
@@ -47,6 +102,10 @@ const Page = () => {
 
   const handleFeedbackGenerated = (feedback: string): void => {
     setFinalFeedback(feedback);
+  };
+
+  const handleLanguageChange = (newLanguage: LanguageType): void => {
+    setLanguage(newLanguage);
   };
 
   const isTabDisabled = (tab: TabType): boolean => {
@@ -65,30 +124,30 @@ const Page = () => {
   };
 
   const tabConfig: Record<TabType, { label: string; icon: React.ReactNode; mobileLabel: string }> = {
-    vitals: {
-      label: "Vitals",
-      icon: <Activity className="w-4 h-4 md:w-5 md:h-5" />,
-      mobileLabel: "Vitals"
+    vitals: { 
+      label: currentLanguage.vitals, 
+      icon: <Activity className="w-4 h-4 md:w-5 md:h-5" />, 
+      mobileLabel: currentLanguage.mobileLabels.vitals
     },
-    lifestyle: {
-      label: "Lifestyle",
-      icon: <Heart className="w-4 h-4 md:w-5 md:h-5" />,
-      mobileLabel: "Lifestyle"
+    lifestyle: { 
+      label: currentLanguage.lifestyle, 
+      icon: <Heart className="w-4 h-4 md:w-5 md:h-5" />, 
+      mobileLabel: currentLanguage.mobileLabels.lifestyle
     },
-    medications: {
-      label: "Medications",
-      icon: <Pill className="w-4 h-4 md:w-5 md:h-5" />,
-      mobileLabel: "Meds"
+    medications: { 
+      label: currentLanguage.medications, 
+      icon: <Pill className="w-4 h-4 md:w-5 md:h-5" />, 
+      mobileLabel: currentLanguage.mobileLabels.medications
     },
-    food: {
-      label: "Food",
-      icon: <Apple className="w-4 h-4 md:w-5 md:h-5" />,
-      mobileLabel: "Food"
+    food: { 
+      label: currentLanguage.food, 
+      icon: <Apple className="w-4 h-4 md:w-5 md:h-5" />, 
+      mobileLabel: currentLanguage.mobileLabels.food
     },
-    final: {
-      label: "AI Report",
-      icon: <Brain className="w-4 h-4 md:w-5 md:h-5" />,
-      mobileLabel: "Report"
+    final: { 
+      label: currentLanguage.final, 
+      icon: <Brain className="w-4 h-4 md:w-5 md:h-5" />, 
+      mobileLabel: currentLanguage.mobileLabels.final
     }
   };
 
@@ -96,10 +155,13 @@ const Page = () => {
   const currentStepIndex = tabs.indexOf(activeTab) + 1;
 
   return (
-    <div className="min-h-screen bg-gray-">
-      {/* User Profile Header - Full Width */}
+    <div className="min-h-screen bg-gray-50">
+      {/* User Profile Header - Full Width with Language Selector */}
       <div className="w-full bg-white shadow-sm">
-        <UserProfileHeader />
+        <UserProfileHeader 
+          currentLanguage={language}
+          onLanguageChange={handleLanguageChange}
+        />
       </div>
 
       {/* Main Content Container */}
@@ -116,7 +178,7 @@ const Page = () => {
               </div>
               <div>
                 <div className="text-sm text-blue-900 font-medium">
-                  Step {currentStepIndex} of 5
+                  {currentLanguage.step} {currentStepIndex} {currentLanguage.of} 5
                 </div>
                 <div className="text-lg font-semibold text-emerald-900">
                   {tabConfig[activeTab].label}
@@ -133,10 +195,10 @@ const Page = () => {
 
           {/* Progress Bar */}
           <div className="w-full bg-cyan-100 rounded-full h-2 mt-3">
-            <div
+            <div 
               className="bg-emerald-900 h-2 rounded-full transition-all duration-300"
-              style={{
-                width: `${(currentStepIndex / 5) * 100}%`
+              style={{ 
+                width: `${(currentStepIndex / 5) * 100}%` 
               }}
             ></div>
           </div>
@@ -150,16 +212,17 @@ const Page = () => {
                     key={tab}
                     onClick={() => handleTabChange(tab)}
                     disabled={isTabDisabled(tab)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-colors ${activeTab === tab
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-colors ${
+                      activeTab === tab
                         ? "bg-emerald-900 text-white"
                         : "text-blue-900 hover:bg-cyan-50"
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {tabConfig[tab].icon}
                     <span className="font-medium flex-1">{tabConfig[tab].label}</span>
                     {(tab === "lifestyle" && lifestyleDone) ||
-                      (tab === "medications" && medicationsDone) ||
-                      (tab === "food" && foodDone) ? (
+                    (tab === "medications" && medicationsDone) ||
+                    (tab === "food" && foodDone) ? (
                       <CheckCircle className="w-4 h-4 text-cyan-100" />
                     ) : null}
                   </button>
@@ -177,16 +240,17 @@ const Page = () => {
                 key={tab}
                 onClick={() => handleTabChange(tab)}
                 disabled={isTabDisabled(tab)}
-                className={`flex items-center px-4 py-3 font-medium transition-colors whitespace-nowrap rounded-lg text-base min-w-[140px] justify-center gap-2 ${activeTab === tab
+                className={`flex items-center px-4 py-3 font-medium transition-colors whitespace-nowrap rounded-lg text-base min-w-[140px] justify-center gap-2 ${
+                  activeTab === tab
                     ? "bg-emerald-900 text-white shadow-sm"
                     : "text-blue-900 hover:bg-cyan-100 hover:text-emerald-900"
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {tabConfig[tab].icon}
                 <span>{tabConfig[tab].label}</span>
                 {(tab === "lifestyle" && lifestyleDone) ||
-                  (tab === "medications" && medicationsDone) ||
-                  (tab === "food" && foodDone) ? (
+                (tab === "medications" && medicationsDone) ||
+                (tab === "food" && foodDone) ? (
                   <CheckCircle className="w-4 h-4 text-cyan-100" />
                 ) : null}
               </button>
@@ -198,7 +262,10 @@ const Page = () => {
         <div className="min-h-[500px]">
           {activeTab === "vitals" && (
             <div className="space-y-6">
-              <DiabetesVitalsForm onVitalsSubmitted={handleVitalsSubmit} />
+              <DiabetesVitalsForm 
+                onVitalsSubmitted={handleVitalsSubmit} 
+                initialLanguage={language}
+              />
               {vitalsId && requestAI && <DiabetesAISummary vitalsId={vitalsId} />}
             </div>
           )}
@@ -214,7 +281,7 @@ const Page = () => {
                   }}
                   className="w-full lg:w-auto bg-emerald-900 text-white px-8 py-4 lg:py-3 rounded-lg hover:bg-emerald-800 transition-colors font-semibold flex items-center justify-center gap-3 text-lg lg:text-base"
                 >
-                  Continue to Medications
+                  {currentLanguage.continueToMeds}
                   <Pill className="w-5 h-5 lg:w-4 lg:h-4" />
                 </button>
               </div>
@@ -232,7 +299,7 @@ const Page = () => {
                   }}
                   className="w-full lg:w-auto bg-emerald-900 text-white px-8 py-4 lg:py-3 rounded-lg hover:bg-emerald-800 transition-colors font-semibold flex items-center justify-center gap-3 text-lg lg:text-base"
                 >
-                  Continue to Food Advice
+                  {currentLanguage.continueToFood}
                   <Apple className="w-5 h-5 lg:w-4 lg:h-4" />
                 </button>
               </div>
@@ -241,7 +308,7 @@ const Page = () => {
 
           {activeTab === "food" && (
             <div className="space-y-6">
-              <DiabetesFoodAdvice
+              <DiabetesFoodAdvice 
                 enabled={requestAI}
                 onComplete={() => {
                   setFoodDone(true);
@@ -260,11 +327,11 @@ const Page = () => {
                   <div className="flex items-center gap-3 text-emerald-900 mb-3">
                     <CheckCircle className="w-6 h-6 lg:w-5 lg:h-5" />
                     <h4 className="font-semibold text-lg lg:text-base">
-                      Latest Report Generated
+                      {currentLanguage.latestReport}
                     </h4>
                   </div>
                   <p className="text-blue-900 text-base lg:text-sm">
-                    Your comprehensive health analysis has been successfully generated and is displayed above.
+                    {currentLanguage.reportSuccess}
                   </p>
                 </div>
               )}
@@ -284,7 +351,7 @@ const Page = () => {
                   className="w-full bg-blue-900 text-white py-4 lg:py-3 px-6 rounded-lg hover:bg-blue-800 transition-colors font-semibold flex items-center justify-center gap-3 text-lg lg:text-base"
                 >
                   <RotateCcw className="w-5 h-5 lg:w-4 lg:h-4" />
-                  Start New Assessment
+                  {currentLanguage.startNew}
                 </button>
               </div>
             </div>

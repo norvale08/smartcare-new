@@ -11,7 +11,8 @@ import {
   AlertCircle,
   RefreshCw,
   Plus,
-  Clock
+  Clock,
+  Languages
 } from "lucide-react";
 
 interface UserProfile {
@@ -36,16 +37,23 @@ interface UserProfile {
 
 interface UserProfileHeaderProps {
   onDoctorsToggle?: (show: boolean) => void;
+  currentLanguage?: "en" | "sw";
+  onLanguageChange?: (language: "en" | "sw") => void;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }) => {
+const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ 
+  onDoctorsToggle, 
+  currentLanguage = "en",
+  onLanguageChange 
+}) => {
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDoctors, setShowDoctors] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [language, setLanguage] = useState<"en" | "sw">(currentLanguage);
 
   const getAuthToken = useCallback((): string | null => {
     try {
@@ -82,17 +90,6 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
       return 0;
     }
   }, []);
-
-  // Commented out BMI calculation function
-  /*
-  const calculateBMI = useCallback((weight: number, height: number): string => {
-    if (!weight || !height || height === 0) return "N/A";
-    
-    const heightInMeters = height / 100;
-    const bmi = weight / (heightInMeters * heightInMeters);
-    return bmi.toFixed(1);
-  }, []);
-  */
 
   const fetchUserProfile = useCallback(async () => {
     setLoading(true);
@@ -148,6 +145,32 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
     }
   }, []);
 
+  // Handle language change
+  const handleLanguageChange = (newLanguage: "en" | "sw") => {
+    setLanguage(newLanguage);
+    if (onLanguageChange) {
+      onLanguageChange(newLanguage);
+    }
+    
+    // Optional: Save language preference to localStorage
+    if (typeof window !== "undefined") {
+      localStorage.setItem("preferredLanguage", newLanguage);
+    }
+  };
+
+  // Load language preference from localStorage on component mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedLanguage = localStorage.getItem("preferredLanguage") as "en" | "sw";
+      if (savedLanguage && savedLanguage !== language) {
+        setLanguage(savedLanguage);
+        if (onLanguageChange) {
+          onLanguageChange(savedLanguage);
+        }
+      }
+    }
+  }, []);
+
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile]);
@@ -183,6 +206,42 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
     fetchUserProfile();
   };
 
+  // Language content for the header
+  const languageContent = {
+    en: {
+      profile: "Profile",
+      doctors: "Doctors",
+      dr: "Dr",
+      view: "View",
+      noProfile: "No Profile Found",
+      completeProfile: "Complete your profile to get started",
+      profileError: "Profile Error",
+      createProfile: "Create Profile",
+      doctorManagement: "Doctor Management",
+      doctorDescription: "Connect and communicate with your healthcare team",
+      close: "Close",
+      addDoctor: "Add Doctor",
+      healthcareTeam: "Your healthcare team is essential for comprehensive care"
+    },
+    sw: {
+      profile: "Wasifu",
+      doctors: "Madaktari",
+      dr: "Dk",
+      view: "Tazama",
+      noProfile: "Hakuna Wasifu Ulipatikana",
+      completeProfile: "Kamilisha wasifu wako kuanza",
+      profileError: "Hitilafu ya Wasifu",
+      createProfile: "Unda Wasifu",
+      doctorManagement: "Usimamizi wa Daktari",
+      doctorDescription: "Wasiliana na ushirikiana na timu yako ya afya",
+      close: "Funga",
+      addDoctor: "Ongeza Daktari",
+      healthcareTeam: "Timu yako ya afya ni muhimu kwa huduma kamili"
+    }
+  };
+
+  const currentLangContent = languageContent[language];
+
   // Loading state
   if (loading) {
     return (
@@ -217,7 +276,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
                 <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
               </div>
               <div className="hidden sm:block">
-                <h3 className="text-lg font-semibold text-gray-900">Profile Error</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{currentLangContent.profileError}</h3>
                 <p className="text-sm text-gray-600">{error}</p>
               </div>
             </div>
@@ -247,8 +306,8 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
                 <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div className="hidden sm:block">
-                <h3 className="text-lg font-semibold text-gray-900">No Profile Found</h3>
-                <p className="text-sm text-gray-600">Complete your profile to get started</p>
+                <h3 className="text-lg font-semibold text-gray-900">{currentLangContent.noProfile}</h3>
+                <p className="text-sm text-gray-600">{currentLangContent.completeProfile}</p>
               </div>
             </div>
             <button
@@ -256,7 +315,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center space-x-2 text-sm shadow-md hover:shadow-lg"
             >
               <User className="w-4 h-4" />
-              <span>Create Profile</span>
+              <span>{currentLangContent.createProfile}</span>
             </button>
           </div>
         </div>
@@ -268,9 +327,6 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
   if (userProfile.diabetes) healthConditions.push("Diabetes");
   if (userProfile.hypertension) healthConditions.push("Hypertension");
   if (userProfile.cardiovascular) healthConditions.push("Cardiovascular");
-
-  // BMI calculation commented out - variable no longer used
-  // const bmi = calculateBMI(userProfile.weight, userProfile.height);
 
   return (
     <div className="w-full bg-gray-100 border-b border-gray-200 shadow-sm">
@@ -291,7 +347,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
               </div>
             )}
 
-            {/* User Details - Different layout for mobile vs desktop */}
+            {/* User Details */}
             <div className="min-w-0 flex-1">
               {/* Mobile Layout */}
               <div className="sm:hidden">
@@ -300,8 +356,6 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
                     <h1 className="text-base font-bold text-gray-900 truncate max-w-[120px]">
                       {userProfile.fullName}
                     </h1>
-                    
-                    {/* BMI badge removed from mobile view */}
                   </div>
                 </div>
                 
@@ -345,7 +399,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
                   )}
                 </div>
                 
-                {/* Detailed stats - Only on desktop - BMI removed */}
+                {/* Detailed stats - Only on desktop */}
                 <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
                   <div className="flex items-center space-x-1 bg-blue-50 px-3 py-1 rounded-full">
                     <Calendar className="w-4 h-4 text-blue-600" />
@@ -359,14 +413,28 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
                     <Activity className="w-4 h-4 text-blue-600" />
                     <span className="font-medium text-blue-700">{userProfile.height || "N/A"} cm</span>
                   </div>
-                  {/* BMI stat removed */}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Action Buttons - Always horizontal on all screen sizes */}
+          {/* Action Buttons - Including Language Selector */}
           <div className="flex items-center space-x-2 ml-3">
+            {/* Language Selector */}
+            <div className="relative group">
+              <select
+                value={language}
+                onChange={(e) => handleLanguageChange(e.target.value as "en" | "sw")}
+                className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm font-medium text-gray-700 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all cursor-pointer"
+              >
+                <option value="en">🇬🇧 EN</option>
+                <option value="sw">🇰🇪 SW</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                <Languages className="w-4 h-4" />
+              </div>
+            </div>
+
             {/* Manage Doctors Button */}
             <button
               onClick={handleShowDoctors}
@@ -377,8 +445,8 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
               }`}
             >
               <Stethoscope className="w-4 h-4" />
-              <span className="hidden xs:inline">Doctors</span>
-              <span className="xs:hidden">Dr</span>
+              <span className="hidden xs:inline">{currentLangContent.doctors}</span>
+              <span className="xs:hidden">{currentLangContent.dr}</span>
             </button>
 
             {/* View Profile Button */}
@@ -387,13 +455,13 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
               className="px-3 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 font-semibold flex items-center space-x-2 text-sm shadow-md hover:shadow-lg"
             >
               <User className="w-4 h-4" />
-              <span className="hidden xs:inline">Profile</span>
-              <span className="xs:hidden">View</span>
+              <span className="hidden xs:inline">{currentLangContent.profile}</span>
+              <span className="xs:hidden">{currentLangContent.view}</span>
             </button>
           </div>
         </div>
 
-        {/* Minimal mobile stats - Only show on mobile - BMI removed */}
+        {/* Minimal mobile stats */}
         <div className="sm:hidden flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1 text-xs text-gray-600">
@@ -433,9 +501,9 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
                   <Stethoscope className="w-4 h-4 sm:w-6 sm:h-6" />
                 </div>
                 <div>
-                  <h2 className="text-xl sm:text-3xl font-bold">Doctor Management</h2>
+                  <h2 className="text-xl sm:text-3xl font-bold">{currentLangContent.doctorManagement}</h2>
                   <p className="text-blue-100 text-sm sm:text-lg mt-1">
-                    Connect and communicate with your healthcare team
+                    {currentLangContent.doctorDescription}
                   </p>
                 </div>
               </div>
@@ -459,7 +527,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
                 <div className="text-xs sm:text-sm text-gray-600 flex items-center space-x-2">
                   <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <span>Your healthcare team is essential for comprehensive care</span>
+                  <span>{currentLangContent.healthcareTeam}</span>
                 </div>
                 <div className="flex space-x-2 sm:space-x-3">
                   <button
@@ -467,14 +535,14 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ onDoctorsToggle }
                     className="flex-1 sm:flex-none px-4 py-2 sm:px-6 sm:py-3 bg-gray-500 text-white rounded-lg sm:rounded-xl hover:bg-gray-600 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm sm:text-base"
                   >
                     <X className="w-4 h-4" />
-                    <span>Close</span>
+                    <span>{currentLangContent.close}</span>
                   </button>
                   <button
                     onClick={() => console.log("Add new doctor")}
                     className="flex-1 sm:flex-none px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg sm:rounded-xl hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm sm:text-base"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Add Doctor</span>
+                    <span>{currentLangContent.addDoctor}</span>
                   </button>
                 </div>
               </div>
