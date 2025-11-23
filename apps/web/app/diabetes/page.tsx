@@ -8,12 +8,12 @@ import LifestyleForm from "../components/diabetesPages/DiabetesLifestyle";
 import DiabetesMedications from "../components/diabetesPages/DiabetesMedications";
 import DiabetesFoodAdvice from "../components/diabetesPages/DiabetesFoodAdvice";
 import UserProfileHeader from "../components/UserProfileHeader";
-import { 
-  Activity, 
-  Heart, 
-  Pill, 
-  Apple, 
-  Brain, 
+import {
+  Activity,
+  Heart,
+  Pill,
+  Apple,
+  Brain,
   CheckCircle,
   RotateCcw,
   Menu,
@@ -123,6 +123,7 @@ const Page = () => {
   };
 
   const tabConfig: Record<TabType, { label: string; icon: React.ReactNode; mobileLabel: string }> = {
+
     vitals: { 
       label: currentLanguage.vitals, 
       icon: <Activity className="w-4 h-4 md:w-5 md:h-5" />, 
@@ -147,6 +148,31 @@ const Page = () => {
       label: currentLanguage.final, 
       icon: <Brain className="w-4 h-4 md:w-5 md:h-5" />, 
       mobileLabel: currentLanguage.mobileLabels.final
+
+    vitals: {
+      label: "Vitals",
+      icon: <Activity className="w-4 h-4 md:w-5 md:h-5" />,
+      mobileLabel: "Vitals"
+    },
+    lifestyle: {
+      label: "Lifestyle",
+      icon: <Heart className="w-4 h-4 md:w-5 md:h-5" />,
+      mobileLabel: "Lifestyle"
+    },
+    medications: {
+      label: "Medications",
+      icon: <Pill className="w-4 h-4 md:w-5 md:h-5" />,
+      mobileLabel: "Meds"
+    },
+    food: {
+      label: "Food",
+      icon: <Apple className="w-4 h-4 md:w-5 md:h-5" />,
+      mobileLabel: "Food"
+    },
+    final: {
+      label: "AI Report",
+      icon: <Brain className="w-4 h-4 md:w-5 md:h-5" />,
+      mobileLabel: "Report"
     }
   };
 
@@ -194,10 +220,10 @@ const Page = () => {
 
           {/* Progress Bar */}
           <div className="w-full bg-cyan-100 rounded-full h-2 mt-3">
-            <div 
+            <div
               className="bg-emerald-900 h-2 rounded-full transition-all duration-300"
-              style={{ 
-                width: `${(currentStepIndex / 5) * 100}%` 
+              style={{
+                width: `${(currentStepIndex / 5) * 100}%`
               }}
             ></div>
           </div>
@@ -211,17 +237,16 @@ const Page = () => {
                     key={tab}
                     onClick={() => handleTabChange(tab)}
                     disabled={isTabDisabled(tab)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-colors ${
-                      activeTab === tab
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-colors ${activeTab === tab
                         ? "bg-emerald-900 text-white"
                         : "text-blue-900 hover:bg-cyan-50"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {tabConfig[tab].icon}
                     <span className="font-medium flex-1">{tabConfig[tab].label}</span>
                     {(tab === "lifestyle" && lifestyleDone) ||
-                    (tab === "medications" && medicationsDone) ||
-                    (tab === "food" && foodDone) ? (
+                      (tab === "medications" && medicationsDone) ||
+                      (tab === "food" && foodDone) ? (
                       <CheckCircle className="w-4 h-4 text-cyan-100" />
                     ) : null}
                   </button>
@@ -239,17 +264,16 @@ const Page = () => {
                 key={tab}
                 onClick={() => handleTabChange(tab)}
                 disabled={isTabDisabled(tab)}
-                className={`flex items-center px-4 py-3 font-medium transition-colors whitespace-nowrap rounded-lg text-base min-w-[140px] justify-center gap-2 ${
-                  activeTab === tab
+                className={`flex items-center px-4 py-3 font-medium transition-colors whitespace-nowrap rounded-lg text-base min-w-[140px] justify-center gap-2 ${activeTab === tab
                     ? "bg-emerald-900 text-white shadow-sm"
                     : "text-blue-900 hover:bg-cyan-100 hover:text-emerald-900"
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {tabConfig[tab].icon}
                 <span>{tabConfig[tab].label}</span>
                 {(tab === "lifestyle" && lifestyleDone) ||
-                (tab === "medications" && medicationsDone) ||
-                (tab === "food" && foodDone) ? (
+                  (tab === "medications" && medicationsDone) ||
+                  (tab === "food" && foodDone) ? (
                   <CheckCircle className="w-4 h-4 text-cyan-100" />
                 ) : null}
               </button>
@@ -307,7 +331,7 @@ const Page = () => {
 
           {activeTab === "food" && (
             <div className="space-y-6">
-              <DiabetesFoodAdvice 
+              <DiabetesFoodAdvice
                 enabled={requestAI}
                 onComplete={() => {
                   setFoodDone(true);

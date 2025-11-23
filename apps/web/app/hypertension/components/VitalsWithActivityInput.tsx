@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import ContextAwareAlert, { type ContextAnalysis } from "./ContextAwareAlert"
 import { Heart, Activity as ActivityIcon, Clock, Zap, Mic } from "lucide-react"
+import { useTranslation } from "../../../lib/TranslationContext"
 
 // Voice input component
 const VoiceInput = ({
@@ -98,6 +99,7 @@ interface VitalsWithActivityInputProps {
 export default function VitalsWithActivityInput({
   onAfterSave,
 }: VitalsWithActivityInputProps) {
+  const { t } = useTranslation()
   const [systolic, setSystolic] = useState("")
   const [diastolic, setDiastolic] = useState("")
   const [heartRate, setHeartRate] = useState("")
@@ -132,7 +134,7 @@ export default function VitalsWithActivityInput({
     setAnalysis(null)
 
     if (!systolic || !diastolic || !heartRate) {
-      setMessage("Please enter all vital sign values.")
+      setMessage(t.vitals.allFieldsRequired)
       return
     }
 
@@ -144,7 +146,9 @@ export default function VitalsWithActivityInput({
       Number(heartRate) < 30 ||
       Number(heartRate) > 200
     ) {
-      setMessage("Please enter realistic vital values.")
+      setMessage(t.language === "en-US" 
+        ? "Please enter realistic vital values."
+        : "Tafadhali weka maadili halali ya vitali.")
       return
     }
 
@@ -177,9 +181,10 @@ export default function VitalsWithActivityInput({
 
       if (!saveResp.ok) throw new Error("Failed to save vitals")
 
-      // Call AI analysis
+      // Call AI analysis with language parameter
+      const languageParam = t.language === "sw-TZ" ? "sw-TZ" : "en-US";
       const aiResp = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/hypertensionVitals/analyze`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/hypertensionVitals/analyze?language=${languageParam}`,
         {
           method: "POST",
           headers: {
@@ -212,11 +217,15 @@ export default function VitalsWithActivityInput({
         diastolic: Number(diastolic),
         heartRate: Number(heartRate),
       })
-      setMessage("✅ Vitals saved & analyzed successfully!")
+      setMessage(t.language === "en-US" 
+        ? "✅ Vitals saved & analyzed successfully!"
+        : "✅ Vitali zimehifadhiwa na kuchambuliwa kwa mafanikio!")
       if (onAfterSave) onAfterSave()
       reset()
     } catch (e: any) {
-      setMessage(e.message || "There was an error. Please try again.")
+      setMessage(e.message || (t.language === "en-US" 
+        ? "There was an error. Please try again."
+        : "Kulikuwa na hitilafu. Tafadhali jaribu tena."))
       setAnalysis(null)
     } finally {
       setSaving(false)
@@ -230,19 +239,22 @@ export default function VitalsWithActivityInput({
           <Heart className="w-5 h-5 text-white" />
         </div>
         <h3 className="text-lg font-semibold text-gray-800">
-          Enter Vitals & Activity Context
+          {t.vitals.title}
         </h3>
       </div>
 
       <p className="text-sm text-gray-600 mb-6">
-        Enter your blood pressure, heart rate, and recent activity — see AI-guided feedback instantly after saving.
+        {t.language === "en-US" 
+          ? "Enter your blood pressure, heart rate, and recent activity — see AI-guided feedback instantly after saving."
+          : "Weka shinikizo la damu, kiwango cha moyo, na shughuli za hivi karibuni — ona maoni ya AI mara tu baada ya kuhifadhi."
+        }
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Systolic */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Systolic (mmHg)</label>
+            <label className="text-sm font-medium text-gray-700">{t.vitals.systolic}</label>
             <div className="flex gap-2">
               <input
                 type="number"
@@ -255,25 +267,30 @@ export default function VitalsWithActivityInput({
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
               />
               <VoiceInput
-                lang="en-US"
-                placeholder="Say your systolic value..."
+                lang={t.language}
+                placeholder={t.language === "en-US" ? "Say your systolic value..." : "Sema thamani ya systolic..."}
                 onResult={(text) => {
                   const num = normalizeNumber(text)
                   if (num !== null && num >= 50 && num <= 250) {
                     setSystolic(num.toString())
                   } else {
-                    setMessage("Please say a valid systolic value between 50–250")
+                    setMessage(t.language === "en-US" 
+                      ? "Please say a valid systolic value between 50–250"
+                      : "Tafadhali sema thamani halali ya systolic kati ya 50–250"
+                    )
                   }
                 }}
                 disabled={saving}
               />
             </div>
-            <p className="text-xs text-gray-500">Upper number</p>
+            <p className="text-xs text-gray-500">
+              {t.language === "en-US" ? "Upper number" : "Nambari ya juu"}
+            </p>
           </div>
 
           {/* Diastolic */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Diastolic (mmHg)</label>
+            <label className="text-sm font-medium text-gray-700">{t.vitals.diastolic}</label>
             <div className="flex gap-2">
               <input
                 type="number"
@@ -286,25 +303,30 @@ export default function VitalsWithActivityInput({
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
               />
               <VoiceInput
-                lang="en-US"
-                placeholder="Say your diastolic value..."
+                lang={t.language}
+                placeholder={t.language === "en-US" ? "Say your diastolic value..." : "Sema thamani ya diastolic..."}
                 onResult={(text) => {
                   const num = normalizeNumber(text)
                   if (num !== null && num >= 30 && num <= 150) {
                     setDiastolic(num.toString())
                   } else {
-                    setMessage("Please say a valid diastolic value between 30–150")
+                    setMessage(t.language === "en-US"
+                      ? "Please say a valid diastolic value between 30–150"
+                      : "Tafadhali sema thamani halali ya diastolic kati ya 30–150"
+                    )
                   }
                 }}
                 disabled={saving}
               />
             </div>
-            <p className="text-xs text-gray-500">Lower number</p>
+            <p className="text-xs text-gray-500">
+              {t.language === "en-US" ? "Lower number" : "Nambari ya chini"}
+            </p>
           </div>
 
           {/* Heart Rate */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Heart Rate (bpm)</label>
+            <label className="text-sm font-medium text-gray-700">{t.vitals.heartRate}</label>
             <div className="flex gap-2">
               <input
                 type="number"
@@ -317,20 +339,25 @@ export default function VitalsWithActivityInput({
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
               />
               <VoiceInput
-                lang="en-US"
-                placeholder="Say your heart rate..."
+                lang={t.language}
+                placeholder={t.language === "en-US" ? "Say your heart rate..." : "Sema kiwango cha moyo..."}
                 onResult={(text) => {
                   const num = normalizeNumber(text)
                   if (num !== null && num >= 30 && num <= 200) {
                     setHeartRate(num.toString())
                   } else {
-                    setMessage("Please say a valid heart rate between 30–200")
+                    setMessage(t.language === "en-US"
+                      ? "Please say a valid heart rate between 30–200"
+                      : "Tafadhali sema kiwango halali cha moyo kati ya 30–200"
+                    )
                   }
                 }}
                 disabled={saving}
               />
             </div>
-            <p className="text-xs text-gray-500">Beats/min</p>
+            <p className="text-xs text-gray-500">
+              {t.language === "en-US" ? "Beats/min" : "Mipigo/dakika"}
+            </p>
           </div>
         </div>
 
@@ -341,7 +368,7 @@ export default function VitalsWithActivityInput({
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
               <ActivityIcon className="w-4 h-4" />
-              Recent Activity Type
+              {t.language === "en-US" ? "Recent Activity Type" : "Aina ya Shughuli ya Hivi Karibuni"}
             </label>
             <select
               value={activityType}
@@ -351,7 +378,18 @@ export default function VitalsWithActivityInput({
             >
               {activityOptions.map((opt) => (
                 <option value={opt.value} key={opt.value}>
-                  {opt.label}
+                  {t.language === "en-US" ? opt.label : 
+                    opt.value === "none" ? "Hakuna shughuli ya hivi karibuni" :
+                    opt.value === "exercise" ? "Zoezi/Mazoezi" :
+                    opt.value === "walking" ? "Kutembea" :
+                    opt.value === "eating" ? "Kula/Chakula" :
+                    opt.value === "stress" ? "Mkazo/Wasiwasi" :
+                    opt.value === "sleep_deprivation" ? "Upungufu wa Usingizi" :
+                    opt.value === "caffeine" ? "Kunywa Kahawa" :
+                    opt.value === "medication" ? "Dawa ya Hivi Karibuni" :
+                    opt.value === "illness" ? "Ugonjwa/Homa" :
+                    "Nyingine"
+                  }
                 </option>
               ))}
             </select>
@@ -361,7 +399,7 @@ export default function VitalsWithActivityInput({
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
               <Clock className="w-4 h-4" />
-              Duration (minutes)
+              {t.language === "en-US" ? "Duration (minutes)" : "Muda (dakika)"}
             </label>
             <input
               type="number"
@@ -378,7 +416,7 @@ export default function VitalsWithActivityInput({
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
               <Zap className="w-4 h-4" />
-              Intensity
+              {t.language === "en-US" ? "Intensity" : "Ukali"}
             </label>
             <div className="flex gap-2">
               {(["light", "moderate", "vigorous"] as const).map((level) => (
@@ -393,7 +431,12 @@ export default function VitalsWithActivityInput({
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
-                  {level.charAt(0).toUpperCase() + level.slice(1)}
+                  {t.language === "en-US" 
+                    ? level.charAt(0).toUpperCase() + level.slice(1)
+                    : level === "light" ? "Nyepesi" :
+                      level === "moderate" ? "Wastani" :
+                      "Kali"
+                  }
                 </button>
               ))}
             </div>
@@ -402,7 +445,7 @@ export default function VitalsWithActivityInput({
           {/* Time Since Activity */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">
-              How long ago? (minutes)
+              {t.language === "en-US" ? "How long ago? (minutes)" : "Muda uliopita? (dakika)"}
             </label>
             <input
               type="number"
@@ -418,14 +461,17 @@ export default function VitalsWithActivityInput({
           {/* Notes */}
           <div className="md:col-span-2 space-y-2">
             <label className="text-sm font-medium text-gray-700">
-              Notes (optional)
+              {t.language === "en-US" ? "Notes (optional)" : "Maelezo (hiari)"}
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               disabled={saving}
               rows={2}
-              placeholder="E.g., Just finished a walk, or feeling stressed out this morning..."
+              placeholder={t.language === "en-US" 
+                ? "E.g., Just finished a walk, or feeling stressed out this morning..."
+                : "Mf., Nimeimaliza matembezi, au nahisi mkazo asubuhi hii..."
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
             />
           </div>
@@ -451,10 +497,10 @@ export default function VitalsWithActivityInput({
           {saving ? (
             <div className="flex items-center justify-center">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Saving...
+              {t.language === "en-US" ? "Saving..." : "Inahifadhi..."}
             </div>
           ) : (
-            "Save Vitals & Analyze"
+            t.vitals.saveButton
           )}
         </button>
       </form>

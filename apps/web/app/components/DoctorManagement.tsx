@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Phone, Mail, MapPin, Calendar, Stethoscope, MessageSquare, PhoneCall, ArrowLeft, AlertCircle,
   RefreshCw, Send, Shield, Building, Award, Clock, Search, UserPlus, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, Input, Button } from '@repo/ui';
+import { useTranslation } from '../../lib/TranslationContext';
 
 interface Doctor {
   id: string;
@@ -53,6 +54,7 @@ interface DoctorManagementProps {
 }
 
 const DoctorSearch: React.FC<DoctorSearchProps> = ({ onDoctorRequest, requestedDoctors }) => {
+  const { t, language } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -195,12 +197,18 @@ const DoctorSearch: React.FC<DoctorSearchProps> = ({ onDoctorRequest, requestedD
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="font-semibold text-gray-900">Search Our Medical Network</h4>
-          <p className="text-sm text-gray-600">Find specialists based on your needs</p>
+          <h4 className="font-semibold text-gray-900">
+            {language === "en-US" ? "Search Our Medical Network" : "Tafuta Katika Mtandao Wetu wa Matibabu"}
+          </h4>
+          <p className="text-sm text-gray-600">
+            {language === "en-US" ? "Find specialists based on your needs" : "Pata wataalamu kulingana na mahitaji yako"}
+          </p>
         </div>
         <div className="flex items-center space-x-2 text-sm text-gray-500">
           <User className="w-4 h-4" />
-          <span>{searchResults.length} doctors available</span>
+          <span>
+            {searchResults.length} {language === "en-US" ? "doctors available" : "madaktari wanapatikana"}
+          </span>
         </div>
       </div>
 
@@ -208,7 +216,9 @@ const DoctorSearch: React.FC<DoctorSearchProps> = ({ onDoctorRequest, requestedD
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
         <Input
           type="text"
-          placeholder="Search by name, specialization, hospital, or condition..."
+          placeholder={language === "en-US" 
+            ? "Search by name, specialization, hospital, or condition..."
+            : "Tafuta kwa jina, utaalam, hospitali, au hali ya afya..."}
           className="w-full pl-12 pr-24 py-3 text-base border-2 border-gray-200 focus:border-blue-500 transition-colors"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -232,8 +242,12 @@ const DoctorSearch: React.FC<DoctorSearchProps> = ({ onDoctorRequest, requestedD
         {isLoading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-            <p className="text-gray-600 font-medium">Searching our database...</p>
-            <p className="text-sm text-gray-500 mt-1">Finding the best doctors for you</p>
+            <p className="text-gray-600 font-medium">
+              {language === "en-US" ? "Searching our database..." : "Inatafuta kwenye hifadhidata yetu..."}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              {language === "en-US" ? "Finding the best doctors for you" : "Kupata madaktari bora kwako"}
+            </p>
           </div>
         ) : searchResults.length > 0 ? (
           searchResults.map((doctor) => {
@@ -253,7 +267,7 @@ const DoctorSearch: React.FC<DoctorSearchProps> = ({ onDoctorRequest, requestedD
                           {isRequested && (
                             <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center">
                               <CheckCircle className="w-3 h-3 mr-1" />
-                              Requested
+                              {language === "en-US" ? "Requested" : "Imeombwa"}
                             </span>
                           )}
                         </div>
@@ -267,7 +281,7 @@ const DoctorSearch: React.FC<DoctorSearchProps> = ({ onDoctorRequest, requestedD
                             </svg>
                             {doctor.rating.toFixed(1)}
                           </span>
-                          <span>• {doctor.experience} years</span>
+                          <span>• {doctor.experience} {language === "en-US" ? "years" : "miaka"}</span>
                         </div>
                       </div>
                     </div>
@@ -289,17 +303,17 @@ const DoctorSearch: React.FC<DoctorSearchProps> = ({ onDoctorRequest, requestedD
                     <div className="flex flex-wrap gap-2">
                       {doctor.treatsHypertension && (
                         <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded border border-blue-200">
-                          Hypertension
+                          {language === "en-US" ? "Hypertension" : "Shinikizo la Damu"}
                         </span>
                       )}
                       {doctor.treatsDiabetes && (
                         <span className="bg-green-50 text-green-700 text-xs px-2 py-1 rounded border border-green-200">
-                          Diabetes
+                          {language === "en-US" ? "Diabetes" : "Kisukari"}
                         </span>
                       )}
                       {doctor.treatsCardiovascular && (
                         <span className="bg-red-50 text-red-700 text-xs px-2 py-1 rounded border border-red-200">
-                          Cardiovascular
+                          {language === "en-US" ? "Cardiovascular" : "Moyo na Mishipa"}
                         </span>
                       )}
                     </div>
@@ -318,12 +332,12 @@ const DoctorSearch: React.FC<DoctorSearchProps> = ({ onDoctorRequest, requestedD
                       {isRequested ? (
                         <>
                           <CheckCircle className="w-4 h-4 mr-2" />
-                          Requested
+                          {language === "en-US" ? "Requested" : "Imeombwa"}
                         </>
                       ) : (
                         <>
                           <UserPlus className="w-4 h-4 mr-2" />
-                          Request
+                          {language === "en-US" ? "Request" : "Omba"}
                         </>
                       )}
                     </Button>
@@ -335,8 +349,12 @@ const DoctorSearch: React.FC<DoctorSearchProps> = ({ onDoctorRequest, requestedD
         ) : searchQuery && !isLoading ? (
           <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
             <User className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <h4 className="font-semibold text-gray-700 mb-1">No doctors found</h4>
-            <p className="text-gray-500 text-sm">Try adjusting your search terms or filters</p>
+            <h4 className="font-semibold text-gray-700 mb-1">
+              {language === "en-US" ? "No doctors found" : "Hakuna madaktari walio patikana"}
+            </h4>
+            <p className="text-gray-500 text-sm">
+              {language === "en-US" ? "Try adjusting your search terms or filters" : "Jaribu kurekebisha maneno yako ya utafutaji au vichujio"}
+            </p>
           </div>
         ) : (
           <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
@@ -391,16 +409,33 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
 
       if (!response.ok) {
         if (response.status === 404) {
+          // No doctor assigned - this is not an error, just no assignment yet
           setAssignedDoctor(null);
+          setError(null); // Clear any previous errors
           return;
         }
-        throw new Error(`Failed to fetch assigned doctor: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch assigned doctor: ${response.status}`);
       }
 
       const data = await response.json();
       
-      if (data.success && data.assignedDoctor) {
+      console.log('Assigned doctor API response:', data);
+      
+      // Handle different response formats
+      if (data.success) {
+        // API returns { success: true, assignedDoctor: {...} } or { success: true, assignedDoctor: null }
+        if (data.assignedDoctor) {
+          setAssignedDoctor(data.assignedDoctor);
+        } else {
+          setAssignedDoctor(null);
+        }
+      } else if (data.assignedDoctor) {
+        // Fallback: if assignedDoctor exists directly in response
         setAssignedDoctor(data.assignedDoctor);
+      } else if (Array.isArray(data) && data.length > 0) {
+        // Fallback: if response is an array with doctor data
+        setAssignedDoctor(data[0]);
       } else {
         setAssignedDoctor(null);
       }

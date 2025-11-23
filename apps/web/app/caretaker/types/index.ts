@@ -18,6 +18,7 @@ export interface VitalSigns {
   diastolic?: number;
   heartRate?: number;
   glucose?: number;
+  age: number;
   timestamp: string;
   patientId: string;
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TriangleAlert, CheckCircle } from "lucide-react";
+import { useTranslation } from"../../../lib/TranslationContext";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -14,6 +15,7 @@ type StatusData = {
 };
 
 export default function HypertensionAlert({ refreshToken }: { refreshToken?: number }) {
+  const { t, language } = useTranslation();
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,9 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
         setError(null);
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         if (!token) {
-          setError('You must be logged in to view alerts.');
+          setError(language === "sw-TZ" 
+            ? "Lazima uwe umeingia ili kuona arifa." 
+            : "You must be logged in to view alerts.");
           setLoading(false);
           return;
         }
@@ -122,62 +126,64 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
   function getBloodPressureCategory(systolic: number, diastolic: number, age?: number) {
     const { systolicHigh, diastolicHigh, systolicLow, diastolicLow } = getBloodPressureStatus(systolic, diastolic, age);
 
+    const isSwahili = language === "sw-TZ";
+    
     if (systolic < systolicLow || diastolic < diastolicLow) {
       return { 
-        level: 'Low Blood Pressure', 
+        level: isSwahili ? 'Shinikizo la Chini la Damu' : 'Low Blood Pressure', 
         color: 'bg-blue-50 border-blue-600', 
         text: 'text-blue-700', 
-        title: 'Low Blood Pressure', 
+        title: isSwahili ? 'Shinikizo la Chini la Damu' : 'Low Blood Pressure', 
         icon: <TriangleAlert color="#2563eb" size={20} />, 
         button: false,
         severity: 'low'
       };
     } else if (systolic < 120 && diastolic < 80) {
       return { 
-        level: 'Normal', 
+        level: isSwahili ? 'Kawaida' : 'Normal', 
         color: 'bg-green-50 border-green-600', 
         text: 'text-green-700', 
-        title: 'Normal Blood Pressure', 
+        title: isSwahili ? 'Shinikizo la Damu la Kawaida' : 'Normal Blood Pressure', 
         icon: <CheckCircle color="#16a34a" size={20} />, 
         button: false,
         severity: 'normal'
       };
     } else if (systolic >= 120 && systolic < 130 && diastolic < 80) {
       return { 
-        level: 'Elevated', 
+        level: isSwahili ? 'Kiwango Cha Juu' : 'Elevated', 
         color: 'bg-yellow-50 border-yellow-600', 
         text: 'text-yellow-700', 
-        title: 'Elevated Blood Pressure', 
+        title: isSwahili ? 'Shinikizo la Damu la Juu' : 'Elevated Blood Pressure', 
         icon: <TriangleAlert color="#eab308" size={20} />, 
         button: false,
         severity: 'elevated'
       };
     } else if ((systolic >= 130 && systolic < 140) || (diastolic >= 80 && diastolic < 90)) {
       return { 
-        level: 'Stage 1 Hypertension', 
+        level: isSwahili ? 'Hatua ya 1 ya Shinikizo la Juu la Damu' : 'Stage 1 Hypertension', 
         color: 'bg-orange-50 border-orange-600', 
         text: 'text-orange-700', 
-        title: 'Stage 1 Hypertension', 
+        title: isSwahili ? 'Hatua ya 1 ya Shinikizo la Juu la Damu' : 'Stage 1 Hypertension', 
         icon: <TriangleAlert color="#ea580c" size={20} />, 
         button: true,
         severity: 'stage1'
       };
     } else if ((systolic >= 140 && systolic < 180) || (diastolic >= 90 && diastolic < 120)) {
       return { 
-        level: 'Stage 2 Hypertension', 
+        level: isSwahili ? 'Hatua ya 2 ya Shinikizo la Juu la Damu' : 'Stage 2 Hypertension', 
         color: 'bg-red-50 border-red-600', 
         text: 'text-red-700', 
-        title: 'Stage 2 Hypertension', 
+        title: isSwahili ? 'Hatua ya 2 ya Shinikizo la Juu la Damu' : 'Stage 2 Hypertension', 
         icon: <TriangleAlert color="#dc2626" size={20} />, 
         button: true,
         severity: 'stage2'
       };
     } else if (systolic >= 180 || diastolic >= 120) {
       return { 
-        level: 'Hypertensive Crisis', 
+        level: isSwahili ? 'Mgongano wa Shinikizo la Juu la Damu' : 'Hypertensive Crisis', 
         color: 'bg-red-100 border-red-800', 
         text: 'text-red-800', 
-        title: 'Hypertensive Crisis', 
+        title: isSwahili ? 'Mgongano wa Shinikizo la Juu la Damu' : 'Hypertensive Crisis', 
         icon: <TriangleAlert color="#b91c1c" size={20} />, 
         button: true,
         severity: 'crisis'
@@ -186,20 +192,20 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
       // This handles cases like 110/85 - should be normal or elevated, not Stage 1
       if (systolic < 120 && diastolic >= 80 && diastolic < 90) {
         return { 
-          level: 'Normal', 
+          level: isSwahili ? 'Kawaida' : 'Normal', 
           color: 'bg-green-50 border-green-600', 
           text: 'text-green-700', 
-          title: 'Normal Blood Pressure', 
+          title: isSwahili ? 'Shinikizo la Damu la Kawaida' : 'Normal Blood Pressure', 
           icon: <CheckCircle color="#16a34a" size={20} />, 
           button: false,
           severity: 'normal'
         };
       }
       return { 
-        level: 'Unknown', 
+        level: isSwahili ? 'Haijulikani' : 'Unknown', 
         color: 'bg-gray-50 border-gray-400', 
         text: 'text-gray-700', 
-        title: 'Unknown', 
+        title: isSwahili ? 'Haijulikani' : 'Unknown', 
         icon: <TriangleAlert color="#6b7280" size={20} />, 
         button: false,
         severity: 'unknown'
@@ -228,9 +234,19 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
     }
 
     if (heartRate < lowThreshold) {
-      return { message: `Bradycardia (Low Heart Rate)`, color: 'text-blue-700' };
+      return { 
+        message: language === "sw-TZ" 
+          ? `Bradycardia (Kasi ya Chini ya Moyo)` 
+          : `Bradycardia (Low Heart Rate)`, 
+        color: 'text-blue-700' 
+      };
     } else if (heartRate > highThreshold) {
-      return { message: `Tachycardia (High Heart Rate)`, color: 'text-red-700' };
+      return { 
+        message: language === "sw-TZ" 
+          ? `Tachycardia (Kasi ya Juu ya Moyo)` 
+          : `Tachycardia (High Heart Rate)`, 
+        color: 'text-red-700' 
+      };
     } else {
       return null;
     }
@@ -239,7 +255,9 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
   if (loading) {
     return (
       <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">
-        <span className="text-gray-500 text-sm">Loading health alert...</span>
+        <span className="text-gray-500 text-sm">
+          {language === "sw-TZ" ? "Inapakia arifa ya afya..." : "Loading health alert..."}
+        </span>
       </div>
     );
   }
@@ -255,7 +273,11 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
   if (!statusData) {
     return (
       <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">
-        <span className="text-gray-500 text-sm">No blood pressure data for today. Please enter your vitals.</span>
+        <span className="text-gray-500 text-sm">
+          {language === "sw-TZ" 
+            ? "Hakuna data ya shinikizo la damu kwa leo. Tafadhali ingiza vitali zako." 
+            : "No blood pressure data for today. Please enter your vitals."}
+        </span>
       </div>
     );
   }
@@ -272,27 +294,51 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
       
       {statusData.age && (
         <p className="text-sm text-gray-600 mb-1">
-          Age-based assessment for {statusData.age} years old
+          {language === "sw-TZ" 
+            ? `Tathmini kulingana na umri kwa umri wa miaka ${statusData.age}`
+            : `Age-based assessment for ${statusData.age} years old`
+          }
         </p>
       )}
       
       <p className={`text-sm ${bpCategory.text} mb-4`}>
         {(() => {
+          const isSwahili = language === "sw-TZ";
           switch (bpCategory.level) {
             case 'Normal':
-              return 'Your blood pressure reading is within the normal range, indicating no immediate cause for concern.';
+            case 'Kawaida':
+              return isSwahili 
+                ? 'Usomaji wako wa shinikizo la damu uko ndani ya kiwango cha kawaida, ukionyesha hakuna sababu ya wasiwasi ya haraka.'
+                : 'Your blood pressure reading is within the normal range, indicating no immediate cause for concern.';
             case 'Elevated':
-              return 'Your blood pressure is slightly elevated. Consider lifestyle changes and regular monitoring.';
+            case 'Kiwango Cha Juu':
+              return isSwahili
+                ? 'Shinikizo lako la damu limeinuka kidogo. Fikiria mabadiliko ya maisha na ufuatiliaji wa mara kwa mara.'
+                : 'Your blood pressure is slightly elevated. Consider lifestyle changes and regular monitoring.';
             case 'Stage 1 Hypertension':
-              return 'You are in Stage 1 Hypertension. Please monitor your blood pressure regularly and consult your doctor if this persists.';
+            case 'Hatua ya 1 ya Shinikizo la Juu la Damu':
+              return isSwahili
+                ? 'Uko katika Hatua ya 1 ya Shinikizo la Juu la Damu. Tafadhali fuatilia shinikizo lako la damu mara kwa mara na shauriana na daktari wako ikiwa hii inaendelea.'
+                : 'You are in Stage 1 Hypertension. Please monitor your blood pressure regularly and consult your doctor if this persists.';
             case 'Stage 2 Hypertension':
-              return 'You are in Stage 2 Hypertension. It is recommended to consult your doctor soon for proper management.';
+            case 'Hatua ya 2 ya Shinikizo la Juu la Damu':
+              return isSwahili
+                ? 'Uko katika Hatua ya 2 ya Shinikizo la Juu la Damu. Inapendekezwa ushauriane na daktari wako hivi karibuni kwa usimamizi sahihi.'
+                : 'You are in Stage 2 Hypertension. It is recommended to consult your doctor soon for proper management.';
             case 'Hypertensive Crisis':
-              return 'Hypertensive Crisis! Seek immediate medical attention.';
+            case 'Mgongano wa Shinikizo la Juu la Damu':
+              return isSwahili
+                ? 'Mgongano wa Shinikizo la Juu la Damu! Tafuta huduma ya matibabu mara moja.'
+                : 'Hypertensive Crisis! Seek immediate medical attention.';
             case 'Low Blood Pressure':
-              return 'Your blood pressure is low. If you experience dizziness or feel unwell, contact your healthcare provider.';
+            case 'Shinikizo la Chini la Damu':
+              return isSwahili
+                ? 'Shinikizo lako la damu ni la chini. Ikiwa unapata kizunguzungu au unajisikia vibaya, wasiliana na mtoa huduma wako wa afya.'
+                : 'Your blood pressure is low. If you experience dizziness or feel unwell, contact your healthcare provider.';
             default:
-              return 'Continue to monitor blood pressure regularly and maintain a healthy lifestyle.';
+              return isSwahili
+                ? 'Endelea kufuatilia shinikizo la damu mara kwa mara na kudumisha maisha ya afya.'
+                : 'Continue to monitor blood pressure regularly and maintain a healthy lifestyle.';
           }
         })()}
       </p>
@@ -304,10 +350,10 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
       )}
       
       <div className="text-sm mb-2">
-        <p><strong>Systolic:</strong> {statusData.systolic} mmHg</p>
-        <p><strong>Diastolic:</strong> {statusData.diastolic} mmHg</p>
-        <p><strong>Heart Rate:</strong> {statusData.heartRate} bpm</p>
-        {statusData.age && <p><strong>Age:</strong> {statusData.age} years</p>}
+        <p><strong>{language === "sw-TZ" ? "Sistolic:" : "Systolic:"}</strong> {statusData.systolic} mmHg</p>
+        <p><strong>{language === "sw-TZ" ? "Diastolic:" : "Diastolic:"}</strong> {statusData.diastolic} mmHg</p>
+        <p><strong>{language === "sw-TZ" ? "Kasi ya Moyo:" : "Heart Rate:"}</strong> {statusData.heartRate} bpm</p>
+        {statusData.age && <p><strong>{language === "sw-TZ" ? "Umri:" : "Age:"}</strong> {statusData.age} {language === "sw-TZ" ? "miaka" : "years"}</p>}
       </div>
       
       {bpCategory.button && (
@@ -315,7 +361,7 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
           onClick={scrollToDoctorManagement}
           className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition"
         >
-          Find Doctor Nearby
+          {language === "sw-TZ" ? "Tafuta Daktari Karibu" : "Find Doctor Nearby"}
         </button>
       )}
     </div>

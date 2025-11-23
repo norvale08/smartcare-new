@@ -1,6 +1,6 @@
 
 import express from 'express';
-import cors from 'cors'; 
+import cors from 'cors';
 import session from "express-session";
 import { connectMongoDB } from './lib/mongodb';
 import dotenv from "dotenv";
@@ -159,9 +159,9 @@ app.use('/api/speech', speechRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     message: 'Route not found',
-    path: req.originalUrl 
+    path: req.originalUrl
   });
 });
 

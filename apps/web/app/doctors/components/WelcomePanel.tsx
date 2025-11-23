@@ -1,5 +1,6 @@
 //WelcomePanel.tsx
 'use client';
+
 import React from "react";
 import { DashboardStats, Patient } from "@/types/doctor";
 

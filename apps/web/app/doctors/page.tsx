@@ -49,7 +49,9 @@ const DoctorsDashboard = () => {
 
 
   // Route protection: redirect unauthenticated doctors
-useEffect(() => {
+  useEffect(() => {
+    if (typeof window === "undefined") return; // guard SSR
+
     const verifyAuth = async () => {
       if (!token) {
         setIsAuthenticated(false);
@@ -93,6 +95,8 @@ useEffect(() => {
 
   // Fetch doctor info
   useEffect(() => {
+    if (typeof window === "undefined") return; // guard SSR
+
     const fetchDoctor = async () => {
       try {
         const res = await authFetch(`${API_URL}/api/doctorDashboard/doctor`, { cache: "no-store" });
@@ -109,6 +113,8 @@ useEffect(() => {
 
   // Fetch ONLY assigned patients
   useEffect(() => {
+    if (typeof window === "undefined") return; // guard SSR
+
     const fetchAssignedPatients = async () => {
       try {
         const res = await authFetch(`${API_URL}/api/doctorDashboard/assignedPatients`, {
@@ -127,6 +133,11 @@ useEffect(() => {
           const capitalize = (str: string) =>
             str ? str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : "";
 
+          // Extract coordinates
+          const coordinates = p.coordinates
+            ? { lat: p.coordinates.lat, lng: p.coordinates.lng }
+            : null;
+
           return {
             id: p._id,
             name: capitalize(p.fullName),
@@ -136,6 +147,7 @@ useEffect(() => {
             vitals: p.vitals,
             riskLevel: p.riskLevel,
             location: p.location ?? "Unknown",
+            coordinates: coordinates,
             lastUpdate: formatRelativeTime(p.updatedAt) || formatRelativeTime(p.createdAt),
           };
         });
@@ -156,6 +168,7 @@ useEffect(() => {
   const [vitalTrends, setVitalTrends] = useState<VitalTrend>({ heartRate: [], bloodPressure: [], glucose: [], bmi: [], });
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const fetchTrends = async () => {
       try {
         const res = await fetch(`${API_URL}/api/doctorDashboard/vitalTrends`, {
@@ -225,6 +238,7 @@ useEffect(() => {
   const [anomalyDistributionBar, setAnomalyDistributionBar] = useState<AnomalyBarData[]>([]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const fetchAnomalyDistribution = async () => {
       try {
         const res = await fetch(`${API_URL}/api/doctorDashboard/anomalyDistribution`, {
@@ -245,7 +259,6 @@ useEffect(() => {
 
 
   // Render Logic
-  // --------------------
   if (!authChecked) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">

@@ -138,8 +138,8 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
     // Initial fetch
     fetchNotifications();
 
-    // Poll for new notifications every 60 seconds
-    const interval = setInterval(fetchNotifications, 60000);
+    // Poll for new notifications every 10 seconds (more frequent for critical alerts)
+    const interval = setInterval(fetchNotifications, 10000);
 
     return () => clearInterval(interval);
   }, [patient.id]);
@@ -229,15 +229,25 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
     }
   };
 
-  // Sort notifications with unread and high priority first
+  // Sort notifications with critical priority first
   const sortedNotifications = [...notifications].sort((a, b) => {
-    // Prioritize unread notifications
+    // First: Prioritize unread notifications
     if (!a.read && b.read) return -1;
     if (a.read && !b.read) return 1;
     
-    // Then prioritize by priority
+    // Second: Prioritize by priority (critical first)
     const priorityOrder = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3 };
-    return priorityOrder[a.priority] - priorityOrder[b.priority];
+    const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+    if (priorityDiff !== 0) return priorityDiff;
+    
+    // Third: Prioritize hypertension/vital alerts
+    if (a.type === 'hypertension_alert' && b.type !== 'hypertension_alert') return -1;
+    if (a.type !== 'hypertension_alert' && b.type === 'hypertension_alert') return 1;
+    if (a.type === 'vital_alert' && b.type !== 'vital_alert') return -1;
+    if (a.type !== 'vital_alert' && b.type === 'vital_alert') return 1;
+    
+    // Finally: Sort by timestamp (newest first)
+    return b.timestamp.getTime() - a.timestamp.getTime();
   });
 
   if (loading) {

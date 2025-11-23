@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { HeartPulse,Globe,TriangleAlert,MicVocal,Pill,Utensils,AlertCircle,CheckCircle,Wine,Cigarette,Coffee,Activity, User, Search, Send,
+import { HeartPulse, Globe, TriangleAlert, MicVocal, Pill, Utensils, AlertCircle, CheckCircle, Wine, Cigarette, Coffee, Activity, User, Search, Send,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import axios from 'axios';
@@ -21,6 +21,7 @@ import NearbyClinics from "./components/NearbyClinics";
 import DietRecommendations from "./components/DietRecommendations";
 import DoctorManagement from "../components/DoctorManagement";
 import MedicationReminders from "./components/MedicationReminders";
+import { TranslationProvider, useTranslation } from "../../lib/TranslationContext";
 
 // import { Doctor } from "@/types/doctor";
 import { Button, Input, Card, CardHeader, CardContent, CardDescription, CardTitle } from "@repo/ui";
@@ -62,18 +63,53 @@ const getBpLevel = (systolic: number, diastolic: number): string => {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+// Tab navigation component
+const TabNavigation = ({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: string) => void }) => {
+  const { t } = useTranslation();
+  const tabs = [
+    { id: 'vitals', label: t.common.vitals, icon: Activity },
+    { id: 'doctor', label: t.common.doctor, icon: User },
+    { id: 'medicine', label: t.common.medicine, icon: Pill },
+    { id: 'lifestyle', label: t.common.lifestyleAndDiet, icon: Utensils },
+    { id: 'maps', label: t.common.maps, icon: Globe }
+  ];
 
+  return (
+    <div className="flex overflow-x-auto bg-white shadow-sm border-b">
+      {tabs.map((tab) => {
+        const IconComponent = tab.icon;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className={`flex items-center px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors ${
+              activeTab === tab.id
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <IconComponent className="w-4 h-4 mr-2" />
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 
 function DashboardPage() {
+   const { t, language, setLanguage } = useTranslation();
   const { data: session, status } = useSession();
   console.log("Submitting vitals with userId:", session?.user?.id);
 
+  const [activeTab, setActiveTab] = useState('vitals');
   const [systolic, setSystolic] = useState('');
   const [diastolic, setDiastolic] = useState('');
   const [heartRate, setHeartRate] = useState('');
   const [message, setMessage] = useState('');
   const [hasToken, setHasToken] = useState(false);
   const [alertRefreshToken, setAlertRefreshToken] = useState(0);
+  // const [language, setLanguage] = useState<string>("en-US");
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -90,13 +126,13 @@ function DashboardPage() {
 
   const handleSubmit = async () => {
     if (!systolic || !diastolic || !heartRate) {
-      setMessage('Please enter all vitals.');
+      setMessage(t.vitals.allFieldsRequired);
       return;
     }
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!token) {
-      setMessage('You must be logged in to save vitals.');
+      setMessage(t.vitals.failedToSave);
       return;
     }
 
@@ -112,7 +148,7 @@ function DashboardPage() {
         },
         withCredentials: true,
       });
-      setMessage(' Vitals saved successfully');
+      setMessage(t.vitals.savedSuccessfully);
       setSystolic('');
       setDiastolic('');
       setHeartRate('');
@@ -129,7 +165,7 @@ function DashboardPage() {
         console.error("Failed to refresh AI recommendations:", err);
       }
     } catch (error: any) {
-      setMessage(error?.response?.data?.message || ' Failed to save vitals');
+      setMessage(error?.response?.data?.message || t.vitals.failedToSave);
       console.error(error);
     }
   };
@@ -157,7 +193,6 @@ function DashboardPage() {
   const { listening, transcript, startListening, stopListening, setTranscript, error } =
     useVoiceInput();
 
-  const [language, setLanguage] = useState<string>("en-US");
   const [listeningField, setListeningField] = useState<
     "systolic" | "diastolic" | "heartRate" | null
   >(null);
@@ -238,7 +273,9 @@ function DashboardPage() {
 
     try {
       setLoadingAI(true);
-      const res = await axios.get(`${API_URL}/api/hypertension/lifestyle`, {
+      // Pass language parameter to API
+      const languageParam = language === "sw-TZ" ? "sw-TZ" : "en-US";
+      const res = await axios.get(`${API_URL}/api/hypertension/lifestyle?language=${languageParam}`, {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true,
       });
@@ -260,7 +297,9 @@ function DashboardPage() {
         return;
       }
       
-      const res = await axios.get(`${API_URL}/api/hypertension/diet`, {
+      // Pass language parameter to API
+      const languageParam = language === "sw-TZ" ? "sw-TZ" : "en-US";
+      const res = await axios.get(`${API_URL}/api/hypertension/diet?language=${languageParam}`, {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true,
       });
@@ -314,6 +353,15 @@ function DashboardPage() {
     fetchAIRecommendations();
     fetchDietRecommendations();
   }, [alertRefreshToken]);
+
+  // Refetch AI recommendations when language changes
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) return;
+
+    fetchAIRecommendations();
+    fetchDietRecommendations();
+  }, [language]);
 
   const todayAlert = getTodayAlertStatus(vitals);
   const currentBpLevel = todayAlert.systolic !== null && todayAlert.diastolic !== null ? getBpLevel(todayAlert.systolic, todayAlert.diastolic) : '';
@@ -426,6 +474,131 @@ function DashboardPage() {
       console.error("Failed to update patient profile", error);
     }
   };
+
+  // Render content based on active tab
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'vitals':
+        return (
+          <>
+            <HypertensionAlert refreshToken={alertRefreshToken} />
+            <VitalsWithActivityInput onAfterSave={() => setAlertRefreshToken(Date.now())} />
+            <HealthTrends vitals={vitals} />
+          </>
+        );
+      case 'doctor':
+        return (
+          <>
+            <DoctorManagement condition="hypertension" />
+            <NearbyClinics />
+          </>
+        );
+      case 'medicine':
+        return (
+          <>
+            <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
+              <MedicationAnalysisPage />
+            </div>
+            <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
+              <MedicationReminders />
+            </div>
+          </>
+        );
+      case 'lifestyle':
+        return (
+          <>
+            <LifestyleAssessment
+              lifestyle={lifestyle}
+              onLifestyleChange={setLifestyle}
+              bpLevel={currentBpLevel}
+              alertStatus={todayAlert.status}
+              todayVitals={{ systolic: todayAlert.systolic, diastolic: todayAlert.diastolic, heartRate: todayAlert.heartRate }}
+              aiRecommendations={aiRecommendations}
+              loadingAI={loadingAI}
+              onRegenerateLifestyle={async () => {
+                if (!patient) return;
+                
+                setRegeneratingLifestyle(true);
+                const token = localStorage.getItem("token");
+                if (!token) {
+                  console.warn("No token found - cannot regenerate lifestyle");
+                  setRegeneratingLifestyle(false);
+                  return;
+                }
+                
+                try {
+                  // Fetch latest alerts for the patient
+                  const alertsRes = await fetch(`${API_URL}/api/hypertensionVitals/me`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                    credentials: 'include',
+                  });
+                  const alertsData = await alertsRes.json();
+                  const todayVitals = Array.isArray(alertsData?.data) 
+                    ? alertsData.data.filter((v: any) => {
+                        const vDate = new Date(v.timestamp || v.createdAt);
+                        const today = new Date();
+                        return vDate.toDateString() === today.toDateString();
+                      })
+                    : [];
+
+                  // Get lifestyle data
+                  const lifestylePayload = {
+                    smoking: lifestyle.smoking ? "Heavy" : "None",
+                    alcohol: lifestyle.alcohol ? "Frequently" : "None",
+                    exercise: lifestyle.exercise === "high" ? "Daily" : 
+                             lifestyle.exercise === "moderate" ? "Few times/week" : 
+                             lifestyle.exercise === "low" ? "Rarely" : "None",
+                    sleep: "7-8 hrs"
+                  };
+
+                  // Call the lifestyle update API which will regenerate AI advice
+                  const updateRes = await axios.post(`${API_URL}/api/hypertension/lifestyle/update`, lifestylePayload, {
+                    headers: {
+                      'Content-Type': 'application/json',
+                      Authorization: `Bearer ${token}`,
+                    },
+                    withCredentials: true,
+                  });
+
+                  // Fetch updated AI recommendations
+                  const aiRes = await axios.get(`${API_URL}/api/hypertension/lifestyle`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                    withCredentials: true,
+                  });
+                  
+                  setAiRecommendations(aiRes.data);
+                } catch (error) {
+                  console.error("Failed to regenerate lifestyle recommendations:", error);
+                } finally {
+                  setRegeneratingLifestyle(false);
+                }
+              }}
+              loadingRegenerate={regeneratingLifestyle}
+            />
+            <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
+              <DietRecommendations 
+                dietData={dietData} 
+                loading={dietLoading} 
+                onRegenerate={fetchDietRecommendations}
+                patient={patient ? {
+                  age: Number(computeAge(patient?.dob)) || undefined,
+                  weight: patient?.weight,
+                  gender: patient?.gender
+                } : undefined}
+              />
+            </div>
+          </>
+        );
+      case 'maps':
+        return (
+          <div className="w-full max-w-4xl">
+            <NearbyClinics />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
   
   return (
     <div className="min-h-screen bg-gray-100">
@@ -435,128 +608,47 @@ function DashboardPage() {
         patient={patient}
       />
 
-      <main className="flex flex-col items-center px-4 py-6 gap-6">
-        
-        {patient && (
-          <PatientProfile
-            patient={patient}
-            vitals={vitals}
-            onEditClick={() => setIsEditing(true)}
-          />
-        )}
-
-        {isEditing && (
-          <EditProfileModal
-            editForm={editForm}
-            onClose={() => setIsEditing(false)}
-            onSave={handleSaveProfile}
-            onChange={handleEditChange}
-          />
-        )}
-              
-        <HypertensionAlert refreshToken={alertRefreshToken} />
-
-        <VitalsWithActivityInput onAfterSave={() => setAlertRefreshToken(Date.now())} />
-        
-        {/* Doctor Management Section */}
-        <DoctorManagement condition="hypertension" />
-
-        <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
-          <MedicationAnalysisPage />
+      <main className="flex flex-col items-center">
+        {/* Tab Navigation */}
+        <div className="w-full bg-white shadow-sm">
+          <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
 
-        <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
-          <MedicationReminders />
+        <div className="w-full px-4 py-6">
+          {/* Patient Profile - Always visible */}
+          {patient && (
+            <div className="max-w-4xl mx-auto mb-6">
+              <PatientProfile
+                patient={patient}
+                vitals={vitals}
+                onEditClick={() => setIsEditing(true)}
+              />
+            </div>
+          )}
+
+          {isEditing && (
+            <EditProfileModal
+              editForm={editForm}
+              onClose={() => setIsEditing(false)}
+              onSave={handleSaveProfile}
+              onChange={handleEditChange}
+            />
+          )}
+
+          {/* Tab Content */}
+          <div className="flex flex-col items-center gap-6">
+            {renderTabContent()}
+          </div>
         </div>
-
-        <LifestyleAssessment
-          lifestyle={lifestyle}
-          onLifestyleChange={setLifestyle}
-          bpLevel={currentBpLevel}
-          alertStatus={todayAlert.status}
-          todayVitals={{ systolic: todayAlert.systolic, diastolic: todayAlert.diastolic, heartRate: todayAlert.heartRate }}
-          aiRecommendations={aiRecommendations}
-          loadingAI={loadingAI}
-          onRegenerateLifestyle={async () => {
-            if (!patient) return;
-            
-            setRegeneratingLifestyle(true);
-            const token = localStorage.getItem("token");
-            if (!token) {
-              console.warn("No token found - cannot regenerate lifestyle");
-              setRegeneratingLifestyle(false);
-              return;
-            }
-            
-            try {
-              // Fetch latest alerts for the patient
-              const alertsRes = await fetch(`${API_URL}/api/hypertensionVitals/me`, {
-                headers: { Authorization: `Bearer ${token}` },
-                credentials: 'include',
-              });
-              const alertsData = await alertsRes.json();
-              const todayVitals = Array.isArray(alertsData?.data) 
-                ? alertsData.data.filter((v: any) => {
-                    const vDate = new Date(v.timestamp || v.createdAt);
-                    const today = new Date();
-                    return vDate.toDateString() === today.toDateString();
-                  })
-                : [];
-
-              // Get lifestyle data
-              const lifestylePayload = {
-                smoking: lifestyle.smoking ? "Heavy" : "None",
-                alcohol: lifestyle.alcohol ? "Frequently" : "None",
-                exercise: lifestyle.exercise === "high" ? "Daily" : 
-                         lifestyle.exercise === "moderate" ? "Few times/week" : 
-                         lifestyle.exercise === "low" ? "Rarely" : "None",
-                sleep: "7-8 hrs"
-              };
-
-              // Call the lifestyle update API which will regenerate AI advice
-              const updateRes = await axios.post(`${API_URL}/api/hypertension/lifestyle/update`, lifestylePayload, {
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
-                },
-                withCredentials: true,
-              });
-
-              // Fetch updated AI recommendations
-              const aiRes = await axios.get(`${API_URL}/api/hypertension/lifestyle`, {
-                headers: { Authorization: `Bearer ${token}` },
-                withCredentials: true,
-              });
-              
-              setAiRecommendations(aiRes.data);
-            } catch (error) {
-              console.error("Failed to regenerate lifestyle recommendations:", error);
-            } finally {
-              setRegeneratingLifestyle(false);
-            }
-          }}
-          loadingRegenerate={regeneratingLifestyle}
-        />
-
-        <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
-          <DietRecommendations 
-            dietData={dietData} 
-            loading={dietLoading} 
-            onRegenerate={fetchDietRecommendations}
-            patient={patient ? {
-              age: Number(computeAge(patient?.dob)) || undefined,
-              weight: patient?.weight,
-              gender: patient?.gender
-            } : undefined}
-          />
-        </div>
-
-        <HealthTrends vitals={vitals} />
-
-        <NearbyClinics />
       </main>
     </div>
   );
 }
 
-export default DashboardPage;
+export default function WrappedDashboardPage() {
+  return (
+    <TranslationProvider>
+      <DashboardPage />
+    </TranslationProvider>
+  );
+}
