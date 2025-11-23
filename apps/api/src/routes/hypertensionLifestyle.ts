@@ -16,7 +16,9 @@ router.get(
       }
 
       const userId = req.user.userId; // ✅ strongly typed now
-      const result = await generateLifestyleRecommendations(userId);
+      // Get language from query parameter, default to "en-US"
+      const language = (req.query.language as string) || "en-US";
+      const result = await generateLifestyleRecommendations(userId, language);
 
       res.json(result);
     } catch (err) {

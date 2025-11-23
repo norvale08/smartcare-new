@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Pill, Clock, CheckCircle, AlertCircle, Bell } from 'lucide-react';
+import { useTranslation } from "../../../lib/TranslationContext";
 
 interface Medication {
   _id: string;
@@ -17,6 +18,7 @@ interface Medication {
 }
 
 const MedicationReminders: React.FC = () => {
+  const { t } = useTranslation();
   const [medications, setMedications] = useState<Medication[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(true);
@@ -188,12 +190,18 @@ const MedicationReminders: React.FC = () => {
         console.error("❌ Failed to mark medication as taken:", response.status, errorData);
         
         // Show error to user
-        alert(`Failed to mark medication as taken: ${errorData.message}`);
+        alert(t.language === "en-US" 
+          ? `Failed to mark medication as taken: ${errorData.message}`
+          : `Imeshindik kuashiria dawa kama iliyonywewa: ${errorData.message}`
+        );
       }
 
     } catch (error: any) {
       console.error('❌ Error marking medication as taken:', error);
-      alert('Error marking medication as taken. Please try again.');
+      alert(t.language === "en-US" 
+        ? 'Error marking medication as taken. Please try again.'
+        : 'Hitilafu katika kuashiria dawa kama iliyonywewa. Tafadhali jaribu tena.'
+      );
     }
   };
 
@@ -232,17 +240,24 @@ const MedicationReminders: React.FC = () => {
       <div className="bg-white rounded-lg border p-6 text-center">
         <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">
-          {recentlyTakenCount > 0 ? 'All Caught Up!' : 'No Active Medications'}
+          {recentlyTakenCount > 0 
+            ? (t.language === "en-US" ? 'All Caught Up!' : 'Umeshikilia Yote!')
+            : (t.language === "en-US" ? 'No Active Medications' : 'Hakuna Dawa Zinazotumika')
+          }
         </h3>
         <p className="text-gray-500">
           {recentlyTakenCount > 0 
-            ? `You've taken all your medications recently. Great job!`
-            : 'You don\'t have any active medications at the moment.'
+            ? (t.language === "en-US" 
+                ? `You've taken all your medications recently. Great job!`
+                : `Umenywa dawa zako zote hivi karibuni. Kazi nzuri!`)
+            : (t.language === "en-US"
+                ? 'You don\'t have any active medications at the moment.'
+                : 'Huna dawa zozote zinazotumika kwa sasa.')
           }
         </p>
         {recentlyTakenCount > 0 && (
           <p className="text-sm text-green-600 mt-2">
-            {recentlyTakenCount} medication(s) taken recently
+            {recentlyTakenCount} {t.language === "en-US" ? "medication(s) taken recently" : "dawa zilizonywewa hivi karibuni"}
           </p>
         )}
       </div>
@@ -253,9 +268,11 @@ const MedicationReminders: React.FC = () => {
     <div className="bg-white rounded-lg border p-6">
       <div className="flex items-center space-x-2 mb-4">
         <Bell className="w-5 h-5 text-blue-600" />
-        <h3 className="text-lg font-semibold">Medication Reminders</h3>
+        <h3 className="text-lg font-semibold">
+          {t.language === "en-US" ? "Medication Reminders" : "Kumbusho za Dawa"}
+        </h3>
         <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-          {activeMedications.length} active
+          {activeMedications.length} {t.language === "en-US" ? "active" : "zinatumika"}
         </span>
       </div>
 
@@ -280,10 +297,16 @@ const MedicationReminders: React.FC = () => {
                   </div>
                   
                   <div className="text-sm text-gray-600 space-y-1">
-                    <p><strong>Dosage:</strong> {medication.dosage}</p>
-                    <p><strong>Frequency:</strong> {medication.frequency}</p>
+                    <p>
+                      <strong>{t.language === "en-US" ? "Dosage:" : "Kipimo:"}</strong> {medication.dosage}
+                    </p>
+                    <p>
+                      <strong>{t.language === "en-US" ? "Frequency:" : "Mara ngapi:"}</strong> {medication.frequency}
+                    </p>
                     {medication.instructions && (
-                      <p><strong>Instructions:</strong> {medication.instructions}</p>
+                      <p>
+                        <strong>{t.language === "en-US" ? "Instructions:" : "Maelekezo:"}</strong> {medication.instructions}
+                      </p>
                     )}
                   </div>
 
@@ -291,10 +314,12 @@ const MedicationReminders: React.FC = () => {
                     <div className="flex items-center space-x-2 text-sm">
                       <Clock className="w-4 h-4 text-gray-400" />
                       <span className="text-gray-700">
-                        Next dose: <strong>{nextDose || 'No reminders set'}</strong>
+                        {t.language === "en-US" ? "Next dose:" : "Kipimo kifuatacho:"} <strong>{nextDose || (t.language === "en-US" ? 'No reminders set' : 'Hakuna kumbusho zilizowekwa')}</strong>
                       </span>
                       {isDue && (
-                        <span className="text-orange-600 font-medium">• Due soon</span>
+                        <span className="text-orange-600 font-medium">
+                          • {t.language === "en-US" ? "Due soon" : "Inakuja hivi karibuni"}
+                        </span>
                       )}
                     </div>
                     
@@ -318,7 +343,7 @@ const MedicationReminders: React.FC = () => {
 
                   {medication.lastTaken && (
                     <div className="mt-2 text-xs text-green-600">
-                      Last taken: {new Date(medication.lastTaken).toLocaleString()}
+                      {t.language === "en-US" ? "Last taken:" : "Iliyonywewa mara ya mwisho:"} {new Date(medication.lastTaken).toLocaleString()}
                     </div>
                   )}
                 </div>
@@ -326,7 +351,7 @@ const MedicationReminders: React.FC = () => {
                 <button
                   onClick={() => markAsTaken(medication._id)}
                   className="ml-4 p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                  title="Mark as taken"
+                  title={t.language === "en-US" ? "Mark as taken" : "Weka kama iliyonywewa"}
                 >
                   <CheckCircle className="w-5 h-5" />
                 </button>
@@ -339,9 +364,9 @@ const MedicationReminders: React.FC = () => {
       {/* Debug info - remove in production */}
       <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
         <div className="font-mono">
-          <div>Total medications: {medications.length}</div>
-          <div>Active medications: {activeMedications.length}</div>
-          <div>Current time: {currentTime.toLocaleTimeString()}</div>
+          <div>{t.language === "en-US" ? "Total medications:" : "Jumla ya dawa:"} {medications.length}</div>
+          <div>{t.language === "en-US" ? "Active medications:" : "Dawa zinazotumika:"} {activeMedications.length}</div>
+          <div>{t.language === "en-US" ? "Current time:" : "Muda wa sasa:"} {currentTime.toLocaleTimeString()}</div>
         </div>
       </div>
     </div>
