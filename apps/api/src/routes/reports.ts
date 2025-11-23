@@ -1,7 +1,7 @@
 // routes/reports.ts
 import express from "express";
 import { connectMongoDB } from "../lib/mongodb";
-import Appointment from "../models/Appointment";
+import Appointment from "../models/appointment";
 import User from "../models/user";
 
 const router = express.Router();

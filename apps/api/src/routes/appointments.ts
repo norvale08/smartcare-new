@@ -1,6 +1,6 @@
 // routes/appointments.ts
 import express from "express";
-import Appointment, { IAppointment } from "../models/Appointment";
+import Appointment, { IAppointment } from "../models/appointment";
 import { connectMongoDB } from "../lib/mongodb";
 
 const router = express.Router();
