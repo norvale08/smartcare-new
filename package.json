@@ -7,20 +7,20 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "concurrently \"pnpm run dev:node\" \"pnpm run dev:speech\"",
+    "dev:node": "turbo run dev",
+    "dev:speech": "cd apps/speech-service && .\\venv\\Scripts\\python.exe app.py",
+    "dev:web-only": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint"
   },
   "devDependencies": {
-    "turbo": "^2.5.4"
+    "turbo": "^2.5.4",
+    "concurrently": "^8.2.0"
   },
   "dependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-native": "0.79.4"
-
-    
-
-
   }
 }

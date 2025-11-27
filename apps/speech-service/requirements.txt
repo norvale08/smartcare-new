@@ -1,0 +1,7 @@
+Flask==3.0.0
+Flask-CORS==4.0.0
+SpeechRecognition==3.10.0
+PyAudio==0.2.14
+python-dotenv==1.0.0
+pydub==0.25.1
+requests==2.31.0

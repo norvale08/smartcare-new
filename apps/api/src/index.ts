@@ -45,7 +45,7 @@ import medicineRoutes from './routes/medicine';
 import appointmentRoutes from "./routes/appointments";
 import reportRoutes from "./routes/reports";
 import speechRoutes from './routes/groqSpeechRoutes';
-
+import pythonSpeechRoutes from './routes/speech.routes';
 dotenv.config();
 
 const app = express();
@@ -156,6 +156,7 @@ app.use('/api/medicine', medicineRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/speech', speechRoutes);
+app.use('/api/python-speech', pythonSpeechRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
