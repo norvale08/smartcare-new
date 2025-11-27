@@ -9,8 +9,7 @@ import { toast } from "react-hot-toast";
 import CustomToaster from "../ui/CustomToaster";
 import { Heart, Activity, Droplet, CheckCircle2, Utensils, Dumbbell, Clock, Zap, Mic } from "lucide-react";
 
-import GroqVoiceInput from "../ui/GroqVoiceInput";
-import BrowserTextToSpeech from "../ui/BrowserTextToSpeech";
+import VoiceInput from "../voice/VoiceInput"; // Using existing VoiceInput
 import InteractiveVoiceForm from "./InteractiveVoiceForm";
 
 interface Props {
@@ -293,20 +292,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
     );
   };
 
-  const getFieldValue = (fieldName: keyof diabetesType): string => {
-    const value = watch(fieldName);
-    return value ? String(value) : '';
-  };
-
-  const getVoiceMessage = (field: keyof diabetesType): string => {
-    const value = getFieldValue(field);
-    if (field === 'glucose') return value ? `${currentLanguage.glucoseSet} ${value}` : currentLanguage.glucoseNotSet;
-    if (field === 'systolic') return value ? `${currentLanguage.systolicSet} ${value}` : currentLanguage.systolicNotSet;
-    if (field === 'diastolic') return value ? `${currentLanguage.diastolicSet} ${value}` : currentLanguage.diastolicNotSet;
-    if (field === 'heartRate') return value ? `${currentLanguage.heartRateSet} ${value}` : currentLanguage.heartRateNotSet;
-    return value || '';
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-3 sm:p-4 md:p-6 lg:p-8">
       <CustomToaster />
@@ -388,13 +373,11 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
                   />
                   {formState.errors.glucose && <p className="text-red-600 text-xs sm:text-sm mt-1 sm:mt-2 font-medium">{formState.errors.glucose.message}</p>}
                 </div>
-                <div className="sm:w-auto w-full flex gap-2">
-                  <GroqVoiceInput 
-                    onResult={(result) => handleVoiceInput("glucose", result)} 
-                    language={languageValue} 
-                    size="sm"
+                <div className="sm:w-auto w-full">
+                  <VoiceInput 
+                    onTranscriptionComplete={(text) => handleVoiceInput("glucose", text)} 
+                    placeholder={languageValue === "sw" ? "Bonyeza kurekodi sauti" : "Click to record voice"}
                   />
-                  <BrowserTextToSpeech text={getVoiceMessage("glucose")} language={languageValue} size="sm" />
                 </div>
               </div>
             </div>
@@ -433,13 +416,11 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
                       />
                       {formState.errors.systolic && <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.systolic.message}</p>}
                     </div>
-                    <div className="sm:w-auto w-full flex gap-2">
-                      <GroqVoiceInput 
-                        onResult={(result) => handleVoiceInput("systolic", result)} 
-                        language={languageValue} 
-                        size="sm"
+                    <div className="sm:w-auto w-full">
+                      <VoiceInput 
+                        onTranscriptionComplete={(text) => handleVoiceInput("systolic", text)} 
+                        placeholder={languageValue === "sw" ? "Bonyeza kurekodi sauti" : "Click to record voice"}
                       />
-                      <BrowserTextToSpeech text={getVoiceMessage("systolic")} language={languageValue} size="sm" />
                     </div>
                   </div>
                 </div>
@@ -459,13 +440,11 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
                       />
                       {formState.errors.diastolic && <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.diastolic.message}</p>}
                     </div>
-                    <div className="sm:w-auto w-full flex gap-2">
-                      <GroqVoiceInput 
-                        onResult={(result) => handleVoiceInput("diastolic", result)} 
-                        language={languageValue} 
-                        size="sm"
+                    <div className="sm:w-auto w-full">
+                      <VoiceInput 
+                        onTranscriptionComplete={(text) => handleVoiceInput("diastolic", text)} 
+                        placeholder={languageValue === "sw" ? "Bonyeza kurekodi sauti" : "Click to record voice"}
                       />
-                      <BrowserTextToSpeech text={getVoiceMessage("diastolic")} language={languageValue} size="sm" />
                     </div>
                   </div>
                 </div>
@@ -485,13 +464,11 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
                       />
                       {formState.errors.heartRate && <p className="text-red-600 text-xs mt-1 font-medium">{formState.errors.heartRate.message}</p>}
                     </div>
-                    <div className="sm:w-auto w-full flex gap-2">
-                      <GroqVoiceInput 
-                        onResult={(result) => handleVoiceInput("heartRate", result)} 
-                        language={languageValue} 
-                        size="sm"
+                    <div className="sm:w-auto w-full">
+                      <VoiceInput 
+                        onTranscriptionComplete={(text) => handleVoiceInput("heartRate", text)} 
+                        placeholder={languageValue === "sw" ? "Bonyeza kurekodi sauti" : "Click to record voice"}
                       />
-                      <BrowserTextToSpeech text={getVoiceMessage("heartRate")} language={languageValue} size="sm" />
                     </div>
                   </div>
                 </div>
