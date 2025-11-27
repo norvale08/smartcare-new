@@ -1,4 +1,4 @@
-// apps/web/app/components/diabetesPages/InteractiveVoiceForm.tsx
+// apps/web/app/components/diabetesPages/InteractiveVoiceForm.tsx - UPDATED
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -26,7 +26,7 @@ const VITAL_FIELDS: VitalField[] = [
     name: "glucose",
     label: { en: "Blood Glucose", sw: "Sukari ya Damu" },
     prompt: { 
-      en: "Please say your blood glucose level in mg/dL. For example, one hundred twenty", 
+      en: "Please say your blood glucose level in mg d L. For example, one hundred twenty", 
       sw: "Tafadhali sema kiwango cha sukari damu yako. Kwa mfano, mia moja ishirini" 
     },
     min: 20,
@@ -122,7 +122,7 @@ const InteractiveVoiceForm: React.FC<InteractiveVoiceFormProps> = ({
         }
 
         // Configure speech
-        utterance.rate = 0.85; // Slightly slower for clarity
+        utterance.rate = 0.85;
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
 
@@ -147,7 +147,86 @@ const InteractiveVoiceForm: React.FC<InteractiveVoiceFormProps> = ({
     });
   };
 
-  // Speech-to-Text function (still using Groq)
+  // Convert WebM to WAV
+  const convertWebmToWav = async (webmBlob: Blob): Promise<Blob> => {
+    try {
+      console.log('🔄 Converting WebM to WAV...');
+      
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const arrayBuffer = await webmBlob.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      const wavBuffer = encodeAudioBufferToWav(audioBuffer);
+      const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+      
+      console.log('✓ WebM to WAV conversion successful');
+      return wavBlob;
+    } catch (err) {
+      console.error('❌ WebM to WAV conversion failed:', err);
+      throw new Error('Failed to convert audio format');
+    }
+  };
+
+  // Encode AudioBuffer to WAV
+  const encodeAudioBufferToWav = (audioBuffer: AudioBuffer): ArrayBuffer => {
+    const numChannels = audioBuffer.numberOfChannels ?? 1;
+    const sampleRate = Math.floor(audioBuffer.sampleRate ?? 16000);
+    const length = audioBuffer.length ?? 0;
+    
+    if (length === 0) {
+      throw new Error('Audio buffer is empty');
+    }
+
+    const bufferSize = 44 + length * numChannels * 2;
+    const buffer = new ArrayBuffer(bufferSize);
+    const view = new DataView(buffer);
+    
+    // WAV header functions
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+    
+    // RIFF header
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + length * numChannels * 2, true);
+    writeString(8, 'WAVE');
+    
+    // fmt chunk
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numChannels * 2, true);
+    view.setUint16(32, numChannels * 2, true);
+    view.setUint16(34, 16, true);
+    
+    // data chunk
+    writeString(36, 'data');
+    view.setUint32(40, length * numChannels * 2, true);
+    
+    // Write PCM data
+    let offset = 44;
+    for (let i = 0; i < length; i++) {
+      for (let channel = 0; channel < numChannels; channel++) {
+        try {
+          const channelData = audioBuffer.getChannelData(channel);
+          const sample = Math.max(-1, Math.min(1, channelData[i] ?? 0));
+          view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+          offset += 2;
+        } catch (err) {
+          view.setInt16(offset, 0, true);
+          offset += 2;
+        }
+      }
+    }
+    
+    return buffer;
+  };
+
+  // Speech-to-Text using Python service
   const listen = async (): Promise<number | null> => {
     return new Promise(async (resolve) => {
       try {
@@ -159,13 +238,13 @@ const InteractiveVoiceForm: React.FC<InteractiveVoiceFormProps> = ({
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
-            sampleRate: 48000
+            sampleRate: 16000,
+            channelCount: 1
           }
         });
 
         const mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'audio/webm;codecs=opus',
-          audioBitsPerSecond: 256000
+          mimeType: 'audio/webm',
         });
 
         const audioChunks: Blob[] = [];
@@ -187,30 +266,54 @@ const InteractiveVoiceForm: React.FC<InteractiveVoiceFormProps> = ({
             return;
           }
 
-          // Send to backend
-          const formData = new FormData();
-          formData.append("audio", audioBlob, "recording.webm");
-          formData.append("language", language);
-
           try {
-            const response = await fetch(`${API_URL}/api/speech/stt`, {
+            // Convert WebM to WAV
+            const wavBlob = await convertWebmToWav(audioBlob);
+            
+            // Send to Python speech service
+            const formData = new FormData();
+            formData.append("audio", wavBlob, "recording.wav");
+
+            console.log('📤 Sending to Python speech service...');
+            const response = await fetch(`${API_URL}/api/python-speech/transcribe`, {
               method: "POST",
               body: formData
             });
 
+            console.log('📨 Response status:', response.status);
             const data = await response.json();
+            console.log('📨 Response data:', data);
+
             setIsListening(false);
 
-            if (data.success && data.text) {
-              const number = parseInt(data.text.trim(), 10);
-              if (!isNaN(number) && number > 0) {
-                resolve(number);
-              } else {
-                resolve(null);
+            if (data.text) {
+              // Extract numbers from text
+              const text = data.text.toLowerCase();
+              const numbers = text.match(/\d+/g);
+              
+              if (numbers && numbers.length > 0) {
+                const number = parseInt(numbers[0], 10);
+                if (!isNaN(number) && number > 0) {
+                  console.log('✅ Extracted number:', number);
+                  resolve(number);
+                  return;
+                }
               }
+              
+              // Try to parse spoken numbers
+              const spokenNumber = parseSpokenNumber(text);
+              if (spokenNumber !== null) {
+                console.log('✅ Parsed spoken number:', spokenNumber);
+                resolve(spokenNumber);
+                return;
+              }
+              
+              console.log('❌ No valid number found in:', text);
             } else {
-              resolve(null);
+              console.log('❌ No text in response:', data);
             }
+            
+            resolve(null);
           } catch (error) {
             console.error("STT Error:", error);
             setIsListening(false);
@@ -218,14 +321,14 @@ const InteractiveVoiceForm: React.FC<InteractiveVoiceFormProps> = ({
           }
         };
 
-        // Record for 3 seconds
-        mediaRecorder.start(100);
+        // Record for 4 seconds
+        mediaRecorder.start();
         
         setTimeout(() => {
           if (mediaRecorder.state === "recording") {
             mediaRecorder.stop();
           }
-        }, 3000);
+        }, 4000);
 
       } catch (error) {
         console.error("❌ Listen Error:", error);
@@ -238,6 +341,36 @@ const InteractiveVoiceForm: React.FC<InteractiveVoiceFormProps> = ({
         resolve(null);
       }
     });
+  };
+
+  // Parse spoken numbers like "one hundred twenty"
+  const parseSpokenNumber = (text: string): number | null => {
+    const numberWords: { [key: string]: number } = {
+      'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+      'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+      'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15,
+      'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19,
+      'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50,
+      'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90,
+      'hundred': 100
+    };
+
+    const words = text.toLowerCase().split(/\s+/);
+    let total = 0;
+    let current = 0;
+
+    for (const word of words) {
+      const value = numberWords[word];
+      if (value === undefined) continue;
+
+      if (value === 100) {
+        current *= value;
+      } else {
+        current += value;
+      }
+    }
+
+    return current > 0 ? current : null;
   };
 
   // Start the voice-guided process

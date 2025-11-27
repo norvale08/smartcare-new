@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import RecordRTC, { StereoAudioRecorder } from 'recordrtc';
-import { speechAPI, TranscriptionResponse } from '@/lib/speechApi';
 
 interface UseSpeechRecognitionReturn {
   isRecording: boolean;
@@ -20,45 +18,45 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [transcription, setTranscription] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  const recorderRef = useRef<RecordRTC | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   const startRecording = useCallback(async () => {
     try {
       setError(null);
       setTranscription(null);
+      audioChunksRef.current = [];
 
-      // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          sampleRate: 16000, // Standard for speech recognition
-          channelCount: 1,   // Mono for better compatibility
+          sampleRate: 16000,
+          channelCount: 1,
         } 
       });
       
       streamRef.current = stream;
 
-      // Initialize recorder with WAV format
-      const recorder = new RecordRTC(stream, {
-        type: 'audio',
-        mimeType: 'audio/wav', // Force WAV format
-        recorderType: StereoAudioRecorder,
-        numberOfAudioChannels: 1, // Mono
-        desiredSampRate: 16000, // 16kHz sample rate
-        bufferSize: 4096,
-        timeSlice: 1000, // Optional: get blob every second
-        ondataavailable: (blob) => {
-          console.log('Audio data available:', blob.size, 'bytes');
-        }
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm'
       });
 
-      recorder.startRecording();
-      recorderRef.current = recorder;
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.start();
       setIsRecording(true);
       
-      console.log('🎤 Recording started in WAV format');
+      console.log('🎤 Recording started');
     } catch (err: any) {
       console.error('Error starting recording:', err);
       setError('Failed to access microphone. Please check permissions.');
@@ -66,60 +64,77 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   }, []);
 
   const stopRecording = useCallback(async () => {
-    if (!recorderRef.current) return;
+    if (!mediaRecorderRef.current || !isRecording) return;
 
+    console.log('🛑 Stopping recording...');
     setIsRecording(false);
     setIsProcessing(true);
 
-    console.log('🛑 Stopping recording...');
+    mediaRecorderRef.current.stop();
+    
+    // Stop all tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
 
-    recorderRef.current.stopRecording(async () => {
+    // Wait for all data to be available
+    setTimeout(async () => {
       try {
-        const blob = recorderRef.current!.getBlob();
-        
-        console.log('📦 Audio blob created:', {
-          size: blob.size,
-          type: blob.type,
-          format: 'WAV'
+        const blob = new Blob(audioChunksRef.current, { 
+          type: 'audio/webm' 
         });
 
-        // Stop all tracks
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => {
-            track.stop();
-            console.log('🎯 Stopped track:', track.kind);
-          });
+        console.log('📦 Audio blob created:', {
+          size: blob.size,
+          type: blob.type
+        });
+
+        if (blob.size === 0) {
+          throw new Error('Recorded audio is empty');
         }
 
-        // Send to backend for transcription
+        const formData = new FormData();
+        formData.append('audio', blob, 'recording.webm');
+
         console.log('🚀 Sending to speech API...');
-        const result: TranscriptionResponse = await speechAPI.transcribe(blob);
+        
+        // CORRECT ENDPOINT - using python-speech
+        const response = await fetch(`${API_URL}/api/python-speech/transcribe`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('Transcription result:', result);
 
         if (result.success && result.text) {
-          console.log('✅ Transcription successful:', result.text);
           setTranscription(result.text);
           setError(null);
         } else {
-          const errorMsg = result.error || 'Failed to transcribe audio';
-          console.error('❌ Transcription failed:', errorMsg);
-          setError(errorMsg);
+          throw new Error(result.error || 'Transcription failed');
         }
       } catch (err: any) {
         console.error('💥 Error processing recording:', err);
         setError(err.message || 'Failed to process recording');
       } finally {
         setIsProcessing(false);
-        recorderRef.current = null;
+        mediaRecorderRef.current = null;
         streamRef.current = null;
-        console.log('🧹 Cleanup complete');
+        audioChunksRef.current = [];
       }
-    });
-  }, []);
+    }, 500);
+  }, [isRecording, API_URL]);
 
   const clearTranscription = useCallback(() => {
     setTranscription(null);
     setError(null);
-    console.log('🗑️ Transcription cleared');
   }, []);
 
   return {

@@ -2,11 +2,28 @@
 const nextConfig = {
   transpilePackages: ['@repo/ui'],
   eslint: {
-    ignoreDuringBuilds: true, // 🚀 allows build to succeed even with lint errors
+    ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true, // 🚀 allows build to succeed even with TypeScript errors
+    ignoreBuildErrors: true,
   },
+  webpack: (config, { isServer }) => {
+    // Add polyfills for client-side only
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        dns: false,
+        child_process: false,
+      };
+    }
+    
+    return config;
+  },
+  // Optimize for client-side rendering
+  reactStrictMode: true,
 }
 
-export default nextConfig
+export default nextConfig;
