@@ -3,7 +3,7 @@
 import React, { Dispatch, SetStateAction } from "react";
 import { Wine, Cigarette, Coffee, TriangleAlert, CheckCircle } from "lucide-react";
 import axios from 'axios';
-import { useTranslation } from "../../../lib/TranslationContext";
+import { useTranslation } from "../../../lib/hypertension/useTranslation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 

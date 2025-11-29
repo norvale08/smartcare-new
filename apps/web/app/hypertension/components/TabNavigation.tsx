@@ -1,6 +1,6 @@
 import React from "react";
 import { Activity, User, Pill, Utensils, Globe } from "lucide-react";
-import { useTranslation } from "../../../lib/TranslationContext";
+import { useTranslation } from "../../../lib/hypertension/useTranslation";
 
 interface TabNavigationProps {
   activeTab: string;

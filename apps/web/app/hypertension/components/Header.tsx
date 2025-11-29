@@ -2,16 +2,20 @@
 
 import React from "react";
 import { HeartPulse, Globe } from "lucide-react";
-import { useTranslation } from "../../../lib/TranslationContext";
+import { Translations } from "../../../lib/hypertension/useTranslation";
 
 interface HeaderProps {
+  t: Translations;
   language: string;
   onLanguageChange: (lang: string) => void;
   patient: any;
 }
 
-const Header: React.FC<HeaderProps> = ({ language, onLanguageChange, patient }) => {
-  const { t, availableLanguages } = useTranslation();
+const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient }) => {
+  const availableLanguages = [
+    { code: "en-US", name: "English", nativeName: "English" },
+    { code: "sw-TZ", name: "Swahili", nativeName: "Kiswahili" },
+  ];
   const userName = patient?.fullName || "Sarah ";
   const userInitials = userName.slice(0, 2).toUpperCase();
 

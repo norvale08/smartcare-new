@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import ContextAwareAlert, { type ContextAnalysis } from "./ContextAwareAlert"
 import { Heart, Activity as ActivityIcon, Clock, Zap, Mic } from "lucide-react"
-import { useTranslation } from "../../../lib/TranslationContext"
+import { useTranslation } from "../../../lib/hypertension/useTranslation"
 import InteractiveVoiceForm from "./InteractiveVoiceForm"
 
 // Number normalization function
@@ -180,10 +180,26 @@ export default function VitalsWithActivityInput({
     systolic: number;
     diastolic: number;
     heartRate: number;
+    activityType?: string;
+    duration?: number;
+    intensity?: string;
+    timeSinceActivity?: number;
   }) => {
     setSystolic(data.systolic.toString())
     setDiastolic(data.diastolic.toString())
     setHeartRate(data.heartRate.toString())
+    if (data.activityType) {
+      setActivityType(data.activityType)
+    }
+    if (typeof data.duration === "number") {
+      setDuration(data.duration ? data.duration.toString() : "")
+    }
+    if (data.intensity && ["light", "moderate", "vigorous"].includes(data.intensity)) {
+      setIntensity(data.intensity)
+    }
+    if (typeof data.timeSinceActivity === "number") {
+      setTimeSinceActivity(data.timeSinceActivity ? data.timeSinceActivity.toString() : "")
+    }
     setShowVoiceForm(false)
     
     // Continue with the form, user still needs to fill activity details
@@ -200,6 +216,7 @@ export default function VitalsWithActivityInput({
           language={t.language === "sw-TZ" ? "sw" : "en"}
           onComplete={handleVoiceFormComplete}
           onCancel={() => setShowVoiceForm(false)}
+          mode="full"
         />
       )}
 

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import React from "react";
-import { useTranslation } from "../../../lib/TranslationContext";
+import { useTranslation } from "../../../lib/hypertension/useTranslation";
 
 interface PatientProfileProps {
   patient: any;

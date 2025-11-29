@@ -1,5 +1,7 @@
 "use client"
 
+import { useState, useEffect, useCallback } from "react";
+
 export interface Translations {
   language: string;
   // Common
@@ -80,7 +82,9 @@ export interface Translations {
   };
 }
 
-export const translations: { [key: string]: Translations } = {
+type LangKey = "en-US" | "sw-TZ";
+
+const translations: Record<LangKey, Translations> = {
   "en-US": {
     language: "en-US",
     common: {
@@ -215,6 +219,61 @@ export const translations: { [key: string]: Translations } = {
       hypertensiveCrisis: "Mgongano wa Shinikizo la Juu la Damu",
       stable: "Imekuwa Imara",
       alert: "Tangazo",
-    },
+    }
   }
+};
+
+interface UseTranslationReturn {
+  language: string;
+  setLanguage: (lang: string) => void;
+  t: Translations;
+  availableLanguages: { code: string; name: string; nativeName: string }[];
+}
+
+export const useTranslation = (): UseTranslationReturn => {
+  const [language, setLanguageInternal] = useState<LangKey>("en-US");
+
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem("language");
+    if (savedLanguage && translations[savedLanguage as LangKey]) {
+      setLanguageInternal(savedLanguage as LangKey);
+    }
+  }, []);
+
+  const handleSetLanguage = useCallback((lang: string) => {
+    const langKey = lang as LangKey;
+    if (translations[langKey]) {
+      setLanguageInternal(langKey);
+      localStorage.setItem("language", lang);
+      window.dispatchEvent(new CustomEvent('languagechange', { detail: langKey }));
+    }
+  }, []);
+
+  const availableLanguages = [
+    { code: "en-US", name: "English", nativeName: "English" },
+    { code: "sw-TZ", name: "Swahili", nativeName: "Kiswahili" },
+  ];
+
+  useEffect(() => {
+    const handleLanguageChange = (e: CustomEvent) => {
+      const lang = e.detail as LangKey;
+      if (translations[lang]) {
+        setLanguageInternal(lang);
+      }
+    };
+
+    window.addEventListener('languagechange', handleLanguageChange as EventListener);
+    return () => {
+      window.removeEventListener('languagechange', handleLanguageChange as EventListener);
+    };
+  }, []);
+
+  const currentTranslations = translations[language] || translations["en-US"];
+
+  return {
+    language,
+    setLanguage: handleSetLanguage,
+    t: currentTranslations,
+    availableLanguages,
+  };
 };

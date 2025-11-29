@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Dispatch, SetStateAction } from "react";
 import { useSession } from "next-auth/react";
-import { TranslationProvider, useTranslation } from "../../lib/TranslationContext";
+import { useTranslation } from "../../../web/lib/hypertension/useTranslation";
 import axios from 'axios';
 
 import Header from "./components/Header";
@@ -84,6 +84,7 @@ function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <Header 
+        t={t}
         language={language}
         onLanguageChange={setLanguage}
         patient={patient}
@@ -140,10 +141,4 @@ function DashboardPage() {
   );
 }
 
-export default function WrappedDashboardPage() {
-  return (
-    <TranslationProvider>
-      <DashboardPage />
-    </TranslationProvider>
-  );
-}
+export default DashboardPage;

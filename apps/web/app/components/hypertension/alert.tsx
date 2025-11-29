@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TriangleAlert, CheckCircle } from "lucide-react";
-import { useTranslation } from"../../../lib/TranslationContext";
+import { useTranslation } from"../../../lib/hypertension/useTranslation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 

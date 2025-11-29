@@ -1,6 +1,6 @@
 "use client"
 import { AlertCircle, AlertTriangle, CheckCircle, Info } from "lucide-react"
-import { useTranslation } from "../../../lib/TranslationContext"
+import { useTranslation } from "../../../lib/hypertension/useTranslation"
 
 // Stand-in UI components for dev/testing (replace with real UI lib if you have it)
 const Card = (props: React.HTMLAttributes<HTMLDivElement>) => <div {...props} style={{border: '1px solid #eee', borderRadius: '8px', padding: 16, margin: 8, ...props.style}}/>;

@@ -16,7 +16,14 @@ interface Notification {
   diastolic?: number;
 }
 
-const RealTimeNotifications: React.FC = () => {
+interface RealTimeNotificationsProps {
+  onNotificationSelect?: (payload: {
+    notification: Notification;
+    preferredTab: 'overview' | 'messages' | 'medications' | 'appointments';
+  }) => void;
+}
+
+const RealTimeNotifications: React.FC<RealTimeNotificationsProps> = ({ onNotificationSelect }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -202,6 +209,21 @@ const RealTimeNotifications: React.FC = () => {
     }
   };
 
+  const resolvePreferredTab = (notification: Notification): 'overview' | 'messages' | 'medications' | 'appointments' => {
+    switch (notification.type) {
+      case 'message':
+        return 'messages';
+      case 'appointment':
+        return 'appointments';
+      case 'call':
+        return 'overview';
+      case 'hypertension_alert':
+      case 'vital_alert':
+      default:
+        return 'overview';
+    }
+  };
+
   const handleNotificationClick = (notification: Notification) => {
     // Handle different notification types
     switch (notification.type) {
@@ -224,6 +246,13 @@ const RealTimeNotifications: React.FC = () => {
         alert('Viewing notification details');
     }
     
+    if (onNotificationSelect) {
+      onNotificationSelect({
+        notification,
+        preferredTab: resolvePreferredTab(notification)
+      });
+    }
+
     // Mark as read when clicked
     markAsRead(notification.id);
   };
