@@ -5,7 +5,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
 import { Activity } from "lucide-react";
-import { useTranslation } from "../../../lib/TranslationContext";
+import { useTranslation } from "../../../lib/hypertension/useTranslation";
 
 interface VitalsData {
   systolic: number;

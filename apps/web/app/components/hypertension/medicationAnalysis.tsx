@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Pill, AlertCircle, CheckCircle } from 'lucide-react';
-import { useTranslation } from '../../../lib/TranslationContext';
+import { useTranslation } from '../../../lib/hypertension/useTranslation';
 
 export default function MedicationAnalysisPage() {
   const { t, language } = useTranslation();

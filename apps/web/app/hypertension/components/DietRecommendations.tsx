@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Utensils } from "lucide-react";
-import { useTranslation } from "../../../lib/TranslationContext";
+import { useTranslation } from "../../../lib/hypertension/useTranslation";
 
 interface DietRecommendationsData {
   breakfast: string;

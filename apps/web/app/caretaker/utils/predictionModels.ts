@@ -1,6 +1,36 @@
 // utils/predictionModels.ts
 import * as tf from '@tensorflow/tfjs';
 
+const HYPERTENSION_SAMPLES = 900;
+const DIABETES_SAMPLES = 700;
+const TRAINING_EPOCHS = 45;
+
+let backendReadyPromise: Promise<void> | null = null;
+const ensureBackendReady = async () => {
+  if (!backendReadyPromise) {
+    backendReadyPromise = (async () => {
+      try {
+        await tf.ready();
+      } catch (error) {
+        console.warn('TensorFlow initialization warning:', error);
+      }
+    })();
+  }
+  return backendReadyPromise;
+};
+
+const calculateSlope = (values: number[]): number => {
+  if (!values || values.length < 2) return 0;
+  const n = values.length;
+  const sumX = (n * (n - 1)) / 2;
+  const sumY = values.reduce((a, b) => a + b, 0);
+  const sumXY = values.reduce((sum, y, idx) => sum + idx * y, 0);
+  const sumXX = (n * (n - 1) * (2 * n - 1)) / 6;
+  const denominator = n * sumXX - sumX * sumX;
+  if (denominator === 0) return 0;
+  return (n * sumXY - sumX * sumY) / denominator;
+};
+
 interface PatientVitals {
   systolic: number;
   diastolic: number;
@@ -29,6 +59,7 @@ class HypertensionPredictor {
 
   async loadModel() {
     try {
+      await ensureBackendReady();
       // Try to load pre-trained model from local storage first
       const localStorageKey = 'hypertension-model';
       const modelArtifacts = localStorage.getItem(localStorageKey);
@@ -55,6 +86,7 @@ class HypertensionPredictor {
   }
 
   private async createAndTrainModel(): Promise<tf.LayersModel> {
+    await ensureBackendReady();
     // Create a simple neural network
     const model = tf.sequential({
       layers: [
@@ -76,7 +108,7 @@ class HypertensionPredictor {
     
     // Train the model
     await model.fit(features, labels, {
-      epochs: 100,
+      epochs: TRAINING_EPOCHS,
       batchSize: 32,
       validationSplit: 0.2,
       verbose: 0
@@ -90,7 +122,7 @@ class HypertensionPredictor {
     const labels = [];
     
     // Generate synthetic data covering various scenarios
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < HYPERTENSION_SAMPLES; i++) {
       const systolic = Math.random() * 80 + 80; // 80-160
       const diastolic = Math.random() * 50 + 60; // 60-110
       const heartRate = Math.random() * 70 + 50; // 50-120
@@ -249,21 +281,21 @@ class HypertensionPredictor {
     // Only calculate trends if we have enough valid data points
     if (validSystolicVitals.length >= 2) {
       const systolicValues = validSystolicVitals.map(v => v.systolic!);
-      const systolicSlope = this.calculateLinearSlope(systolicValues);
+      const systolicSlope = calculateSlope(systolicValues);
       if (systolicSlope > 2) trends.systolicTrend = 'increasing';
       else if (systolicSlope < -2) trends.systolicTrend = 'decreasing';
     }
 
     if (validDiastolicVitals.length >= 2) {
       const diastolicValues = validDiastolicVitals.map(v => v.diastolic!);
-      const diastolicSlope = this.calculateLinearSlope(diastolicValues);
+      const diastolicSlope = calculateSlope(diastolicValues);
       if (diastolicSlope > 2) trends.diastolicTrend = 'increasing';
       else if (diastolicSlope < -2) trends.diastolicTrend = 'decreasing';
     }
 
     if (validHRVitals.length >= 2) {
       const hrValues = validHRVitals.map(v => v.heartRate!);
-      const hrSlope = this.calculateLinearSlope(hrValues);
+      const hrSlope = calculateSlope(hrValues);
       if (hrSlope > 3) trends.heartRateTrend = 'increasing';
       else if (hrSlope < -3) trends.heartRateTrend = 'decreasing';
     }
@@ -271,17 +303,7 @@ class HypertensionPredictor {
     return trends;
   }
 
-  private calculateLinearSlope(values: number[]): number {
-    if (values.length < 2) return 0;
-    
-    const n = values.length;
-    const sumX = (n * (n - 1)) / 2;
-    const sumY = values.reduce((a, b) => a + b, 0);
-    const sumXY = values.reduce((sum, y, x) => sum + x * y, 0);
-    const sumXX = (n * (n - 1) * (2 * n - 1)) / 6;
-    
-    return (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-  }
+  // slope helper removed in favor of shared utility
 
   private predictWithRules(vitals: PatientVitals, historicalVitals?: PatientVitals[]): PredictionResult {
     const { systolic, diastolic, age, bmi = 25 } = vitals;
@@ -388,7 +410,7 @@ class DiabetesPredictor {
     const features = [];
     const labels = [];
     
-    for (let i = 0; i < 800; i++) {
+    for (let i = 0; i < DIABETES_SAMPLES; i++) {
       const glucose = Math.random() * 150 + 50; // 50-200
       const age = Math.random() * 60 + 20; // 20-80
       const bmi = Math.random() * 20 + 18; // 18-38
@@ -522,24 +544,14 @@ class DiabetesPredictor {
     if (validGlucoseVitals.length < 2) return 'stable';
     
     const glucoseValues = validGlucoseVitals.map(v => v.glucose!);
-    const slope = this.calculateLinearSlope(glucoseValues);
+    const slope = calculateSlope(glucoseValues);
     
     if (slope > 2) return 'increasing';
     if (slope < -2) return 'decreasing';
     return 'stable';
   }
 
-  private calculateLinearSlope(values: number[]): number {
-    if (values.length < 2) return 0;
-    
-    const n = values.length;
-    const sumX = (n * (n - 1)) / 2;
-    const sumY = values.reduce((a, b) => a + b, 0);
-    const sumXY = values.reduce((sum, y, x) => sum + x * y, 0);
-    const sumXX = (n * (n - 1) * (2 * n - 1)) / 6;
-    
-    return (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-  }
+  // slope helper removed in favor of shared utility
 
   private predictWithRules(vitals: PatientVitals & { glucose: number }, historicalVitals?: (PatientVitals & { glucose: number })[]): PredictionResult {
     const { glucose, age, bmi = 25 } = vitals;
@@ -603,3 +615,92 @@ export const diabetesPredictor = new DiabetesPredictor();
 
 // Export types for use in other modules
 export type { PatientVitals, PredictionResult };
+
+export interface HistoricalRiskInsight {
+  label: 'stable' | 'elevating' | 'critical';
+  score: number;
+  summary: string;
+  averages: {
+    systolic: number;
+    diastolic: number;
+    heartRate?: number;
+  };
+  slopes: {
+    systolic: number;
+    diastolic: number;
+  };
+}
+
+export const deriveHistoricalRiskFromVitals = (
+  vitals: PatientVitals[],
+  options?: { window?: number; language?: 'en' | 'sw' }
+): HistoricalRiskInsight | null => {
+  if (!vitals || vitals.length === 0) return null;
+  const windowSize = options?.window ?? 6;
+  const meaningfulVitals = vitals
+    .filter(v => typeof v.systolic === 'number' && typeof v.diastolic === 'number')
+    .slice(0, windowSize);
+
+  if (meaningfulVitals.length < 3) return null;
+
+  const average = (key: keyof PatientVitals) =>
+    meaningfulVitals.reduce((sum, vital) => sum + (vital[key] || 0), 0) / meaningfulVitals.length;
+
+  const avgSystolic = average('systolic');
+  const avgDiastolic = average('diastolic');
+  const avgHeartRate = average('heartRate');
+
+  const systolicValues = meaningfulVitals.map(v => v.systolic || 0);
+  const diastolicValues = meaningfulVitals.map(v => v.diastolic || 0);
+
+  const slopes = {
+    systolic: calculateSlope(systolicValues),
+    diastolic: calculateSlope(diastolicValues)
+  };
+
+  const variability = {
+    systolic: Math.max(...systolicValues) - Math.min(...systolicValues),
+    diastolic: Math.max(...diastolicValues) - Math.min(...diastolicValues)
+  };
+
+  let score = 0;
+  if (avgSystolic >= 150 || avgDiastolic >= 95) score += 4;
+  else if (avgSystolic >= 140 || avgDiastolic >= 90) score += 3;
+  else if (avgSystolic >= 130 || avgDiastolic >= 85) score += 2;
+  else if (avgSystolic >= 120 || avgDiastolic >= 80) score += 1;
+
+  if (slopes.systolic > 2 || slopes.diastolic > 2) score += 1;
+  if (variability.systolic > 15 || variability.diastolic > 10) score += 1;
+
+  let label: HistoricalRiskInsight['label'] = 'stable';
+  if (score >= 5) label = 'critical';
+  else if (score >= 3) label = 'elevating';
+
+  const language = options?.language === 'sw' ? 'sw' : 'en';
+  const summaries = {
+    stable: {
+      en: `Recent averages ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)} mmHg look steady. Keep routines consistent.`,
+      sw: `Wastani wa hivi karibuni ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)} mmHg unaonekana tulivu. Endelea na utaratibu huo.`
+    },
+    elevating: {
+      en: `Blood pressure is trending upward with averages around ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)} mmHg. Consider reviewing medication and salt intake.`,
+      sw: `Shinikizo la damu linaongezeka hadi takribani ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)} mmHg. Fikiria kurekebisha dawa na ulaji wa chumvi.`
+    },
+    critical: {
+      en: `Averages near ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)} mmHg plus rising trends indicate high risk. Escalate to the care team immediately.`,
+      sw: `Wastani wa takribani ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)} mmHg na mwelekeo wa kuongezeka unaonyesha hatari kubwa. Wasiliana na daktari mara moja.`
+    }
+  };
+
+  return {
+    label,
+    score,
+    summary: summaries[label][language],
+    averages: {
+      systolic: avgSystolic,
+      diastolic: avgDiastolic,
+      heartRate: avgHeartRate
+    },
+    slopes
+  };
+};

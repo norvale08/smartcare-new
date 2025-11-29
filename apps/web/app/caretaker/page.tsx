@@ -54,6 +54,8 @@ interface PatientRequest {
   _id?: string;
 }
 
+type DashboardTab = 'overview' | 'messages' | 'medications' | 'appointments';
+
 const CaretakerDashboard = () => {
   const { data: session, status } = useSession();
   
@@ -69,7 +71,7 @@ const CaretakerDashboard = () => {
   const [hasToken, setHasToken] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [activeTab, setActiveTab] = useState<'overview' | 'messages' | 'medications' | 'appointments'>('overview');
+  const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
 
   
   // Extract role from JWT token
@@ -238,7 +240,7 @@ const CaretakerDashboard = () => {
     }
   };
 
-  const handlePatientSelect = (patient: Patient) => {
+  const handlePatientSelect = (patient: Patient, options?: { tab?: DashboardTab }) => {
     // console.log("🔄 ===== PATIENT SELECTED =====");
     // console.log("👤 Selected Patient:", {
     //   id: patient.id,
@@ -250,11 +252,31 @@ const CaretakerDashboard = () => {
     const patientIdentifier = patient.userId || patient.id;
     console.log("🔍 Using patient identifier:", patientIdentifier);
     
+    const targetTab = options?.tab ?? 'overview';
     setSelectedPatient(patient);
-    setActiveTab('overview');
+    setActiveTab(targetTab);
     setPatientVitals([]);
     
     fetchPatientVitals(patientIdentifier);
+  };
+
+  const findPatientMatch = (patientId?: string) => {
+    if (!patientId) return null;
+    return patients.find((patient) => 
+      patient.id === patientId ||
+      patient.userId === patientId ||
+      patient.user?._id === patientId ||
+      patient.user?.id === patientId
+    ) || null;
+  };
+
+  const handleNotificationSelect = ({ notification, preferredTab }: { notification: { patientId?: string; patientName?: string }; preferredTab: DashboardTab }) => {
+    const matchedPatient = findPatientMatch(notification.patientId);
+    if (matchedPatient) {
+      handlePatientSelect(matchedPatient, { tab: preferredTab });
+      return;
+    }
+    setMessage(`Unable to open notification for ${notification.patientName || 'patient'} — please refresh assigned patients.`);
   };
 
   const handleOpenMessaging = () => {
@@ -409,7 +431,7 @@ const CaretakerDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       <DashboardHeader />
-      <RealTimeNotifications />
+      <RealTimeNotifications onNotificationSelect={handleNotificationSelect} />
 
       <main className="flex flex-col items-center px-4 py-6 gap-6">
         {message && (

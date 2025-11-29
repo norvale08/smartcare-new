@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Phone, Mail, MapPin, Calendar, Stethoscope, MessageSquare, PhoneCall, ArrowLeft, AlertCircle,
   RefreshCw, Send, Shield, Building, Award, Clock, Search, UserPlus, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, Input, Button } from '@repo/ui';
-import { useTranslation } from '../../lib/TranslationContext';
+import { useTranslation } from '../../lib/hypertension/useTranslation';
 
 interface Doctor {
   id: string;

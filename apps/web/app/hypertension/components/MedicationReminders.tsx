@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Pill, Clock, CheckCircle, AlertCircle, Bell } from 'lucide-react';
-import { useTranslation } from "../../../lib/TranslationContext";
+import { useTranslation } from "../../../lib/hypertension/useTranslation";
 
 interface Medication {
   _id: string;

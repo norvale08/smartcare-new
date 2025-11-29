@@ -1,7 +1,7 @@
 // components/VitalsPredictions.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { TrendingUp, AlertTriangle, CheckCircle, Activity, Heart, Droplets } from 'lucide-react';
-import { hypertensionPredictor, diabetesPredictor } from '../utils/predictionModels';
+import { hypertensionPredictor, diabetesPredictor, deriveHistoricalRiskFromVitals } from '../utils/predictionModels';
 
 interface VitalReading {
   systolic?: number;
@@ -261,6 +261,12 @@ const VitalPredictions: React.FC<VitalPredictionsProps> = ({ patient, vitals }) 
     }
   };
 
+  const getHistoricalRiskColor = (label: 'critical' | 'elevating' | 'stable') => {
+    if (label === 'critical') return getRiskColor('high');
+    if (label === 'elevating') return getRiskColor('medium');
+    return getRiskColor('low');
+  };
+
   const getRiskIcon = (riskLevel: string) => {
     switch (riskLevel) {
       case 'high': return <AlertTriangle className="w-5 h-5" />;
@@ -403,6 +409,18 @@ const VitalPredictions: React.FC<VitalPredictionsProps> = ({ patient, vitals }) 
   const bpTrend = getVitalTrend(currentVitals?.systolic, previousVitals?.systolic);
   const glucoseTrend = getVitalTrend(currentVitals?.glucose, previousVitals?.glucose);
   const heartRateTrend = getVitalTrend(currentVitals?.heartRate, previousVitals?.heartRate);
+  const historicalRisk = useMemo(() => {
+    if (!vitals || vitals.length === 0) return null;
+    const structuredVitals = vitals
+      .filter(reading => reading.systolic !== undefined && reading.diastolic !== undefined && reading.heartRate !== undefined)
+      .map((reading) => ({
+        systolic: reading.systolic!,
+        diastolic: reading.diastolic!,
+        heartRate: reading.heartRate!,
+        age: reading.age ?? patient.age,
+      }));
+    return deriveHistoricalRiskFromVitals(structuredVitals, { window: 6, language: 'en' });
+  }, [vitals, patient.age]);
 
   // Check if vital values exist for display
   const hasBloodPressure = currentVitals?.systolic !== undefined && currentVitals?.diastolic !== undefined;
@@ -506,6 +524,53 @@ const VitalPredictions: React.FC<VitalPredictionsProps> = ({ patient, vitals }) 
               <div className="text-xs text-gray-600 mb-1">Age</div>
               <div className="font-bold text-lg">{currentVitals.age || patient.age}</div>
               <div className="text-xs text-gray-500">years</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historicalRisk && (
+        <div className="border-t pt-6 mt-6">
+          <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-blue-600" />
+            Historical Risk Trend
+          </h4>
+          <div className={`p-4 rounded-lg border-2 ${getHistoricalRiskColor(historicalRisk.label)}`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-base font-semibold capitalize">{historicalRisk.label}</span>
+              <span className="text-sm font-bold bg-white px-2 py-1 rounded-full border">
+                Score {historicalRisk.score.toFixed(1)}
+              </span>
+            </div>
+            <p className="text-sm text-gray-700 leading-relaxed">{historicalRisk.summary}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 text-sm">
+              <div className="p-3 rounded-lg bg-white/60 border border-gray-200">
+                <div className="text-xs text-gray-500">Avg BP</div>
+                <div className="font-semibold text-gray-900">
+                  {Math.round(historicalRisk.averages.systolic)}/{Math.round(historicalRisk.averages.diastolic)} mmHg
+                </div>
+              </div>
+              {historicalRisk.averages.heartRate ? (
+                <div className="p-3 rounded-lg bg-white/60 border border-gray-200">
+                  <div className="text-xs text-gray-500">Avg HR</div>
+                  <div className="font-semibold text-gray-900">
+                    {Math.round(historicalRisk.averages.heartRate)} bpm
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-white/60 border border-gray-200">
+                  <div className="text-xs text-gray-500">Readings used</div>
+                  <div className="font-semibold text-gray-900">
+                    {Math.min(vitals.length, 6)} recent
+                  </div>
+                </div>
+              )}
+              <div className="p-3 rounded-lg bg-white/60 border border-gray-200">
+                <div className="text-xs text-gray-500">Trend slope</div>
+                <div className="font-semibold text-gray-900">
+                  {historicalRisk.slopes.systolic.toFixed(1)}/{historicalRisk.slopes.diastolic.toFixed(1)}
+                </div>
+              </div>
             </div>
           </div>
         </div>
