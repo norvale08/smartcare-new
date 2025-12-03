@@ -704,3 +704,76 @@ export const deriveHistoricalRiskFromVitals = (
     slopes
   };
 };
+
+export const deriveHistoricalDiabetesRiskFromVitals = (
+  vitals: PatientVitals[],
+  options?: { window?: number; language?: 'en' | 'sw' }
+): HistoricalRiskInsight | null => {
+  if (!vitals || vitals.length === 0) return null;
+  const windowSize = options?.window ?? 6;
+  const meaningfulVitals = vitals
+    .filter(v => typeof v.glucose === 'number')
+    .slice(0, windowSize);
+
+  if (meaningfulVitals.length < 3) return null;
+
+  const average = (key: 'glucose' | 'heartRate') =>
+    meaningfulVitals.reduce((sum, vital) => sum + ((vital as any)[key] || 0), 0) / meaningfulVitals.length;
+
+  const avgGlucose = average('glucose');
+  const avgHeartRate = average('heartRate');
+
+  const glucoseValues = meaningfulVitals.map(v => (v as any).glucose || 0);
+  const hrValues = meaningfulVitals.map(v => (v as any).heartRate || 0);
+
+  const slopes = {
+    systolic: calculateSlope(glucoseValues),
+    diastolic: calculateSlope(hrValues)
+  };
+
+  const variability = {
+    systolic: Math.max(...glucoseValues) - Math.min(...glucoseValues),
+    diastolic: Math.max(...hrValues) - Math.min(...hrValues)
+  };
+
+  let score = 0;
+  if (avgGlucose >= 180) score += 4;
+  else if (avgGlucose >= 140) score += 3;
+  else if (avgGlucose >= 126) score += 2;
+  else if (avgGlucose >= 100) score += 1;
+
+  if (slopes.systolic > 5 || slopes.diastolic > 3) score += 1;
+  if (variability.systolic > 40 || variability.diastolic > 15) score += 1;
+
+  let label: HistoricalRiskInsight['label'] = 'stable';
+  if (score >= 5) label = 'critical';
+  else if (score >= 3) label = 'elevating';
+
+  const language = options?.language === 'sw' ? 'sw' : 'en';
+  const summaries = {
+    stable: {
+      en: `Recent glucose averages ${Math.round(avgGlucose)} mg/dL look steady. Keep monitoring.`,
+      sw: `Wastani wa glukosi wa hivi karibuni ${Math.round(avgGlucose)} mg/dL unaonekana thabiti. Endeleza kufuatilia.`
+    },
+    elevating: {
+      en: `Glucose is trending upward with averages around ${Math.round(avgGlucose)} mg/dL. Consider diet review.`,
+      sw: `Glukosi linaongezeka wastani ${Math.round(avgGlucose)} mg/dL. Fikiria kupima lishe.`
+    },
+    critical: {
+      en: `Averages near ${Math.round(avgGlucose)} mg/dL plus rising trends indicate high diabetes risk. Escalate immediately.`,
+      sw: `Wastani karibu ${Math.round(avgGlucose)} mg/dL pamoja na mwelekeo unaoongezeka unaonyesha hatari ya kisukari. Piga simu daktari mara moja.`
+    }
+  };
+
+  return {
+    label,
+    score,
+    summary: summaries[label][language],
+    averages: {
+      systolic: avgGlucose,
+      diastolic: avgHeartRate,
+      heartRate: avgHeartRate
+    },
+    slopes
+  };
+};
