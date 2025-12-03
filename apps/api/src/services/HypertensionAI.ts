@@ -7,7 +7,7 @@ import Patient from "../models/patient";
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const model = "llama-3.3-70b-versatile"; // High-quality model
 
-// ✅ Generate daily alerts from recent vitals (matching frontend logic)
+
 async function getDailyAlerts(userId: string, language: string = "en-US"): Promise<string[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -31,65 +31,65 @@ async function getDailyAlerts(userId: string, language: string = "en-US"): Promi
     return alerts;
   }
 
-  // Use the same logic as the frontend alerts.tsx component
+  
   vitals.forEach((vital) => {
     const systolic = Number(vital.systolic);
     const diastolic = Number(vital.diastolic);
     const heartRate = Number(vital.heartRate);
 
-    // Blood pressure alerts (matching frontend logic)
+    
     if (systolic >= 180 || diastolic >= 120) {
       alerts.push(language === "sw-TZ"
-        ? `🚨 MGONGANO WA SHINIKIZO LA DAMU: ${systolic}/${diastolic} mmHg - Tafuta huduma ya matibabu haraka!`
-        : `🚨 HYPERTENSIVE CRISIS: ${systolic}/${diastolic} mmHg - Seek immediate medical attention!`
+        ? ` MGONGANO WA SHINIKIZO LA DAMU: ${systolic}/${diastolic} mmHg - Tafuta huduma ya matibabu haraka!`
+        : ` HYPERTENSIVE CRISIS: ${systolic}/${diastolic} mmHg - Seek immediate medical attention!`
       );
     } else if (systolic >= 140 || diastolic >= 90) {
       alerts.push(language === "sw-TZ"
-        ? `⚠️ Hatua ya 2 ya Shinikizo la Juu la Damu: ${systolic}/${diastolic} mmHg - Wasiliana na daktari wako hivi karibuni`
-        : `⚠️ Stage 2 Hypertension: ${systolic}/${diastolic} mmHg - Consult your doctor soon`
+        ? ` Hatua ya 2 ya Shinikizo la Juu la Damu: ${systolic}/${diastolic} mmHg - Wasiliana na daktari wako hivi karibuni`
+        : ` Stage 2 Hypertension: ${systolic}/${diastolic} mmHg - Consult your doctor soon`
       );
     } else if (systolic >= 130 || diastolic >= 80) {
       alerts.push(language === "sw-TZ"
-        ? `⚠️ Hatua ya 1 ya Shinikizo la Juu la Damu: ${systolic}/${diastolic} mmHg - Fuatilia kwa karibu`
-        : `⚠️ Stage 1 Hypertension: ${systolic}/${diastolic} mmHg - Monitor closely`
+        ? ` Hatua ya 1 ya Shinikizo la Juu la Damu: ${systolic}/${diastolic} mmHg - Fuatilia kwa karibu`
+        : ` Stage 1 Hypertension: ${systolic}/${diastolic} mmHg - Monitor closely`
       );
     } else if (systolic >= 120) {
       alerts.push(language === "sw-TZ"
-        ? `📈 Shinikizo la Damu Lilioinuka: ${systolic}/${diastolic} mmHg - Fikiria mabadiliko ya maisha`
-        : `📈 Elevated Blood Pressure: ${systolic}/${diastolic} mmHg - Consider lifestyle changes`
+        ? ` Shinikizo la Damu Lilioinuka: ${systolic}/${diastolic} mmHg - Fikiria mabadiliko ya maisha`
+        : ` Elevated Blood Pressure: ${systolic}/${diastolic} mmHg - Consider lifestyle changes`
       );
     } else if (systolic < 90 || diastolic < 60) {
       alerts.push(language === "sw-TZ"
-        ? `📉 Shinikizo la Chini la Damu: ${systolic}/${diastolic} mmHg - Wasiliana na mtoa huduma wa afya ikiwa hujisikii vizuri`
-        : `📉 Low Blood Pressure: ${systolic}/${diastolic} mmHg - Contact healthcare provider if unwell`
+        ? ` Shinikizo la Chini la Damu: ${systolic}/${diastolic} mmHg - Wasiliana na mtoa huduma wa afya ikiwa hujisikii vizuri`
+        : `Low Blood Pressure: ${systolic}/${diastolic} mmHg - Contact healthcare provider if unwell`
       );
     }
 
-    // Heart rate alerts
+   
     if (heartRate < 60) {
       alerts.push(language === "sw-TZ"
-        ? `💙 Kasi ya Chini ya Moyo: Kasi ya moyo ${heartRate} bpm - Kasi ya chini ya moyo imegunduliwa`
-        : `💙 Bradycardia: Heart rate ${heartRate} bpm - Low heart rate detected`
+        ? ` Kasi ya Chini ya Moyo: Kasi ya moyo ${heartRate} bpm - Kasi ya chini ya moyo imegunduliwa`
+        : `Bradycardia: Heart rate ${heartRate} bpm - Low heart rate detected`
       );
     } else if (heartRate > 100) {
       alerts.push(language === "sw-TZ"
-        ? `❤️ Kasi ya Juu ya Moyo: Kasi ya moyo ${heartRate} bpm - Kasi ya juu ya moyo`
-        : `❤️ Tachycardia: Heart rate ${heartRate} bpm - Elevated heart rate`
+        ? ` Kasi ya Juu ya Moyo: Kasi ya moyo ${heartRate} bpm - Kasi ya juu ya moyo`
+        : ` Tachycardia: Heart rate ${heartRate} bpm - Elevated heart rate`
       );
     }
   });
 
   if (alerts.length === 0) {
     alerts.push(language === "sw-TZ"
-      ? "✅ Vitali ziko imara leo - hakuna tahadhari zilizogunduliwa"
-      : "✅ Vitals stable today - no alerts detected"
+      ? " Vitali ziko imara leo - hakuna tahadhari zilizogunduliwa"
+      : "Vitals stable today - no alerts detected"
     );
   }
 
   return alerts;
 }
 
-// ✅ Fetch current lifestyle
+
 async function getCurrentLifestyle(userId: string) {
   const lifestyle = await HypertensionLifestyle.findOne({
     userId: new mongoose.Types.ObjectId(userId),
@@ -112,7 +112,7 @@ async function getCurrentLifestyle(userId: string) {
       };
 }
 
-// ✅ Main AI Lifestyle Recommendation Function
+
 export async function generateLifestyleRecommendations(
   userId: string,
   language: string = "en-US"
@@ -124,7 +124,7 @@ export async function generateLifestyleRecommendations(
     const prompt = language === "sw-TZ" ? `
 Wewe ni msaidizi wa AI wa usimamizi wa shinikizo la damu. Toa mapendekezo ya maisha yanayolengwa kulingana na data ifuatayo ya mgonjwa:
 
-📊 TAHADHARI ZA VITALI ZA LEO:
+TAHADHARI ZA VITALI ZA LEO:
 ${alerts.join("\n")}
 
 🏃 MAISHA YA SASA:
@@ -148,10 +148,10 @@ Weze ufupi, chanya, na unaoweza kutekelezaka.
 ` : `
 You are a hypertension management AI assistant. Provide personalized lifestyle recommendations based on the following patient data:
 
-📊 DAILY VITALS ALERTS:
+ DAILY VITALS ALERTS:
 ${alerts.join("\n")}
 
-🏃 CURRENT LIFESTYLE:
+ CURRENT LIFESTYLE:
 - Smoking: ${lifestyle.smoking}
 - Alcohol: ${lifestyle.alcohol}
 - Exercise: ${lifestyle.exercise}
@@ -188,10 +188,10 @@ Keep it short, positive, and actionable.
       { new: true, upsert: true }
     );
 
-    console.log("✅ AI lifestyle advice generated via Groq");
+    // console.log(" AI lifestyle advice generated via Groq");
     return { advice: structuredAdvice, alerts, warnings };
   } catch (error) {
-    console.error("❌ Error generating Groq recommendations:", error);
+    console.error(" Error generating Groq recommendations:", error);
     return {
       advice: getFallbackAdvice(language),
       alerts: await getDailyAlerts(userId, language),
@@ -200,36 +200,36 @@ Keep it short, positive, and actionable.
   }
 }
 
-// ✅ Helper: Format and structure advice
+
 function parseAndStructureAdvice(rawAdvice: string, language: string): string {
   let text = rawAdvice;
   
   if (language === "sw-TZ") {
     text = text
-      .replace(/USHAURI WA JUMLA:/gi, "💡 UHAKIKI MUHIMU:")
-      .replace(/HATUA ZA HARAKA:/gi, "\n🎯 MPANGO WA LEO:")
-      .replace(/UBORESHAJI WA MAISHA:/gi, "\n🌟 MALENGO YA MAISHA:")
-      .replace(/USHAURI WA HEWA:/gi, "\n🌤 USHAURI WA HEWA:");
+      .replace(/USHAURI WA JUMLA:/gi, " UHAKIKI MUHIMU:")
+      .replace(/HATUA ZA HARAKA:/gi, "\n MPANGO WA LEO:")
+      .replace(/UBORESHAJI WA MAISHA:/gi, "\n MALENGO YA MAISHA:")
+      .replace(/USHAURI WA HEWA:/gi, "\n USHAURI WA HEWA:");
 
     if (!text.includes("UHAKIKI MUHIMU")) {
-      text = "💡 UHAKIKI ULIO LENGWA:\n\n" + text;
+      text = " UHAKIKI ULIO LENGWA:\n\n" + text;
     }
   } else {
     text = text
-      .replace(/GENERAL ADVICE:/gi, "💡 KEY INSIGHTS:")
-      .replace(/IMMEDIATE ACTIONS:/gi, "\n🎯 TODAY'S ACTION PLAN:")
-      .replace(/LIFESTYLE IMPROVEMENTS:/gi, "\n🌟 LIFESTYLE GOALS:")
-      .replace(/WEATHER CONSIDERATIONS:/gi, "\n🌤 WEATHER TIPS:");
+      .replace(/GENERAL ADVICE:/gi, " KEY INSIGHTS:")
+      .replace(/IMMEDIATE ACTIONS:/gi, "\n TODAY'S ACTION PLAN:")
+      .replace(/LIFESTYLE IMPROVEMENTS:/gi, "\n LIFESTYLE GOALS:")
+      .replace(/WEATHER CONSIDERATIONS:/gi, "\n WEATHER TIPS:");
 
     if (!text.includes("KEY INSIGHTS")) {
-      text = "💡 PERSONALIZED INSIGHTS:\n\n" + text;
+      text = " PERSONALIZED INSIGHTS:\n\n" + text;
     }
   }
 
   return text.trim();
 }
 
-// ✅ Helper: Detect warnings based on lifestyle/vitals
+
 function extractWarnings(lifestyle: any, alerts: string[], language: string): string[] {
   const warnings: string[] = [];
 
@@ -274,45 +274,45 @@ function extractWarnings(lifestyle: any, alerts: string[], language: string): st
   return warnings;
 }
 
-// ✅ Fallback Advice
+
 function getFallbackAdvice(language: string): string {
   if (language === "sw-TZ") {
     return `💡 UHAKIKI MUHIMU:
 
 Tuko hapa kuunga mkono safari yako ya afya ya moyo. Ingawa hatukuweza kutoa mapendekezo ya AI yaliyolengwa sasa, hizi ndizo vidokezo muhimu:
 
-🎯 MPANGO WA LEO:
+ MPANGO WA LEO:
 • Fuatilia BP kila siku kwa wakati mmoja
 • Kaa na maji mengi (glasi 6-8/siku)
 • Tumia dawa kama zilivyoagizwa
 • Fanya kupumua kwa kina au kutafakari mwepesi
 
-🌟 MALENGO YA MAISHA:
+ MALENGO YA MAISHA:
 • Punguza ulaji wa chumvi
 • Fanya mazoezi angalau dakika 30 kila siku
 • Lala masaa 7-8
 • Punguza pombe, epuka uvutaji sigara
 
-Uthabiti huleta maendeleo 💪`;
+Uthabiti huleta maendeleo `;
   }
 
-  return `💡 KEY INSIGHTS:
+  return ` KEY INSIGHTS:
 
 We're here to support your heart health journey. While we couldn't generate personalized AI recommendations now, here are essential tips:
 
-🎯 TODAY'S ACTION PLAN:
+ TODAY'S ACTION PLAN:
 • Monitor BP daily at the same time
 • Stay hydrated (6-8 glasses/day)
 • Take medications as prescribed
 • Practice deep breathing or light meditation
 
-🌟 LIFESTYLE GOALS:
+ LIFESTYLE GOALS:
 • Reduce salt intake
 • Exercise at least 30 mins daily
 • Sleep 7-8 hours
 • Limit alcohol, avoid smoking
 
-Consistency brings progress 💪`;
+Consistency brings progress `;
 }
 
 export async function analyzeVitalsWithAI(input: { vitals: any; activity: any }, language: string = "en-US"): Promise<any> {
@@ -391,7 +391,7 @@ export async function analyzeVitalsWithAI(input: { vitals: any; activity: any },
         return analysis;
     } catch (error) {
         console.error("Error calling Groq API for vitals analysis:", error);
-        // Fallback to a default response in case of an error
+        
         return {
             severity: "yellow",
             title: language === "sw-TZ" ? "Haiwezekani kuchambua vitali" : "Could not analyze vitals",
@@ -408,18 +408,18 @@ export async function analyzeVitalsWithAI(input: { vitals: any; activity: any },
     }
 }
 
-// ✅ Generate diet recommendations
+
 export async function generateDietRecommendations(userId: string, language: string = "en-US") {
   try {
-    // Get current lifestyle data
+    
     const lifestyle = await getCurrentLifestyle(userId);
     
-    // Get patient profile (gender and weight)
+   
     const patient = await Patient.findOne({
       userId: new mongoose.Types.ObjectId(userId),
     });
     
-    // Get recent vitals first to analyze alerts
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -432,7 +432,7 @@ export async function generateDietRecommendations(userId: string, language: stri
     .sort({ createdAt: -1 })
     .limit(5);
 
-    // Generate daily alerts from vitals (using same logic as lifestyle function)
+    
     const alerts = await getDailyAlerts(userId, language);
 
     const latestVital = vitals[0];
@@ -444,12 +444,12 @@ export async function generateDietRecommendations(userId: string, language: stri
         (language === "sw-TZ" ? "Kawaida" : "Normal")) : 
       (language === "sw-TZ" ? "Haijarekodiwa" : "Not recorded");
 
-    // Get patient demographics
+    
     const gender = patient?.gender || (language === "sw-TZ" ? "Haijatajwa" : "Not specified");
     const weight = patient?.weight || (language === "sw-TZ" ? "Haijatajwa" : "Not specified");
     const age = patient?.dob ? computeAge(patient.dob) : (language === "sw-TZ" ? "Haijatajwa" : "Not specified");
 
-    // Create prompt for diet recommendations (concise output)
+    
     const prompt = language === "sw-TZ" ? `
 Wewe ni mtaalamu wa lishe wa Kenya anayejihusisha na usimamizi wa shinikizo la damu. Unda mpango wa mlo wa kila siku uliolengwa kwa kutumia VYAKULA HALISI VYA KENYA tu.
 
@@ -529,12 +529,12 @@ Keep each section under 40 words. Format clearly with each meal section.
 
     const rawData = completion.choices[0]?.message?.content || "";
     
-    console.log("Raw AI diet response:", rawData); // Debug log
+    // console.log("Raw AI diet response:", rawData); 
     
-    // Parse the raw response into structured format
+    
     const dietData = parseDietResponse(rawData, language);
 
-    // Enforce brevity safeguards
+    
     const limit = (t: string, n = 220) => (t && t.length > n ? t.slice(0, n).trimEnd() + '…' : t);
     const conciseDiet = {
       breakfast: limit(dietData.breakfast),
@@ -545,9 +545,9 @@ Keep each section under 40 words. Format clearly with each meal section.
       calorieTarget: dietData.calorieTarget,
     };
     
-    console.log("Parsed diet data:", dietData); // Debug log
+    // console.log("Parsed diet data:", dietData);
     
-    // Save to database
+    
     await HypertensionLifestyle.findOneAndUpdate(
       { userId: new mongoose.Types.ObjectId(userId) },
       { 
@@ -557,10 +557,10 @@ Keep each section under 40 words. Format clearly with each meal section.
       { new: true, upsert: true }
     );
 
-    console.log("✅ Diet recommendations generated via Groq");
+    // console.log(" Diet recommendations generated via Groq");
     return conciseDiet;
   } catch (error) {
-    console.error("❌ Error generating diet recommendations:", error);
+    console.error(" Error generating diet recommendations:", error);
     return {
       breakfast: language === "sw-TZ" 
         ? "Maziwa lala na mkate wa maharagwe na ndizi"
@@ -582,7 +582,7 @@ Keep each section under 40 words. Format clearly with each meal section.
   }
 }
 
-// ✅ Helper: Compute age from DOB
+
 function computeAge(dob: string | Date): number {
   const birth = new Date(dob);
   if (isNaN(birth.getTime())) return 0;
@@ -593,9 +593,9 @@ function computeAge(dob: string | Date): number {
   return age;
 }
 
-// ✅ Helper: Parse diet response from AI
+
 function parseDietResponse(rawResponse: string, language: string) {
-  // Default fallback
+  
   const defaultDiet = {
     breakfast: language === "sw-TZ" 
       ? "Maziwa lala na mkate wa maharagwe na ndizi"
@@ -623,17 +623,14 @@ function parseDietResponse(rawResponse: string, language: string) {
   try {
     console.log("Parsing diet response:", rawResponse.substring(0, 300) + "...");
 
-    // Handle inline headers like "content **LUNCH**: more content"
-    // First, identify and mark all section headers, then extract content between them
-    
-    // Normalize text first
+   
     let normalizedText = rawResponse
       .replace(/\bSUPPER\b/gi, 'DINNER')
-      .replace(/\d+\.?\s*/gi, ''); // Remove numbering
+      .replace(/\d+\.?\s*/gi, ''); 
     
     const result: { [key: string]: string } = {};
     
-    // Find all section markers and their positions
+    
     const sectionPattern = language === "sw-TZ" 
       ? /\*\*\s*(CHAKULA CHA ASUBUHI|CHAKULA CHA MCHANA|CHAKULA CHA JIONI|VITAFUNIO|USHAURI|USHAURI WA JUMLA)\s*\*\*/gi
       : /\*\*\s*(BREAKFAST|LUNCH|DINNER|SUPPER|SNACKS|ADVICE|GENERAL\s*ADVICE)\s*\*\*/gi;
@@ -650,7 +647,7 @@ function parseDietResponse(rawResponse: string, language: string) {
       }
     }
     
-    // If no bold headers found, try plain headers
+    
     if (sections.length === 0) {
       const plainPattern = language === "sw-TZ"
         ? /\b(CHAKULA CHA ASUBUHI|CHAKULA CHA MCHANA|CHAKULA CHA JIONI|VITAFUNIO|USHAURI|USHAURI WA JUMLA)\s*:?/gi
@@ -666,7 +663,7 @@ function parseDietResponse(rawResponse: string, language: string) {
       }
     }
     
-    // Extract content between sections
+    
     for (let i = 0; i < sections.length; i++) {
       const section = sections[i];
       const nextSection = sections[i + 1];
@@ -678,7 +675,7 @@ function parseDietResponse(rawResponse: string, language: string) {
         .replace(/\b(BREAKFAST|LUNCH|DINNER|SNACKS|ADVICE|CHAKULA CHA ASUBUHI|CHAKULA CHA MCHANA|CHAKULA CHA JIONI|VITAFUNIO|USHAURI)\s*:?\s*/gi, '')
         .trim();
       
-      // Remove any trailing header markers that might have been included
+      
       content = content.replace(/^\*\*.*?\*\*\s*/, '').trim();
       
       if (content && content.length > 0) {
@@ -693,7 +690,7 @@ function parseDietResponse(rawResponse: string, language: string) {
       }
     }
     
-    // Special case: content before first header (usually BREAKFAST)
+    
     if (sections.length > 0 && !result.breakfast) {
       const firstSection = sections[0];
       const beforeFirst = normalizedText.substring(0, firstSection.pos)
@@ -717,7 +714,7 @@ function parseDietResponse(rawResponse: string, language: string) {
       calorieTarget: defaultDiet.calorieTarget,
     };
 
-    console.log("Successfully parsed diet data:", dietData);
+    // console.log("Successfully parsed diet data:", dietData);
     return dietData;
   } catch (error) {
     console.error("Error parsing diet response:", error);
@@ -726,7 +723,7 @@ function parseDietResponse(rawResponse: string, language: string) {
   }
 }
 
-// ✅ Update Lifestyle + Regenerate AI
+
 export async function updateLifestyle(
   userId: string,
   updates: { alcohol?: string; smoking?: string; exercise?: string; sleep?: string },
@@ -754,25 +751,25 @@ export async function updateLifestyle(
     ).exec();
 
     if (updated) {
-      console.log("🔄 Regenerating lifestyle advice via Groq...");
+      console.log(" Regenerating lifestyle advice via Groq...");
       await generateLifestyleRecommendations(userId, language);
     }
 
     return updated;
   } catch (error) {
-    console.error("❌ Error updating lifestyle:", error);
+    console.error("Error updating lifestyle:", error);
     return null;
   }
 }
 
-// ✅ Generate medication interactions
+
 export async function generateMedicationInteractions(
   medications: Array<{ name: string; dosage: string; frequency: string }>,
   context?: { age?: number; condition?: string },
   language: string = "en-US"
 ) {
   try {
-    // Create prompt for medication interaction analysis
+    
     const medicationList = medications.map(med => 
       `${med.name} (${med.dosage} - ${med.frequency})`
     ).join(", ");
@@ -798,19 +795,19 @@ Tafadhali toa uchambuzi wa kina unaojumuisha:
 5. Mapendekezo ya ufuatiliaji
 
 Weka majibu yako kwa uwazi na sehemu hizi:
-🔍 UCHAMBUZI WA MWINGILIANO:
+UCHAMBUZI WA MWINGILIANO:
 [Maelezo kuhusu mwingiliano wa dawa]
 
-⚠️ ATHARI MBABA ZINAZOWEZEEKANA:
+ATHARI MBABA ZINAZOWEZEEKANA:
 [Athari mbaya za kawaida za kuangalia]
 
-🛡️ TAHADHARI ZA USALAMA:
+ TAHADHARI ZA USALAMA:
 [Hatua muhimu za usalama]
 
-🆘 WAKATI WA KUTAFUTA USAIDIZI:
+WAKATI WA KUTAFUTA USAIDIZI:
 [Alamu nyekundu zinazohitaji huduma ya matibabu]
 
-📊 MAPENDEKEZO YA UFUATILIAJI:
+ MAPENDEKEZO YA UFUATILIAJI:
 [Nini cha kufuatilia na mara ngapi]
 
 Weka majibu yako ya kitaalamu, yanayotegemea ushahidi, na rahisi kuelewa kwa wagonjwa.
@@ -832,19 +829,19 @@ Please provide a comprehensive analysis covering:
 5. Recommendations for monitoring
 
 Format your response clearly with these sections:
-🔍 INTERACTION ANALYSIS:
+ INTERACTION ANALYSIS:
 [Details about medication interactions]
 
-⚠️ POTENTIAL SIDE EFFECTS:
+ POTENTIAL SIDE EFFECTS:
 [Common side effects to watch for]
 
-🛡️ SAFETY PRECAUTIONS:
+ SAFETY PRECAUTIONS:
 [Important safety measures]
 
-🆘 WHEN TO SEEK HELP:
+ WHEN TO SEEK HELP:
 [Red flags requiring medical attention]
 
-📊 MONITORING RECOMMENDATIONS:
+ MONITORING RECOMMENDATIONS:
 [What to monitor and how often]
 
 Keep your response professional, evidence-based, and easy to understand for patients.
@@ -862,10 +859,10 @@ Keep your response professional, evidence-based, and easy to understand for pati
         ? "Haijawezekana kuchambua mwingiliano wa dawa kwa sasa. Tafadhali shauriana na mtoa huduma wako wa afya."
         : "Unable to analyze medication interactions at this time. Please consult with your healthcare provider.");
 
-    console.log("✅ Medication interactions generated via Groq");
+    // console.log("Medication interactions generated via Groq");
     return analysis;
   } catch (error) {
-    console.error("❌ Error generating medication interactions:", error);
+    console.error(" Error generating medication interactions:", error);
     return language === "sw-TZ"
       ? "Haijawezekana kuchambua mwingiliano wa dawa kutokana na hitilafu ya kiufundi. Tafadhali wasiliana na mtoa huduma wako wa afya kwa habari ya usalama wa dawa."
       : "Unable to analyze medication interactions due to a technical error. Please contact your healthcare provider for medication safety information.";
