@@ -1,10 +1,9 @@
-// apps/web/components/Map.tsx
-'use client';  // Add this if using Next.js App Router (app directory)
+'use client'; 
 
 import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps';
 
 export function GoogleMapComponent() {
-  const position = { lat: -1.286389, lng: 36.817223 }; // Nairobi coordinates
+  const position = { lat: -1.286389, lng: 36.817223 }; 
 
   return (
     <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
