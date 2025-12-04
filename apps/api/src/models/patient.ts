@@ -1,9 +1,8 @@
-// patient.ts
 import mongoose, { Schema, model, models } from "mongoose";
 
 const PatientSchema = new Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  // Basic Info
+
   fullName: { type: String, required: true },
   dob: { type: Date, required: true },
   gender: {
@@ -46,7 +45,7 @@ const PatientSchema = new Schema({
 
 },
 
-  { timestamps: true }   // adds createdAt + updatedAt
+  { timestamps: true }   
 );
 
 const Patient = models.Patient || model("Patient", PatientSchema);

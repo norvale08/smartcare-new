@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TriangleAlert, CheckCircle } from "lucide-react";
+import { TriangleAlert, CheckCircle, MapPin } from "lucide-react";
+import Link from "next/link";
 
 type DiabetesStatus = {
   glucose: number;
@@ -86,31 +87,135 @@ export default function DiabetesAlerts({ refreshToken }: Props) {
     fetchTodayVitals();
   }, [refreshToken]);
 
-  if (loading) return <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">Loading diabetes alert...</div>;
-  if (error) return <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">{error}</div>;
-  if (!statusData) return <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">No glucose data for today. Please enter your vitals.</div>;
+  if (loading) return (
+    <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">
+      Loading diabetes alert...
+    </div>
+  );
+  
+  if (error) return (
+    <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6">
+      <div className="text-red-600 mb-4">{error}</div>
+      <Link href="/map">
+        <button className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all font-medium flex items-center gap-2">
+          <MapPin className="w-4 h-4" />
+          Find Medical Facilities
+        </button>
+      </Link>
+    </div>
+  );
+  
+  if (!statusData) return (
+    <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6">
+      <div className="text-gray-600 mb-4">No glucose data for today. Please enter your vitals.</div>
+      <Link href="/map">
+        <button className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all font-medium flex items-center gap-2">
+          <MapPin className="w-4 h-4" />
+          Find Medical Facilities
+        </button>
+      </Link>
+    </div>
+  );
 
   function getGlucoseCategory(glucose: number, context: string) {
-    if (glucose < 70) return { title: "Low Blood Sugar", color: "bg-blue-50 border-blue-600", text: "text-blue-700", icon: <TriangleAlert color="#2563eb" size={20} />, message: "Glucose too low!", button: true };
+    if (glucose < 70) return { 
+      title: "Low Blood Sugar", 
+      color: "bg-blue-50 border-blue-600", 
+      text: "text-blue-700", 
+      icon: <TriangleAlert color="#2563eb" size={20} />, 
+      message: "Glucose too low!",
+      buttonText: "Find Emergency Help",
+      buttonColor: "from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+    };
+    
     if (context === "Fasting") return glucose <= 125
-      ? { title: "Normal Fasting Glucose", color: "bg-green-50 border-green-600", text: "text-green-700", icon: <CheckCircle color="#16a34a" size={20} />, message: "Fasting glucose normal", button: false }
-      : { title: "High Fasting Glucose", color: "bg-red-50 border-red-600", text: "text-red-700", icon: <TriangleAlert color="#dc2626" size={20} />, message: "Fasting glucose high", button: true };
+      ? { 
+        title: "Normal Fasting Glucose", 
+        color: "bg-green-50 border-green-600", 
+        text: "text-green-700", 
+        icon: <CheckCircle color="#16a34a" size={20} />, 
+        message: "Fasting glucose normal",
+        buttonText: "Find Medical Facilities",
+        buttonColor: "from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+      }
+      : { 
+        title: "High Fasting Glucose", 
+        color: "bg-red-50 border-red-600", 
+        text: "text-red-700", 
+        icon: <TriangleAlert color="#dc2626" size={20} />, 
+        message: "Fasting glucose high",
+        buttonText: "Find Nearby Doctor",
+        buttonColor: "from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
+      };
+    
     if (context === "Post-meal") return glucose <= 180
-      ? { title: "Normal Post-meal Glucose", color: "bg-green-50 border-green-600", text: "text-green-700", icon: <CheckCircle color="#16a34a" size={20} />, message: "Post-meal glucose normal", button: false }
-      : { title: "High Post-meal Glucose", color: "bg-red-50 border-red-600", text: "text-red-700", icon: <TriangleAlert color="#dc2626" size={20} />, message: "Post-meal glucose high", button: true };
+      ? { 
+        title: "Normal Post-meal Glucose", 
+        color: "bg-green-50 border-green-600", 
+        text: "text-green-700", 
+        icon: <CheckCircle color="#16a34a" size={20} />, 
+        message: "Post-meal glucose normal",
+        buttonText: "Find Medical Facilities",
+        buttonColor: "from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+      }
+      : { 
+        title: "High Post-meal Glucose", 
+        color: "bg-red-50 border-red-600", 
+        text: "text-red-700", 
+        icon: <TriangleAlert color="#dc2626" size={20} />, 
+        message: "Post-meal glucose high",
+        buttonText: "Find Diabetes Specialist",
+        buttonColor: "from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
+      };
+    
     return glucose <= 200
-      ? { title: "Normal Random Glucose", color: "bg-green-50 border-green-600", text: "text-green-700", icon: <CheckCircle color="#16a34a" size={20} />, message: "Random glucose normal", button: false }
-      : { title: "High Random Glucose", color: "bg-red-50 border-red-600", text: "text-red-700", icon: <TriangleAlert color="#dc2626" size={20} />, message: "Random glucose high", button: true };
+      ? { 
+        title: "Normal Random Glucose", 
+        color: "bg-green-50 border-green-600", 
+        text: "text-green-700", 
+        icon: <CheckCircle color="#16a34a" size={20} />, 
+        message: "Random glucose normal",
+        buttonText: "Find Medical Facilities",
+        buttonColor: "from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+      }
+      : { 
+        title: "High Random Glucose", 
+        color: "bg-red-50 border-red-600", 
+        text: "text-red-700", 
+        icon: <TriangleAlert color="#dc2626" size={20} />, 
+        message: "Random glucose high",
+        buttonText: "Emergency Medical Help",
+        buttonColor: "from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
+      };
   }
 
   const glucoseCategory = getGlucoseCategory(statusData.glucose, statusData.context);
 
   return (
     <div className={`bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 border-l-4 ${glucoseCategory.color}`}>
-      <div className="flex items-center gap-2 mb-2">{glucoseCategory.icon}<h3 className={`text-lg font-bold ${glucoseCategory.text}`}>{glucoseCategory.title}</h3></div>
-      <p className={`text-sm ${glucoseCategory.text} mb-4`}>{glucoseCategory.message}</p>
-      <div className="text-sm mb-2"><p><strong>Glucose:</strong> {statusData.glucose} mg/dL</p><p><strong>Context:</strong> {statusData.context}</p></div>
-      {glucoseCategory.button && <button className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition">Find Doctor Nearby</button>}
+      <div className="flex items-center gap-2 mb-2">
+        {glucoseCategory.icon}
+        <h3 className={`text-lg font-bold ${glucoseCategory.text}`}>
+          {glucoseCategory.title}
+        </h3>
+      </div>
+      
+      <p className={`text-sm ${glucoseCategory.text} mb-4`}>
+        {glucoseCategory.message}
+      </p>
+      
+      <div className="text-sm mb-2">
+        <p><strong>Glucose:</strong> {statusData.glucose} mg/dL</p>
+        <p><strong>Context:</strong> {statusData.context}</p>
+      </div>
+      
+      {/* SINGLE BUTTON THAT TAKES USER TO /map PAGE */}
+      <Link href="/map">
+        <button className={`bg-gradient-to-r ${glucoseCategory.buttonColor} text-white px-4 py-2 rounded-lg transition-all font-medium flex items-center gap-2`}>
+          <MapPin className="w-4 h-4" />
+          {glucoseCategory.buttonText}
+        </button>
+      </Link>
     </div>
   );
 }

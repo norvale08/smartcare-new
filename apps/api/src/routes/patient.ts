@@ -1,3 +1,5 @@
+// COMPLETE UPDATED patient.ts router with location features
+
 import express from "express";
 import jwt from "jsonwebtoken";
 import Patient from "../models/patient";
@@ -63,6 +65,7 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
           cardiovascular: patient.cardiovascular,
           allergies: patient.allergies,
           surgeries: patient.surgeries,
+          location: patient.location, // ✅ Include location
           createdAt: patient.createdAt
         }
       });
@@ -114,9 +117,10 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
         cardiovascular: user.cardiovascular || false,
         allergies: user.allergies || "",
         surgeries: user.surgeries || "",
+        location: null, // No location in User model
         createdAt: user.createdAt
       },
-      source: "user" // Indicate this came from User model
+      source: "user"
     });
 
   } catch (error) {
@@ -168,6 +172,7 @@ router.get("/debug", authenticateUser, async (req: any, res: any) => {
   }
 });
 
+// Create patient profile
 router.post("/", authenticateUser, async (req: any, res: any) => {
   try {
     await connectMongoDB();
@@ -201,6 +206,8 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
       hypertension: body.hypertension === true || body.hypertension === "true",
       cardiovascular:
         body.cardiovascular === true || body.cardiovascular === "true",
+      // Include location if provided
+      location: body.location || null
     };
 
     const newPatient = new Patient(patientData);
@@ -308,6 +315,7 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
   }
 });
 
+// Update patient profile
 router.put("/", authenticateUser, async (req: any, res: any) => {
   try {
     await connectMongoDB();
@@ -328,6 +336,7 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
       "cardiovascular",
       "allergies",
       "surgeries",
+      "location", // ✅ Allow location updates
     ];
 
     const update: any = {};
@@ -338,6 +347,7 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
     }
 
     if (update.dob) update.dob = new Date(update.dob);
+    if (update.location) update.location.updatedAt = new Date();
 
     const patient = await Patient.findOneAndUpdate(
       { userId: req.userId },
@@ -387,7 +397,7 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
       success: true,
       message: "Patient profile updated",
       data: patient,
-      redirectTo, // ✅ return redirect
+      redirectTo,
     });
   } catch (error) {
     console.error("❌ Update patient error:", error);
@@ -395,5 +405,109 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
   }
 });
 
+// ==================== LOCATION ENDPOINTS ====================
+
+// Update patient location
+router.put("/location", authenticateUser, async (req: any, res: any) => {
+  try {
+    await connectMongoDB();
+
+    const { lat, lng, address } = req.body;
+
+    // Validate coordinates
+    if (!lat || !lng) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Latitude and longitude are required" 
+      });
+    }
+
+    // Validate coordinate ranges
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid coordinates" 
+      });
+    }
+
+    console.log("📍 Updating location for userId:", req.userId);
+    console.log("Coordinates:", { lat, lng, address });
+
+    // Update patient location
+    const patient = await Patient.findOneAndUpdate(
+      { userId: req.userId },
+      { 
+        $set: { 
+          location: {
+            lat,
+            lng,
+            address: address || "Address not provided",
+            updatedAt: new Date()
+          }
+        } 
+      },
+      { new: true }
+    );
+
+    if (!patient) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Patient profile not found. Please complete your profile first." 
+      });
+    }
+
+    console.log("✅ Location updated successfully");
+
+    res.status(200).json({
+      success: true,
+      message: "Location updated successfully",
+      data: {
+        location: patient.location
+      }
+    });
+  } catch (error) {
+    console.error("❌ Location update error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to update location" 
+    });
+  }
+});
+
+// Get patient location
+router.get("/location", authenticateUser, async (req: any, res: any) => {
+  try {
+    await connectMongoDB();
+
+    const patient = await Patient.findOne({ userId: req.userId });
+
+    if (!patient) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Patient profile not found" 
+      });
+    }
+
+    if (!patient.location) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Location not set. Please update your location." 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        location: patient.location
+      }
+    });
+  } catch (error) {
+    console.error("❌ Get location error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to fetch location" 
+    });
+  }
+});
 
 export default router;
