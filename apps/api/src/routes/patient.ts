@@ -1,4 +1,4 @@
-// COMPLETE UPDATED patient.ts router with location features
+// COMPLETE UPDATED patient.ts router with location features AND email
 
 import express from "express";
 import jwt from "jsonwebtoken";
@@ -53,6 +53,7 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
           fullName: patient.fullName,
           firstname: patient.firstname,
           lastname: patient.lastname,
+          email: patient.email, // ✅ ADDED email field
           dob: patient.dob,
           gender: patient.gender,
           weight: patient.weight,
@@ -65,7 +66,7 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
           cardiovascular: patient.cardiovascular,
           allergies: patient.allergies,
           surgeries: patient.surgeries,
-          location: patient.location, // ✅ Include location
+          location: patient.location,
           createdAt: patient.createdAt
         }
       });
@@ -105,6 +106,7 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
         fullName: user.fullName || `${user.firstname} ${user.lastname}`,
         firstname: user.firstname,
         lastname: user.lastname,
+        email: user.email, // User's login email (not emergency contact)
         dob: user.dob,
         gender: user.gender,
         weight: user.weight,
@@ -117,7 +119,7 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
         cardiovascular: user.cardiovascular || false,
         allergies: user.allergies || "",
         surgeries: user.surgeries || "",
-        location: null, // No location in User model
+        location: null,
         createdAt: user.createdAt
       },
       source: "user"
@@ -206,7 +208,8 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
       hypertension: body.hypertension === true || body.hypertension === "true",
       cardiovascular:
         body.cardiovascular === true || body.cardiovascular === "true",
-      // Include location if provided
+      // Include email if provided
+      email: body.email || null, // ✅ ADDED email field
       location: body.location || null
     };
 
@@ -329,6 +332,7 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
       "picture",
       "firstname",
       "lastname",
+      "email", // ✅ ADDED email field
       "phoneNumber",
       "relationship",
       "diabetes",
@@ -336,7 +340,7 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
       "cardiovascular",
       "allergies",
       "surgeries",
-      "location", // ✅ Allow location updates
+      "location",
     ];
 
     const update: any = {};
@@ -359,7 +363,7 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
       return res.status(404).json({ message: "Patient profile not found" });
     }
 
-    // Mirror to User
+    // Mirror to User (but NOT email - keep emergency contact email only in Patient)
     try {
       const userUpdate: any = {};
       for (const field of ["weight", "height", "firstname", "lastname", "fullName", "phoneNumber", "dob", "gender", "diabetes", "hypertension", "cardiovascular", "allergies", "surgeries"]) {

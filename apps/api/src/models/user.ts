@@ -94,6 +94,7 @@ const userSchema = new Schema(
       type: Number,
       default: null,
     },
+    
     relationship: {
       type: String,
       default: "",

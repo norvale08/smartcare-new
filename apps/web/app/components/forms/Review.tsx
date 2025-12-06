@@ -39,6 +39,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ goToStep }) => {
           <p><strong>Last Name:</strong> {values.lastname}</p>
           <p><strong>Phone:</strong> {values.phoneNumber}</p>
           <p><strong>Relationship:</strong> {values.relationship}</p>
+          <p><strong>Email:</strong> {values.email}</p>
           <button
             type="button"
             onClick={() => goToStep(2)}
