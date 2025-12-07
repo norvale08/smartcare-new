@@ -9,6 +9,7 @@ import MedicationReminders from "./MedicationReminders";
 import LifestyleAssessment from "./LifestyleAssessment";
 import DietRecommendations from "./DietRecommendations";
 import type { LifestyleData } from "./LifestyleAssessment";
+import Maps from "../../../app/components/Map"
 
 interface TabContentProps {
   activeTab: string;
@@ -124,7 +125,8 @@ const TabContent: React.FC<TabContentProps> = ({
     case 'maps':
       return (
         <div className="w-full max-w-4xl">
-          <NearbyClinics />
+          {/* <NearbyClinics /> */}
+          <Maps />
         </div>
       );
     
