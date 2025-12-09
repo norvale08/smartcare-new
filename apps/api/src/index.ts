@@ -51,7 +51,7 @@ import reportRoutes from "./routes/reports";
 import speechRoutes from './routes/groqSpeechRoutes';
 import pythonSpeechRoutes from './routes/speech.routes';
 import relativeSetupRoutes from './routes/relative-setup';
-
+import relativePatientRouter from './routes/relativePatient'
 const app = express();
 
 
@@ -160,7 +160,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/speech', speechRoutes);
 app.use('/api/python-speech', pythonSpeechRoutes);
 app.use('/api/relative-setup', relativeSetupRoutes);
-
+app.use('/api/relative', relativePatientRouter);
 
 app.use('*', (req, res) => {
   res.status(404).json({

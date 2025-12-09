@@ -1,6 +1,8 @@
+// apps/api/src/routes/admin/controllers/relatives.controller.ts
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import mongoose from "mongoose";
 import { connectMongoDB } from "../../../lib/mongodb";
 import { emailService } from "../../../lib/emailService";
 import Patient from "../../../models/patient";
@@ -12,6 +14,18 @@ interface CreateRelativeRequest {
   accessLevel?: string;
   adminNotes?: string;
 }
+
+// Helper to convert to ObjectId
+const toObjectId = (id: any) => {
+  try {
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      return new mongoose.Types.ObjectId(id);
+    }
+  } catch (e) {
+    console.error("ObjectId conversion failed:", e);
+  }
+  return id;
+};
 
 export const getPatientsWithRelativeRequests = async (req: Request, res: Response) => {
   try {
@@ -106,7 +120,6 @@ export const getPatientsWithRelativeRequests = async (req: Request, res: Respons
 export const createRelativeAccount = async (req: Request, res: Response) => {
   console.log('\n=== CREATE RELATIVE ACCOUNT DEBUG ===');
   console.log('📦 Request Body:', JSON.stringify(req.body, null, 2));
-  console.log('📦 Content-Type:', req.headers['content-type']);
   
   try {
     await connectMongoDB();
@@ -116,40 +129,29 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
     console.log(`📋 Creating relative account for patient: ${patientId}`);
     console.log(`📧 Emergency contact email: ${emergencyContactEmail}`);
 
-    // VALIDATION: Check if all required fields exist
+    // VALIDATION
     if (!patientId || !emergencyContactEmail) {
-      console.error('❌ Missing required fields:', {
-        patientId: !!patientId,
-        emergencyContactEmail: !!emergencyContactEmail
-      });
+      console.error('❌ Missing required fields');
       return res.status(400).json({
         success: false,
-        message: "Missing required fields: patientId and emergencyContactEmail are required",
-        missingFields: {
-          patientId: !patientId,
-          emergencyContactEmail: !emergencyContactEmail
-        }
+        message: "Missing required fields: patientId and emergencyContactEmail are required"
       });
     }
 
-    // VALIDATION: Check patientId format
     if (!/^[0-9a-fA-F]{24}$/.test(patientId)) {
       console.error('❌ Invalid patientId format:', patientId);
       return res.status(400).json({
         success: false,
-        message: "Invalid patient ID format. Must be 24-character MongoDB ObjectId",
-        patientId
+        message: "Invalid patient ID format"
       });
     }
 
-    // VALIDATION: Check email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(emergencyContactEmail)) {
       console.error('❌ Invalid email format:', emergencyContactEmail);
       return res.status(400).json({
         success: false,
-        message: "Invalid email format for emergency contact",
-        email: emergencyContactEmail
+        message: "Invalid email format"
       });
     }
 
@@ -166,10 +168,27 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
     console.log('✅ Found patient:', {
       id: patient._id,
       name: patient.fullName,
-      email: patient.email
+      email: patient.email,
+      userId: patient.userId
     });
 
-    // Check if relative already exists with this email
+    // ✅ CRITICAL: Get the patient's User account
+    const patientUser = await User.findById(toObjectId(patient.userId));
+    if (!patientUser) {
+      console.error('❌ Patient User account not found:', patient.userId);
+      return res.status(404).json({
+        success: false,
+        message: "Patient user account not found"
+      });
+    }
+
+    console.log('✅ Found patient user:', {
+      id: patientUser._id,
+      email: patientUser.email,
+      name: patientUser.fullName
+    });
+
+    // Check if relative already exists
     const existingRelative = await User.findOne({ 
       email: emergencyContactEmail, 
       role: "relative" 
@@ -204,7 +223,7 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
     const relativeLastName = patient.lastname || 'Member';
     const relativeFullName = `${relativeFirstName} ${relativeLastName}`;
 
-    // ✅ FIXED: Create relative user with ALL required fields
+    // ✅ CRITICAL FIX: Create relative user with proper patient references
     const relativeUser = new User({
       email: emergencyContactEmail,
       firstName: relativeFirstName,
@@ -212,13 +231,13 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
       phoneNumber: patient.phoneNumber || '',
       role: "relative",
       
-      // ✅ CRITICAL: Add ALL relative-specific fields
+      // ✅ CRITICAL: Link to BOTH the User ID and Patient Profile ID
       isEmergencyContact: true,
       relationshipToPatient: patient.relationship || 'Family Member',
-      monitoredPatient: patient.userId,
-      monitoredPatientProfile: patient._id,
+      monitoredPatient: toObjectId(patient.userId), // ✅ Link to User._id
+      monitoredPatientProfile: patient._id,          // ✅ Link to Patient._id
       
-      // ✅ CRITICAL: Add invitation fields
+      // Invitation fields
       invitationToken,
       invitationExpires,
       invitationStatus: "pending",
@@ -229,13 +248,13 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
       profileCompleted: false,
       password: "temporary-password-needs-reset",
       
-      // ✅ Add other required User schema fields
+      // Other required User schema fields
       isFirstLogin: true,
       fullName: relativeFullName,
       firstname: relativeFirstName,
       lastname: relativeLastName,
       
-      // Set default values for other fields
+      // Default values for other fields
       diabetes: false,
       hypertension: false,
       cardiovascular: false,
@@ -272,7 +291,8 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
 
     console.log(`✅ Relative account created: ${relativeUser._id}`);
     console.log(`📧 Relative email: ${relativeUser.email}`);
-    console.log('📋 Relative document:', JSON.stringify(relativeUser.toObject(), null, 2));
+    console.log(`🔗 Linked to Patient User ID: ${relativeUser.monitoredPatient}`);
+    console.log(`🔗 Linked to Patient Profile ID: ${relativeUser.monitoredPatientProfile}`);
 
     // Generate setup token for the relative
     const setupToken = jwt.sign(
@@ -281,6 +301,7 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
         email: relativeUser.email,
         type: "relative-setup",
         patientId: patient._id,
+        patientUserId: patient.userId, // ✅ Include patient's User ID
         patientName: patient.fullName,
         relativeName: relativeFullName,
         relationship: patient.relationship || 'Family Member',
@@ -293,19 +314,15 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
     const patientName = patient.fullName;
     
     console.log(`📧 Sending invitation email to relative: ${relativeUser.email}`);
-    console.log(`   Patient: ${patientName}`);
-    console.log(`   Relative: ${relativeFullName}`);
-    console.log(`   Relationship: ${patient.relationship}`);
     console.log(`🔑 Setup Token: ${setupToken.substring(0, 50)}...`);
     
-    // ✅ CRITICAL FIX: Just pass the token, not a URL
     // Send email to the emergency contact (relative)
     const emailSent = await emailService.sendRelativeInvitationEmail(
-      relativeUser.email, // Send to relative's email
-      relativeFullName,   // Relative's name
-      patientName,        // Patient's name
+      relativeUser.email,
+      relativeFullName,
+      patientName,
       patient.relationship || 'Family Member',
-      setupToken,         // ✅ JUST THE TOKEN STRING, not a URL
+      setupToken,
       accessLevel
     );
 
@@ -326,7 +343,7 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
         invitationStatus: "pending",
         invitationExpires,
         emailSent: emailSent,
-        setupToken: emailSent ? undefined : setupToken // Only send token if email failed
+        setupToken: emailSent ? undefined : setupToken
       }
     });
 
@@ -376,6 +393,7 @@ export const resendRelativeInvitation = async (req: Request, res: Response) => {
         email: relativeUser.email,
         type: "relative-setup",
         patientId: patient._id,
+        patientUserId: patient.userId,
         patientName: patient.fullName,
         relativeName: `${relativeUser.firstName} ${relativeUser.lastName}`,
         relationship: relativeUser.relationshipToPatient || patient.relationship,
@@ -390,13 +408,12 @@ export const resendRelativeInvitation = async (req: Request, res: Response) => {
     relativeUser.invitationSentAt = new Date();
     await relativeUser.save();
 
-    // ✅ CRITICAL FIX: Just pass the token, not a URL
     const emailSent = await emailService.sendRelativeInvitationEmail(
       relativeUser.email,
       `${relativeUser.firstName} ${relativeUser.lastName}`,
       patient.fullName,
       relativeUser.relationshipToPatient || patient.relationship,
-      setupToken,         // ✅ JUST THE TOKEN STRING, not a URL
+      setupToken,
       relativeUser.accessLevel || "view_only"
     );
 

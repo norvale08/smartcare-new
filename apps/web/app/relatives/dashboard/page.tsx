@@ -1,8 +1,8 @@
+// apps/frontend/app/relative/dashboard/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 interface PatientInfo {
   id: string;
@@ -14,9 +14,12 @@ interface PatientInfo {
   gender: string;
   diabetes: boolean;
   hypertension: boolean;
+  cardiovascular?: boolean;
   allergies: string;
   surgeries: string;
   picture: string;
+  weight?: number;
+  height?: number;
 }
 
 interface User {
@@ -25,9 +28,9 @@ interface User {
   name: string;
   role: string;
   accessLevel: string;
-  relationship: string;
-  monitoredPatient?: PatientInfo;
-  monitoredPatientProfile?: string;
+  relationship?: string;
+  monitoredPatient?: string; // This should be patient's User ID
+  monitoredPatientProfile?: string; // This should be Patient profile ID
 }
 
 interface VitalRecord {
@@ -98,102 +101,90 @@ export default function RelativeDashboard() {
     }
 
     setUser(parsedUser);
-    fetchPatientData(parsedUser);
+    fetchRelativeData(parsedUser, token);
   }, [router]);
 
-  const fetchPatientData = async (relativeUser: User) => {
+  const fetchRelativeData = async (relativeUser: User, token: string) => {
     try {
-      const token = localStorage.getItem('token');
+      console.log('🔍 Fetching relative data for:', relativeUser.email);
       
-      // Fetch patient profile
-      if (relativeUser.monitoredPatientProfile) {
-        const response = await fetch(`${API_BASE_URL}/api/patients/${relativeUser.monitoredPatientProfile}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      // Fetch patient profile using the relative-specific endpoint
+      const profileResponse = await fetch(`${API_BASE_URL}/api/relative/patient-profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        console.log('📋 Profile response:', profileData);
         
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setPatientData(data.data);
-          }
+        if (profileData.success) {
+          setPatientData(profileData.data);
+        }
+      } else {
+        console.error('❌ Failed to fetch patient profile:', profileResponse.status);
+      }
+
+      // Fetch patient vitals using the relative-specific endpoint
+      const vitalsResponse = await fetch(`${API_BASE_URL}/api/relative/patient-vitals`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (vitalsResponse.ok) {
+        const vitalsData = await vitalsResponse.json();
+        console.log('📊 Vitals response count:', vitalsData.count);
+        
+        if (vitalsData.success) {
+          setVitals(vitalsData.data);
+        }
+      } else {
+        console.error('❌ Failed to fetch patient vitals:', vitalsResponse.status);
+      }
+
+      // Fetch health summary
+      const summaryResponse = await fetch(`${API_BASE_URL}/api/relative/patient-summary`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (summaryResponse.ok) {
+        const summaryData = await summaryResponse.json();
+        console.log('📈 Summary response:', summaryData);
+        
+        if (summaryData.success) {
+          setSummary(summaryData.data);
         }
       }
 
-      // Fetch patient vitals if we have patient ID
-      if (relativeUser.monitoredPatient) {
-        await Promise.all([
-          fetchPatientVitals(relativeUser.monitoredPatient.id),
-          fetchHealthSummary(relativeUser.monitoredPatient.id),
-          fetchHealthStats(relativeUser.monitoredPatient.id)
-        ]);
+      // Fetch health stats
+      const statsResponse = await fetch(`${API_BASE_URL}/api/relative/patient-stats?days=30`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        console.log('📊 Stats response:', statsData);
+        
+        if (statsData.success) {
+          setStats(statsData.data);
+        }
       }
 
     } catch (error) {
-      console.error('Error fetching patient data:', error);
+      console.error('❌ Error fetching relative data:', error);
+      setError('Failed to load patient data. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchPatientVitals = async (patientId: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/api/patient-vitals/${patientId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setVitals(data.data);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching vitals:', error);
-    }
-  };
-
-  const fetchHealthSummary = async (patientId: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/api/patient-vitals/${patientId}/summary`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setSummary(data.data);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching summary:', error);
-    }
-  };
-
-  const fetchHealthStats = async (patientId: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/api/patient-vitals/${patientId}/stats?days=30`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setStats(data.data);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching stats:', error);
     }
   };
 
@@ -218,7 +209,7 @@ export default function RelativeDashboard() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          toUserId: user.monitoredPatient,
+          toUserId: user.monitoredPatient, // This should be the patient's User ID
           message: message.trim(),
           messageType: 'relative_to_patient'
         }),
@@ -238,7 +229,7 @@ export default function RelativeDashboard() {
         setError(data.message || 'Failed to send message');
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Error sending message:', error);
       setError('Failed to send message. Please try again.');
     } finally {
       setSendingMessage(false);
@@ -246,26 +237,34 @@ export default function RelativeDashboard() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'Invalid date';
+    }
   };
 
   const calculateAge = (dob: string) => {
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+    try {
+      const birthDate = new Date(dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      return age;
+    } catch {
+      return 'Unknown';
     }
-    
-    return age;
   };
 
   const getHealthStatus = () => {
@@ -309,6 +308,7 @@ export default function RelativeDashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p className="ml-4 text-gray-600">Loading patient data...</p>
       </div>
     );
   }
@@ -332,7 +332,7 @@ export default function RelativeDashboard() {
               <span className="text-gray-600">Welcome, {user.name}</span>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
               >
                 Logout
               </button>
@@ -382,6 +382,11 @@ export default function RelativeDashboard() {
                       Hypertension
                     </span>
                   )}
+                  {patientData?.cardiovascular && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                      Cardiovascular
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -417,6 +422,22 @@ export default function RelativeDashboard() {
             </button>
           </nav>
         </div>
+
+        {/* Error/Success Messages */}
+        {(error || success) && (
+          <div className="mb-6">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+                {success}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Content based on active tab */}
         {activeTab === 'overview' && (
@@ -499,6 +520,13 @@ export default function RelativeDashboard() {
                     </div>
                   )}
                   
+                  {stats.avgHeartRate !== undefined && (
+                    <div>
+                      <p className="text-sm text-gray-500">Avg. Heart Rate</p>
+                      <p className="text-xl font-semibold text-gray-900">{stats.avgHeartRate} BPM</p>
+                    </div>
+                  )}
+                  
                   {stats.avgGlucose !== undefined && (
                     <div>
                       <p className="text-sm text-gray-500">Avg. Glucose</p>
@@ -575,7 +603,7 @@ export default function RelativeDashboard() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {vitals.slice(0, 10).map((vital) => (
+                    {vitals.slice(0, 20).map((vital) => (
                       <tr key={vital.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {formatDate(vital.timestamp)}
@@ -618,18 +646,6 @@ export default function RelativeDashboard() {
               <div className="bg-white shadow rounded-lg p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Send Message to {patientData?.name?.split(' ')[0] || 'Patient'}</h3>
                 
-                {error && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-                    {error}
-                  </div>
-                )}
-                
-                {success && (
-                  <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-                    {success}
-                  </div>
-                )}
-                
                 <form onSubmit={handleSendMessage}>
                   <div className="mb-4">
                     <textarea
@@ -639,13 +655,14 @@ export default function RelativeDashboard() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       rows={4}
                       required
+                      disabled={sendingMessage}
                     />
                   </div>
                   
                   <div className="flex justify-end">
                     <button
                       type="submit"
-                      disabled={sendingMessage}
+                      disabled={sendingMessage || !user.monitoredPatient}
                       className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {sendingMessage ? 'Sending...' : 'Send Message'}
@@ -682,7 +699,7 @@ export default function RelativeDashboard() {
                   
                   <div className="pt-4 border-t border-gray-200">
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Your Relationship</h4>
-                    <p className="text-gray-900">{user.relationship}</p>
+                    <p className="text-gray-900">{user.relationship || 'Not specified'}</p>
                     <p className="text-sm text-gray-500 mt-1">Access Level: {user.accessLevel}</p>
                   </div>
                 </div>
@@ -726,6 +743,24 @@ export default function RelativeDashboard() {
                     </dd>
                   </div>
                 )}
+
+                {patientData.weight && (
+                  <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt className="text-sm font-medium text-gray-500">Weight</dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {patientData.weight} kg
+                    </dd>
+                  </div>
+                )}
+
+                {patientData.height && (
+                  <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt className="text-sm font-medium text-gray-500">Height</dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {patientData.height} cm
+                    </dd>
+                  </div>
+                )}
                 
                 {patientData.allergies && (
                   <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
@@ -759,7 +794,12 @@ export default function RelativeDashboard() {
                           Hypertension
                         </span>
                       )}
-                      {!patientData.diabetes && !patientData.hypertension && (
+                      {patientData.cardiovascular && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Cardiovascular
+                        </span>
+                      )}
+                      {!patientData.diabetes && !patientData.hypertension && !patientData.cardiovascular && (
                         <span className="text-sm text-gray-500">No known conditions</span>
                       )}
                     </div>
