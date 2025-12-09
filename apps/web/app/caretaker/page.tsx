@@ -13,10 +13,15 @@ import PatientRequests from "./components/PatientRequests";
 import PatientTabs from './components/PatientTabs';
 import RealTimeNotifications from './components/RealTimeNotifications';
 import PatientHeader from './components/PatientHeader';
+<<<<<<< Updated upstream
 import PatientMessages from "./components/PatientMessages";
 import QuickStats from "./components/QuickStats";
 import DoctorMedicationManagement from './components/DoctorMedicationManagement';
 import AppointmentsView from './components/AppointmentsView';
+=======
+
+
+>>>>>>> Stashed changes
 interface Patient {
   id: string;
   userId?: string;
@@ -71,8 +76,12 @@ const CaretakerDashboard = () => {
   const [hasToken, setHasToken] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+<<<<<<< Updated upstream
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
 
+=======
+  const [activeTab, setActiveTab] = useState<'overview' | 'messages'>('overview'); // Single source of truth
+>>>>>>> Stashed changes
   
   // Extract role from JWT token
   useEffect(() => {
@@ -112,7 +121,7 @@ const CaretakerDashboard = () => {
       fetchAssignedPatients();
     }
   }, [status, hasToken, refreshTrigger]);
-
+//Start of fetching asssigned patients
   const fetchAssignedPatients = async () => {
     try {
       setPatientsLoading(true);
@@ -164,7 +173,7 @@ const CaretakerDashboard = () => {
       setPatientsLoading(false);
     }
   };
-
+//End of fetching assigned patients
   const fetchPatientVitals = async (patientId: string) => {
     try {
       setIsLoading(true);
@@ -254,12 +263,18 @@ const CaretakerDashboard = () => {
     
     const targetTab = options?.tab ?? 'overview';
     setSelectedPatient(patient);
+<<<<<<< Updated upstream
     setActiveTab(targetTab);
     setPatientVitals([]);
+=======
+    setActiveTab('overview'); // Reset to overview when selecting new patient
+    setPatientVitals([]); // Clear previous vitals
+>>>>>>> Stashed changes
     
     fetchPatientVitals(patientIdentifier);
   };
 
+<<<<<<< Updated upstream
   const findPatientMatch = (patientId?: string) => {
     if (!patientId) return null;
     return patients.find((patient) => 
@@ -268,6 +283,51 @@ const CaretakerDashboard = () => {
       patient.user?._id === patientId ||
       patient.user?.id === patientId
     ) || null;
+=======
+  // SIMPLIFIED: Just switch to messages tab using the already selected patient
+  const handleOpenMessaging = () => {
+    console.log("💬 Opening messaging for:", selectedPatient);
+    if (selectedPatient) {
+      setActiveTab('messages');
+    } else {
+      console.error("No patient selected for messaging");
+    }
+  };
+
+  // Add this function to test the API directly
+  const testVitalsAPI = async (patientId: string) => {
+    const token = localStorage.getItem("token");
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/patient/vitals/${patientId}`;
+    
+    console.log("🧪 TESTING API DIRECTLY:", apiUrl);
+    
+    try {
+      const response = await fetch(apiUrl, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
+      
+      console.log("🧪 TEST RESPONSE:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+      
+      const text = await response.text();
+      console.log("🧪 TEST RESPONSE TEXT:", text);
+      
+      try {
+        const json = JSON.parse(text);
+        console.log("🧪 TEST RESPONSE JSON:", json);
+      } catch (e) {
+        console.log("🧪 Response is not JSON");
+      }
+    } catch (error) {
+      console.error("🧪 TEST ERROR:", error);
+    }
+>>>>>>> Stashed changes
   };
 
   const handleNotificationSelect = ({ notification, preferredTab }: { notification: { patientId?: string; patientName?: string }; preferredTab: DashboardTab }) => {
@@ -427,6 +487,23 @@ const CaretakerDashboard = () => {
       </div>
     );
   }
+  //temporary debugging
+  // Add this to your CaretakerDashboard component temporarily
+const PatientDataDebug = ({ patient }: { patient: Patient }) => {
+  return (
+    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+      <h4 className="font-bold text-yellow-800 mb-2">Patient Data Debug:</h4>
+      <pre className="text-xs text-yellow-700 overflow-auto">
+        {JSON.stringify({
+          id: patient.id,
+          userId: patient.userId,
+          fullName: patient.fullName,
+          // Add any other relevant fields from your Patient type
+        }, null, 2)}
+      </pre>
+    </div>
+  );
+};
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -554,6 +631,7 @@ const CaretakerDashboard = () => {
                         Patient Overview
                       </button>
                       <button
+<<<<<<< Updated upstream
                         onClick={() => setActiveTab('medications')}
                         className={`py-4 px-1 border-b-2 font-medium text-sm ${
                           activeTab === 'medications'
@@ -576,6 +654,8 @@ const CaretakerDashboard = () => {
         Appointments
       </button>
                       <button
+=======
+>>>>>>> Stashed changes
                         onClick={handleOpenMessaging}
                         className={`py-4 px-1 border-b-2 font-medium text-sm ${
                           activeTab === 'messages'
@@ -590,6 +670,7 @@ const CaretakerDashboard = () => {
 
                   <div className="p-6">
                     {activeTab === 'overview' && (
+<<<<<<< Updated upstream
                       <div className="space-y-6">
                     
                         <PatientTabs
@@ -607,6 +688,15 @@ const CaretakerDashboard = () => {
                             <AppointmentsView patient={selectedPatient} />
                           )}
                     
+=======
+                      <PatientTabs
+                        patient={selectedPatient}
+                        patientVitals={patientVitals}
+                        isLoading={isLoading}
+                      />
+                    )}
+                    
+>>>>>>> Stashed changes
                     {activeTab === 'messages' && (
                       <div>
                         <div className="flex justify-between items-center mb-4">
@@ -620,9 +710,14 @@ const CaretakerDashboard = () => {
                             Back to Overview
                           </button>
                         </div>
+<<<<<<< Updated upstream
 
                         {/* ✅ Messaging Component */}
                         <PatientMessages selectedPatient={selectedPatient} />
+=======
+                        <PatientDataDebug patient={selectedPatient} />
+                        
+>>>>>>> Stashed changes
                       </div>
                     )}
                   </div>

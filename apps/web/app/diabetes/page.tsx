@@ -9,6 +9,7 @@ import LifestyleForm from "../components/diabetesPages/DiabetesLifestyle";
 import DiabetesMedications from "../components/diabetesPages/DiabetesMedications";
 import DiabetesFoodAdvice from "../components/diabetesPages/DiabetesFoodAdvice";
 import UserProfileHeader from "../components/UserProfileHeader";
+import MedicationReminders from "../hypertension/components/MedicationReminders";
 import { 
   Activity, 
   Heart, 
@@ -303,6 +304,7 @@ const Page = () => {
                   <Apple className="w-5 h-5 lg:w-4 lg:h-4" />
                 </button>
               </div>
+              <MedicationReminders />
             </div>
           )}
 
