@@ -39,6 +39,18 @@ const EmergencyStep = () => {
       </div>
 
       <div>
+        <Label htmlFor="email">Email</Label>
+        <Input
+          type="email"
+          id="email"
+          {...register('email', authValidationRules.email)}
+        />
+        {errors.email?.message && (
+          <p className="text-red-500">{errors.email.message as string}</p>
+        )}
+      </div>
+
+      <div>
         <Label htmlFor="phoneNumber">Phone Number</Label>
         <Input
           type="text"
