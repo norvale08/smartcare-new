@@ -39,6 +39,7 @@ import patientAssignedDoctorsRoute from "./routes/patientAssignedDoctors";
 import notificationsRouter from './routes/notifications';
 import patientVitalsRouter from './routes/patientVitals';
 import messagesRouter from './routes/messages';
+<<<<<<< Updated upstream
 import doctorsRoutes from "./routes/doctors";
 import comprehensiveFeedbackRoutes from "./routes/comprehensiveFeedback";
 
@@ -52,6 +53,13 @@ import speechRoutes from './routes/groqSpeechRoutes';
 import pythonSpeechRoutes from './routes/speech.routes';
 import relativeSetupRoutes from './routes/relative-setup';
 import relativePatientRouter from './routes/relativePatient'
+=======
+import patientDetailsRoute from "./routes/patientDetails";
+
+
+dotenv.config();
+
+>>>>>>> Stashed changes
 const app = express();
 
 
@@ -149,7 +157,11 @@ app.use('/api/patient', patientAssignedDoctorsRoute);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/patient/vitals', patientVitalsRouter);
 app.use('/api/messages', messagesRouter);
+<<<<<<< Updated upstream
 app.use("/api", comprehensiveFeedbackRoutes);
+=======
+app.use('/api/patient/details', patientDetailsRoute);
+>>>>>>> Stashed changes
 
 app.use('/api/medications/prescribe', medicationPrescriptionRoutes);
 app.use('/api/medications/reminders', medicationReminderRoutes);
