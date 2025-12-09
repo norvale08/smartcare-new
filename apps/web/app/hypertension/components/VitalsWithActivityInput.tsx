@@ -1,10 +1,20 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useRef, useCallback, useEffect } from "react"
 import ContextAwareAlert, { type ContextAnalysis } from "./ContextAwareAlert"
 import { Heart, Activity as ActivityIcon, Clock, Zap, Mic } from "lucide-react"
 import { useTranslation } from "../../../lib/hypertension/useTranslation"
 import InteractiveVoiceForm from "./InteractiveVoiceForm"
+import VoiceControlPanel from "./VoiceControlPanel"
+  import { 
+  startVoiceMode, 
+  stopVoiceMode, 
+  speak, 
+  listenForField,
+  VoiceModeState 
+} from "../utils/voiceUtils"
+import toast, { ToastOptions } from "react-hot-toast";
+import { languageContent } from "../utils/formUtils"
 
 // Number normalization function
 const normalizeNumber = (text: string): number | null => {
@@ -60,6 +70,116 @@ export default function VitalsWithActivityInput({
     heartRate: number
   } | null>(null)
   const [showVoiceForm, setShowVoiceForm] = useState(false)
+  const [voiceModeState, setVoiceModeState] = useState<VoiceModeState>({
+    active: false,
+    listening: false,
+    speaking: false,
+    currentField: null,
+    muted: false,
+    status: ""
+  })
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const languageValue = t.language === "sw-TZ" ? "sw" : "en";
+  const currentLanguage = languageContent[languageValue];
+  const isProcessingRef = useRef(false);
+  const fieldRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceModeActiveRef = useRef(false);
+
+  // Update voice mode ref when state changes
+  useEffect(() => {
+    voiceModeActiveRef.current = voiceModeState.active;
+  }, [voiceModeState.active]);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+      }
+      voiceModeActiveRef.current = false;
+    };
+  }, []);
+
+  // Text-to-Speech wrapper
+  const handleSpeak = useCallback(async (text: string): Promise<void> => {
+    return speak(text, languageValue, voiceModeState.muted, voiceModeActiveRef, setVoiceModeState);
+  }, [languageValue, voiceModeState.muted]);
+
+  // Mock form functions for voice mode integration
+  const mockSetValue = (name: string, value: any, options?: any) => {
+    switch (name) {
+      case 'systolic':
+        setSystolic(value.toString());
+        break;
+      case 'diastolic':
+        setDiastolic(value.toString());
+        break;
+      case 'heartRate':
+        setHeartRate(value.toString());
+        break;
+      default:
+        break;
+    }
+  };
+
+  const mockGetValues = () => ({
+    systolic,
+    diastolic,
+    heartRate,
+  });
+
+  // Mock toast
+  const mockToast = toast;
+
+  // Start voice mode
+  const handleStartVoiceMode = async () => {
+    await startVoiceMode({
+      languageValue,
+      currentLanguage,
+      voiceModeActiveRef,
+      voiceModeState,
+      setVoiceModeState,
+      setValue: mockSetValue,
+      getValues: mockGetValues,
+      toast: mockToast,
+      handleSpeak,
+      listenForField: (params: any) => {
+        return listenForField({
+          fieldName: params.fieldName,
+          fieldLabel: params.fieldLabel,
+          fieldType: params.fieldType,
+          min: params.min,
+          max: params.max,
+          languageValue,
+          currentLanguage,
+          voiceModeActiveRef,
+          isProcessingRef,
+          setVoiceModeState,
+          mediaRecorderRef,
+          API_URL,
+          fieldRefs,
+          handleSpeak,
+          isRequired: true
+        });
+      }
+    });
+  };
+
+  // Stop voice mode
+  const handleStopVoiceMode = () => {
+    stopVoiceMode({
+      voiceModeActiveRef,
+      mediaRecorderRef,
+      currentLanguage,
+      setVoiceModeState,
+      handleSpeak,
+      isMuted: voiceModeState.muted
+    });
+  };
 
   const reset = () => {
     setSystolic("")
@@ -239,15 +359,16 @@ export default function VitalsWithActivityInput({
               }
             </p>
           </div>
-          <button
-            onClick={() => setShowVoiceForm(true)}
-            disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Mic className="w-4 h-4" />
-            {t.language === "en-US" ? "Voice Assistant" : "Msaidizi wa Sauti"}
-          </button>
         </div>
+
+        {/* Enhanced Voice Control Panel */}
+        <VoiceControlPanel
+          voiceModeState={voiceModeState}
+          currentLanguage={currentLanguage}
+          languageValue={languageValue}
+          onToggleMute={() => setVoiceModeState((prev: VoiceModeState) => ({ ...prev, muted: !prev.muted }))}
+          onToggleVoiceMode={voiceModeState.active ? handleStopVoiceMode : handleStartVoiceMode}
+        />
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

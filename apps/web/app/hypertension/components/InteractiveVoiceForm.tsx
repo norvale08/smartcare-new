@@ -640,7 +640,7 @@ const listen = async (): Promise<number | string | null> => {
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-600 to-pink-600 rounded-full mb-3">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full mb-3">
             <Mic className="text-white" size={32} />
           </div>
           <h2 className="text-2xl font-bold text-gray-800">
@@ -664,7 +664,7 @@ const listen = async (): Promise<number | string | null> => {
             <button
               onClick={startVoiceInput}
               disabled={isSpeaking || isListening}
-              className="w-full bg-gradient-to-r from-red-600 to-pink-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {language === "sw" ? "🎙️ Anza" : "🎙️ Start"}
             </button>
@@ -693,7 +693,7 @@ const listen = async (): Promise<number | string | null> => {
             {/* Progress Bar */}
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
-                className="bg-gradient-to-r from-red-600 to-pink-600 h-2 rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2 rounded-full transition-all duration-500"
                 style={{ width: `${((currentFieldIndex + 1) / currentFields.length) * 100}%` }}
               />
             </div>
@@ -711,10 +711,10 @@ const listen = async (): Promise<number | string | null> => {
 
             {/* Current Value Display */}
             {lastValue !== null && confirming && (
-              <div className="bg-gradient-to-r from-red-50 to-pink-50 p-6 rounded-xl text-center border-2 border-red-200">
+              <div className="bg-gradient-to-r from-emerald-50 to-green-50 p-6 rounded-xl text-center border-2 border-emerald-200">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  {currentSection === "activity" && <Activity className="text-red-600" size={20} />}
-                  <div className="text-4xl font-bold text-red-600">
+                  {currentSection === "activity" && <Activity className="text-emerald-600" size={20} />}
+                  <div className="text-4xl font-bold text-emerald-600">
                     {lastValue}
                   </div>
                   <div className="text-sm text-gray-600">
@@ -727,10 +727,10 @@ const listen = async (): Promise<number | string | null> => {
             {/* Status Messages */}
             <div className="text-center p-4 bg-gray-50 rounded-xl min-h-[60px] flex items-center justify-center">
               {isSpeaking && (
-                <div className="flex items-center justify-center gap-2 text-red-600">
-                  <div className="w-2 h-2 bg-red-600 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-red-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                  <div className="w-2 h-2 bg-red-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                <div className="flex items-center justify-center gap-2 text-emerald-600">
+                  <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" />
+                  <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                  <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                   <span className="ml-2 font-semibold">
                     {language === "sw" ? "Ninazungumza..." : "Speaking..."}
                   </span>
@@ -738,8 +738,8 @@ const listen = async (): Promise<number | string | null> => {
               )}
               
               {isListening && (
-                <div className="flex items-center justify-center gap-2 text-red-600">
-                  <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
+                <div className="flex items-center justify-center gap-2 text-emerald-600">
+                  <div className="w-3 h-3 bg-emerald-600 rounded-full animate-pulse" />
                   <span className="font-semibold">
                     {language === "sw" ? "Sikiliza..." : "Listening..."}
                   </span>

@@ -1,6 +1,7 @@
 import React, { Dispatch, SetStateAction } from "react";
 import HypertensionAlert from "../../components/hypertension/alert";
 import VitalsWithActivityInput from "./VitalsWithActivityInput";
+import VoiceControlPanel from "./VoiceControlPanel";
 import HealthTrends from "./HealthTrends";
 import DoctorManagement from "../../components/DoctorManagement";
 import NearbyClinics from "./NearbyClinics";
@@ -10,6 +11,7 @@ import LifestyleAssessment from "./LifestyleAssessment";
 import DietRecommendations from "./DietRecommendations";
 import type { LifestyleData } from "./LifestyleAssessment";
 import Maps from "../../../app/components/Map"
+import { useTranslation } from "../../../lib/hypertension/useTranslation";
 
 interface TabContentProps {
   activeTab: string;
@@ -60,10 +62,11 @@ const TabContent: React.FC<TabContentProps> = ({
   };
 
   switch (activeTab) {
-    case 'vitals':
+  case 'vitals':
       return (
         <>
           <HypertensionAlert refreshToken={alertRefreshToken} />
+
           <VitalsWithActivityInput onAfterSave={() => setAlertRefreshToken(Date.now())} />
           <HealthTrends vitals={vitals} />
         </>
