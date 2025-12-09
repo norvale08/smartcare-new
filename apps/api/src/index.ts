@@ -1,9 +1,14 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables FIRST
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 
 import express from 'express';
 import cors from 'cors';
 import session from "express-session";
 import { connectMongoDB } from './lib/mongodb';
-import dotenv from "dotenv";
 
 import authRoute from "./routes/auth";
 import loginRoute from './routes/login';
@@ -18,7 +23,6 @@ import diabetesAiRoutes from "./routes/diabetesAi";
 import LifestyleRoutes from "./routes/diabetesLifestyle";
 import hypertensionLifestyle from "./routes/hypertensionLifestyle";
 import hypertensionDiet from "./routes/hypertensionDiet";
-import adminPatientsRoutes from "./routes/admin";
 import doctorDashboardRouter from './routes/doctorDashboardRoutes';
 import logoutRoute from "./routes/logout";
 import verifyTokenRoute from "./routes/verifyTokenRoute";
@@ -46,22 +50,20 @@ import appointmentRoutes from "./routes/appointments";
 import reportRoutes from "./routes/reports";
 import speechRoutes from './routes/groqSpeechRoutes';
 import pythonSpeechRoutes from './routes/speech.routes';
-
-dotenv.config();
+import relativeSetupRoutes from './routes/relative-setup';
 
 const app = express();
 
-// ✅ CRITICAL: Convert PORT to number for app.listen()
+
 const PORT = parseInt(process.env.PORT || '8000', 10);
 
-// ✅ CORS CONFIGURATION - MUST BE BEFORE OTHER MIDDLEWARE
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:8000',
-  'https://smartcare-new-web.vercel.app', // ✅ Your Vercel URL
+  'https://smartcare-new-web.vercel.app', 
 ];
 
-// Add FRONTEND_URL from environment if it exists
+
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
@@ -96,7 +98,7 @@ app.use(express.urlencoded({ extended: true }));
 // Connect to MongoDB
 connectMongoDB();
 
-// ✅ Health check endpoints for Render
+
 app.get('/', (_req, res) => {
   res.json({
     message: 'SmartCare API is running!',
@@ -116,7 +118,7 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// ✅ ROUTES - Keep your existing routes as they are
+
 app.use('/api/auth', authRoute);
 app.use('/api/login', loginRoute);
 app.use('/api/emergency', emergencyRoutes);
@@ -127,14 +129,13 @@ app.use('/api/hypertensionVitals', hypertensionRoutes);
 app.use('/api/medications', medicationsRoutes);
 app.use('/api/userStatus', userStatusRouter);
 app.use("/api/doctors/search", doctorSearchRoutes);
-app.use('/api/doctors', doctorsRoutes); // ✅ This now uses the modular doctor routes
+app.use('/api/doctors', doctorsRoutes); 
 app.use("/api/diabetesAi", diabetesAiRoutes);
 app.use('/api/lifestyle', LifestyleRoutes);
 app.use('/api/hypertension/lifestyle', hypertensionLifestyle);
 app.use('/api/hypertension/diet', hypertensionDiet);
-app.use("/api/admin/patients", adminPatientsRoutes);
+app.use('/api/hypertension/diet', hypertensionDiet);
 app.use('/api/doctorDashboard', doctorDashboardRouter);
-app.use('/api/logout', logoutRoute);
 app.use("/api/verifyToken", verifyTokenRoute);
 app.use( "/api/diabeticFood", diabetesFoodRoute);
 app.use('/api/admin',adminRoutes);
@@ -158,10 +159,9 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/speech', speechRoutes);
 app.use('/api/python-speech', pythonSpeechRoutes);
+app.use('/api/relative-setup', relativeSetupRoutes);
 
 
-
-// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
     message: 'Route not found',

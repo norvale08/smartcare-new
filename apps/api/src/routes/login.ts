@@ -1,12 +1,13 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
 import User from "../models/user";
 import { connectMongoDB } from "../lib/mongodb";
+import { emailService } from "../lib/emailService";
 
 const router = express.Router();
 
+// Main login route
 router.post("/", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -15,12 +16,10 @@ router.post("/", async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: "User not found" });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ 
+        success: false,
+        message: "User not found" 
+      });
     }
 
     console.log("=== LOGIN DEBUG START ===");
@@ -28,6 +27,40 @@ router.post("/", async (req, res) => {
     console.log("User ID:", user._id);
     console.log("User role:", user.role);
     console.log("Profile completed:", user.profileCompleted);
+    
+    
+    if (user.role === "relative") {
+      
+      if (!user.password || user.password === "temporary-password-needs-reset") {
+        
+        return res.status(401).json({ 
+          message: "Please complete your account setup first. Check your email for the setup link.",
+          needsSetup: true,
+          role: "relative",
+          email: user.email
+        });
+      }
+      
+      // Check if invitation is still pending
+      if (user.invitationStatus === "pending") {
+        
+        return res.status(401).json({ 
+          message: "Please complete your account setup via the link in your email.",
+          needsSetup: true,
+          role: "relative",
+          email: user.email
+        });
+      }
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ 
+        success: false,
+        message: "Invalid credentials" 
+      });
+    }
+
     console.log("Raw disease fields from DB:", {
       diabetes: user.diabetes,
       hypertension: user.hypertension,
@@ -35,8 +68,6 @@ router.post("/", async (req, res) => {
       selectedDiseases: user.selectedDiseases
     });
 
-    // CRITICAL: Build selectedDiseases array from boolean fields
-    // Always rebuild from booleans - don't trust the array
     const selectedDiseases: string[] = [];
     if (user.diabetes === true) {
       selectedDiseases.push("diabetes");
@@ -59,15 +90,27 @@ router.post("/", async (req, res) => {
                      user.email;
 
     // Create JWT with role and diseases included
+    const tokenPayload: any = {
+      userId: user._id,
+      email: user.email,
+      name: userName,
+      role: user.role,
+      status: user.profileCompleted ? "complete" : "incomplete"
+    };
+
+    // Add disease info for patients only
+    if (user.role === "patient") {
+      tokenPayload.disease = selectedDiseases;
+    }
+    
+    // Add relative-specific info
+    if (user.role === "relative") {
+      tokenPayload.accessLevel = user.accessLevel || "view_only";
+      tokenPayload.relationship = user.relationshipToPatient;
+    }
+
     const token = jwt.sign(
-      {
-        userId: user._id,
-        email: user.email,
-        name: userName,
-        role: user.role,
-        disease: selectedDiseases,
-        status: user.profileCompleted ? "complete" : "incomplete"
-      },
+      tokenPayload,
       process.env.JWT_SECRET || "your-default-secret",
       { expiresIn: "24h" }
     );
@@ -145,9 +188,18 @@ router.post("/", async (req, res) => {
         break;
 
       case "relative":
-        redirectTo = "/relative/dashboard";
-        message = "Welcome, here are your linked patients.";
-        console.log("➡️ Relative redirect:", redirectTo);
+        console.log("Processing relative redirect...");
+        
+        // ✅ RELATIVE LOGIC: Check if setup is complete
+        if (!user.profileCompleted || user.invitationStatus === "pending") {
+          redirectTo = "/relatives/setup";
+          message = "Please complete your account setup.";
+          console.log(" Relative setup incomplete -> /relative/setup");
+        } else {
+          redirectTo = "/relatives/dashboard";
+          message = "Welcome, here are your linked patients.";
+          console.log("➡️ Relative redirect:", redirectTo);
+        }
         break;
 
       default:
@@ -160,16 +212,27 @@ router.post("/", async (req, res) => {
     console.log("=== LOGIN DEBUG END ===\n");
 
     // Return safe user object (no password)
-    const safeUser = {
+    const safeUser: any = {
       id: user._id,
       email: user.email,
       name: userName,
       role: user.role,
       profileCompleted: user.profileCompleted,
-      selectedDiseases: selectedDiseases
     };
 
+    // Add role-specific fields
+    if (user.role === "patient") {
+      safeUser.selectedDiseases = selectedDiseases;
+    }
+    
+    if (user.role === "relative") {
+      safeUser.accessLevel = user.accessLevel;
+      safeUser.relationship = user.relationshipToPatient;
+      safeUser.invitationStatus = user.invitationStatus;
+    }
+
     res.status(200).json({
+      success: true,
       user: safeUser,
       token,
       redirectTo,
@@ -177,7 +240,100 @@ router.post("/", async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Login error:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error" 
+    });
+  }
+});
+
+// ✅ Helper endpoint for relatives who need setup
+router.post("/relative-setup-help", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required"
+      });
+    }
+
+    await connectMongoDB();
+
+    const user = await User.findOne({ 
+      email, 
+      role: "relative",
+      invitationStatus: "pending"
+    });
+
+    if (!user) {
+      // Don't reveal if user exists or not (security)
+      return res.status(200).json({
+        success: true,
+        message: "If you have a pending invitation, a new setup link has been sent to your email."
+      });
+    }
+
+    // Find associated patient
+    const patient = await User.findById(user.monitoredPatient);
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: "Associated patient not found"
+      });
+    }
+
+    // Generate new setup token
+    const setupToken = jwt.sign(
+      {
+        userId: user._id,
+        email: user.email,
+        type: "relative-setup",
+        patientId: patient._id,
+        patientName: patient.fullName || `${patient.firstName} ${patient.lastName}`,
+        relativeName: `${user.firstName} ${user.lastName}`,
+        relationship: user.relationshipToPatient,
+        accessLevel: user.accessLevel || "view_only"
+      },
+      process.env.JWT_SECRET || "your-default-secret",
+      { expiresIn: "7d" }
+    );
+
+    // Update expiration
+    user.invitationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await user.save();
+
+    // Send email using your email service
+    const emailSent = await emailService.sendRelativeInvitationEmail(
+      user.email,
+      `${user.firstName} ${user.lastName}`,
+      patient.fullName || `${patient.firstName} ${patient.lastName}`,
+      user.relationshipToPatient,
+      setupToken,
+      user.accessLevel || "view_only"
+    );
+
+    if (!emailSent) {
+      console.error('❌ Failed to resend setup email');
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send email. Please contact support."
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "A new setup link has been sent to your email.",
+      emailSent: true
+    });
+
+  } catch (error) {
+    console.error("❌ Relative setup help error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 });
 

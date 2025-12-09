@@ -62,7 +62,8 @@ interface Relative {
   createdAt: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// ✅ FIXED: Changed from 3001 to 8000 to match backend
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export default function AdminPatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -83,6 +84,7 @@ export default function AdminPatientsPage() {
   const [creatingRelative, setCreatingRelative] = useState(false);
   const [resendingInvitation, setResendingInvitation] = useState(false);
   const [activeTab, setActiveTab] = useState("patients"); // "patients" or "relatives"
+  const [selectedAccessLevel, setSelectedAccessLevel] = useState("view_only");
   
   const [pagination, setPagination] = useState<PaginationInfo>({
     currentPage: 1,
@@ -269,28 +271,42 @@ export default function AdminPatientsPage() {
       setCreatingRelative(true);
       const token = localStorage.getItem("token");
       
+      // Validate email exists
+      if (!selectedPatient.email) {
+        setError("Emergency contact email is required to create a relative account");
+        setCreatingRelative(false);
+        return;
+      }
+
+      const requestBody = {
+        patientId: selectedPatient._id,
+        emergencyContactEmail: selectedPatient.email,
+        accessLevel: selectedAccessLevel,
+        adminNotes: `Relative account created by admin for ${getPatientFullName(selectedPatient)}`
+      };
+
+      console.log("📤 Sending request to create relative account:", requestBody);
+
       const response = await fetch(`${API_BASE_URL}/api/admin/create-relative-account`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          patientId: selectedPatient._id,
-          emergencyContactEmail: selectedPatient.email,
-          accessLevel: "view_only",
-          adminNotes: `Relative account created by admin for ${selectedPatient.firstname} ${selectedPatient.lastname}`
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await response.json();
+      console.log("📥 Response from create relative account:", data);
 
       if (data.success) {
         setSuccessMessage(data.message);
         setShowCreateRelativeModal(false);
         setShowContactModal(false);
-        fetchStatistics(); // Refresh statistics
-        fetchRelatives(); // Refresh relatives list
+        
+        // Refresh data
+        fetchStatistics();
+        fetchRelatives(1);
         
         // Auto-hide success message after 5 seconds
         setTimeout(() => {
@@ -300,8 +316,8 @@ export default function AdminPatientsPage() {
         setError(data.message || "Failed to create relative account");
       }
     } catch (err) {
-      console.error("Error creating relative account:", err);
-      setError("Failed to create relative account");
+      console.error("❌ Error creating relative account:", err);
+      setError("Failed to create relative account. Please check the console for details.");
     } finally {
       setCreatingRelative(false);
     }
@@ -330,7 +346,7 @@ export default function AdminPatientsPage() {
       if (data.success) {
         setSuccessMessage(data.message);
         setShowResendModal(false);
-        fetchRelatives(); // Refresh relatives list
+        fetchRelatives(relativesPagination.currentPage);
         
         setTimeout(() => {
           setSuccessMessage("");
@@ -347,35 +363,49 @@ export default function AdminPatientsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    if (!dateString) return "N/A";
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return "Invalid date";
+    }
   };
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return "N/A";
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return "Invalid date";
+    }
   };
 
   const calculateAge = (dob: string) => {
     if (!dob) return "N/A";
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+    try {
+      const birthDate = new Date(dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      return age;
+    } catch {
+      return "N/A";
     }
-    
-    return age;
   };
 
   const formatRelationship = (relationship: string) => {
@@ -449,9 +479,8 @@ export default function AdminPatientsPage() {
         return;
       }
 
-      // Fetch all patients for CSV (without pagination)
       const queryParams = new URLSearchParams({
-        limit: "1000", // Large limit to get all patients
+        limit: "1000",
         ...(searchTerm && { search: searchTerm }),
         ...(diseaseFilter !== "all" && { disease: diseaseFilter }),
       });
@@ -472,7 +501,6 @@ export default function AdminPatientsPage() {
       if (data.success) {
         const patientsData = data.data.patients;
         
-        // Create CSV headers
         const headers = [
           'Patient Name',
           'Patient Email',
@@ -488,7 +516,6 @@ export default function AdminPatientsPage() {
           'Registration Date'
         ];
 
-        // Create CSV rows
         const csvRows = patientsData.map((patient: Patient) => [
           `"${getPatientFullName(patient)}"`,
           `"${patient.patientEmail}"`,
@@ -504,13 +531,11 @@ export default function AdminPatientsPage() {
           `"${formatDate(patient.createdAt)}"`
         ]);
 
-        // Combine headers and rows
         const csvContent = [
           headers.join(','),
           ...csvRows.map((row: string[]) => row.join(','))
         ].join('\n');
 
-        // Create and download file
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -1173,6 +1198,12 @@ export default function AdminPatientsPage() {
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
               <span className="text-red-800">{error}</span>
+              <button
+                onClick={() => setError("")}
+                className="ml-auto text-red-600 hover:text-red-800"
+              >
+                Dismiss
+              </button>
             </div>
           </div>
         )}
@@ -1339,7 +1370,7 @@ export default function AdminPatientsPage() {
         </div>
       )}
 
-      {/* Create Relative Account Modal - UPDATED MESSAGING */}
+      {/* Create Relative Account Modal */}
       {showCreateRelativeModal && selectedPatient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
@@ -1394,8 +1425,9 @@ export default function AdminPatientsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-1">Access Level</p>
                   <select 
+                    value={selectedAccessLevel}
+                    onChange={(e) => setSelectedAccessLevel(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                    defaultValue="view_only"
                   >
                     <option value="view_only">View Only (Can see health data)</option>
                     <option value="caretaker">Caretaker (Can message doctors)</option>
@@ -1442,7 +1474,7 @@ export default function AdminPatientsPage() {
         </div>
       )}
 
-      {/* Resend Invitation Modal - UPDATED MESSAGING */}
+      {/* Resend Invitation Modal */}
       {showResendModal && selectedRelative && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">

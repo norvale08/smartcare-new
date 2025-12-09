@@ -11,40 +11,105 @@ class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
+    const port = parseInt(process.env.SMTP_PORT || '587');
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false,
+      port: port,
+      secure: port === 465, // true for 465, false for other ports
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      // Add timeout and debug settings
+      connectionTimeout: 10000, // 10 seconds
+      socketTimeout: 15000, // 15 seconds
+      debug: process.env.NODE_ENV === 'development', // Enable debug in dev
+      logger: process.env.NODE_ENV === 'development', // Log in dev
     });
+    
+    // Log configuration (mask password)
+    console.log('📧 Email Service Initialized');
+    console.log('   Host:', process.env.SMTP_HOST || 'smtp.gmail.com');
+    console.log('   Port:', port);
+    console.log('   Secure:', port === 465);
+    console.log('   User:', process.env.SMTP_USER || 'NOT SET');
+    console.log('   Password:', process.env.SMTP_PASS ? 'SET (' + process.env.SMTP_PASS.length + ' chars)' : 'NOT SET');
   }
 
   async sendEmail(options: EmailOptions): Promise<boolean> {
+    console.log('\n📧 === EMAIL SEND ATTEMPT ===');
+    console.log('   To:', options.to);
+    console.log('   Subject:', options.subject);
+    
     try {
-      await this.transporter.sendMail({
+      // Validate environment variables
+      if (!process.env.SMTP_USER) {
+        console.error('   ❌ SMTP_USER is not set in environment variables');
+        return false;
+      }
+      if (!process.env.SMTP_PASS) {
+        console.error('   ❌ SMTP_PASS is not set in environment variables');
+        return false;
+      }
+
+      const info = await this.transporter.sendMail({
         from: `"Healthcare System" <${process.env.SMTP_USER}>`,
         to: options.to,
         subject: options.subject,
         html: options.html,
         text: options.text,
       });
-      console.log(`✅ Email sent successfully to ${options.to}`);
+
+      console.log(`   ✅ Email sent successfully to ${options.to}`);
+      console.log(`   📫 Message ID: ${info.messageId}`);
       return true;
-    } catch (error) {
-      console.error('❌ Error sending email:', error);
+      
+    } catch (error: any) {
+      console.error('   ❌ EMAIL SEND FAILED:');
+      console.error('   Error Code:', error.code || 'UNKNOWN');
+      console.error('   Error Message:', error.message);
+      
+      // Provide helpful error messages
+      if (error.code === 'EAUTH') {
+        console.error('\n   🔐 AUTHENTICATION FAILED!');
+        console.error('   Possible reasons:');
+        console.error('   1. Gmail App Password expired (most likely)');
+        console.error('   2. Wrong app password');
+        console.error('   3. 2FA not enabled');
+        console.error('\n   🔧 Fix: Generate NEW App Password:');
+        console.error('   1. Go to: https://myaccount.google.com/apppasswords');
+        console.error('   2. Create new password for "Mail"');
+        console.error('   3. Update .env file with new 16-char password');
+        console.error('   4. Restart server');
+        
+      } else if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKET') {
+        console.error('\n   ⏰ CONNECTION TIMEOUT!');
+        console.error('   Possible reasons:');
+        console.error('   1. Port 587 blocked by firewall/ISP');
+        console.error('   2. Gmail temporarily blocked your IP');
+        console.error('\n   🔧 Try:');
+        console.error('   1. Switch to port 465 (update SMTP_PORT=465)');
+        console.error('   2. Wait 10 minutes and try again');
+        console.error('   3. Check: https://accounts.google.com/b/0/DisplayUnlockCaptcha');
+        
+      } else if (error.code === 'EENVELOPE') {
+        console.error('\n   📭 ENVELOPE ERROR!');
+        console.error('   Invalid email address or missing fields');
+      }
+      
       return false;
     }
   }
 
   // Send password reset email to doctor
   async sendPasswordResetEmail(doctorEmail: string, resetToken: string, doctorName: string): Promise<boolean> {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const resetLink = `${frontendUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(doctorEmail)}`;
+    const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetLink = `${frontendBaseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(doctorEmail)}`;
     
-    console.log('🔗 Generated reset link for doctor:', resetLink);
+    console.log('\n🔗 Password Reset Email Request:');
+    console.log('   Doctor:', doctorName);
+    console.log('   Email:', doctorEmail);
+    console.log('   Reset Link:', resetLink);
     
     const html = `
       <!DOCTYPE html>
@@ -145,7 +210,7 @@ class EmailService {
     });
   }
 
-  // Send invitation email to relative/family member ONLY
+  // Send invitation email to relative/family member
   async sendRelativeInvitationEmail(
     relativeEmail: string,
     relativeName: string,
@@ -154,10 +219,14 @@ class EmailService {
     setupToken: string,
     accessLevel: string
   ): Promise<boolean> {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const setupLink = `${frontendUrl}/relatives/setup?token=${setupToken}&email=${encodeURIComponent(relativeEmail)}`;
+    const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const setupLink = `${frontendBaseUrl}/relatives/setup?token=${setupToken}&email=${encodeURIComponent(relativeEmail)}`;
     
-    console.log('🔗 Generated setup link for relative:', setupLink);
+    console.log('\n👨‍👩‍👧‍👦 Relative Invitation Email:');
+    console.log('   Relative:', relativeName);
+    console.log('   Email:', relativeEmail);
+    console.log('   Patient:', patientName);
+    console.log('   Setup Link:', setupLink);
     
     // Format access level for display
     const accessLevelFormatted = accessLevel === 'view_only' ? 'View Only' :
@@ -206,13 +275,18 @@ class EmailService {
             margin: 20px 0;
           }
           .permission-item {
-            display: flex;
-            align-items: center;
             margin-bottom: 8px;
           }
           .permission-check {
             color: #10b981;
             margin-right: 8px;
+          }
+          .warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 12px;
+            margin: 20px 0;
+            border-radius: 4px;
           }
         </style>
       </head>
@@ -230,9 +304,9 @@ class EmailService {
               <p style="margin: 0 0 10px 0; font-weight: 600;">
                 <span style="color: #0ea5e9;">📋 Invitation Details:</span>
               </p>
-              <p><strong>Patient:</strong> ${patientName}</p>
-              <p><strong>Your Relationship:</strong> ${relationship}</p>
-              <p><strong>Access Level:</strong> ${accessLevelFormatted}</p>
+              <p style="margin: 5px 0;"><strong>Patient:</strong> ${patientName}</p>
+              <p style="margin: 5px 0;"><strong>Your Relationship:</strong> ${relationship}</p>
+              <p style="margin: 5px 0;"><strong>Access Level:</strong> ${accessLevelFormatted}</p>
             </div>
             
             <p>You've been granted access to monitor ${patientName}'s health information and medical records. To activate your account and set your password, please click the button below:</p>
@@ -263,7 +337,7 @@ class EmailService {
               ` : ''}
             </div>
             
-            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 20px 0; border-radius: 4px;">
+            <div class="warning">
               <strong>⏰ Important:</strong> This invitation link will expire in 7 days. Please activate your account promptly.
             </div>
             
@@ -328,13 +402,18 @@ class EmailService {
     });
   }
 
-  // Send general communication email (existing, unchanged)
+  // Send general communication email
   async sendGeneralCommunication(
     doctorEmail: string, 
     doctorName: string, 
     subject: string, 
     message: string
   ): Promise<boolean> {
+    console.log('\n📢 General Communication Email:');
+    console.log('   Doctor:', doctorName);
+    console.log('   Email:', doctorEmail);
+    console.log('   Subject:', subject);
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -399,6 +478,49 @@ class EmailService {
       subject: subject,
       html,
       text,
+    });
+  }
+
+  // NEW: Test connection method
+  async testConnection(): Promise<boolean> {
+    console.log('\n🔧 Testing SMTP Connection...');
+    try {
+      await this.transporter.verify();
+      console.log('   ✅ SMTP connection verified successfully!');
+      return true;
+    } catch (error: any) {
+      console.error('   ❌ SMTP connection failed:');
+      console.error('   Code:', error.code);
+      console.error('   Message:', error.message);
+      return false;
+    }
+  }
+
+  // NEW: Quick test email method
+  async sendTestEmail(toEmail?: string): Promise<boolean> {
+    const testEmail = toEmail || process.env.SMTP_USER;
+    if (!testEmail) {
+      console.error('   ❌ No email address provided for test');
+      return false;
+    }
+
+    console.log('\n🧪 Sending test email to:', testEmail);
+    
+    return this.sendEmail({
+      to: testEmail,
+      subject: 'Test Email - Healthcare System',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body>
+          <h2>Test Email</h2>
+          <p>This is a test email from your Healthcare System.</p>
+          <p>If you receive this, your email configuration is working correctly!</p>
+          <p>Time: ${new Date().toLocaleString()}</p>
+        </body>
+        </html>
+      `,
+      text: `Test Email - If you receive this, your email configuration is working correctly!\nTime: ${new Date().toLocaleString()}`
     });
   }
 }
