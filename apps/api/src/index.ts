@@ -54,7 +54,7 @@ import pythonSpeechRoutes from './routes/speech.routes';
 import relativeSetupRoutes from './routes/relative-setup';
 import relativePatientRouter from './routes/relativePatient'
 
-import patientDetailsRoute from "./routes/patientDetails";
+// import patientDetailsRoute from "./routes/patientDetails";
 
 
 dotenv.config();
@@ -158,7 +158,7 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/patient/vitals', patientVitalsRouter);
 app.use('/api/messages', messagesRouter);
 app.use("/api", comprehensiveFeedbackRoutes);
-app.use('/api/patient/details', patientDetailsRoute);
+// app.use('/api/patient/details', patientDetailsRoute);
 
 app.use('/api/medications/prescribe', medicationPrescriptionRoutes);
 app.use('/api/medications/reminders', medicationReminderRoutes);
