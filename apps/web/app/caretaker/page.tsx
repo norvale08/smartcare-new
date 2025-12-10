@@ -13,15 +13,11 @@ import PatientRequests from "./components/PatientRequests";
 import PatientTabs from './components/PatientTabs';
 import RealTimeNotifications from './components/RealTimeNotifications';
 import PatientHeader from './components/PatientHeader';
-<<<<<<< Updated upstream
 import PatientMessages from "./components/PatientMessages";
 import QuickStats from "./components/QuickStats";
 import DoctorMedicationManagement from './components/DoctorMedicationManagement';
 import AppointmentsView from './components/AppointmentsView';
-=======
 
-
->>>>>>> Stashed changes
 interface Patient {
   id: string;
   userId?: string;
@@ -49,6 +45,7 @@ interface VitalSigns {
   glucose?: number;
   timestamp: string;
   patientId: string;
+  age?: number; // Added to match the expected type from the types/index.ts
 }
 
 interface PatientRequest {
@@ -76,13 +73,8 @@ const CaretakerDashboard = () => {
   const [hasToken, setHasToken] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-<<<<<<< Updated upstream
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
 
-=======
-  const [activeTab, setActiveTab] = useState<'overview' | 'messages'>('overview'); // Single source of truth
->>>>>>> Stashed changes
-  
   // Extract role from JWT token
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -121,7 +113,7 @@ const CaretakerDashboard = () => {
       fetchAssignedPatients();
     }
   }, [status, hasToken, refreshTrigger]);
-//Start of fetching asssigned patients
+
   const fetchAssignedPatients = async () => {
     try {
       setPatientsLoading(true);
@@ -152,8 +144,6 @@ const CaretakerDashboard = () => {
 
       const data = await response.json();
       
-      // console.log("🔄 ASSIGNED PATIENTS RAW DATA:", data);
-      
       let patientsData: Patient[] = [];
       
       if (Array.isArray(data)) {
@@ -173,15 +163,12 @@ const CaretakerDashboard = () => {
       setPatientsLoading(false);
     }
   };
-//End of fetching assigned patients
+
   const fetchPatientVitals = async (patientId: string) => {
     try {
       setIsLoading(true);
       setPatientVitals([]);
       const token = localStorage.getItem("token");
-      
-      // console.log("🩺 ===== FETCHING PATIENT VITALS =====");
-      // console.log("👤 Patient ID:", patientId);
 
       if (!token) {
         throw new Error("No authentication token found");
@@ -197,8 +184,6 @@ const CaretakerDashboard = () => {
       let lastError = null;
 
       for (const apiUrl of apiEndpoints) {
-        console.log("🌐 Trying API endpoint:", apiUrl);
-        
         try {
           response = await fetch(apiUrl, {
             headers: { 
@@ -206,25 +191,21 @@ const CaretakerDashboard = () => {
               'Content-Type': 'application/json'
             },
           });
-
-          console.log("📡 Response status:", response.status);
           
           if (response.ok) {
             const result = await response.json();
-            console.log("✅ SUCCESS with endpoint:", apiUrl);
 
             if (result.success && Array.isArray(result.data) && result.data.length > 0) {
               const validatedVitals = result.data.map((vital: any) => ({
                 ...vital,
                 patientId: patientId,
-                timestamp: vital.timestamp || vital.createdAt || vital.date || new Date().toISOString()
+                timestamp: vital.timestamp || vital.createdAt || vital.date || new Date().toISOString(),
+                age: vital.age || undefined // Add age field
               }));
               
               setPatientVitals(validatedVitals);
-              console.log(`✅ Loaded ${validatedVitals.length} vitals`);
               return;
             } else {
-              console.log("⚠️ No vitals data in response");
               setPatientVitals([]);
               return;
             }
@@ -232,17 +213,15 @@ const CaretakerDashboard = () => {
             continue;
           }
         } catch (err) {
-          console.log(`❌ Endpoint ${apiUrl} failed:`, err);
           lastError = err;
           continue;
         }
       }
 
-      console.log("❌ All API endpoints failed");
       setPatientVitals([]);
       
     } catch (error: any) {
-      console.error("❌ Failed to fetch patient vitals:", error);
+      console.error("Failed to fetch patient vitals:", error);
       setPatientVitals([]);
     } finally {
       setIsLoading(false);
@@ -250,31 +229,16 @@ const CaretakerDashboard = () => {
   };
 
   const handlePatientSelect = (patient: Patient, options?: { tab?: DashboardTab }) => {
-    // console.log("🔄 ===== PATIENT SELECTED =====");
-    // console.log("👤 Selected Patient:", {
-    //   id: patient.id,
-    //   userId: patient.userId,
-    //   name: patient.fullName,
-    //   condition: patient.condition
-    // });
-    
     const patientIdentifier = patient.userId || patient.id;
-    console.log("🔍 Using patient identifier:", patientIdentifier);
-    
     const targetTab = options?.tab ?? 'overview';
+    
     setSelectedPatient(patient);
-<<<<<<< Updated upstream
     setActiveTab(targetTab);
     setPatientVitals([]);
-=======
-    setActiveTab('overview'); // Reset to overview when selecting new patient
-    setPatientVitals([]); // Clear previous vitals
->>>>>>> Stashed changes
     
     fetchPatientVitals(patientIdentifier);
   };
 
-<<<<<<< Updated upstream
   const findPatientMatch = (patientId?: string) => {
     if (!patientId) return null;
     return patients.find((patient) => 
@@ -283,52 +247,7 @@ const CaretakerDashboard = () => {
       patient.user?._id === patientId ||
       patient.user?.id === patientId
     ) || null;
-=======
-  // SIMPLIFIED: Just switch to messages tab using the already selected patient
-  const handleOpenMessaging = () => {
-    console.log("💬 Opening messaging for:", selectedPatient);
-    if (selectedPatient) {
-      setActiveTab('messages');
-    } else {
-      console.error("No patient selected for messaging");
-    }
-  };
-
-  // Add this function to test the API directly
-  const testVitalsAPI = async (patientId: string) => {
-    const token = localStorage.getItem("token");
-    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/patient/vitals/${patientId}`;
-    
-    console.log("🧪 TESTING API DIRECTLY:", apiUrl);
-    
-    try {
-      const response = await fetch(apiUrl, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      });
-      
-      console.log("🧪 TEST RESPONSE:", {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
-      });
-      
-      const text = await response.text();
-      console.log("🧪 TEST RESPONSE TEXT:", text);
-      
-      try {
-        const json = JSON.parse(text);
-        console.log("🧪 TEST RESPONSE JSON:", json);
-      } catch (e) {
-        console.log("🧪 Response is not JSON");
-      }
-    } catch (error) {
-      console.error("🧪 TEST ERROR:", error);
-    }
->>>>>>> Stashed changes
-  };
+  }; // Added missing closing brace
 
   const handleNotificationSelect = ({ notification, preferredTab }: { notification: { patientId?: string; patientName?: string }; preferredTab: DashboardTab }) => {
     const matchedPatient = findPatientMatch(notification.patientId);
@@ -340,7 +259,6 @@ const CaretakerDashboard = () => {
   };
 
   const handleOpenMessaging = () => {
-    console.log("💬 Opening messaging for:", selectedPatient);
     if (selectedPatient) {
       setActiveTab('messages');
     } else {
@@ -463,8 +381,6 @@ const CaretakerDashboard = () => {
     return <div className="min-h-screen bg-gray-100 flex items-center justify-center">Loading...</div>;
   }
 
-  // Only show access denied if we have a token and the role is explicitly not "doctor"
-  // If userRole is null, it means we're still extracting it, so wait
   if (hasToken && userRole !== null && userRole !== "doctor") {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -476,7 +392,6 @@ const CaretakerDashboard = () => {
     );
   }
 
-  // If no token and not authenticated, show login message
   if (status === "unauthenticated" && !hasToken) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -487,23 +402,22 @@ const CaretakerDashboard = () => {
       </div>
     );
   }
-  //temporary debugging
-  // Add this to your CaretakerDashboard component temporarily
-const PatientDataDebug = ({ patient }: { patient: Patient }) => {
-  return (
-    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-      <h4 className="font-bold text-yellow-800 mb-2">Patient Data Debug:</h4>
-      <pre className="text-xs text-yellow-700 overflow-auto">
-        {JSON.stringify({
-          id: patient.id,
-          userId: patient.userId,
-          fullName: patient.fullName,
-          // Add any other relevant fields from your Patient type
-        }, null, 2)}
-      </pre>
-    </div>
-  );
-};
+
+  // Temporary debugging component
+  const PatientDataDebug = ({ patient }: { patient: Patient }) => {
+    return (
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+        <h4 className="font-bold text-yellow-800 mb-2">Patient Data Debug:</h4>
+        <pre className="text-xs text-yellow-700 overflow-auto">
+          {JSON.stringify({
+            id: patient.id,
+            userId: patient.userId,
+            fullName: patient.fullName,
+          }, null, 2)}
+        </pre>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -631,7 +545,6 @@ const PatientDataDebug = ({ patient }: { patient: Patient }) => {
                         Patient Overview
                       </button>
                       <button
-<<<<<<< Updated upstream
                         onClick={() => setActiveTab('medications')}
                         className={`py-4 px-1 border-b-2 font-medium text-sm ${
                           activeTab === 'medications'
@@ -642,20 +555,18 @@ const PatientDataDebug = ({ patient }: { patient: Patient }) => {
                         <Pill className="w-4 h-4 inline mr-1" />
                         Medications
                       </button>
-                          <button
-        onClick={() => setActiveTab('appointments')}
-        className={`py-4 px-1 border-b-2 font-medium text-sm ${
-          activeTab === 'appointments'
-            ? 'border-blue-500 text-blue-600'
-            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-        }`}
-      >
-        <Calendar className="w-4 h-4 inline mr-1" />
-        Appointments
-      </button>
                       <button
-=======
->>>>>>> Stashed changes
+                        onClick={() => setActiveTab('appointments')}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                          activeTab === 'appointments'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <Calendar className="w-4 h-4 inline mr-1" />
+                        Appointments
+                      </button>
+                      <button
                         onClick={handleOpenMessaging}
                         className={`py-4 px-1 border-b-2 font-medium text-sm ${
                           activeTab === 'messages'
@@ -670,9 +581,7 @@ const PatientDataDebug = ({ patient }: { patient: Patient }) => {
 
                   <div className="p-6">
                     {activeTab === 'overview' && (
-<<<<<<< Updated upstream
                       <div className="space-y-6">
-                    
                         <PatientTabs
                           patient={selectedPatient}
                           patientVitals={patientVitals}
@@ -684,19 +593,11 @@ const PatientDataDebug = ({ patient }: { patient: Patient }) => {
                     {activeTab === 'medications' && (
                       <DoctorMedicationManagement patient={selectedPatient} />
                     )}
-                     {activeTab === 'appointments' && (
-                            <AppointmentsView patient={selectedPatient} />
-                          )}
                     
-=======
-                      <PatientTabs
-                        patient={selectedPatient}
-                        patientVitals={patientVitals}
-                        isLoading={isLoading}
-                      />
+                    {activeTab === 'appointments' && (
+                      <AppointmentsView patient={selectedPatient} />
                     )}
-                    
->>>>>>> Stashed changes
+
                     {activeTab === 'messages' && (
                       <div>
                         <div className="flex justify-between items-center mb-4">
@@ -710,14 +611,9 @@ const PatientDataDebug = ({ patient }: { patient: Patient }) => {
                             Back to Overview
                           </button>
                         </div>
-<<<<<<< Updated upstream
 
                         {/* ✅ Messaging Component */}
                         <PatientMessages selectedPatient={selectedPatient} />
-=======
-                        <PatientDataDebug patient={selectedPatient} />
-                        
->>>>>>> Stashed changes
                       </div>
                     )}
                   </div>
