@@ -92,6 +92,41 @@ router.get("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =>
   }
 });
 
+// Get notifications for a specific patient
+router.get("/patient/:patientId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { patientId } = req.params;
+    const { limit = "20", read } = req.query;
+    
+    let query: any = { userId, patientId };
+    
+    if (read === "false" || read === "true") {
+      query.read = read === "true";
+    }
+
+    const notifications = await Notification.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit as string));
+
+    res.status(200).json({
+      success: true,
+      data: notifications,
+      count: notifications.length,
+    });
+  } catch (error: any) {
+    console.error("❌ Error fetching patient notifications:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch patient notifications" 
+    });
+  }
+});
+
 // Get unread notifications count
 router.get("/unread/count", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {

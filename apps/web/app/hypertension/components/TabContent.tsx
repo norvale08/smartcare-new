@@ -76,7 +76,7 @@ const TabContent: React.FC<TabContentProps> = ({
       return (
         <>
           <DoctorManagement condition="hypertension" />
-          <NearbyClinics />
+          {/* <NearbyClinics /> */}
         </>
       );
     

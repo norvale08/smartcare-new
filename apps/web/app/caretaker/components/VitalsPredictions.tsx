@@ -141,7 +141,6 @@ const VitalPredictions: React.FC<VitalPredictionsProps> = ({ patient, vitals }) 
           }, historicalVitals.length > 0 ? historicalVitals : undefined)
             .then(hypertensionPred => ({ type: 'hypertension', data: hypertensionPred }))
             .catch(error => {
-              console.error('Hypertension prediction failed:', error);
               return { type: 'hypertension', data: null };
             })
         );
@@ -167,7 +166,6 @@ const VitalPredictions: React.FC<VitalPredictionsProps> = ({ patient, vitals }) 
           }, diabetesHistoricalVitals.length > 0 ? diabetesHistoricalVitals : undefined)
             .then(diabetesPred => ({ type: 'diabetes', data: diabetesPred }))
             .catch(error => {
-              console.error('Diabetes prediction failed:', error);
               return { type: 'diabetes', data: null };
             })
         );
@@ -183,7 +181,7 @@ const VitalPredictions: React.FC<VitalPredictionsProps> = ({ patient, vitals }) 
 
       // Wait for all predictions with timeout
       const timeoutPromise = new Promise<null>((resolve) => 
-        setTimeout(() => resolve(null), 3000) // 3 second timeout
+        setTimeout(() => resolve(null), 2000) // Reduced timeout for better performance
       );
 
       const results = await Promise.race([
@@ -210,10 +208,9 @@ const VitalPredictions: React.FC<VitalPredictionsProps> = ({ patient, vitals }) 
       }
 
     } catch (error) {
-      console.error('Prediction error:', error);
       setError('Using quick health assessment');
       
-      // Fallback to simple rule-based analysis - FIXED: Added null check
+      // Fallback to simple rule-based analysis
       if (vitals[0]) {
         const fallbackPredictions = generateFallbackPredictions(vitals[0]);
         setPredictions(fallbackPredictions);
@@ -231,21 +228,22 @@ const VitalPredictions: React.FC<VitalPredictionsProps> = ({ patient, vitals }) 
     debouncedPredict();
   }, [makePredictions]);
 
-  // Preload models when component mounts
+  // Preload models when component mounts with optimized timeout
   useEffect(() => {
     const preloadModels = async () => {
       try {
+        // Set reasonable timeout for model loading
         await Promise.race([
           Promise.all([
             hypertensionPredictor.loadModel(),
             diabetesPredictor.loadModel()
           ]),
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Model loading timeout')), 5000)
+            setTimeout(() => reject(new Error('Model loading timeout')), 3000)
           )
         ]);
       } catch (error) {
-        console.log('Model preloading failed, will use fallback when needed');
+        // Silent fail - will use fallback when needed
       }
     };
 
@@ -409,6 +407,7 @@ const VitalPredictions: React.FC<VitalPredictionsProps> = ({ patient, vitals }) 
   const bpTrend = getVitalTrend(currentVitals?.systolic, previousVitals?.systolic);
   const glucoseTrend = getVitalTrend(currentVitals?.glucose, previousVitals?.glucose);
   const heartRateTrend = getVitalTrend(currentVitals?.heartRate, previousVitals?.heartRate);
+  
   const historicalRisk = useMemo(() => {
     if (!vitals || vitals.length === 0) return null;
     const structuredVitals = vitals
