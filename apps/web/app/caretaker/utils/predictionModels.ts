@@ -1,9 +1,9 @@
 // utils/predictionModels.ts
 import * as tf from '@tensorflow/tfjs';
 
-const HYPERTENSION_SAMPLES = 900;
-const DIABETES_SAMPLES = 700;
-const TRAINING_EPOCHS = 45;
+const HYPERTENSION_SAMPLES = 500;
+const DIABETES_SAMPLES = 300;
+const TRAINING_EPOCHS = 20;
 
 let backendReadyPromise: Promise<void> | null = null;
 const ensureBackendReady = async () => {
@@ -90,8 +90,8 @@ class HypertensionPredictor {
     // Create a simple neural network
     const model = tf.sequential({
       layers: [
-        tf.layers.dense({ inputShape: [5], units: 10, activation: 'relu' }),
-        tf.layers.dense({ units: 8, activation: 'relu' }),
+        tf.layers.dense({ inputShape: [5], units: 8, activation: 'relu' }),
+        tf.layers.dense({ units: 6, activation: 'relu' }),
         tf.layers.dense({ units: 3, activation: 'softmax' }) // 3 classes: low, medium, high
       ]
     });
@@ -382,8 +382,8 @@ class DiabetesPredictor {
   private async createAndTrainModel(): Promise<tf.LayersModel> {
     const model = tf.sequential({
       layers: [
-        tf.layers.dense({ inputShape: [4], units: 8, activation: 'relu' }),
-        tf.layers.dense({ units: 6, activation: 'relu' }),
+        tf.layers.dense({ inputShape: [4], units: 6, activation: 'relu' }),
+        tf.layers.dense({ units: 4, activation: 'relu' }),
         tf.layers.dense({ units: 3, activation: 'softmax' })
       ]
     });
@@ -397,7 +397,7 @@ class DiabetesPredictor {
     const { features, labels } = this.generateTrainingData();
     
     await model.fit(features, labels, {
-      epochs: 100,
+      epochs: 50,
       batchSize: 32,
       validationSplit: 0.2,
       verbose: 0
