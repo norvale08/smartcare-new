@@ -8,24 +8,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui"
 const AboutUs = () => {
   const values = [
     {
-      icon: <HeartPulse className="w-8 h-8 text-emerald-500" />,
+      icon: <HeartPulse className="w-12 h-12 text-emerald-500" />,
       title: "Patient-Centered Care",
-      description: "We put patients first, designing solutions that empower individuals to take control of their health journey."
+      description: "We prioritize the needs and well-being of our patients, designing solutions that empower individuals to take control of their health journey.",
+      detail: "Every feature is crafted with the patient experience in mind, ensuring ease of use and meaningful health insights."
     },
     {
-      icon: <Lightbulb className="w-8 h-8 text-emerald-500" />,
+      icon: <Lightbulb className="w-12 h-12 text-yellow-400" />,
       title: "Innovation",
-      description: "Leveraging cutting-edge technology and AI to provide smart, accessible healthcare solutions."
+      description: "Leveraging cutting-edge technology and AI to provide smart, accessible healthcare solutions.",
+      detail: "Our AI algorithms continuously learn and adapt to provide personalized health recommendations."
     },
     {
-      icon: <Users className="w-8 h-8 text-emerald-500" />,
+      icon: <Users className="w-12 h-12 text-blue-600" />,
       title: "Accessibility",
-      description: "Making quality healthcare management available to everyone, regardless of location or technical expertise."
+      description: "Making quality healthcare management available to everyone, regardless of location or technical expertise.",
+      detail: "Multilingual support and voice commands ensure everyone can benefit from our platform."
     },
     {
-      icon: <Award className="w-8 h-8 text-emerald-500" />,
+      icon: <Award className="w-12 h-12 text-emerald-500" />,
       title: "Excellence",
-      description: "Committed to delivering the highest quality of care through continuous improvement and evidence-based practices."
+      description: "Committed to delivering high-quality, reliable health monitoring solutions that make a real difference.",
+      detail: "We partner with leading medical institutions to ensure our solutions meet the highest standards."
     }
   ]
 
@@ -49,9 +53,9 @@ const AboutUs = () => {
   ]
 
   return (
-    <div className='bg-slate-400 min-h-screen'>
+    <div className=' min-h-screen'>
       <Header />
-      
+
       {/* Hero Section */}
       <div className="relative text-white p-10 py-20 overflow-hidden">
         <video
@@ -64,7 +68,7 @@ const AboutUs = () => {
           <source src="/assets/doctorVideo.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
-        
+
         <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-emerald-400 opacity-70 z-0"></div>
 
         <div className="relative z-10 max-w-4xl mx-auto text-center">
@@ -75,89 +79,41 @@ const AboutUs = () => {
         </div>
       </div>
 
+      
       {/* Mission Section */}
-      <div className="p-8 md:p-12 max-w-6xl mx-auto">
-        <div className="bg-white rounded-xl shadow-lg p-8 md:p-12">
-          <div className="flex items-center justify-center mb-6">
-            <Target className="w-12 h-12 text-emerald-500 mr-4" />
-            <h2 className="text-3xl font-bold text-gray-800">Our Mission</h2>
-          </div>
-          <p className="text-lg text-gray-700 leading-relaxed text-center max-w-4xl mx-auto">
-            At SmartCare, we are dedicated to empowering individuals living with chronic conditions like diabetes and hypertension. 
-            Our mission is to bridge the gap between patients and quality healthcare by providing an intelligent, user-friendly 
-            platform that makes health monitoring accessible, accurate, and actionable. We believe that everyone deserves the 
-            tools and support needed to live their healthiest life, regardless of their location or technical background.
+      <div className="p-8 md:p-12 bg-blue-50">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl font-bold mb-6 text-gray-800">Our Mission</h2>
+          <p className="text-lg text-gray-700 leading-relaxed mb-4">
+            SmartCare was founded with a simple yet powerful mission: to empower individuals living with chronic conditions like hypertension and diabetes to take control of their health through innovative, accessible technology.
+          </p>
+          <p className="text-lg text-gray-700 leading-relaxed">
+            We believe that everyone deserves access to quality healthcare monitoring, regardless of their location or technical expertise. By combining AI-powered insights with user-friendly design and multilingual support, we're breaking down barriers and creating a healthier future for all.
           </p>
         </div>
       </div>
 
-      {/* Story Section */}
-      <div className="py-16 px-6 md:px-12 bg-gradient-to-r from-blue-950 to-emerald-700 text-white">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold mb-8 text-center">Our Story</h2>
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <p className="text-lg leading-relaxed mb-4">
-                SmartCare was born from a simple observation: managing chronic diseases shouldn't be complicated or 
-                intimidating. Our founders, healthcare professionals and technologists, witnessed firsthand the challenges 
-                patients face in monitoring their health conditions effectively.
-              </p>
-              <p className="text-lg leading-relaxed">
-                We created SmartCare to transform this experience—combining artificial intelligence with intuitive design 
-                to create a system that feels less like medical equipment and more like a trusted health companion. Today, 
-                we're proud to serve thousands of patients, helping them take control of their health journey with confidence.
-              </p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8">
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className="bg-emerald-500 rounded-full w-3 h-3 mt-2 mr-4"></div>
-                  <div>
-                    <h3 className="font-bold text-xl mb-2">2023</h3>
-                    <p>SmartCare platform launched with core monitoring features</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="bg-emerald-500 rounded-full w-3 h-3 mt-2 mr-4"></div>
-                  <div>
-                    <h3 className="font-bold text-xl mb-2">2024</h3>
-                    <p>AI-powered analytics and multilingual support introduced</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="bg-emerald-500 rounded-full w-3 h-3 mt-2 mr-4"></div>
-                  <div>
-                    <h3 className="font-bold text-xl mb-2">2025</h3>
-                    <p>Expanded to serve communities across multiple regions</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Values Section */}
-      <div className="p-8 md:p-12">
+      <div className="p-8 md:p-12 bg-gradient-to-r from-blue-950 to-emerald-700 text-white">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold mb-4 text-center">Our Core Values</h2>
           <p className="text-lg text-center mb-12 max-w-2xl mx-auto">
             The principles that guide everything we do at SmartCare
           </p>
-          
+
           <div className="grid md:grid-cols-2 gap-6">
             {values.map((value, index) => (
               <Card key={index} className="hover:shadow-xl transition-shadow duration-300">
                 <CardHeader>
-                  <div className="flex items-center gap-4">
-                    <div className="bg-emerald-50 p-3 rounded-lg">
-                      {value.icon}
-                    </div>
-                    <CardTitle className="text-xl">{value.title}</CardTitle>
+                  <div className="flex justify-center mb-4 ">
+                    {value.icon}
                   </div>
+                  <CardTitle className="text-center text-xl">{value.title}</CardTitle>
+
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600">{value.description}</p>
+                  <p className="text-center text-gray-600 mb-3">{value.description}</p>
+                  <p className="text-center text-emerald-600 italic">{value.detail}</p>
                 </CardContent>
               </Card>
             ))}
@@ -165,17 +121,60 @@ const AboutUs = () => {
         </div>
       </div>
 
+      {/* Story Section */}
+      <div className="py-16 px-6 md:px-12 bg-emerald-200">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl font-bold mb-8 text-center">Our Story</h2>
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div>
+              <p className="text-lg leading-relaxed mb-4">
+                SmartCare was born from a personal experience. Our founder witnessed family members struggle with managing diabetes and hypertension in resource-limited settings, where access to regular medical check-ups was challenging and health literacy was low.
+              </p>
+              <p className="text-lg leading-relaxed mb-4">
+                This inspired the creation of a platform that would bridge the gap between patients and healthcare providers, making vital health monitoring as simple as checking your phone. We started with a vision to create a solution that would work for everyone—from tech-savvy urban dwellers to rural communities with limited digital access.
+              </p>
+              <p className="text-lg leading-relaxed">Today, SmartCare serves thousands of patients across multiple regions, helping them track their health, receive timely interventions, and connect with healthcare providers when they need it most. Our journey has just begun, and we're committed to continuously improving and expanding our reach.</p>
+            </div>
+            {/* <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8">
+              <div className="space-y-4"> */}
+                {/* <div className="flex items-start">
+                  <div className="bg-emerald-500 rounded-full w-3 h-3 mt-2 mr-4"></div>
+                  <div>
+                    <h3 className="font-bold text-xl mb-2">2023</h3>
+                    <p>SmartCare platform launched with core monitoring features</p>
+                  </div>
+                </div> */}
+                {/* <div className="flex items-start">
+                  <div className="bg-emerald-500 rounded-full w-3 h-3 mt-2 mr-4"></div>
+                  <div>
+                    <h3 className="font-bold text-xl mb-2">2024</h3>
+                    <p>AI-powered analytics and multilingual support introduced</p>
+                  </div>
+                </div> */}
+                {/* <div className="flex items-start">
+                  <div className="bg-emerald-500 rounded-full w-3 h-3 mt-2 mr-4"></div>
+                  <div>
+                    <h3 className="font-bold text-xl mb-2">2025</h3>
+                    <p>Expanded to serve communities across multiple regions</p>
+                  </div>
+                </div> */}
+              {/* </div>
+            </div> */}
+          </div>
+        </div>
+      </div>
+
       {/* Team Section */}
-      <div className="py-16 px-6 md:px-12 bg-white">
+      <div className="py-16 px-6 md:px-12 bg-blue-50">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold mb-4 text-center">Our Team</h2>
           <p className="text-lg text-center mb-12 max-w-2xl mx-auto text-gray-700">
             A diverse group of passionate professionals committed to improving healthcare
           </p>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {team.map((member, index) => (
-              <div key={index} className="bg-gradient-to-br from-blue-50 to-emerald-50 p-6 rounded-xl hover:scale-105 transition-transform duration-300">
+              <div key={index} className="bg-white p-6 rounded-xl hover:scale-105 transition-transform duration-300">
                 <div className="bg-emerald-500 w-16 h-16 rounded-full flex items-center justify-center mb-4 mx-auto">
                   <Users className="w-8 h-8 text-white" />
                 </div>
@@ -190,10 +189,10 @@ const AboutUs = () => {
       {/* CTA Section */}
       <div className="py-16 px-6 md:px-12 bg-gradient-to-r from-blue-950 to-emerald-700 text-white">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-6">Join Us on This Journey</h2>
+          <h2 className="text-3xl font-bold mb-6">Join Us in Transforming Healthcare</h2>
           <p className="text-xl mb-8 leading-relaxed">
-            Whether you're a patient looking to better manage your health, a healthcare provider seeking innovative 
-            solutions, or a partner who shares our vision—we'd love to connect with you.
+            Whether you're a patient looking to better manage your health, a healthcare provider seeking innovative
+            solutions, or a partner who shares our vision, SmartCare is here for you.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <a href="/registration">

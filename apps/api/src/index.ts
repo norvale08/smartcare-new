@@ -55,7 +55,7 @@ import relativeSetupRoutes from './routes/relative-setup';
 import relativePatientRouter from './routes/relativePatient'
 
 // import patientDetailsRoute from "./routes/patientDetails";
-
+import sendEmailRouter from './routes/send-email';
 
 dotenv.config();
 
@@ -86,7 +86,7 @@ app.use(cors({
 // Handle preflight requests
 app.options('*', cors());
 
-// ✅ SESSION SETUP
+// SESSION SETUP
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your-session-secret",
@@ -170,6 +170,7 @@ app.use('/api/speech', speechRoutes);
 app.use('/api/python-speech', pythonSpeechRoutes);
 app.use('/api/relative-setup', relativeSetupRoutes);
 app.use('/api/relative', relativePatientRouter);
+app.use('/api', sendEmailRouter);
 
 app.use('*', (req, res) => {
   res.status(404).json({
@@ -187,7 +188,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// ✅ CRITICAL: Bind to 0.0.0.0 for Render deployment
+// CRITICAL: Bind to 0.0.0.0 for Render deployment
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server is running on http://0.0.0.0:${PORT}`);
   console.log(`📱 Health check: http://0.0.0.0:${PORT}/health`);
@@ -195,7 +196,7 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`🔗 CORS enabled for allowed origins`);
 });
 
-// ✅ Graceful shutdown for production
+// Graceful shutdown for production
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, shutting down gracefully');
   process.exit(0);

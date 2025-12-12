@@ -6,60 +6,60 @@ import { HeartPulse, Mail, Phone, MapPin } from 'lucide-react';
 
 const Footer = () => {
     return (
-        <footer className="bg-gradient-to-r from-blue-950 to-emerald-700 p-4 lg:p-6 text-white py-8 px-4">
-            <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-5 gap-8">
+        <footer className="bg-gradient-to-r from-blue-950 to-emerald-700 p-4 lg:p-5 text-white ">
+            <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-5 gap-3">
                 <div>
                     <div className="flex items-center gap-2 mb-2">
                         <HeartPulse className="font-bold" color="#34d399" size={20} />
                         <h3 className="text-md sm:text-lg font-bold">SmartCare</h3>
                     </div>
-                    <p className="text-emerald-300 text-xs">
+                    <p className="text-emerald-300 text-sm">
                         Empowering patients with advanced health management tools for chronic disease monitoring.
                     </p>
                 </div>
 
                 <div className="text-center lg:text-left">
-                    <h1 className="text-white font-bold mb-2 text-sm">Product</h1>
+                    <h1 className="text-white font-bold mb-2 text-md">Product</h1>
                     <div className="space-y-1">
-                        <p><Link href="/features" className="text-emerald-300 hover:text-white cursor-pointer transition-colors text-xs">Features</Link></p>
-                        <p><Link href="/pricing" className="text-emerald-300 hover:text-white cursor-pointer transition-colors text-xs">Pricing</Link></p>
-                        <p><Link href="/security"  className="text-emerald-300 hover:text-white cursor-pointer transition-colors text-xs">Security</Link></p>
+                        <p><Link href="/features" className="text-emerald-300 hover:text-white cursor-pointer transition-colors text-sm">Features</Link></p>
+                        <p><Link href="/pricing" className="text-emerald-300 hover:text-white cursor-pointer transition-colors text-sm">Pricing</Link></p>
+                        <p><Link href="/security"  className="text-emerald-300 hover:text-white cursor-pointer transition-colors text-sm">Security</Link></p>
                     </div>
                 </div>
 
                 <div className="text-center lg:text-left">
-                    <h1 className="text-white font-bold mb-2 text-sm">Support</h1>
+                    <h1 className="text-white font-bold mb-2 text-md">Support</h1>
                     <div className="space-y-1">
-                        <p><Link href="/help" className="text-emerald-300 hover:text-white cursor-pointer transition-colors text-xs">Help Center</Link></p>
-                        <p><Link href="/contact" className="text-emerald-300 hover:text-white cursor-pointer transition-colors text-xs">Contact Us</Link></p>
-                        <p><Link href="/privacy" className="text-emerald-300 hover:text-white cursor-pointer transition-colors text-xs">Privacy Policy</Link></p>
+                        <p><Link href="/help" className="text-emerald-300 hover:text-white cursor-pointer transition-colors text-sm">Help Center</Link></p>
+                        <p><Link href="/contact" className="text-emerald-300 hover:text-white cursor-pointer transition-colors text-sm">Contact Us</Link></p>
+                        <p><Link href="/privacy" className="text-emerald-300 hover:text-white cursor-pointer transition-colors text-sm">Privacy Policy</Link></p>
                     </div>
                 </div>
 
                 <div>
-                    <h4 className="text-sm font-bold mb-2">Quick Links</h4>
+                    <h4 className="text-md font-bold mb-2">Quick Links</h4>
                     <ul className="space-y-1">
-                        <li><Link href="/features" className="text-xs text-emerald-300 hover:text-white transition">Features</Link></li>
-                        <li><Link href="/resources" className="text-xs text-emerald-300 hover:text-white transition">Resources</Link></li>
-                        <li><Link href="/about" className="text-xs text-emerald-300 hover:text-white transition">About Us</Link></li>
-                        <li><Link href="/contact" className="text-xs text-emerald-300 hover:text-white transition">Contact</Link></li>
+                        <li><Link href="/features" className="text-sm text-emerald-300 hover:text-white transition">Features</Link></li>
+                        <li><Link href="/resources" className="text-sm text-emerald-300 hover:text-white transition">Resources</Link></li>
+                        <li><Link href="/about" className="text-sm text-emerald-300 hover:text-white transition">About Us</Link></li>
+                        <li><Link href="/contact" className="text-sm text-emerald-300 hover:text-white transition">Contact</Link></li>
                     </ul>
                 </div>
 
                 <div>
-                    <h4 className="text-sm font-bold mb-2">Contact Us</h4>
+                    <h4 className="text-md font-bold mb-2">Contact Us</h4>
                     <ul className="space-y-2">
                         <li className="flex items-center gap-2">
                             <Mail size={18} />
-                            <span className="text-xs text-emerald-300">support@smartcare.com</span>
+                            <span className="text-sm text-emerald-300">smartcarehealthsystem@gmail.com</span>
                         </li>
                         <li className="flex items-center gap-2">
                             <Phone size={18} />
-                            <span className="text-xs text-emerald-300">+254 700 000 000</span>
+                            {/* <span className="text-sm text-emerald-300">+254 700 000 000</span> */}
                         </li>
                         <li className="flex items-center gap-2">
                             <MapPin size={18} />
-                            <span className="text-xs text-emerald-300">Nairobi, Kenya</span>
+                            {/* <span className="text-sm text-emerald-300">Nairobi, Kenya</span> */}
                         </li>
                     </ul>
 

@@ -1,4 +1,3 @@
-// app/features/page.tsx
 "use client"
 import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui"
@@ -159,18 +158,23 @@ const FeaturesPage = () => {
   ]
 
   return (
-    <div className='min-h-screen bg-gradient-to-b from-slate-50 to-slate-100'>
+    <div className='min-h-screen bg-gradient-to-b from-blue-50 to-blue-100'>
       <Header />
 
       {/* Hero Section */}
       <div className="relative bg-gradient-to-r from-blue-950 to-emerald-700 text-white py-20 px-6">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-950 via-blue-800 to-emerald-600 z-0"></div>
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover z-0"
+        >
+          <source src="/assets/doctorVideo.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
 
-        {/* Animated background shapes */}
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style={{ animationDelay: '2s' }}></div>
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-emerald-400 opacity-70 z-0"></div>
 
         <div className="relative z-10 container mx-auto px-4 py-5 lg:py-5">
           <div className="max-w-6xl mx-auto text-center">

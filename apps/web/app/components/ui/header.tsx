@@ -8,21 +8,23 @@ const Header = () => {
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
   return (
-    <header className="bg-slate-400 text-black shadow-md sticky top-0 z-50">
+    <header className="bg-blue-950 text-white shadow-md sticky top-0 z-50">
       {/* Top bar */}
       <div className="flex justify-between items-center px-4 h-14">
-        <div className="flex items-center gap-2">
-          <HeartPulse color="darkblue" size={30} />
-          <h1 className="text-lg font-bold text-white">SmartCare</h1>
-        </div>
+        <Link href='/'>
+          <div className="flex items-center gap-2">
+            <HeartPulse className='text-emerald-400' size={30} />
+            <h1 className="text-lg font-bold text-white">SmartCare</h1>
+          </div>
+        </Link>
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex gap-16 font-medium">
-          <Link href="/" className="hover:p-2 hover:bg-slate-300 rounded-sm transition duration-200">Home</Link>
-          <Link href="/features" className="hover:p-2 hover:bg-slate-300 rounded-sm transition duration-200">Features</Link>
-          <Link href="/resources" className="hover:p-2 hover:bg-slate-300 rounded-sm transition duration-200">Resources</Link>
-          <Link href="/about" className="hover:p-2 hover:bg-slate-300 rounded-sm transition duration-200">About Us</Link>
-          <Link href="/contact" className="hover:p-2 hover:bg-slate-300 rounded-sm transition duration-200">Contact</Link>
+          <Link href="/" className="hover:p-2 hover:bg-blue-900 hover:text-emerald-400 rounded-sm transition duration-200">Home</Link>
+          <Link href="/features" className="hover:p-2 hover:bg-blue-900 hover:text-emerald-400 rounded-sm transition duration-200">Features</Link>
+          <Link href="/resources" className="hover:p-2 hover:bg-blue-900 hover:text-emerald-400 rounded-sm transition duration-200">Resources</Link>
+          <Link href="/about" className="hover:p-2 hover:bg-blue-900 hover:text-emerald-400 rounded-sm transition duration-200">About Us</Link>
+          <Link href="/contact" className="hover:p-2 hover:bg-blue-900 hover:text-emerald-400 rounded-sm transition duration-200">Contact</Link>
         </nav>
 
         {/* Mobile Menu Icon */}
