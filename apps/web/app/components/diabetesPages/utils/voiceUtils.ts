@@ -11,33 +11,48 @@ export const speak = async (
 ): Promise<void> => {
   if (isMuted || !voiceModeActiveRef.current) return Promise.resolve();
 
-  return new Promise((resolve) => {
-    try {
-      setState(true, languageValue === "sw" ? "Ninazungumza..." : "Speaking...");
-      window.speechSynthesis?.cancel();
+  setState(true, languageValue === "sw" ? "Ninazungumza..." : "Speaking...");
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = languageValue === "sw" ? "sw-KE" : "en-US";
-      utterance.rate = 0.9;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
+  try {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    
+    // Convert language code: 'sw' for Swahili, 'en' for English
+    const synthesisLang = languageValue === "sw" ? "sw" : "en";
+    
+    const response = await fetch(`${API_URL}/api/python-speech/synthesize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, language: synthesisLang }),
+    });
 
-      utterance.onend = () => {
+    if (!response.ok) throw new Error("Failed to synthesize speech");
+
+    const audioBlob = await response.blob();
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
+
+    return new Promise<void>((resolve) => {
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
         setState(false, "");
         resolve();
       };
-
-      utterance.onerror = () => {
+      audio.onerror = () => {
+        URL.revokeObjectURL(audioUrl);
         setState(false, "");
         resolve();
       };
-
-      window.speechSynthesis.speak(utterance);
-    } catch (error) {
-      setState(false, "");
-      resolve();
-    }
-  });
+      audio.play().catch(() => {
+        URL.revokeObjectURL(audioUrl);
+        setState(false, "");
+        resolve();
+      });
+    });
+  } catch (error) {
+    console.error("TTS Error:", error);
+    setState(false, "");
+    return Promise.resolve();
+  }
 };
 
 export const convertWebmToWav = async (webmBlob: Blob): Promise<Blob> => {

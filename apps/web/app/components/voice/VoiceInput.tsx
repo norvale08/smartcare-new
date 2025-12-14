@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Square } from 'lucide-react';
+import { Mic, Square, Globe } from 'lucide-react';
 
 interface VoiceInputProps {
   onTranscriptionComplete?: (text: string) => void;
@@ -18,6 +18,7 @@ export default function VoiceInput({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [language, setLanguage] = useState<'en-US' | 'sw'>('en-US'); // DEFAULT: English
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -78,7 +79,6 @@ export default function VoiceInput({
     return buffer;
   };
 
- 
   const convertWebmToWav = async (webmBlob: Blob): Promise<Blob> => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const arrayBuffer = await webmBlob.arrayBuffer();
@@ -93,7 +93,6 @@ export default function VoiceInput({
     return new Blob([wavArrayBuffer], { type: 'audio/wav' });
   };
 
-  
   const startRecording = async () => {
     try {
       setError(null);
@@ -141,6 +140,7 @@ export default function VoiceInput({
 
       const formData = new FormData();
       formData.append('audio', wavBlob, 'recording.wav');
+      formData.append('language', language); // Send selected language to Express
 
       const response = await fetch(`${API_URL}/api/python-speech/transcribe`, {
         method: 'POST',
@@ -164,7 +164,6 @@ export default function VoiceInput({
     }
   };
 
- 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
@@ -172,14 +171,16 @@ export default function VoiceInput({
     }
   };
 
-  
   const handleMicClick = () => {
     if (!isClient) return;
     if (isRecording) stopRecording();
     else startRecording();
   };
 
-  
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en-US' ? 'sw' : 'en-US');
+  };
+
   if (!isClient) {
     return (
       <button
@@ -192,14 +193,32 @@ export default function VoiceInput({
   }
 
   return (
-    <div className={className}>
+    <div className={`${className} flex items-center gap-2`}>
+      {/* Language Toggle */}
+      <button
+        type="button"
+        onClick={toggleLanguage}
+        disabled={isRecording || isProcessing}
+        className={`
+          px-3 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2
+          bg-gray-100 hover:bg-gray-200 text-gray-700
+          ${(isRecording || isProcessing) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `}
+        title={`Switch to ${language === 'en-US' ? 'Swahili' : 'English'}`}
+      >
+        <Globe size={16} />
+        <span className="hidden sm:inline">{language === 'en-US' ? '🇺🇸 English' : '🇰🇪 Swahili'}</span>
+        <span className="sm:hidden">{language === 'en-US' ? 'EN' : 'SW'}</span>
+      </button>
+
+      {/* Record Button */}
       <button
         type="button"
         onClick={handleMicClick}
         disabled={isProcessing}
         className={`
           px-3 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2
-          ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-500 text-white'}
+          ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-500 text-white hover:bg-blue-600'}
           ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
       >
@@ -221,7 +240,7 @@ export default function VoiceInput({
         )}
       </button>
 
-      {error && <p className="text-red-600 text-xs mt-1">{error}</p>}
+      {error && <p className="text-red-600 text-xs mt-1 absolute top-full left-0">{error}</p>}
     </div>
   );
 }

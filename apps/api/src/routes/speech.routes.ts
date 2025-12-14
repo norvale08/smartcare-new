@@ -23,7 +23,7 @@ const upload = multer({
   },
 });
 
-// Python service URL - CORRECTED to port 5000
+// Python service URL
 const PYTHON_SERVICE_URL = 'http://localhost:5000';
 
 // Interfaces
@@ -83,11 +83,16 @@ router.post('/transcribe', upload.single('audio'), async (req: Request, res: Res
     }
 
     filePath = req.file.path;
+    
+    // Get language from request body (sent as form field)
+    const language = req.body.language || 'en-US';
+    
     console.log('📁 Received audio file:', {
       originalname: req.file.originalname,
       mimetype: req.file.mimetype,
       size: req.file.size,
-      path: filePath
+      path: filePath,
+      language: language
     });
 
     // Create form data to send to Python service
@@ -96,8 +101,10 @@ router.post('/transcribe', upload.single('audio'), async (req: Request, res: Res
       filename: req.file.originalname || 'audio.wav',
       contentType: req.file.mimetype,
     });
+    // Add language to form data
+    formData.append('language', language);
 
-    console.log('🎯 Forwarding to Python service:', `${PYTHON_SERVICE_URL}/transcribe`);
+    console.log('🎯 Forwarding to Python service:', `${PYTHON_SERVICE_URL}/transcribe`, 'with language:', language);
 
     // Forward to Python service
     const response = await axios.post<TranscriptionResponse>(
@@ -170,8 +177,8 @@ router.post('/synthesize', express.json(), async (req: Request, res: Response) =
 
     console.log('✅ Synthesis response received');
 
-    // Stream the audio back to client
-    res.setHeader('Content-Type', 'audio/wav');
+    // Stream the audio back to client (MP3 from gTTS)
+    res.setHeader('Content-Type', 'audio/mpeg');
     response.data.pipe(res);
   } catch (error: any) {
     console.error('❌ Synthesis error:', error);
