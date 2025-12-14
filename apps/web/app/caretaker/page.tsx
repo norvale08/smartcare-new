@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { 
   HeartPulse, Users, Search, Phone, MessageSquare, Calendar,
-  Stethoscope, AlertTriangle, CheckCircle, Clock, Filter, Activity, Pill
+  Stethoscope, AlertTriangle, CheckCircle, Clock, Filter, Activity, Pill, PlusCircle
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button, Input, Card, CardHeader, CardContent, CardTitle } from "@repo/ui";
 import DashboardHeader from "./components/DashboardHeader";
-import PatientSearch from "./components/PatientSearch"
+import PatientSearch from "./components/PatientSearch";
 import PatientRequests from "./components/PatientRequests";
 import PatientTabs from './components/PatientTabs';
 import RealTimeNotifications from './components/RealTimeNotifications';
@@ -17,6 +17,7 @@ import PatientMessages from "./components/PatientMessages";
 import QuickStats from "./components/QuickStats";
 import DoctorMedicationManagement from './components/DoctorMedicationManagement';
 import AppointmentsView from './components/AppointmentsView';
+import MedicationPrescriptionModal from './components/MedicationPrescriptionModal'; // Import the modal
 
 interface Patient {
   id: string;
@@ -35,6 +36,11 @@ interface Patient {
   status: "stable" | "warning" | "critical";
   phoneNumber?: string;
   email?: string;
+  allergies?: Array<{
+    allergyName: string;
+    severity: string;
+    reaction: string;
+  }>;
 }
 
 interface VitalSigns {
@@ -45,7 +51,7 @@ interface VitalSigns {
   glucose?: number;
   timestamp: string;
   patientId: string;
-  age?: number; // Added to match the expected type from the types/index.ts
+  age?: number;
 }
 
 interface PatientRequest {
@@ -74,6 +80,10 @@ const CaretakerDashboard = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
+  
+  // New state for prescription modal
+  const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
+  const [selectedPatientForPrescription, setSelectedPatientForPrescription] = useState<Patient | null>(null);
 
   // Extract role from JWT token
   useEffect(() => {
@@ -200,7 +210,7 @@ const CaretakerDashboard = () => {
                 ...vital,
                 patientId: patientId,
                 timestamp: vital.timestamp || vital.createdAt || vital.date || new Date().toISOString(),
-                age: vital.age || undefined // Add age field
+                age: vital.age || undefined
               }));
               
               setPatientVitals(validatedVitals);
@@ -247,7 +257,7 @@ const CaretakerDashboard = () => {
       patient.user?._id === patientId ||
       patient.user?.id === patientId
     ) || null;
-  }; // Added missing closing brace
+  };
 
   const handleNotificationSelect = ({ notification, preferredTab }: { notification: { patientId?: string; patientName?: string }; preferredTab: DashboardTab }) => {
     const matchedPatient = findPatientMatch(notification.patientId);
@@ -319,6 +329,34 @@ const CaretakerDashboard = () => {
       setSelectedPatient(prev => 
         prev ? { ...prev, lastVisit: new Date().toISOString() } : null
       );
+    }
+  };
+
+  // NEW: Handle prescription button click
+  const handlePrescribeMedication = () => {
+    if (selectedPatient) {
+      setSelectedPatientForPrescription(selectedPatient);
+      setShowPrescriptionModal(true);
+    } else {
+      setMessage('Please select a patient first');
+    }
+  };
+
+  // NEW: Handle prescription modal close
+  const handleClosePrescriptionModal = () => {
+    setShowPrescriptionModal(false);
+    setSelectedPatientForPrescription(null);
+  };
+
+  // NEW: Handle prescription success
+  const handlePrescriptionSuccess = () => {
+    setShowPrescriptionModal(false);
+    setSelectedPatientForPrescription(null);
+    setMessage('Medication prescribed successfully!');
+    // Refresh medications if on medications tab
+    if (activeTab === 'medications') {
+      // You might want to add a refresh trigger for medications
+      setRefreshTrigger(prev => prev + 1);
     }
   };
 
@@ -403,22 +441,6 @@ const CaretakerDashboard = () => {
     );
   }
 
-  // Temporary debugging component
-  const PatientDataDebug = ({ patient }: { patient: Patient }) => {
-    return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-        <h4 className="font-bold text-yellow-800 mb-2">Patient Data Debug:</h4>
-        <pre className="text-xs text-yellow-700 overflow-auto">
-          {JSON.stringify({
-            id: patient.id,
-            userId: patient.userId,
-            fullName: patient.fullName,
-          }, null, 2)}
-        </pre>
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-gray-100">
       <DashboardHeader />
@@ -426,7 +448,7 @@ const CaretakerDashboard = () => {
 
       <main className="flex flex-col items-center px-4 py-6 gap-6">
         {message && (
-          <div className="fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+          <div className="fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50">
             {message}
           </div>
         )}
@@ -582,6 +604,18 @@ const CaretakerDashboard = () => {
                   <div className="p-6">
                     {activeTab === 'overview' && (
                       <div className="space-y-6">
+                        {/* Prescribe Medication Button - Added here */}
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-lg font-medium">Quick Actions</h3>
+                          <Button
+                            onClick={handlePrescribeMedication}
+                            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+                          >
+                            <PlusCircle className="w-4 h-4" />
+                            <span>Prescribe Medication</span>
+                          </Button>
+                        </div>
+                        
                         <PatientTabs
                           patient={selectedPatient}
                           patientVitals={patientVitals}
@@ -591,7 +625,10 @@ const CaretakerDashboard = () => {
                     )}
                     
                     {activeTab === 'medications' && (
-                      <DoctorMedicationManagement patient={selectedPatient} />
+                      <DoctorMedicationManagement 
+                        patient={selectedPatient} 
+                        onPrescribeClick={handlePrescribeMedication} // Pass the function
+                      />
                     )}
                     
                     {activeTab === 'appointments' && (
@@ -612,7 +649,6 @@ const CaretakerDashboard = () => {
                           </button>
                         </div>
 
-                        {/* ✅ Messaging Component */}
                         <PatientMessages selectedPatient={selectedPatient} />
                       </div>
                     )}
@@ -631,6 +667,16 @@ const CaretakerDashboard = () => {
           </div>
         </div>
       </main>
+
+      {/* Medication Prescription Modal */}
+      {showPrescriptionModal && selectedPatientForPrescription && (
+        <MedicationPrescriptionModal
+          patient={selectedPatientForPrescription}
+          isOpen={showPrescriptionModal}
+          onClose={handleClosePrescriptionModal}
+          onSuccess={handlePrescriptionSuccess}
+        />
+      )}
     </div>
   );
 };

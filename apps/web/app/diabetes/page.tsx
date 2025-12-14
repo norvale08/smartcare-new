@@ -304,7 +304,7 @@ const Page = () => {
                   <Apple className="w-5 h-5 lg:w-4 lg:h-4" />
                 </button>
               </div>
-              <MedicationReminders />
+              
             </div>
           )}
 

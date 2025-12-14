@@ -1,6 +1,4 @@
 // FILE: apps/api/src/models/medicationModels.ts
-// Update the medicationSchema to include adherence tracking
-
 import mongoose from "mongoose";
 
 const adherenceEntrySchema = new mongoose.Schema({
@@ -21,6 +19,71 @@ const adherenceEntrySchema = new mongoose.Schema({
   notes: {
     type: String,
     trim: true
+  }
+}, { _id: false });
+
+const weeklyAdherenceSchema = new mongoose.Schema({
+  taken: {
+    type: Boolean,
+    default: false
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'taken', 'missed', 'stopped'],
+    default: 'pending'
+  },
+  takenTime: String,
+  reason: String,
+  markedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
+// Updated side effect schema with doctor information
+const experiencedSideEffectSchema = new mongoose.Schema({
+  sideEffectName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  reportedAt: {
+    type: Date,
+    default: Date.now
+  },
+  severity: {
+    type: String,
+    enum: ['mild', 'moderate', 'severe'],
+    default: 'mild'
+  },
+  notes: {
+    type: String,
+    trim: true
+  },
+  intensity: {
+    type: String,
+    trim: true,
+    enum: ['mild', 'moderate', 'severe', 'very severe']
+  },
+  // Doctor information fields
+  resolved: {
+    type: Boolean,
+    default: false
+  },
+  resolvedAt: {
+    type: Date
+  },
+  doctorNotes: {
+    type: String,
+    trim: true
+  },
+  doctorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  lastUpdated: {
+    type: Date,
+    default: Date.now
   }
 }, { _id: false });
 
@@ -69,7 +132,7 @@ const medicationSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'completed', 'missed', 'cancelled', 'stopped'], // Added 'stopped'
+    enum: ['active', 'completed', 'missed', 'cancelled', 'stopped'],
     default: 'active'
   },
   
@@ -88,6 +151,13 @@ const medicationSchema = new mongoose.Schema({
       type: Date
     },
     history: [adherenceEntrySchema]
+  },
+  
+  // Weekly adherence tracking
+  weeklyAdherence: {
+    type: Map,
+    of: weeklyAdherenceSchema,
+    default: {}
   },
   
   // Patient allergies (added by doctor during prescription)
@@ -131,27 +201,8 @@ const medicationSchema = new mongoose.Schema({
     }
   }],
   
-  // Experienced side effects (reported by patient)
-  experiencedSideEffects: [{
-    sideEffectName: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    reportedAt: {
-      type: Date,
-      default: Date.now
-    },
-    severity: {
-      type: String,
-      enum: ['mild', 'moderate', 'severe'],
-      default: 'mild'
-    },
-    notes: {
-      type: String,
-      trim: true
-    }
-  }],
+  // Experienced side effects (reported by patient) - UPDATED
+  experiencedSideEffects: [experiencedSideEffectSchema],
   
   lastTaken: {
     type: Date
@@ -169,5 +220,7 @@ const medicationSchema = new mongoose.Schema({
 
 medicationSchema.index({ patientId: 1, status: 1 });
 medicationSchema.index({ prescribedBy: 1 });
+medicationSchema.index({ 'adherence.stoppedAt': -1 });
+medicationSchema.index({ 'experiencedSideEffects.reportedAt': -1 });
 
 export const MedicationModel = mongoose.models.Medication || mongoose.model('Medication', medicationSchema);
