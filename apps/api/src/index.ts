@@ -1,9 +1,9 @@
+// FILE: apps/api/src/app.ts
 import dotenv from 'dotenv';
 import path from 'path';
 
 // Load environment variables FIRST
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
-
 
 import express from 'express';
 import cors from 'cors';
@@ -76,10 +76,18 @@ if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
 
+// FIXED: Updated CORS configuration to include Cache-Control header
 app.use(cors({
   origin: allowedOrigins,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'Cache-Control',  // Added this
+    'Pragma',         // Added this
+    'Expires'         // Added this
+  ],
+  exposedHeaders: ['Authorization', 'Content-Type'],
   credentials: true
 }));
 
