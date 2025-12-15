@@ -70,12 +70,8 @@ router.post("/prescribe", authenticateUser, async (req: any, res: any) => {
       medicationImage
     } = req.body;
 
-    console.log("=== PRESCRIBING MEDICATION ===");
-    console.log("Doctor ID:", req.userId);
-    console.log("Patient ID:", patientId);
-    console.log("Medication:", medicationName);
-    console.log("Allergies count:", patientAllergies?.length || 0);
-    console.log("Side effects count:", potentialSideEffects?.length || 0);
+    
+
 
     // Validation
     if (!patientId || !medicationName || !dosage || !frequency) {
@@ -111,8 +107,7 @@ router.post("/prescribe", authenticateUser, async (req: any, res: any) => {
 
     await medication.save();
 
-    console.log("✅ Medication prescribed successfully");
-    console.log("Medication ID:", medication._id);
+   
 
     res.json({
       success: true,
@@ -169,10 +164,7 @@ router.get("/weekly-adherence", authenticateUser, async (req: any, res: any) => 
   try {
     const { weekStart } = req.query;
     
-    console.log("=== FETCHING WEEKLY ADHERENCE ===");
-    console.log("Patient ID:", req.userId);
-    console.log("Week Start:", weekStart);
-
+    
     await connectMongoDB();
 
     // Calculate start and end of week
@@ -192,17 +184,12 @@ router.get("/weekly-adherence", authenticateUser, async (req: any, res: any) => 
     currentWeekEnd.setDate(currentWeekEnd.getDate() + 6);
     currentWeekEnd.setHours(23, 59, 59, 999);
 
-    console.log("Week Start:", currentWeekStart.toISOString());
-    console.log("Week End:", currentWeekEnd.toISOString());
-
     // Get all medications for the patient
     const medications = await MedicationModel.find({
       patientId: req.userId
     })
     .populate('prescribedBy', 'fullName specialization')
     .select('medicationName dosage frequency status adherence takenHistory weeklyAdherence patientAllergies experiencedSideEffects');
-
-    console.log("Found medications:", medications.length);
 
     // Format days of week
     const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -308,7 +295,7 @@ router.get("/weekly-adherence", authenticateUser, async (req: any, res: any) => 
       return medAdherence;
     });
 
-    console.log(`✅ Weekly adherence data processed for ${weeklyAdherence.length} medications`);
+    // console.log(`✅ Weekly adherence data processed for ${weeklyAdherence.length} medications`);
 
     // Calculate summary
     const activeMedications = medications.filter(m => m.status === 'active').length;
@@ -341,11 +328,11 @@ router.get("/weekly-adherence", authenticateUser, async (req: any, res: any) => 
       }
     };
 
-    console.log("Weekly adherence response summary:", {
-      medications: response.data.medications.length,
-      weekDays: response.data.weekDays.length,
-      summary: response.data.summary
-    });
+    // console.log("Weekly adherence response summary:", {
+    //   medications: response.data.medications.length,
+    //   weekDays: response.data.weekDays.length,
+    //   summary: response.data.summary
+    // });
 
     res.json(response);
 
@@ -368,9 +355,9 @@ router.post("/:medicationId/mark-taken", authenticateUser, async (req: any, res:
     const { medicationId } = req.params;
     const { dayDate } = req.body;
 
-    console.log("=== MARKING MEDICATION AS TAKEN ===");
-    console.log("Patient ID:", req.userId);
-    console.log("Medication ID:", medicationId);
+    // console.log("=== MARKING MEDICATION AS TAKEN ===");
+    // console.log("Patient ID:", req.userId);
+    // console.log("Medication ID:", medicationId);
 
     await connectMongoDB();
 
@@ -448,8 +435,6 @@ router.post("/:medicationId/mark-taken", authenticateUser, async (req: any, res:
 
     await medication.save();
 
-    console.log("✅ Medication marked as taken successfully");
-
     res.json({
       success: true,
       message: "Medication marked as taken",
@@ -481,9 +466,9 @@ router.post("/:medicationId/mark-missed", authenticateUser, async (req: any, res
     const { medicationId } = req.params;
     const { reason, dayDate } = req.body;
 
-    console.log("=== MARKING MEDICATION AS MISSED ===");
-    console.log("Patient ID:", req.userId);
-    console.log("Medication ID:", medicationId);
+    // console.log("=== MARKING MEDICATION AS MISSED ===");
+    // console.log("Patient ID:", req.userId);
+    // console.log("Medication ID:", medicationId);
 
     await connectMongoDB();
 
@@ -548,8 +533,6 @@ router.post("/:medicationId/mark-missed", authenticateUser, async (req: any, res
     });
 
     await medication.save();
-
-    console.log("✅ Medication marked as missed");
 
     res.json({
       success: true,
@@ -651,8 +634,6 @@ router.post("/:medicationId/stop-taking", authenticateUser, async (req: any, res
 
     await medication.save();
 
-    console.log("✅ Medication marked as stopped");
-
     res.json({
       success: true,
       message: "Medication marked as stopped. Your doctor has been notified.",
@@ -690,12 +671,12 @@ router.post("/:medicationId/report-side-effect", authenticateUser, async (req: a
     const { medicationId } = req.params;
     const { sideEffectName, severity, notes, intensity } = req.body;
 
-    console.log("=== REPORTING SIDE EFFECT ===");
-    console.log("Patient ID:", req.userId);
-    console.log("Medication ID:", medicationId);
-    console.log("Side Effect:", sideEffectName);
-    console.log("Notes:", notes);
-    console.log("Intensity:", intensity);
+    // console.log("=== REPORTING SIDE EFFECT ===");
+    // console.log("Patient ID:", req.userId);
+    // console.log("Medication ID:", medicationId);
+    // console.log("Side Effect:", sideEffectName);
+    // console.log("Notes:", notes);
+    // console.log("Intensity:", intensity);
 
     if (!sideEffectName) {
       return res.status(400).json({
@@ -767,10 +748,9 @@ router.post("/:medicationId/report-side-effect", authenticateUser, async (req: a
     await medication.save();
 
     if (severity === 'severe') {
+      // Log severe side effect - keeping this one as it's important for debugging
       console.log("⚠️ SEVERE SIDE EFFECT REPORTED - Doctor should be notified");
     }
-
-    console.log("✅ Side effect reported/updated successfully");
 
     res.json({
       success: true,
@@ -1687,6 +1667,64 @@ router.delete("/:medicationId/remove-side-effect", authenticateUser, async (req:
     res.status(500).json({
       success: false,
       message: "Failed to remove side effect",
+      error: error.message
+    });
+  }
+});
+
+
+/**
+ * DELETE /api/medications/reminders/:medicationId
+ * Delete medication (can be used by both doctor and patient with proper permissions)
+ */
+router.delete("/:medicationId", authenticateUser, async (req: any, res: any) => {
+  try {
+    const { medicationId } = req.params;
+
+    console.log("=== DELETING MEDICATION ===");
+    console.log("User ID:", req.userId);
+    console.log("User Role:", req.userRole);
+    console.log("Medication ID:", medicationId);
+
+    await connectMongoDB();
+
+    let medication;
+    
+    if (req.userRole === 'doctor') {
+      // Doctor can delete medications they prescribed
+      medication = await MedicationModel.findOne({
+        _id: medicationId,
+        prescribedBy: req.userId
+      });
+    } else {
+      // Patient can only delete their own medications
+      medication = await MedicationModel.findOne({
+        _id: medicationId,
+        patientId: req.userId
+      });
+    }
+
+    if (!medication) {
+      return res.status(404).json({
+        success: false,
+        message: "Medication not found or you don't have permission to delete it"
+      });
+    }
+
+    await MedicationModel.findByIdAndDelete(medicationId);
+
+    console.log("✅ Medication deleted successfully");
+
+    res.json({
+      success: true,
+      message: "Medication deleted successfully"
+    });
+
+  } catch (error: any) {
+    console.error('❌ Error deleting medication:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete medication",
       error: error.message
     });
   }
