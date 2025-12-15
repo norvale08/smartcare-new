@@ -44,21 +44,21 @@ const ResourcesPage = () => {
       title: "How to Use SmartCare App",
       description: "Step-by-step video tutorial on navigating the SmartCare platform and logging your vitals.",
       duration: "5 min",
-      videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+      videoUrl: "https://youtu.be/-B-RVybvffU?si=hGWXszDqD4ychA-v"
     },
     {
       id: 2,
       title: "Voice Command Features",
       description: "Learn how to use voice commands to quickly input your health data hands-free.",
       duration: "3 min",
-      videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+      videoUrl: "https://youtu.be/-B-RVybvffU?si=hGWXszDqD4ychA-v"
     },
     {
       id: 3,
       title: "Understanding Your Health Alerts",
       description: "What different alert types mean and when to seek medical attention.",
-      duration: "4 min",
-      videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+      duration: "19 min",
+      videoUrl: "https://www.youtube.com/embed/-B-RVybvffU"
     }
   ]
 
@@ -161,7 +161,7 @@ startxref
 
     // Mark as downloaded
     setDownloadedFiles(prev => [...prev, id])
-    
+
     // Show success message
     setTimeout(() => {
       setDownloadedFiles(prev => prev.filter(item => item !== id))
@@ -190,18 +190,36 @@ startxref
   ]
 
   return (
-    <div className='bg-slate-400 min-h-screen'>
+    <div className='bg-emerald-200 min-h-screen'>
       <Header />
-      
+
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-blue-950 to-emerald-700 text-white p-10 md:p-16">
-        <div className="max-w-4xl mx-auto text-center">
+      <div className="relative text-white p-10 md:p-16">
+
+        {/* Video Background */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover z-0"
+        >
+          <source src="/assets/doctorVideo.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+
+        {/* Semi-transparent gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-emerald-700 opacity-70 z-0"></div>
+
+        {/* Hero Content */}
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Health Resources</h1>
           <p className="text-lg md:text-xl">
             Access educational materials, tutorials, and tools to help you manage your health effectively
           </p>
         </div>
       </div>
+
 
       {/* Educational Resources Section */}
       <div className="p-8 md:p-12">
@@ -227,7 +245,7 @@ startxref
                 </CardHeader>
                 <CardContent>
                   <p className="text-gray-600 mb-4">{resource.description}</p>
-                  <a 
+                  <a
                     href={resource.link}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -268,7 +286,7 @@ startxref
                     ></iframe>
                   </div>
                 ) : (
-                  <div 
+                  <div
                     className="relative bg-gradient-to-br from-blue-500 to-emerald-500 h-48 flex items-center justify-center cursor-pointer group"
                     onClick={() => setSelectedVideo(video.id)}
                   >
@@ -290,14 +308,14 @@ startxref
                 <CardContent>
                   <p className="text-gray-600 text-sm mb-4">{video.description}</p>
                   {selectedVideo === video.id ? (
-                    <button 
+                    <button
                       onClick={() => setSelectedVideo(null)}
                       className="w-full bg-gray-500 text-white py-2 rounded-md hover:bg-gray-600 transition-colors"
                     >
                       Close Video
                     </button>
                   ) : (
-                    <button 
+                    <button
                       onClick={() => setSelectedVideo(video.id)}
                       className="w-full bg-emerald-500 text-white py-2 rounded-md hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2"
                     >
@@ -334,14 +352,13 @@ startxref
                       <h3 className="font-bold text-lg mb-1">{resource.title}</h3>
                       <p className="text-gray-600 text-sm mb-2">{resource.description}</p>
                       <span className="text-xs text-gray-500">{resource.size}</span>
-                      <button 
+                      <button
                         onClick={() => handleDownload(resource.id, resource.fileName)}
                         disabled={downloadedFiles.includes(resource.id)}
-                        className={`mt-3 w-full py-2 px-4 rounded-md transition-colors text-sm flex items-center justify-center gap-2 ${
-                          downloadedFiles.includes(resource.id)
-                            ? 'bg-green-500 text-white cursor-default'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                        }`}
+                        className={`mt-3 w-full py-2 px-4 rounded-md transition-colors text-sm flex items-center justify-center gap-2 ${downloadedFiles.includes(resource.id)
+                          ? 'bg-green-500 text-white cursor-default'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                          }`}
                       >
                         {downloadedFiles.includes(resource.id) ? (
                           <>
@@ -383,7 +400,7 @@ startxref
                       <h3 className="font-bold text-lg mb-1">{link.title}</h3>
                       <p className="text-gray-600 text-sm">{link.description}</p>
                     </div>
-                    <a 
+                    <a
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"

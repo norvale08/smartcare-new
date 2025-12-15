@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { Button } from '@repo/ui'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui"
-import { ChevronLeft, ChevronRight, Heart, Activity, Clock, Users, Shield, Smartphone, MapPin, Bell, TrendingUp, Award, CheckCircle, Mail, Phone, } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MessageSquare, Heart, Mic, Activity, Loader2, Clock, Users, Shield, Smartphone, MapPin, Bell, TrendingUp, Award, CheckCircle, Mail, Phone, AlertCircle } from 'lucide-react'
 import Header from './components/ui/header'
 import Link from 'next/link'
 import Footer from './components/ui/Footer1'
@@ -53,10 +53,18 @@ const Home = () => {
     {
       title: "Google Maps Integration",
       icon: MapPin,
-      color: "blue",
+      color: "red",
       description: "Quickly locate nearby healthcare providers with our integrated Google Maps feature. Find the support you need, right when you need it, ensuring you are never far from care.",
       video: "/assets/doctorVideo2.mp4",
       alt: "Google Maps integration demonstration"
+    },
+    {
+      title: "Voice Input System",
+      icon: Mic,
+      color: "purple",
+      description: "Hands-free health data entry using advanced voice recognition technology. Simply speak your vitals and let the system do the rest.",
+      video: "/assets/doctorVideo2.mp4",
+      alt: "Voice Input System demonstration"
     },
     {
       title: "Timely Alerts",
@@ -65,6 +73,22 @@ const Home = () => {
       description: "Receive immediate notifications for abnormal readings and risky health patterns. Stay informed and proactive about your health with our timely alerts.",
       video: "/assets/doctorVideo2.mp4",
       alt: "Alert system demonstration"
+    },
+    {
+      title: "Multilingual Support",
+      icon: MessageSquare,
+      color: "orange",
+      description: "Access the platform in English and Kiswahili, ensuring healthcare accessibility for diverse communities.",
+      video: "/assets/doctorVideo2.mp4",
+      alt: "Multilingual Support demonstration"
+    },    
+    {
+      title: "Secure & Private",
+      icon: Shield,
+      color: "blue",
+      description: "Your health data is protected with enterprise-grade encryption and HIPAA-compliant security measures.",
+      video: "/assets/doctorVideo2.mp4",
+      alt: "Secure & Private demonstration"
     },
     {
       title: "AI-Powered Insights",
@@ -121,13 +145,119 @@ const Home = () => {
     setCurrentFeature((prev) => (prev - 1 + features.length) % features.length)
   }
 
+
+  //Contact form
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: ''
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null)
+  const [statusMessage, setStatusMessage] = useState('')
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSubmit = async () => {
+    // Validate form
+    if (!formData.name || !formData.email || !formData.message) {
+      setSubmitStatus('error')
+      setStatusMessage('Please fill in all fields before submitting.')
+      return
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      setSubmitStatus('error')
+      setStatusMessage('Please enter a valid email address.')
+      return
+    }
+
+    setIsSubmitting(true)
+    setSubmitStatus(null)
+
+    try {
+      // Call API endpoint
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      console.log('Sending to:', `${API_URL}/api/send-email`)
+      console.log('Data:', { name: formData.name, email: formData.email, message: formData.message })
+
+      const response = await fetch(`${API_URL}/api/send-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          message: formData.message
+        })
+      })
+
+      console.log('Response status:', response.status)
+
+      let data
+      try {
+        data = await response.json()
+        console.log('Response data:', data)
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError)
+        throw new Error('Invalid server response')
+      }
+
+      if (response.ok) {
+        // Success
+        setSubmitStatus('success')
+        setStatusMessage(
+          `Thank you, ${formData.name}! Your message has been successfully sent to SmartCare. ` +
+          `We'll respond to ${formData.email} as soon as possible.`
+        )
+
+        // Clear form
+        setFormData({
+          name: '',
+          email: '',
+          message: ''
+        })
+      } else {
+        throw new Error(data.error || 'Failed to send message')
+      }
+
+    } catch (error) {
+      // Error
+      setSubmitStatus('error')
+      let errorMessage = 'Oops! Something went wrong while sending your message. '
+
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage += 'Unable to connect to the server. Please check if the API server is running.'
+      } else if (error instanceof Error) {
+        errorMessage += error.message
+      } else {
+        errorMessage += 'Please try again or contact us directly at smartcarehealthsystem@gmail.com.'
+      }
+
+      setStatusMessage(errorMessage)
+      console.error('Error sending email:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+
   return (
-    <div className='bg-slate-400 min-h-screen'>
+    <div className='bg-emerald-200 min-h-screen'>
       <Header />
 
       {/* Hero Section with Video Background */}
       <div className="relative text-white p-10 h-[400px] overflow-hidden">
-        {/* Video Background */}
+        
         <video
           autoPlay
           muted
@@ -152,9 +282,7 @@ const Home = () => {
           <p className="text-lg mb-4 max-w-xl">
             Empower yourself with our advanced health management system designed to help you track your vitals and receive timely alerts for chronic conditions like diabetes and hypertension
           </p>
-          {/* <h2 className="text-2xl font-bold mb-6">
-            Welcome to the future of Chronic Disease Management
-          </h2> */}
+          
           <div className="flex gap-4">
             <Link href="/registration">
               <button className="bg-emerald-400 text-black rounded-md px-3 lg:px-4 py-2 hover:bg-emerald-300 transition-colors duration-200 text-sm lg:text-base">
@@ -200,9 +328,10 @@ const Home = () => {
                         <p className="text-gray-700 text-sm sm:text-base lg:text-lg leading-relaxed">
                           {feature.description}
                         </p>
-                        <button className="mt-6 text-blue-600 font-semibold flex items-center gap-2 hover:gap-3 transition-all">
+                        <Link href='features'><button className="mt-6 text-blue-600 font-semibold flex items-center gap-2 hover:gap-3 transition-all">
                           Learn More <ChevronRight size={20} />
                         </button>
+                        </Link>
                       </div>
 
                       {/* Video Section */}
@@ -310,17 +439,35 @@ const Home = () => {
             </p>
           </div>
 
+
+          {/* Status Messages */}
+          {submitStatus === 'success' && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start space-x-3">
+              <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+              <p className="text-green-800">{statusMessage}</p>
+            </div>
+          )}
+
+          {submitStatus === 'error' && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
+              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-red-800">{statusMessage}</p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
             {/* Contact Form */}
             <div className="p-6 bg-blue-50 rounded-lg">
-              <h2 className="text-2xl font-bold text-blue-800 mb-6">Send Us a Message</h2>
-              <form className="space-y-4">
+              <h2 className="text-2xl font-bold text-blue-800 mb-6">Send Us a Message</h2><form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700">Full Name</label>
                   <input
                     type="text"
                     id="name"
                     name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    disabled={isSubmitting}
                     required
                     className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
                     placeholder="John Doe"
@@ -332,6 +479,9 @@ const Home = () => {
                     type="email"
                     id="email"
                     name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    disabled={isSubmitting}
                     required
                     className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
                     placeholder="john@example.com"
@@ -343,6 +493,9 @@ const Home = () => {
                     id="message"
                     name="message"
                     rows={5}
+                    value={formData.message}
+                    onChange={handleInputChange}
+                    disabled={isSubmitting}
                     required
                     className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
                     placeholder="How can we help you?"
@@ -350,10 +503,18 @@ const Home = () => {
                 </div>
                 <button
                   type="submit"
-                  onClick={(e) => { e.preventDefault(); console.log('Form submission simulated'); }}
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
                   className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-gradient-to-r from-blue-950 to-emerald-600 hover:shadow-xl transition-all transform hover:-translate-y-1"
                 >
-                  Send Message
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Message'
+                  )}
                 </button>
               </form>
             </div>
@@ -365,7 +526,7 @@ const Home = () => {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Phone</h3>
                   <p className="text-gray-600">Call us for immediate assistance.</p>
-                  <p className="font-medium text-blue-700">1-800-SMART-CARE</p>
+                  {/* <p className="font-medium text-blue-700">1-800-SMART-CARE</p> */}
                 </div>
               </div>
 
@@ -374,7 +535,7 @@ const Home = () => {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Email</h3>
                   <p className="text-gray-600">Send us a detailed email query.</p>
-                  <p className="font-medium text-blue-700">support@smartcare.com</p>
+                  <p className="font-medium text-blue-700">smartcarehealthsystem@gmail.com</p>
                 </div>
               </div>
 
@@ -383,7 +544,7 @@ const Home = () => {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Location</h3>
                   <p className="text-gray-600">SmartCare Technologies HQ</p>
-                  <p className="font-medium text-blue-700">123 Health Ave, Wellness City, CA 90210</p>
+                  {/* <p className="font-medium text-blue-700">123 Health Ave, Wellness City, CA 90210</p> */}
                 </div>
               </div>
 

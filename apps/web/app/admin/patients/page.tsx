@@ -85,7 +85,7 @@ export default function AdminPatientsPage() {
   const [resendingInvitation, setResendingInvitation] = useState(false);
   const [activeTab, setActiveTab] = useState("patients"); // "patients" or "relatives"
   const [selectedAccessLevel, setSelectedAccessLevel] = useState("view_only");
-  
+
   const [pagination, setPagination] = useState<PaginationInfo>({
     currentPage: 1,
     totalPages: 1,
@@ -124,7 +124,7 @@ export default function AdminPatientsPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      
+
       if (!token) {
         router.push("/login");
         return;
@@ -186,7 +186,7 @@ export default function AdminPatientsPage() {
     try {
       setRelativesLoading(true);
       const token = localStorage.getItem("token");
-      
+
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: "10",
@@ -270,7 +270,7 @@ export default function AdminPatientsPage() {
     try {
       setCreatingRelative(true);
       const token = localStorage.getItem("token");
-      
+
       // Validate email exists
       if (!selectedPatient.email) {
         setError("Emergency contact email is required to create a relative account");
@@ -303,11 +303,11 @@ export default function AdminPatientsPage() {
         setSuccessMessage(data.message);
         setShowCreateRelativeModal(false);
         setShowContactModal(false);
-        
+
         // Refresh data
         fetchStatistics();
         fetchRelatives(1);
-        
+
         // Auto-hide success message after 5 seconds
         setTimeout(() => {
           setSuccessMessage("");
@@ -329,7 +329,7 @@ export default function AdminPatientsPage() {
     try {
       setResendingInvitation(true);
       const token = localStorage.getItem("token");
-      
+
       const response = await fetch(`${API_BASE_URL}/api/admin/resend-relative-invitation`, {
         method: "POST",
         headers: {
@@ -347,7 +347,7 @@ export default function AdminPatientsPage() {
         setSuccessMessage(data.message);
         setShowResendModal(false);
         fetchRelatives(relativesPagination.currentPage);
-        
+
         setTimeout(() => {
           setSuccessMessage("");
         }, 5000);
@@ -397,11 +397,11 @@ export default function AdminPatientsPage() {
       const today = new Date();
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
-      
+
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
-      
+
       return age;
     } catch {
       return "N/A";
@@ -411,7 +411,7 @@ export default function AdminPatientsPage() {
   const formatRelationship = (relationship: string) => {
     const relationshipMap: { [key: string]: string } = {
       'parent': 'Parent',
-      'sibling': 'Sibling', 
+      'sibling': 'Sibling',
       'spouse': 'Spouse',
       'friend': 'Friend',
       'other': 'Other'
@@ -437,18 +437,18 @@ export default function AdminPatientsPage() {
   const getInvitationStatusBadge = (status: string, expires: string) => {
     const now = new Date();
     const expiryDate = new Date(expires);
-    
+
     if (status === "accepted") {
       return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>;
     }
-    
+
     if (status === "pending") {
       if (expiryDate < now) {
         return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Expired</span>;
       }
       return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>;
     }
-    
+
     return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{status}</span>;
   };
 
@@ -458,9 +458,9 @@ export default function AdminPatientsPage() {
       'caretaker': { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Caretaker' },
       'emergency_only': { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Emergency' }
     };
-    
+
     const badge = levelMap[level] || { bg: 'bg-gray-100', text: 'text-gray-800', label: level };
-    
+
     return (
       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
         {badge.label}
@@ -473,7 +473,7 @@ export default function AdminPatientsPage() {
     try {
       setDownloadingCSV(true);
       const token = localStorage.getItem("token");
-      
+
       if (!token) {
         router.push("/login");
         return;
@@ -500,7 +500,7 @@ export default function AdminPatientsPage() {
 
       if (data.success) {
         const patientsData = data.data.patients;
-        
+
         const headers = [
           'Patient Name',
           'Patient Email',
@@ -562,7 +562,7 @@ export default function AdminPatientsPage() {
     try {
       setDownloadingCSV(true);
       const token = localStorage.getItem("token");
-      
+
       const response = await fetch(`${API_BASE_URL}/api/admin/relatives?limit=1000`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -572,10 +572,10 @@ export default function AdminPatientsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        
+
         if (data.success) {
           const relativesData = data.data.relatives;
-          
+
           const headers = [
             'Relative Name',
             'Relative Email',
@@ -675,11 +675,10 @@ export default function AdminPatientsPage() {
           <nav className="flex space-x-8">
             <button
               onClick={() => setActiveTab("patients")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "patients"
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "patients"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+                }`}
             >
               Patients
               <span className="ml-2 bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded">
@@ -691,11 +690,10 @@ export default function AdminPatientsPage() {
                 setActiveTab("relatives");
                 fetchRelatives();
               }}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "relatives"
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "relatives"
                   ? "border-purple-500 text-purple-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+                }`}
             >
               Family Members
               <span className="ml-2 bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded">
@@ -810,7 +808,7 @@ export default function AdminPatientsPage() {
                     <option value="diabetes">Diabetes Only</option>
                     <option value="hypertension">Hypertension Only</option>
                   </select>
-                  
+
                   <button
                     onClick={() => {
                       setSearchTerm("");
@@ -825,11 +823,10 @@ export default function AdminPatientsPage() {
                   <button
                     onClick={downloadCSV}
                     disabled={downloadingCSV || patients.length === 0}
-                    className={`px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 ${
-                      downloadingCSV || patients.length === 0
+                    className={`px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 ${downloadingCSV || patients.length === 0
                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                         : "bg-white text-gray-700 hover:bg-gray-50"
-                    }`}
+                      }`}
                   >
                     {downloadingCSV ? (
                       <>
@@ -990,22 +987,20 @@ export default function AdminPatientsPage() {
                   <button
                     onClick={() => handlePageChange(pagination.currentPage - 1)}
                     disabled={!pagination.hasPrev}
-                    className={`px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${
-                      pagination.hasPrev
+                    className={`px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${pagination.hasPrev
                         ? "text-gray-700 bg-white hover:bg-gray-50"
                         : "text-gray-400 bg-gray-100 cursor-not-allowed"
-                    }`}
+                      }`}
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => handlePageChange(pagination.currentPage + 1)}
                     disabled={!pagination.hasNext}
-                    className={`px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${
-                      pagination.hasNext
+                    className={`px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${pagination.hasNext
                         ? "text-gray-700 bg-white hover:bg-gray-50"
                         : "text-gray-400 bg-gray-100 cursor-not-allowed"
-                    }`}
+                      }`}
                   >
                     Next
                   </button>
@@ -1023,11 +1018,10 @@ export default function AdminPatientsPage() {
                   <button
                     onClick={downloadRelativesCSV}
                     disabled={downloadingCSV || relatives.length === 0}
-                    className={`px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 ${
-                      downloadingCSV || relatives.length === 0
+                    className={`px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 ${downloadingCSV || relatives.length === 0
                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                         : "bg-white text-gray-700 hover:bg-gray-50"
-                    }`}
+                      }`}
                   >
                     {downloadingCSV ? (
                       <>
@@ -1165,22 +1159,20 @@ export default function AdminPatientsPage() {
                   <button
                     onClick={() => handleRelativesPageChange(relativesPagination.currentPage - 1)}
                     disabled={!relativesPagination.hasPrev}
-                    className={`px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${
-                      relativesPagination.hasPrev
+                    className={`px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${relativesPagination.hasPrev
                         ? "text-gray-700 bg-white hover:bg-gray-50"
                         : "text-gray-400 bg-gray-100 cursor-not-allowed"
-                    }`}
+                      }`}
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => handleRelativesPageChange(relativesPagination.currentPage + 1)}
                     disabled={!relativesPagination.hasNext}
-                    className={`px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${
-                      relativesPagination.hasNext
+                    className={`px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${relativesPagination.hasNext
                         ? "text-gray-700 bg-white hover:bg-gray-50"
                         : "text-gray-400 bg-gray-100 cursor-not-allowed"
-                    }`}
+                      }`}
                   >
                     Next
                   </button>
@@ -1212,8 +1204,9 @@ export default function AdminPatientsPage() {
       {/* Contact Information Modal */}
       {showContactModal && selectedPatient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] flex flex-col">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
                 Contact Information
               </h3>
@@ -1226,38 +1219,36 @@ export default function AdminPatientsPage() {
                 </svg>
               </button>
             </div>
-            
-            <div className="space-y-6">
-              {/* Patient Information */}
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Patient Information</h4>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center space-x-3">
-                    {selectedPatient.picture ? (
-                      <img 
-                        src={selectedPatient.picture} 
-                        alt={getPatientFullName(selectedPatient)}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 font-semibold text-lg">
-                          {getPatientFullName(selectedPatient)?.[0]}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {getPatientFullName(selectedPatient)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {calculateAge(selectedPatient.dob)} years • {selectedPatient.gender}
-                      </p>
-                    </div>
+
+            {/* Fixed Profile Section */}
+            <div className="p-6 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center space-x-3">
+                {selectedPatient.picture ? (
+                  <img
+                    src={selectedPatient.picture}
+                    alt={getPatientFullName(selectedPatient)}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 font-semibold text-lg">
+                      {getPatientFullName(selectedPatient)?.[0]}
+                    </span>
                   </div>
+                )}
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {getPatientFullName(selectedPatient)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {calculateAge(selectedPatient.dob)} years • {selectedPatient.gender}
+                  </p>
                 </div>
               </div>
+            </div>
 
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Patient Contact Information */}
               <div>
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Patient Contact</h4>
@@ -1333,7 +1324,8 @@ export default function AdminPatientsPage() {
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end space-x-3">
+            {/* Fixed Action Buttons */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
               {selectedPatient.email && (
                 <button
                   onClick={() => {
@@ -1424,7 +1416,7 @@ export default function AdminPatientsPage() {
 
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-1">Access Level</p>
-                  <select 
+                  <select
                     value={selectedAccessLevel}
                     onChange={(e) => setSelectedAccessLevel(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"

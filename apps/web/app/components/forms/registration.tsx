@@ -69,7 +69,7 @@ const Registration = () => {
                         </h1>
                     </div>
 
-                    <p className='text-black mb-6 text-lg font-serif font-semibold'>An AI-Powered Health Monitoring</p>
+                    <p className='text-black mb-6 text-lg font-serif font-semibold'>An AI-Powered Remote Patient Monitoring System</p>
                     <div className='space-y-4'>
                         <div>
                             <h3 className='font-semibold'>24/7 Health Monitoring</h3>

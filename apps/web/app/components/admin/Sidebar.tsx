@@ -31,12 +31,12 @@ export default function Sidebar() {
       <ul className="space-y-1">
         <NavItem href="/admin" icon={<PieChart size={20} />} label="Overview" />
         <NavItem href="/admin/doctors" icon={<BriefcaseMedical size={20} />} label="Doctors" />
-        <NavItem href="/admin/hospitals" icon={<Hospital size={20} />} label="Hospitals" />
+        {/* <NavItem href="/admin/hospitals" icon={<Hospital size={20} />} label="Hospitals" /> */}
         <NavItem href="/admin/patients" icon={<UsersRound size={20} />} label="Patients" />
-        <NavItem href="/admin/medications" icon={<Pill size={20} />} label="Medications" />
-        <NavItem href="/admin/appointments" icon={<ClipboardCheck size={20} />} label="Appointments" />
-        <NavItem href="/admin/analytics" icon={<TrendingUp size={20} />} label="Analytics" />
-        <NavItem href="/admin/settings" icon={<Settings size={20} />} label="Settings" />
+        {/* <NavItem href="/admin/medications" icon={<Pill size={20} />} label="Medications" /> */}
+        {/* <NavItem href="/admin/appointments" icon={<ClipboardCheck size={20} />} label="Appointments" /> */}
+        {/* <NavItem href="/admin/analytics" icon={<TrendingUp size={20} />} label="Analytics" />
+        <NavItem href="/admin/settings" icon={<Settings size={20} />} label="Settings" /> */}
       </ul>
     </div>
   );
