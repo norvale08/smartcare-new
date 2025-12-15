@@ -142,7 +142,7 @@ const Login = () => {
             </div>
 
             <p className="text-black mb-6 text-lg font-serif font-semibold">
-              An AI-Powered Health Monitoring
+              An AI-Powered Remote Patient Monitoring System
             </p>
             <div className="space-y-4">
               <div>

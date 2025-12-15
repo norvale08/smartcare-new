@@ -44,21 +44,21 @@ const ResourcesPage = () => {
       title: "How to Use SmartCare App",
       description: "Step-by-step video tutorial on navigating the SmartCare platform and logging your vitals.",
       duration: "5 min",
-      videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+      videoUrl: "https://youtu.be/-B-RVybvffU?si=hGWXszDqD4ychA-v"
     },
     {
       id: 2,
       title: "Voice Command Features",
       description: "Learn how to use voice commands to quickly input your health data hands-free.",
       duration: "3 min",
-      videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+      videoUrl: "https://youtu.be/-B-RVybvffU?si=hGWXszDqD4ychA-v"
     },
     {
       id: 3,
       title: "Understanding Your Health Alerts",
       description: "What different alert types mean and when to seek medical attention.",
-      duration: "4 min",
-      videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+      duration: "19 min",
+      videoUrl: "https://www.youtube.com/embed/-B-RVybvffU"
     }
   ]
 
