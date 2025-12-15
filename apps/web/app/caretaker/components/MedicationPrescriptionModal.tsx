@@ -2,8 +2,8 @@
 // FILE: apps/web/app/caretaker/components/MedicationPrescriptionModal.tsx
 // ============================================
 
-import React, { useState } from 'react';
-import { X, Pill, Calendar, Clock, AlertCircle, Upload, Image as ImageIcon, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Pill, Calendar, Clock, AlertCircle, Upload, Image as ImageIcon, Plus, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface MedicationPrescriptionModalProps {
   isOpen: boolean;
@@ -24,6 +24,22 @@ interface SideEffect {
   severity: 'common' | 'uncommon' | 'rare';
   description: string;
 }
+
+// Common medications for suggestion
+const commonMedications = [
+  { name: 'Lisinopril 10mg', category: 'Hypertension' },
+  { name: 'Amlodipine 5mg', category: 'Hypertension' },
+  { name: 'Metformin 500mg', category: 'Diabetes' },
+  { name: 'Atorvastatin 20mg', category: 'Cholesterol' },
+  { name: 'Losartan 50mg', category: 'Hypertension' },
+  { name: 'Hydrochlorothiazide 25mg', category: 'Hypertension' },
+  { name: 'Insulin Glargine', category: 'Diabetes' },
+  { name: 'Aspirin 81mg', category: 'Cardiac' },
+  { name: 'Clopidogrel 75mg', category: 'Cardiac' },
+  { name: 'Metoprolol 25mg', category: 'Hypertension' },
+  { name: 'Furosemide 40mg', category: 'Diuretic' },
+  { name: 'Levothyroxine 50mcg', category: 'Thyroid' },
+];
 
 const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = ({
   isOpen,
@@ -47,6 +63,11 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [analyzingImage, setAnalyzingImage] = useState(false);
   const [imageAnalysis, setImageAnalysis] = useState<string | null>(null);
+  
+  // New state for existing medications and duplicate check
+  const [existingMedications, setExistingMedications] = useState<any[]>([]);
+  const [loadingMedications, setLoadingMedications] = useState(false);
+  const [showCommonMedications, setShowCommonMedications] = useState(false);
 
   // New allergy form state
   const [newAllergy, setNewAllergy] = useState<Allergy>({
@@ -66,8 +87,45 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
   const reminderTimes = ['08:00', '12:00', '18:00', '20:00'];
 
   // ============================================
+  // EFFECTS
+  // ============================================
+
+  // Load existing medications when modal opens
+  useEffect(() => {
+    if (isOpen && patient?.id) {
+      fetchExistingMedications();
+    }
+  }, [isOpen, patient?.id]);
+
+  // ============================================
   // HANDLER FUNCTIONS
   // ============================================
+
+  const fetchExistingMedications = async () => {
+    try {
+      setLoadingMedications(true);
+      const token = localStorage.getItem("token");
+      
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medications/reminders/patient/${patient.id}`,
+        {
+          headers: { 
+            Authorization: `Bearer ${token ?? ''}`,
+            'Cache-Control': 'no-cache'
+          }
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        setExistingMedications(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching existing medications:', error);
+    } finally {
+      setLoadingMedications(false);
+    }
+  };
 
   const handleToggleReminder = (time: string) => {
     setFormData(prev => ({
@@ -258,6 +316,18 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
       return;
     }
 
+    // Check for duplicate medication
+    const isDuplicate = existingMedications.some(
+      med => med.medicationName.toLowerCase() === formData.medicationName.toLowerCase() &&
+             med.status === 'active'
+    );
+
+    if (isDuplicate) {
+      if (!confirm('This patient already has an active prescription for this medication. Do you want to prescribe it again?')) {
+        return;
+      }
+    }
+
     // Prepare prescription data
     const prescriptionData = {
       patientId: patient.id,
@@ -306,6 +376,9 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
       // Show success message
       alert('Medication prescribed successfully!');
       
+      // Refresh existing medications
+      fetchExistingMedications();
+      
       onClose();
       resetForm();
     } catch (error: any) {
@@ -331,19 +404,34 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
     setImageAnalysis(null);
     setNewAllergy({ allergyName: '', severity: 'mild', reaction: '', notes: '' });
     setNewSideEffect({ name: '', severity: 'common', description: '' });
+    setShowCommonMedications(false);
+  };
+
+  const selectCommonMedication = (medication: string) => {
+    setFormData(prev => ({ ...prev, medicationName: medication }));
+    setShowCommonMedications(false);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
           <div className="flex items-center space-x-2">
             <Pill className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold">Prescribe Medication</h2>
-            <span className="text-sm text-gray-500">for {patient?.name || 'Patient'}</span>
+            <div>
+              <h2 className="text-lg font-semibold">Prescribe Medication</h2>
+              <p className="text-sm text-gray-500">
+                for <span className="font-medium">{patient?.name || 'Patient'}</span>
+              </p>
+            </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
@@ -351,6 +439,68 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Existing Medications Section */}
+          {existingMedications.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-medium text-blue-900 flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Currently Prescribed Medications ({existingMedications.length})
+                </h3>
+                <button
+                  type="button"
+                  onClick={fetchExistingMedications}
+                  disabled={loadingMedications}
+                  className="text-sm text-blue-700 hover:text-blue-900"
+                >
+                  {loadingMedications ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {existingMedications.map((med, index) => (
+                  <div 
+                    key={med._id || index} 
+                    className={`flex items-center justify-between p-3 rounded ${
+                      med.status === 'active' ? 'bg-white' : 'bg-gray-50'
+                    } border ${med.status === 'active' ? 'border-blue-300' : 'border-gray-300'}`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium ${
+                          med.status === 'active' ? 'text-blue-900' : 'text-gray-600'
+                        }`}>
+                          {med.medicationName}
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          med.status === 'active' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {med.status}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {med.dosage} • {med.frequency}
+                      </p>
+                      {med.startDate && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Started: {formatDate(med.startDate)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 ml-4">
+                      {med.patientAllergies?.length > 0 && (
+                        <span className="text-red-600">
+                          {med.patientAllergies.length} allergy(ies)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Medication Image Upload */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -412,9 +562,38 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
           {/* Basic Medication Info */}
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Medication Name <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  Medication Name <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowCommonMedications(!showCommonMedications)}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  {showCommonMedications ? 'Hide suggestions' : 'Show common medications'}
+                </button>
+              </div>
+              
+              {showCommonMedications && (
+                <div className="mb-3 p-3 bg-gray-50 border border-gray-300 rounded-lg">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Common Medications:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {commonMedications.map((med, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => selectCommonMedication(med.name)}
+                        className="text-xs px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors"
+                      >
+                        {med.name}
+                        <span className="text-xs text-gray-500 ml-1">({med.category})</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <input
                 type="text"
                 required
@@ -423,6 +602,17 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="e.g., Lisinopril 10mg"
               />
+              
+              {/* Duplicate warning */}
+              {formData.medicationName && existingMedications.some(
+                med => med.medicationName.toLowerCase() === formData.medicationName.toLowerCase() && med.status === 'active'
+              ) && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                  <p className="text-xs text-yellow-700">
+                    ⚠️ This patient already has an active prescription for this medication.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -436,7 +626,7 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
                   value={formData.dosage}
                   onChange={(e) => setFormData(prev => ({ ...prev, dosage: e.target.value }))}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., 1 tablet"
+                  placeholder="e.g., 1 tablet, 10mg"
                 />
               </div>
 
@@ -455,7 +645,11 @@ const MedicationPrescriptionModal: React.FC<MedicationPrescriptionModalProps> = 
                   <option value="twice daily">Twice daily</option>
                   <option value="three times daily">Three times daily</option>
                   <option value="four times daily">Four times daily</option>
+                  <option value="every other day">Every other day</option>
+                  <option value="weekly">Weekly</option>
                   <option value="as needed">As needed</option>
+                  <option value="with meals">With meals</option>
+                  <option value="at bedtime">At bedtime</option>
                 </select>
               </div>
             </div>
