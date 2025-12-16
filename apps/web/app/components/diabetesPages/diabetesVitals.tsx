@@ -365,20 +365,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
           </div>
         )}
 
-        {process.env.NODE_ENV === 'development' && (
-          <div className="bg-gray-100 p-3 mb-4 rounded-lg text-xs">
-            <div className="font-bold mb-1">Debug Info:</div>
-            <div>Voice Active: {voiceModeState.active ? 'Yes' : 'No'}</div>
-            <div>Listening: {voiceModeState.listening ? 'Yes' : 'No'}</div>
-            <div>Speaking: {voiceModeState.speaking ? 'Yes' : 'No'}</div>
-            <div>Paused: {voiceModeState.paused ? 'Yes' : 'No'}</div>
-            <div>Current Field: {voiceModeState.currentField || 'None'}</div>
-            <div>Muted: {voiceModeState.muted ? 'Yes' : 'No'}</div>
-            <div>pausedRef.current: {pausedRef.current ? 'Yes' : 'No'}</div>
-            <div>voiceModeActiveRef.current: {voiceModeActiveRef.current ? 'Yes' : 'No'}</div>
-          </div>
-        )}
-
+      
         <VoiceControlPanel
           voiceModeState={voiceModeState}
           currentLanguage={currentLanguage}
