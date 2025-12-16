@@ -1,7 +1,6 @@
 // apps/web/app/components/diabetesPages/utils/voiceUtils.ts
 import { getDisplayValue } from './formUtils';
 
-// Store the current audio element globally to control it
 let currentAudio: HTMLAudioElement | null = null;
 
 export const speak = async (
@@ -12,25 +11,16 @@ export const speak = async (
   pausedRef: React.MutableRefObject<boolean>,
   setState: (speaking: boolean, status: string) => void
 ): Promise<void> => {
-  // Check if paused before starting
-  if (pausedRef.current) {
-    console.log("Cannot speak while paused");
-    return Promise.resolve();
-  }
-  
-  if (isMuted || !voiceModeActiveRef.current) return Promise.resolve();
+  if (pausedRef.current || isMuted || !voiceModeActiveRef.current) return Promise.resolve();
 
-  setState(true, languageValue === "sw" ? "Ninazungumza..." : "Speaking...");
+  setState(true, "");
 
   try {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     const synthesisLang = languageValue === "sw" ? "sw" : "en";
     
-    console.log(`🔊 Speaking: "${text}" (lang: ${synthesisLang})`);
-    
-    // Add timeout to prevent hanging
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     
     const response = await fetch(`${API_URL}/api/python-speech/synthesize`, {
       method: "POST",
@@ -42,7 +32,6 @@ export const speak = async (
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.error("Speech synthesis failed:", response.status);
       setState(false, "");
       return Promise.resolve();
     }
@@ -53,10 +42,8 @@ export const speak = async (
     currentAudio = audio;
 
     return new Promise<void>((resolve) => {
-      // Check for pause during playback
       const checkPauseInterval = setInterval(() => {
         if (pausedRef.current) {
-          console.log("Pause detected during speech, stopping audio");
           audio.pause();
           audio.currentTime = 0;
           clearInterval(checkPauseInterval);
@@ -75,8 +62,7 @@ export const speak = async (
         resolve();
       };
       
-      audio.onerror = (error) => {
-        console.error("Audio playback error:", error);
+      audio.onerror = () => {
         clearInterval(checkPauseInterval);
         URL.revokeObjectURL(audioUrl);
         currentAudio = null;
@@ -84,8 +70,7 @@ export const speak = async (
         resolve();
       };
       
-      audio.play().catch((error) => {
-        console.error("Error playing audio:", error);
+      audio.play().catch(() => {
         clearInterval(checkPauseInterval);
         URL.revokeObjectURL(audioUrl);
         currentAudio = null;
@@ -94,16 +79,13 @@ export const speak = async (
       });
     });
   } catch (error: any) {
-    console.error("TTS Error:", error);
     setState(false, "");
     return Promise.resolve();
   }
 };
 
-// Function to stop any currently playing speech
 export const stopCurrentSpeech = () => {
   if (currentAudio) {
-    console.log("Stopping current speech");
     currentAudio.pause();
     currentAudio.currentTime = 0;
     currentAudio = null;
@@ -155,21 +137,18 @@ export const convertWebmToWav = async (webmBlob: Blob): Promise<Blob> => {
     
     return new Blob([buffer], { type: 'audio/wav' });
   } catch (error) {
-    console.error("Error converting to WAV:", error);
     return webmBlob;
   }
 };
 
 export const parseSpokenInput = (text: string, languageValue: string, fieldType?: 'number' | 'select'): { type: 'number' | 'text' | 'skip' | 'unknown'; value?: number; textValue?: string } => {
   const lowerText = text.toLowerCase().trim();
-  console.log(`DEBUG parseSpokenInput: text="${text}", lowerText="${lowerText}", fieldType=${fieldType}`);
   
   const skipWords = languageValue === "sw" 
     ? ['ruka', 'pass', 'next', 'none', 'sina', 'hapana']
     : ['skip', 'pass', 'next', 'none', "don't know", 'not sure'];
   
   if (skipWords.some(word => lowerText.includes(word))) {
-    console.log(`DEBUG: Matched skip word`);
     return { type: 'skip' };
   }
   
@@ -182,16 +161,13 @@ export const parseSpokenInput = (text: string, languageValue: string, fieldType?
     : ['no', 'wrong', 'incorrect', 'false', 'nope', 'try again'];
   
   if (yesWords.some(word => lowerText.includes(word))) {
-    console.log(`DEBUG: Matched yes word`);
     return { type: 'number', value: 1 };
   }
   if (noWords.some(word => lowerText.includes(word))) {
-    console.log(`DEBUG: Matched no word`);
     return { type: 'number', value: 0 };
   }
 
   if (fieldType === 'select') {
-    console.log(`DEBUG: Select field, returning full text: "${lowerText}"`);
     return { type: 'text', textValue: lowerText };
   }
 
@@ -199,17 +175,14 @@ export const parseSpokenInput = (text: string, languageValue: string, fieldType?
   if (numbers && numbers.length > 0) {
     const number = parseInt(numbers[0], 10);
     if (!isNaN(number) && number > 0) {
-      console.log(`DEBUG: Parsed number: ${number}`);
       return { type: 'number', value: number };
     }
   }
 
   if (lowerText.length > 0) {
-    console.log(`DEBUG: Returning text value: "${lowerText}"`);
     return { type: 'text', textValue: lowerText };
   }
 
-  console.log(`DEBUG: Unknown input`);
   return { type: 'unknown' };
 };
 
@@ -227,7 +200,6 @@ const checkIfClearMatch = (spokenText: string, fieldName: string, currentLanguag
           lowerText.includes(" " + normalizedKeyword) ||
           lowerText.startsWith(normalizedKeyword) ||
           lowerText.endsWith(normalizedKeyword)) {
-        console.log(`DEBUG: Clear match found for "${spokenText}" -> "${option}"`);
         return true;
       }
     }
@@ -237,8 +209,6 @@ const checkIfClearMatch = (spokenText: string, fieldName: string, currentLanguag
 };
 
 export const mapSpokenToOption = (spokenText: string, fieldName: string, currentLanguage: any): string | null => {
-  console.log(`DEBUG mapSpokenToOption: fieldName="${fieldName}", spokenText="${spokenText}"`);
-  
   const keywords = currentLanguage.optionKeywords as any;
   
   let options: {dbValue: string, displayValue: string}[] = [];
@@ -289,6 +259,7 @@ export const mapSpokenToOption = (spokenText: string, fieldName: string, current
   
   const lowerSpoken = spokenText.toLowerCase().trim();
   
+  // Try keyword matching first
   if (keywords && keywords[fieldName]) {
     for (const option of options) {
       if (keywords[fieldName][option.dbValue]) {
@@ -296,7 +267,6 @@ export const mapSpokenToOption = (spokenText: string, fieldName: string, current
           const normalizedKeyword = keyword.toLowerCase().trim();
           
           if (lowerSpoken.includes(normalizedKeyword)) {
-            console.log(`DEBUG: MATCH FOUND! Option: ${option.dbValue}`);
             return option.dbValue;
           }
         }
@@ -304,7 +274,7 @@ export const mapSpokenToOption = (spokenText: string, fieldName: string, current
     }
   }
   
-  // Fallback matching for common patterns
+  // Enhanced fallback matching with more flexible patterns
   if (fieldName === 'context') {
     if (lowerSpoken.includes('fasting') || lowerSpoken.includes('fast') || lowerSpoken.includes('empty')) {
       return 'Fasting';
@@ -314,6 +284,76 @@ export const mapSpokenToOption = (spokenText: string, fieldName: string, current
     }
     if (lowerSpoken.includes('random') || lowerSpoken.includes('anytime')) {
       return 'Random';
+    }
+  }
+  
+  if (fieldName === 'exerciseRecent') {
+    // Match "none" or "no exercise"
+    if (lowerSpoken.includes('none') || lowerSpoken.includes('no exercise') || lowerSpoken.includes('not exercised') || lowerSpoken === 'no') {
+      return 'none';
+    }
+    // Match "within 2 hours" - look for "2" and "hour"
+    if ((lowerSpoken.includes('within') && lowerSpoken.includes('2')) || 
+        (lowerSpoken.includes('2') && lowerSpoken.includes('hour') && !lowerSpoken.includes('6') && !lowerSpoken.includes('24'))) {
+      return 'within_2_hours';
+    }
+    // Match "2 to 6 hours" - look for both "2" and "6"
+    if ((lowerSpoken.includes('2') && lowerSpoken.includes('6')) || 
+        (lowerSpoken.includes('two') && lowerSpoken.includes('six'))) {
+      return '2_to_6_hours';
+    }
+    // Match "6 to 24 hours" - look for "6" and "24" or just "24"
+    if ((lowerSpoken.includes('6') && lowerSpoken.includes('24')) || 
+        lowerSpoken.includes('24') ||
+        (lowerSpoken.includes('six') && lowerSpoken.includes('24')) ||
+        (lowerSpoken.includes('6') && lowerSpoken.includes('hours') && lowerSpoken.includes('ago'))) {
+      return '6_to_24_hours';
+    }
+  }
+  
+  if (fieldName === 'exerciseIntensity') {
+    if (lowerSpoken.includes('light') || lowerSpoken.includes('easy') || lowerSpoken.includes('gentle')) {
+      return 'light';
+    }
+    if (lowerSpoken.includes('moderate') || lowerSpoken.includes('medium') || lowerSpoken.includes('normal')) {
+      return 'moderate';
+    }
+    if (lowerSpoken.includes('vigorous') || lowerSpoken.includes('intense') || lowerSpoken.includes('hard') || lowerSpoken.includes('heavy')) {
+      return 'vigorous';
+    }
+  }
+  
+  if (fieldName === 'lastMealTime') {
+    if (lowerSpoken.includes('2') && lowerSpoken.includes('hour') && !lowerSpoken.includes('4') && !lowerSpoken.includes('6')) {
+      return '2_hours';
+    }
+    if (lowerSpoken.includes('4') && lowerSpoken.includes('hour')) {
+      return '4_hours';
+    }
+    if ((lowerSpoken.includes('6') && lowerSpoken.includes('hour') && !lowerSpoken.includes('more')) ||
+        (lowerSpoken.includes('six') && lowerSpoken.includes('hour') && !lowerSpoken.includes('more'))) {
+      return '6_hours';
+    }
+    if (lowerSpoken.includes('more') || lowerSpoken.includes('over') || lowerSpoken.includes('longer')) {
+      return 'more_than_6_hours';
+    }
+  }
+  
+  if (fieldName === 'mealType') {
+    if (lowerSpoken.includes('carb') || lowerSpoken.includes('rice') || lowerSpoken.includes('bread') || lowerSpoken.includes('pasta') || lowerSpoken.includes('ugali')) {
+      return 'carbohydrates';
+    }
+    if (lowerSpoken.includes('sugar') || lowerSpoken.includes('drink') || lowerSpoken.includes('soda') || lowerSpoken.includes('juice')) {
+      return 'sugary_drinks';
+    }
+    if (lowerSpoken.includes('protein') || lowerSpoken.includes('meat') || lowerSpoken.includes('fish') || lowerSpoken.includes('egg') || lowerSpoken.includes('chicken')) {
+      return 'proteins';
+    }
+    if (lowerSpoken.includes('vegetable') || lowerSpoken.includes('salad') || lowerSpoken.includes('greens')) {
+      return 'vegetables';
+    }
+    if (lowerSpoken.includes('mixed') || lowerSpoken.includes('combination') || lowerSpoken.includes('everything')) {
+      return 'mixed_meal';
     }
   }
   
@@ -330,7 +370,6 @@ export const pauseVoiceMode = (params: {
   isMuted: boolean;
 }) => {
   const {
-    voiceModeActiveRef,
     pausedRef,
     mediaRecorderRef,
     setVoiceModeState,
@@ -339,16 +378,12 @@ export const pauseVoiceMode = (params: {
     isMuted
   } = params;
 
-  console.log("=== PAUSING VOICE MODE ===");
-  
   pausedRef.current = true;
   
   if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
     try {
       mediaRecorderRef.current.stop();
-    } catch (error) {
-      console.log("Error stopping recorder:", error);
-    }
+    } catch (error) {}
   }
   
   stopCurrentSpeech();
@@ -358,17 +393,13 @@ export const pauseVoiceMode = (params: {
     paused: true,
     listening: false,
     speaking: false,
-    status: languageValue === "sw" ? "Imesimamishwa" : "Paused"
+    status: ""
   }));
   
   if (!isMuted) {
     setTimeout(() => {
-      handleSpeak(
-        languageValue === "sw" 
-          ? "Nimesimama." 
-          : "Paused."
-      ).catch(error => console.error("Error speaking pause message:", error));
-    }, 200);
+      handleSpeak(languageValue === "sw" ? "Nimesimama." : "Paused.").catch(() => {});
+    }, 100);
   }
 };
 
@@ -382,45 +413,28 @@ export const resumeVoiceMode = async (params: {
   currentField: string | null;
 }) => {
   const {
-    voiceModeActiveRef,
     pausedRef,
     setVoiceModeState,
     handleSpeak,
     languageValue,
-    isMuted,
-    currentField
+    isMuted
   } = params;
 
-  console.log("=== RESUMING VOICE MODE ===");
-  
   pausedRef.current = false;
   
   setVoiceModeState((prev: any) => ({ 
     ...prev, 
     paused: false,
-    listening: false,
-    speaking: false,
-    status: languageValue === "sw" ? "Inaendelea..." : "Resuming..."
+    status: ""
   }));
   
   if (!isMuted) {
     try {
-      const resumeMsg = languageValue === "sw" ? "Tunaendelea." : "Resuming.";
-      await handleSpeak(resumeMsg);
-    } catch (error) {
-      console.error("Error speaking resume message:", error);
-    }
+      await handleSpeak(languageValue === "sw" ? "Tunaendelea." : "Resuming.");
+    } catch (error) {}
   }
-  
-  setTimeout(() => {
-    setVoiceModeState((prev: any) => ({ 
-      ...prev, 
-      status: ""
-    }));
-  }, 1000);
 };
 
-// ============= ASK CONFIRMATION =============
 export const askConfirmation = async (
   value: string | number, 
   fieldName: string, 
@@ -438,27 +452,27 @@ export const askConfirmation = async (
     : getDisplayValue(fieldName, value as string, currentLanguage);
   
   const question = languageValue === "sw" 
-    ? `${currentLanguage.confirmQuestion} ${displayValue}? Sema 'ndio' au 'hapana'`
-    : `${currentLanguage.confirmQuestion} ${displayValue}? Say 'yes' or 'no'`;
+    ? `${displayValue}?`
+    : `${displayValue}?`;
   
-  console.log(`DEBUG askConfirmation: Asking: "${question}"`);
+  // Wait for confirmation question to finish speaking
   await handleSpeak(question);
+  
+  // Small delay to ensure speech completes
+  await new Promise(resolve => setTimeout(resolve, 300));
   
   return new Promise(async (resolve) => {
     try {
-      // Check pause status before starting
       while (pausedRef.current && voiceModeActiveRef.current) {
-        console.log(`DEBUG: Voice mode paused during confirmation, waiting...`);
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
       
       if (!voiceModeActiveRef.current) {
-        console.log(`DEBUG: Voice mode cancelled during confirmation`);
         resolve(false);
         return;
       }
       
-      setVoiceModeState((prev: any) => ({ ...prev, listening: true, status: languageValue === "sw" ? "Ninasikiliza uthibitisho..." : "Listening for confirmation..." }));
+      setVoiceModeState((prev: any) => ({ ...prev, listening: true, status: languageValue === "sw" ? "Sema ndio au hapana" : "Say yes or no" }));
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { 
@@ -480,7 +494,6 @@ export const askConfirmation = async (
         stream.getTracks().forEach(track => track.stop());
         
         if (audioChunks.length === 0 || !voiceModeActiveRef.current) {
-          console.log(`DEBUG: No audio chunks or voice mode cancelled`);
           setVoiceModeState((prev: any) => ({ ...prev, listening: false, status: "" }));
           resolve(false);
           return;
@@ -495,28 +508,23 @@ export const askConfirmation = async (
           formData.append("audio", wavBlob, "recording.wav");
           formData.append("language", languageValue);
 
-          console.log(`DEBUG: Sending confirmation audio to transcription API, size: ${wavBlob.size} bytes`);
           const response = await fetch(`${API_URL}/api/python-speech/transcribe`, {
             method: "POST",
             body: formData,
-            signal: AbortSignal.timeout(10000)
+            signal: AbortSignal.timeout(8000)
           });
 
           if (!response.ok) {
-            console.error(`DEBUG: Confirmation API error: HTTP ${response.status}`);
             setVoiceModeState((prev: any) => ({ ...prev, listening: false, status: "" }));
-            resolve(true); // Auto-confirm on API error
+            resolve(true);
             return;
           }
 
           const data = await response.json();
-          console.log(`DEBUG: Confirmation transcription result:`, data);
-          
           setVoiceModeState((prev: any) => ({ ...prev, listening: false, status: "" }));
 
           if (data.success && data.text) {
             const parsed = parseSpokenInput(data.text, languageValue, 'select');
-            console.log(`DEBUG: Confirmation parsed input:`, parsed);
             if (parsed.type === 'number') {
               resolve(parsed.value === 1);
             } else if (parsed.type === 'text') {
@@ -539,13 +547,11 @@ export const askConfirmation = async (
               resolve(false);
             }
           } else {
-            console.log(`DEBUG: Confirmation failed - no text in response`);
-            resolve(true); // Auto-confirm
+            resolve(true);
           }
         } catch (error: any) {
-          console.error("Confirmation error:", error);
           setVoiceModeState((prev: any) => ({ ...prev, listening: false, status: "" }));
-          resolve(true); // Auto-confirm on error
+          resolve(true);
         }
       };
 
@@ -553,20 +559,17 @@ export const askConfirmation = async (
       
       setTimeout(() => {
         if (mediaRecorder.state === "recording") {
-          console.log(`DEBUG: Confirmation recording timeout`);
           mediaRecorder.stop();
         }
-      }, 5000);
+      }, 3000); // Reduced from 5s to 3s
 
     } catch (error) {
-      console.error("Confirmation setup error:", error);
       setVoiceModeState((prev: any) => ({ ...prev, listening: false, status: "" }));
       resolve(false);
     }
   });
 };
 
-// ============= LISTEN FOR FIELD =============
 export const listenForField = async (
   fieldName: string,
   fieldLabel: string,
@@ -585,16 +588,12 @@ export const listenForField = async (
   handleSpeak: (text: string) => Promise<void>,
   isRequired: boolean
 ): Promise<string | number | 'skip' | null> => {
-  console.log(`DEBUG listenForField: Starting for field "${fieldName}" (${fieldLabel}), required: ${isRequired}`);
   
-  // Check if paused before starting
   while (pausedRef.current && voiceModeActiveRef.current) {
-    console.log(`DEBUG: Voice mode paused, waiting...`);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 300));
   }
   
   if (isProcessingRef.current || !voiceModeActiveRef.current) {
-    console.log(`DEBUG: Already processing or voice mode not active`);
     return null;
   }
 
@@ -607,43 +606,38 @@ export const listenForField = async (
   const fieldInstructionKey = fieldName as keyof typeof currentLanguage.fieldInstructions;
   const instruction = currentLanguage.fieldInstructions[fieldInstructionKey];
   
-  const requiredNote = isRequired ? 
-    (languageValue === "sw" ? " (Sehemu hii ni muhimu)" : " (This field is required)") : 
-    "";
-  
   let finalInstruction = instruction;
   if (isRequired) {
     finalInstruction = languageValue === "sw" 
-      ? `Sehemu hii ni muhimu. ${instruction.replace("Sema 'ruka'", "Haiwezi kurukwa")}`
-      : `This field is required. ${instruction.replace("Say 'skip'", "Cannot be skipped")}`;
-  } else {
-    finalInstruction = languageValue === "sw"
-      ? `${instruction} Unaweza kusema 'ruka' kama huna kipimo hiki.`
-      : `${instruction} You can say 'skip' if you don't have this measurement.`;
+      ? `${instruction.replace("Sema 'ruka'", "")}`
+      : `${instruction.replace("Say 'skip'", "")}`;
   }
   
-  const announcement = `${fieldLabel}${requiredNote}. ${finalInstruction}`;
-  console.log(`DEBUG: Speaking announcement: "${announcement}"`);
+  const announcement = `${fieldLabel}. ${finalInstruction}`;
+  
+  // IMPORTANT: Wait for speech to complete BEFORE starting recording
   await handleSpeak(announcement);
+  
+  // Add small delay to ensure speech has finished
+  await new Promise(resolve => setTimeout(resolve, 500));
 
-  // Check pause status after speaking
   while (pausedRef.current && voiceModeActiveRef.current) {
-    console.log(`DEBUG: Voice mode paused after announcement, waiting...`);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 300));
   }
 
   if (!voiceModeActiveRef.current) {
-    console.log(`DEBUG: Voice mode cancelled during speaking`);
     return null;
   }
 
   return new Promise(async (resolve) => {
     try {
       isProcessingRef.current = true;
+      
+      // Start listening AFTER speech is done
       setVoiceModeState((prev: any) => ({ 
         ...prev, 
         listening: true, 
-        status: languageValue === "sw" ? "Ninasikiliza sasa... Tafadhali zungumza." : "Listening now... Please speak." 
+        status: languageValue === "sw" ? "Zungumza sasa" : "Speak now" 
       }));
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -667,7 +661,6 @@ export const listenForField = async (
         stream.getTracks().forEach(track => track.stop());
         
         if (audioChunks.length === 0 || !voiceModeActiveRef.current) {
-          console.log(`DEBUG: No audio chunks or voice mode cancelled`);
           setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
           isProcessingRef.current = false;
           resolve(null);
@@ -675,7 +668,6 @@ export const listenForField = async (
         }
 
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        console.log(`DEBUG: Audio recorded, size: ${audioBlob.size} bytes`);
 
         try {
           const wavBlob = await convertWebmToWav(audioBlob);
@@ -684,49 +676,36 @@ export const listenForField = async (
           formData.append("audio", wavBlob, "recording.wav");
           formData.append("language", languageValue);
 
-          console.log(`DEBUG: Sending to transcription API`);
           const response = await fetch(`${API_URL}/api/python-speech/transcribe`, {
             method: "POST",
             body: formData,
-            signal: AbortSignal.timeout(15000)
+            signal: AbortSignal.timeout(10000)
           });
 
           if (!response.ok) {
-            console.error(`DEBUG: Transcription API error: HTTP ${response.status}`);
             setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
             isProcessingRef.current = false;
-            const errorMsg = languageValue === "sw"
-              ? "Kumetokea hitilafu. Tafadhali jaribu tena."
-              : "An error occurred. Please try again.";
-            await handleSpeak(errorMsg);
+            await handleSpeak(languageValue === "sw" ? "Jaribu tena." : "Try again.");
             resolve(null);
             return;
           }
 
           const data = await response.json();
-          console.log(`DEBUG: Transcription response:`, data);
           
           setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
           isProcessingRef.current = false;
 
           if (data.success && data.text) {
             const parsed = parseSpokenInput(data.text, languageValue, fieldType);
-            console.log(`DEBUG: Parsed input:`, parsed);
             
             if (parsed.type === 'skip') {
               if (isRequired) {
-                const requiredMsg = languageValue === "sw"
-                  ? "Sehemu hii ni muhimu na haiwezi kurukwa. Tafadhali jaribu tena."
-                  : "This field is required and cannot be skipped. Please try again.";
-                console.log(`DEBUG: Required field attempted to skip`);
-                await handleSpeak(requiredMsg);
+                await handleSpeak(languageValue === "sw" ? "Muhimu. Jaribu tena." : "Required. Try again.");
                 resolve(null);
               } else {
-                console.log(`DEBUG: Skipping optional field`);
                 resolve('skip');
               }
             } else if (parsed.type === 'number' && parsed.value !== undefined) {
-              console.log(`DEBUG: Got number value: ${parsed.value}`);
               if (fieldType === 'number' && min !== undefined && max !== undefined) {
                 if (parsed.value >= min && parsed.value <= max) {
                   const confirmed = await askConfirmation(
@@ -742,38 +721,29 @@ export const listenForField = async (
                     pausedRef
                   );
                   if (confirmed) {
-                    console.log(`DEBUG: Confirmed number value: ${parsed.value}`);
                     resolve(parsed.value);
                   } else {
-                    console.log(`DEBUG: Number confirmation failed`);
                     resolve(null);
                   }
                 } else {
-                  const rangeMsg = languageValue === "sw"
-                    ? `Thamani ${parsed.value} iko nje ya anuwai. Inapaswa kuwa kati ya ${min} na ${max}. Jaribu tena.`
-                    : `Value ${parsed.value} is out of range. Should be between ${min} and ${max}. Please try again.`;
-                  console.log(`DEBUG: Value out of range: ${parsed.value} not in [${min}, ${max}]`);
-                  await handleSpeak(rangeMsg);
+                  await handleSpeak(languageValue === "sw" 
+                    ? `${min} hadi ${max}. Jaribu tena.`
+                    : `${min} to ${max}. Try again.`);
                   resolve(null);
                 }
               } else {
-                console.log(`DEBUG: Field type mismatch or no min/max defined`);
                 resolve(null);
               }
             } else if (parsed.type === 'text' && parsed.textValue && fieldType === 'select') {
-              console.log(`DEBUG: Got text value: "${parsed.textValue}" for select field ${fieldName}`);
               const mappedValue = mapSpokenToOption(parsed.textValue, fieldName, currentLanguage);
-              console.log(`DEBUG: Mapped "${parsed.textValue}" to: ${mappedValue}`);
               
               if (mappedValue) {
                 const isClearMatch = checkIfClearMatch(parsed.textValue, fieldName, currentLanguage);
                 
                 if (isClearMatch) {
-                  console.log(`DEBUG: Clear match detected, skipping confirmation`);
                   resolve(mappedValue);
                 } else {
                   const displayValue = getDisplayValue(fieldName, mappedValue, currentLanguage);
-                  console.log(`DEBUG: Display value for ${mappedValue}: ${displayValue}`);
                   const confirmed = await askConfirmation(
                     displayValue, 
                     fieldName, 
@@ -787,69 +757,40 @@ export const listenForField = async (
                     pausedRef
                   );
                   if (confirmed) {
-                    console.log(`DEBUG: Confirmed mapped value: ${mappedValue}`);
                     resolve(mappedValue);
                   } else {
-                    console.log(`DEBUG: Mapped value confirmation failed`);
                     resolve(null);
                   }
                 }
               } else {
-                const optionsMsg = isRequired
-                  ? (languageValue === "sw"
-                    ? "Sikuelewa. Tafadhali jaribu tena."
-                    : "I didn't understand. Please try again.")
-                  : (languageValue === "sw"
-                    ? "Sikuelewa. Tafadhali jaribu tena au sema 'ruka'."
-                    : "I didn't understand. Please try again or say 'skip'.");
-                console.log(`DEBUG: Could not map text to option`);
-                await handleSpeak(optionsMsg);
+                await handleSpeak(languageValue === "sw" ? "Jaribu tena." : "Try again.");
                 resolve(null);
               }
             } else {
-              const retryMsg = isRequired
-                ? (languageValue === "sw"
-                  ? "Sikukusikia vizuri. Tafadhali jaribu tena."
-                  : "I didn't hear you clearly. Please try again.")
-                : (languageValue === "sw"
-                  ? "Sikukusikia vizuri. Tafadhali jaribu tena au sema 'ruka'."
-                  : "I didn't hear you clearly. Please try again or say 'skip'.");
-              console.log(`DEBUG: Could not understand input`);
-              await handleSpeak(retryMsg);
+              await handleSpeak(languageValue === "sw" ? "Jaribu tena." : "Try again.");
               resolve(null);
             }
           } else {
-            const errorMsg = languageValue === "sw"
-              ? "Kumetokea hitilafu. Tafadhali jaribu tena."
-              : "An error occurred. Please try again.";
-            console.log(`DEBUG: Transcription failed`);
-            await handleSpeak(errorMsg);
+            await handleSpeak(languageValue === "sw" ? "Jaribu tena." : "Try again.");
             resolve(null);
           }
         } catch (error: any) {
-          console.error("STT Error:", error);
           setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
           isProcessingRef.current = false;
-          const errorMsg = languageValue === "sw"
-            ? "Hitilafu ya kiufundi. Tafadhali jaribu tena."
-            : "Technical error. Please try again.";
-          await handleSpeak(errorMsg);
+          await handleSpeak(languageValue === "sw" ? "Hitilafu. Jaribu tena." : "Error. Try again.");
           resolve(null);
         }
       };
 
       mediaRecorder.start();
-      console.log(`DEBUG: Started recording for field "${fieldName}"`);
       
       setTimeout(() => {
         if (mediaRecorder.state === "recording" && voiceModeActiveRef.current) {
-          console.log(`DEBUG: Recording timeout for field "${fieldName}"`);
           mediaRecorder.stop();
         }
-      }, 7000);
+      }, 3000); // Reduced from 7s to 3s
 
     } catch (error) {
-      console.error("Listen Error:", error);
       setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
       isProcessingRef.current = false;
       resolve(null);
@@ -857,7 +798,6 @@ export const listenForField = async (
   });
 };
 
-// ============= START VOICE MODE =============
 export const startVoiceMode = async (params: {
   languageValue: string;
   currentLanguage: any;
@@ -891,16 +831,17 @@ export const startVoiceMode = async (params: {
     fieldRefs
   } = params;
 
-  console.log("=== STARTING VOICE MODE ===");
   setVoiceModeState((prev: any) => ({ ...prev, active: true }));
   voiceModeActiveRef.current = true;
   pausedRef.current = false;
   
   const welcome = languageValue === "sw"
-    ? "Karibu. Nitakusaidia kuweka vipimo vyako vya kiafya. Sehemu muhimu zisizoweza kurukwa zitahitaji thamani halisi. Sehemu za hiari zinaweza kurukwa kwa kusema 'ruka'. Tutaanza na sukari ya damu."
-    : "Welcome. I will help you enter your health measurements. Required fields cannot be skipped and need actual values. Optional fields can be skipped by saying 'skip'. Let's start with blood glucose.";
+    ? "Karibu. Tutaanza na sukari ya damu."
+    : "Welcome. Let's start with blood glucose.";
   
+  // Ensure welcome message completes before starting
   await handleSpeak(welcome);
+  await new Promise(resolve => setTimeout(resolve, 500));
   
   const allFields = [
     { 
@@ -972,53 +913,32 @@ export const startVoiceMode = async (params: {
   ];
 
   for (const field of allFields) {
-    // Check if voice mode is still active
-    if (!voiceModeActiveRef.current) {
-      console.log("Voice mode cancelled, breaking loop");
-      break;
-    }
+    if (!voiceModeActiveRef.current) break;
     
-    // Wait while paused
     while (pausedRef.current && voiceModeActiveRef.current) {
-      console.log(`Voice mode paused at field: ${field.name}`);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
     
-    // Check again after pause
-    if (!voiceModeActiveRef.current) {
-      console.log("Voice mode cancelled during pause, breaking loop");
-      break;
-    }
+    if (!voiceModeActiveRef.current) break;
 
     if (field.dependsOn && field.dependsValue) {
       const dependentValue = getValues(field.dependsOn);
-      console.log(`Checking dependency: ${field.name} depends on ${field.dependsOn}=${dependentValue}, needs ${field.dependsValue}`);
       if (dependentValue !== field.dependsValue) {
-        console.log(`Skipping ${field.name} because ${field.dependsOn} is ${dependentValue}`);
         continue;
       }
     }
 
     let validInput = false;
     let attempts = 0;
-    const maxAttempts = field.required ? 5 : 2;
+    const maxAttempts = field.required ? 3 : 2; // Reduced from 5/2 to 3/2
     
     while (!validInput && attempts < maxAttempts && voiceModeActiveRef.current) {
-      // Wait while paused
       while (pausedRef.current && voiceModeActiveRef.current) {
-        console.log(`Voice mode paused during field attempt: ${field.name}`);
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
       
-      // Check again after pause
-      if (!voiceModeActiveRef.current) {
-        console.log("Voice mode cancelled during pause, breaking attempt loop");
-        break;
-      }
+      if (!voiceModeActiveRef.current) break;
       
-      console.log(`Listening for ${field.name}, attempt ${attempts + 1}, required: ${field.required}`);
-      
-      // Call listenForField with individual parameters
       const result = await listenForField(
         field.name, 
         field.label, 
@@ -1038,98 +958,50 @@ export const startVoiceMode = async (params: {
         field.required
       );
       
-      if (!voiceModeActiveRef.current) {
-        console.log("Voice mode cancelled during listening");
-        break;
-      }
+      if (!voiceModeActiveRef.current) break;
       
       if (result === null) {
-        console.log("No input received");
-        if (!voiceModeState.muted && voiceModeActiveRef.current) {
-          if (field.required) {
-            const requiredMsg = languageValue === "sw"
-              ? `Sehemu hii ni muhimu. Jaribu la ${attempts + 1} kati ya ${maxAttempts}.`
-              : `This field is required. Attempt ${attempts + 1} of ${maxAttempts}.`;
-            await handleSpeak(requiredMsg);
-          } else {
-            await handleSpeak(languageValue === "sw" 
-              ? "Sikukusikia. Tafadhali jaribu tena." 
-              : "I didn't hear you. Please try again."
-            );
-          }
-        }
         attempts++;
         continue;
       }
 
       if (result === 'skip') {
         if (!field.required) {
-          console.log(`User skipped optional field: ${field.name}`);
-          const skipMsg = languageValue === "sw"
-            ? "Kumekwisha ruka."
-            : "Skipped.";
-          
-          toast.success(`⏭️ ${field.label}: ${currentLanguage.skip}`, { duration: 3000 });
-          
-          if (!voiceModeState.muted && voiceModeActiveRef.current) {
-            await handleSpeak(skipMsg);
-          }
-          
+          toast.success(`⏭️ ${field.label}: ${currentLanguage.skip}`, { duration: 2000 });
           validInput = true;
           break;
         } else {
-          console.log(`Required field attempted to be skipped: ${field.name}`);
-          const requiredMsg = languageValue === "sw"
-            ? "Sehemu hii ni muhimu na haiwezi kurukwa. Tafadhali jaribu tena."
-            : "This field is required and cannot be skipped. Please try again.";
-          
-          if (!voiceModeState.muted && voiceModeActiveRef.current) {
-            await handleSpeak(requiredMsg);
-          }
-          
           attempts++;
           continue;
         }
       }
 
-      console.log(`Setting value for ${field.name} to:`, result);
       setValue(field.name, result as any);
       
       const displayValue = typeof result === 'number' 
         ? result 
         : getDisplayValue(field.name, result as string, currentLanguage);
       
-      const successMsg = languageValue === "sw"
-        ? `Imewekwa ${displayValue}`
-        : `Set to ${displayValue}`;
-      
-      toast.success(`✅ ${field.label}: ${displayValue}`, { duration: 3000 });
+      toast.success(`✅ ${field.label}: ${displayValue}`, { duration: 2000 });
       
       if (!voiceModeState.muted && voiceModeActiveRef.current) {
-        await handleSpeak(successMsg);
+        await handleSpeak(languageValue === "sw" ? `${displayValue}` : `${displayValue}`);
       }
       
       validInput = true;
     }
     
     if (!validInput && voiceModeActiveRef.current) {
-      console.log(`Failed to get input for ${field.name} after ${maxAttempts} attempts`);
       if (field.required) {
         const manualMsg = languageValue === "sw"
-          ? `Haiwezekani kukusikia kwa ${field.label}. Tafadhali weka ${field.label} mwenyewe kwenye fomu kabla ya kuwasilisha.`
-          : `Could not hear your ${field.label}. Please enter ${field.label} manually in the form before submitting.`;
+          ? `Weka ${field.label} mwenyewe.`
+          : `Enter ${field.label} manually.`;
         
-        toast.error(`❌ ${manualMsg}`, { duration: 5000 });
+        toast.error(`❌ ${manualMsg}`, { duration: 4000 });
         
         if (!voiceModeState.muted) {
           await handleSpeak(manualMsg);
         }
-        
-        const stopMsg = languageValue === "sw"
-          ? "Nitaacha hali ya sauti. Tafadhali tumia fomu mwenyewe."
-          : "I will stop voice mode. Please use the form directly.";
-        
-        await handleSpeak(stopMsg);
         
         setVoiceModeState((prev: any) => ({ 
           ...prev, 
@@ -1142,30 +1014,21 @@ export const startVoiceMode = async (params: {
         voiceModeActiveRef.current = false;
         pausedRef.current = false;
         return;
-      } else {
-        const moveOnMsg = languageValue === "sw"
-          ? "Tutaenda kwenye kipimo kifuatacho."
-          : "Let's move to the next measurement.";
-        
-        if (!voiceModeState.muted) {
-          await handleSpeak(moveOnMsg);
-        }
       }
     }
 
     if (voiceModeActiveRef.current) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500)); // Reduced from 1000ms to 500ms
     }
   }
 
   if (voiceModeActiveRef.current) {
-    console.log("Voice mode completed successfully");
     const complete = languageValue === "sw"
-      ? "Asante! Vipimo vyote vimekamilika. Sasa unaweza kuchagua kupata uchambuzi wa AI na kisha kubonyeza 'Wasilisha Viwango vya Kiafya'."
-      : "Thank you! All measurements complete. You can now choose to get AI insights and then click 'Submit Vitals'.";
+      ? "Asante! Vimekamilika."
+      : "Thank you! Complete.";
     
     await handleSpeak(complete);
-    toast.success(currentLanguage.voiceComplete, { duration: 5000 });
+    toast.success(currentLanguage.voiceComplete, { duration: 3000 });
   }
   
   setVoiceModeState((prev: any) => ({ 
@@ -1181,7 +1044,6 @@ export const startVoiceMode = async (params: {
   pausedRef.current = false;
 };
 
-// ============= STOP VOICE MODE =============
 export const stopVoiceMode = (params: {
   voiceModeActiveRef: React.MutableRefObject<boolean>;
   pausedRef: React.MutableRefObject<boolean>;
@@ -1201,17 +1063,12 @@ export const stopVoiceMode = (params: {
     isMuted
   } = params;
 
-  console.log("=== STOPPING VOICE MODE ===");
-  
-  // Stop any current speech
   stopCurrentSpeech();
   
   if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
     try {
       mediaRecorderRef.current.stop();
-    } catch (error) {
-      console.log("Error stopping recorder:", error);
-    }
+    } catch (error) {}
   }
   
   voiceModeActiveRef.current = false;
@@ -1228,8 +1085,6 @@ export const stopVoiceMode = (params: {
   });
   
   if (!isMuted) {
-    handleSpeak(currentLanguage.voiceCancelled).catch(error => 
-      console.error("Error speaking stop message:", error)
-    );
+    handleSpeak(currentLanguage.voiceCancelled).catch(() => {});
   }
 };
