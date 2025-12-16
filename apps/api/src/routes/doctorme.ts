@@ -1,64 +1,327 @@
-// routes/doctorMe.ts
-import express, { Request, Response } from "express";
+import express from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/user";
 import { connectMongoDB } from "../lib/mongodb";
 
 const router = express.Router();
 
-router.get("/", async (req: Request, res: Response) => {
+// Authentication middleware
+const authenticateUser = (req: any, res: any, next: any) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      res.status(401).json({ message: "No token provided" });
-      return;
+    const token = req.header("Authorization")?.replace("Bearer ", "") || req.body.token;
+
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
     }
 
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "your-default-secret"
-    ) as { userId: string };
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET || "your-default-secret");
+    req.userId = decoded.userId;
+    req.userEmail = decoded.email;
+    req.userRole = decoded.role;
+
+    console.log("✅ Authenticated user:", decoded.userId, "Role:", decoded.role);
+    next();
+  } catch (error) {
+    console.error("❌ Token verification failed:", error);
+    return res.status(401).json({ message: "Invalid token" });
+  }
+};
+
+// GET /api/doctor/pending-requests - Get all pending requests for this doctor
+router.get("/pending-requests", authenticateUser, async (req: any, res: any) => {
+  try {
+    const doctorId = req.userId;
+
+    if (req.userRole !== 'doctor') {
+      return res.status(403).json({ message: "Only doctors can access this endpoint" });
+    }
+
+    console.log("=== FETCHING PENDING REQUESTS ===");
+    console.log("Doctor ID:", doctorId);
 
     await connectMongoDB();
-    
-    // Find user and ensure they are a doctor
-    const user = await User.findById(decoded.userId);
 
-    if (!user) {
-      res.status(404).json({ message: "User not found" });
-      return;
+    // Find the doctor
+    const doctor = await User.findById(doctorId);
+
+    if (!doctor || doctor.role !== 'doctor') {
+      return res.status(404).json({ message: "Doctor not found" });
     }
 
-    // Check if user is a doctor
-    if (user.role !== "doctor") {
-      res.status(403).json({ message: "Access denied. User is not a doctor." });
-      return;
-    }
+    console.log("Doctor pendingRequests:", doctor.pendingRequests);
 
-    // Return comprehensive doctor data
-    const doctorData = {
-      _id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      role: user.role,
-      specialization: user.specialization,
-      licenseNumber: user.licenseNumber,
-      hospital: user.hospital,
-      diabetes: user.diabetes,
-      hypertension: user.hypertension,
-      conditions: user.conditions,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt
-    };
+    // Get pending requests that have status 'pending'
+    const pendingRequests = (doctor.pendingRequests || [])
+      .filter((request: any) => request.status === 'pending')
+      .map((request: any) => ({
+        _id: request._id,
+        patientId: request.patientId,
+        patientName: request.patientName,
+        requestedAt: request.requestedAt,
+        status: request.status
+      }));
 
-    res.json({ doctor: doctorData });
-  } catch (error) {
-    console.error("Fetch doctor error:", error);
-    res.status(500).json({ message: "Server error" });
+    console.log(`✅ Found ${pendingRequests.length} pending requests for doctor ${doctorId}`);
+
+    res.status(200).json({
+      success: true,
+      pendingRequests: pendingRequests
+    });
+
+  } catch (error: any) {
+    console.error('Error fetching pending requests:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message 
+    });
   }
 });
+
+// POST /api/doctor/accept-request - Accept a patient request
+router.post("/accept-request", authenticateUser, async (req: any, res: any) => {
+  try {
+    const doctorId = req.userId;
+    const { patientId } = req.body;
+
+    if (req.userRole !== 'doctor') {
+      return res.status(403).json({ message: "Only doctors can accept requests" });
+    }
+
+    if (!patientId) {
+      return res.status(400).json({ message: "Patient ID is required" });
+    }
+
+    console.log("=== ACCEPTING PATIENT REQUEST ===");
+    console.log("Doctor ID:", doctorId);
+    console.log("Patient ID:", patientId);
+
+    await connectMongoDB();
+
+    // Find both doctor and patient
+    const doctor = await User.findById(doctorId);
+    const patient = await User.findById(patientId);
+
+    if (!doctor || doctor.role !== 'doctor') {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    if (!patient || patient.role !== 'patient') {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Check if patient is in pending requests
+    const pendingRequest = doctor.pendingRequests?.find((req: any) => 
+      req.patientId.toString() === patientId.toString() && req.status === 'pending'
+    );
+
+    if (!pendingRequest) {
+      return res.status(400).json({ 
+        message: "No pending request found from this patient" 
+      });
+    }
+
+    // Update the request status to 'accepted'
+    const requestIndex = doctor.pendingRequests?.findIndex((req: any) => 
+      req.patientId.toString() === patientId.toString()
+    );
+
+    if (requestIndex !== -1 && doctor.pendingRequests) {
+      doctor.pendingRequests[requestIndex].status = 'accepted';
+    }
+
+    // Add patient to assignedPatients
+    if (!doctor.assignedPatients) {
+      doctor.assignedPatients = [];
+    }
+    
+    // Only add if not already assigned
+    if (!doctor.assignedPatients.some((id: any) => id.toString() === patientId.toString())) {
+      doctor.assignedPatients.push(patientId);
+    }
+
+    await doctor.save();
+
+    // Update patient: set assignedDoctor and remove from requestedDoctors
+    patient.assignedDoctor = doctorId;
+    
+    // Remove this doctor from patient's requestedDoctors
+    if (patient.requestedDoctors) {
+      patient.requestedDoctors = patient.requestedDoctors.filter(
+        (docId: any) => docId.toString() !== doctorId.toString()
+      );
+    }
+
+    await patient.save();
+
+    console.log("✅ Successfully accepted patient request");
+    console.log(`Doctor ${doctorId} now has patient ${patientId} assigned`);
+
+    res.status(200).json({
+      success: true,
+      message: "Patient request accepted successfully",
+      doctor: {
+        id: doctor._id,
+        assignedPatientsCount: doctor.assignedPatients.length
+      },
+      patient: {
+        id: patient._id,
+        fullName: patient.fullName || `${patient.firstName} ${patient.lastName}`,
+        assignedDoctor: patient.assignedDoctor
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error accepting request:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message 
+    });
+  }
+});
+
+// POST /api/doctor/reject-request - Reject a patient request
+router.post("/reject-request", authenticateUser, async (req: any, res: any) => {
+  try {
+    const doctorId = req.userId;
+    const { patientId } = req.body;
+
+    if (req.userRole !== 'doctor') {
+      return res.status(403).json({ message: "Only doctors can reject requests" });
+    }
+
+    if (!patientId) {
+      return res.status(400).json({ message: "Patient ID is required" });
+    }
+
+    console.log("=== REJECTING PATIENT REQUEST ===");
+    console.log("Doctor ID:", doctorId);
+    console.log("Patient ID:", patientId);
+
+    await connectMongoDB();
+
+    // Find doctor
+    const doctor = await User.findById(doctorId);
+
+    if (!doctor || doctor.role !== 'doctor') {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    // Update the request status to 'rejected'
+    const requestIndex = doctor.pendingRequests?.findIndex((req: any) => 
+      req.patientId.toString() === patientId.toString() && req.status === 'pending'
+    );
+
+    if (requestIndex !== -1 && doctor.pendingRequests) {
+      doctor.pendingRequests[requestIndex].status = 'rejected';
+      await doctor.save();
+    }
+
+    console.log("✅ Successfully rejected patient request");
+
+    res.status(200).json({
+      success: true,
+      message: "Patient request rejected"
+    });
+
+  } catch (error: any) {
+    console.error('Error rejecting request:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message 
+    });
+  }
+});
+
+// GET /api/doctor/assigned-patients - Get all assigned patients for this doctor
+router.get("/assigned-patients", authenticateUser, async (req: any, res: any) => {
+  try {
+    const doctorId = req.userId;
+
+    if (req.userRole !== 'doctor') {
+      return res.status(403).json({ message: "Only doctors can access this endpoint" });
+    }
+
+    console.log("=== FETCHING ASSIGNED PATIENTS ===");
+    console.log("Doctor ID:", doctorId);
+
+    await connectMongoDB();
+
+    // Find the doctor WITHOUT populating assignedPatients
+    const doctor = await User.findById(doctorId);
+
+    if (!doctor || doctor.role !== 'doctor') {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    // Get patient IDs from assignedPatients
+    const patientIds = doctor.assignedPatients || [];
+
+    if (patientIds.length === 0) {
+      console.log(`✅ Doctor ${doctorId} has no assigned patients`);
+      return res.status(200).json([]);
+    }
+
+    // Fetch patient details separately
+    const patients = await User.find({
+      _id: { $in: patientIds },
+      role: 'patient'
+    }).select('firstName lastName email gender dob phoneNumber hypertension diabetes cardiovascular selectedDiseases fullName age weight height allergies surgeries conditions updatedAt');
+
+    // Format assigned patients
+    const assignedPatients = patients.map((patient: any) => ({
+      id: patient._id.toString(),
+      fullName: patient.fullName || `${patient.firstName} ${patient.lastName}`,
+      age: patient.age || calculateAge(patient.dob),
+      gender: patient.gender || 'Not specified',
+      condition: getPatientCondition(patient),
+      lastVisit: patient.updatedAt || new Date().toISOString(),
+      status: determinePatientStatus(patient),
+      phoneNumber: patient.phoneNumber,
+      email: patient.email
+    }));
+
+    // console.log(`✅ Found ${assignedPatients.length} assigned patients for doctor ${doctorId}`);
+
+    // res.status(200).json(assignedPatients);
+
+  } catch (error: any) {
+    console.error('Error fetching assigned patients:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message 
+    });
+  }
+});
+
+// Helper function to calculate age from date of birth
+function calculateAge(dob: Date | string | undefined): number {
+  if (!dob) return 0;
+  
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
+}
+
+// Helper function to determine patient condition
+function getPatientCondition(patient: any): "hypertension" | "diabetes" | "both" {
+  if (patient.hypertension && patient.diabetes) return "both";
+  if (patient.hypertension) return "hypertension";
+  if (patient.diabetes) return "diabetes";
+  return "hypertension"; // default
+}
+
+// Helper function to determine patient status based on recent vitals
+function determinePatientStatus(patient: any): 'stable' | 'warning' | 'critical' {
+  // This is a simplified status determination
+  // In production, you'd check recent vitals from the database
+  return 'stable';
+}
 
 export default router;
