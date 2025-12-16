@@ -46,6 +46,38 @@ const isValidSummary = (summary: string | undefined): boolean => {
   );
 };
 
+// ✅ HELPER FUNCTION TO GET PATIENT NAME
+const getPatientName = (patient: any): string => {
+  if (!patient) return "Patient";
+  
+  // Try fullName first
+  if (patient.fullName && patient.fullName.trim() !== "") {
+    return patient.fullName.trim();
+  }
+  
+  // Try firstname + lastname
+  if (patient.firstname && patient.lastname) {
+    return `${patient.firstname.trim()} ${patient.lastname.trim()}`.trim();
+  }
+  
+  // Try firstName + lastName (User model format)
+  if (patient.firstName && patient.lastName) {
+    return `${patient.firstName.trim()} ${patient.lastName.trim()}`.trim();
+  }
+  
+  // Try just firstname
+  if (patient.firstname) {
+    return patient.firstname.trim();
+  }
+  
+  // Try just firstName
+  if (patient.firstName) {
+    return patient.firstName.trim();
+  }
+  
+  return "Patient";
+};
+
 // ✅ MAIN ENDPOINT: GET /api/diabetesAi/summary/:id
 router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
   const startTime = Date.now();
@@ -77,7 +109,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     }
 
     console.log(`📊 Vitals found - Glucose: ${vitals.glucose} mg/dL (${vitals.context})`);
-    console.log(`🌐 Language preference: ${vitals.language || 'en'}`); // ✅ Log the language
+    console.log(`🌐 Language preference: ${vitals.language || 'en'}`);
     console.log(`💓 Additional data - BP: ${vitals.systolic || 'N/A'}/${vitals.diastolic || 'N/A'}, HR: ${vitals.heartRate || 'N/A'}`);
     console.log(`🏃 Exercise: ${vitals.exerciseRecent || 'N/A'} (${vitals.exerciseIntensity || 'N/A'})`);
 
@@ -102,7 +134,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
 
     console.log("🔄 No valid cached summary - generating new one");
 
-    // ✅ 3. Fetch patient profile (for demographics only)
+    // ✅ 3. Fetch patient profile
     console.log(`🔍 Fetching patient profile for userId: ${userId}`);
     const patient = await Patient.findOne({ userId });
     
@@ -115,13 +147,14 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     }
 
     const age = calculateAge(patient.dob);
-    console.log(`👤 Patient found - Age: ${age}, Gender: ${patient.gender}`);
+    const patientName = getPatientName(patient);
+    console.log(`👤 Patient found - Name: ${patientName}, Age: ${age}, Gender: ${patient.gender}`);
 
-    // ✅ 4. Prepare COMPLETE glucose data with CORRECT language from vitals
+    // ✅ 4. Prepare COMPLETE glucose data with patient name
     const glucoseData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
-      language: (vitals.language as "en" | "sw") || "en", // ✅ GET LANGUAGE FROM VITALS, NOT PATIENT!
+      language: (vitals.language as "en" | "sw") || "en",
       age,
       gender: patient.gender,
       weight: patient.weight,
@@ -133,12 +166,14 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
       mealType: vitals.mealType,
+      patientName: patientName, // ✅ ADDED PATIENT NAME
     };
 
     console.log("📋 Complete glucose data prepared:", {
       glucose: glucoseData.glucose,
       context: glucoseData.context,
-      language: glucoseData.language, // ✅ LOG THE LANGUAGE BEING USED
+      language: glucoseData.language,
+      patientName: glucoseData.patientName, // ✅ LOG PATIENT NAME
       bp: `${glucoseData.systolic || 'N/A'}/${glucoseData.diastolic || 'N/A'}`,
       hr: glucoseData.heartRate || 'N/A',
       exercise: `${glucoseData.exerciseRecent || 'N/A'} (${glucoseData.exerciseIntensity || 'N/A'})`,
@@ -161,8 +196,8 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
 
     console.log("✅ GROQ_API_KEY is configured");
 
-    // ✅ 6. Generate AI summary with ALL context
-    console.log(`🤖 Calling SmartCareAI.generateSummary() with language: ${glucoseData.language}...`);
+    // ✅ 6. Generate AI summary with patient name
+    console.log(`🤖 Calling SmartCareAI.generateSummary() for ${patientName} with language: ${glucoseData.language}...`);
     const aiStartTime = Date.now();
     
     const ai = getAIService();
@@ -170,7 +205,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     
     const aiDuration = Date.now() - aiStartTime;
     console.log(`🤖 AI responded in ${aiDuration}ms`);
-    console.log(`📝 Generated feedback (${glucoseData.language}): ${aiFeedback?.substring(0, 150)}...`);
+    console.log(`📝 Generated feedback for ${patientName} (${glucoseData.language}): ${aiFeedback?.substring(0, 150)}...`);
 
     // ✅ 7. Check if AI generation failed
     if (!isValidSummary(aiFeedback)) {
@@ -183,6 +218,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
         details: {
           groqConfigured: !!process.env.GROQ_API_KEY,
           vitalId,
+          patientName,
           language: glucoseData.language,
           glucoseData: {
             glucose: glucoseData.glucose,
@@ -210,13 +246,15 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       success: true,
       aiFeedback, 
       cached: false,
-      language: glucoseData.language, // ✅ Return the language used
+      patientName, // ✅ Return patient name in response
+      language: glucoseData.language,
       generationTime: aiDuration,
       totalTime: totalDuration,
       contextUsed: {
         glucose: glucoseData.glucose,
         context: glucoseData.context,
         language: glucoseData.language,
+        patientName: patientName,
         bloodPressure: glucoseData.systolic && glucoseData.diastolic ? 
           `${glucoseData.systolic}/${glucoseData.diastolic}` : 'Not provided',
         heartRate: glucoseData.heartRate || 'Not provided',
@@ -248,7 +286,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
   }
 });
 
-// ✅ Food Advice Endpoint - Updated to use language from vitals
+// ✅ Food Advice Endpoint - Updated to include patient name
 router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
@@ -270,8 +308,9 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
     }
 
     const age = calculateAge(patient.dob);
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
 
-    // ✅ Get language from vitals
+    // ✅ Prepare food advice data with patient name
     const foodAdviceData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -282,19 +321,25 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
       height: patient.height,
       age,
       gender: patient.gender,
-      language: (vitals.language as "en" | "sw") || "en", // ✅ FROM VITALS!
+      language: (vitals.language as "en" | "sw") || "en",
       exerciseRecent: vitals.exerciseRecent,
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
       mealType: vitals.mealType,
+      patientName: patientName, // ✅ ADDED PATIENT NAME
+      allergies: patient.allergies ? [patient.allergies] : [],
+      medicalHistory: patient.selectedDiseases || [],
     };
 
     console.log("🍽️ Food advice data:", {
       glucose: foodAdviceData.glucose,
       context: foodAdviceData.context,
-      language: foodAdviceData.language, // ✅ LOG IT
+      language: foodAdviceData.language,
+      patientName: foodAdviceData.patientName, // ✅ LOG PATIENT NAME
       bp: `${foodAdviceData.systolic || 'N/A'}/${foodAdviceData.diastolic || 'N/A'}`,
-      exercise: `${foodAdviceData.exerciseRecent || 'N/A'} (${foodAdviceData.exerciseIntensity || 'N/A'})`
+      exercise: `${foodAdviceData.exerciseRecent || 'N/A'} (${foodAdviceData.exerciseIntensity || 'N/A'})`,
+      allergies: foodAdviceData.allergies || [],
+      medicalHistory: foodAdviceData.medicalHistory || []
     });
 
     const ai = getAIService();
@@ -303,15 +348,19 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
     res.status(200).json({
       success: true,
       foodAdvice,
+      patientName, // ✅ Return patient name
       language: foodAdviceData.language,
       contextUsed: {
         glucose: foodAdviceData.glucose,
         context: foodAdviceData.context,
         language: foodAdviceData.language,
+        patientName: patientName,
         bloodPressure: foodAdviceData.systolic && foodAdviceData.diastolic ? 
           `${foodAdviceData.systolic}/${foodAdviceData.diastolic}` : 'Not provided',
         exercise: foodAdviceData.exerciseRecent && foodAdviceData.exerciseIntensity ? 
-          `${foodAdviceData.exerciseRecent} (${foodAdviceData.exerciseIntensity})` : 'Not provided'
+          `${foodAdviceData.exerciseRecent} (${foodAdviceData.exerciseIntensity})` : 'Not provided',
+        allergies: foodAdviceData.allergies || [],
+        medicalHistory: foodAdviceData.medicalHistory || []
       }
     });
 
@@ -320,6 +369,182 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
     res.status(500).json({ 
       success: false,
       message: "Failed to generate food advice", 
+      error: error.message 
+    });
+  }
+});
+
+// ✅ Quick Tips Endpoint - Updated to include patient name
+router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const vitalId = req.params.id;
+    console.log(`💡 Quick tips request for vital: ${vitalId}`);
+
+    const vitals = await Diabetes.findById(vitalId);
+    if (!vitals) {
+      return res.status(404).json({ success: false, message: "Vitals not found" });
+    }
+
+    const patient = await Patient.findOne({ userId });
+    if (!patient) {
+      return res.status(404).json({ success: false, message: "Patient profile not found" });
+    }
+
+    const age = calculateAge(patient.dob);
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+
+    const quickTipsData = {
+      glucose: vitals.glucose,
+      context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
+      systolic: vitals.systolic,
+      diastolic: vitals.diastolic,
+      heartRate: vitals.heartRate,
+      weight: patient.weight,
+      height: patient.height,
+      age,
+      gender: patient.gender,
+      language: (vitals.language as "en" | "sw") || "en",
+      exerciseRecent: vitals.exerciseRecent,
+      exerciseIntensity: vitals.exerciseIntensity,
+      lastMealTime: vitals.lastMealTime,
+      mealType: vitals.mealType,
+      patientName: patientName, // ✅ ADDED PATIENT NAME
+    };
+
+    console.log("💡 Quick tips data:", {
+      glucose: quickTipsData.glucose,
+      context: quickTipsData.context,
+      language: quickTipsData.language,
+      patientName: quickTipsData.patientName, // ✅ LOG PATIENT NAME
+      bp: `${quickTipsData.systolic || 'N/A'}/${quickTipsData.diastolic || 'N/A'}`,
+      exercise: `${quickTipsData.exerciseRecent || 'N/A'} (${quickTipsData.exerciseIntensity || 'N/A'})`
+    });
+
+    const ai = getAIService();
+    const quickTips = await ai.generateQuickFoodTips(quickTipsData);
+
+    res.status(200).json({
+      success: true,
+      quickTips,
+      patientName, // ✅ Return patient name
+      language: quickTipsData.language,
+    });
+
+  } catch (error: any) {
+    console.error("❌ Quick tips error:", error.message);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to generate quick tips", 
+      error: error.message 
+    });
+  }
+});
+
+// ✅ Comprehensive Feedback Endpoint
+router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const vitalId = req.params.id;
+    console.log(`📋 Comprehensive feedback request for vital: ${vitalId}`);
+
+    const vitals = await Diabetes.findById(vitalId);
+    if (!vitals) {
+      return res.status(404).json({ success: false, message: "Vitals not found" });
+    }
+
+    const patient = await Patient.findOne({ userId });
+    if (!patient) {
+      return res.status(404).json({ success: false, message: "Patient profile not found" });
+    }
+
+    const age = calculateAge(patient.dob);
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+
+    // First, get all the individual components
+    const glucoseData = {
+      glucose: vitals.glucose,
+      context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
+      systolic: vitals.systolic,
+      diastolic: vitals.diastolic,
+      heartRate: vitals.heartRate,
+      weight: patient.weight,
+      height: patient.height,
+      age,
+      gender: patient.gender,
+      language: (vitals.language as "en" | "sw") || "en",
+      exerciseRecent: vitals.exerciseRecent,
+      exerciseIntensity: vitals.exerciseIntensity,
+      lastMealTime: vitals.lastMealTime,
+      mealType: vitals.mealType,
+      patientName: patientName, // ✅ ADDED PATIENT NAME
+    };
+
+    console.log("📋 Generating comprehensive feedback for:", patientName);
+
+    const ai = getAIService();
+
+    // Generate all components
+    const [summary, foodAdvice, quickTips, glucoseFeedback] = await Promise.all([
+      ai.generateSummary(glucoseData),
+      ai.generateKenyanFoodAdvice({
+        ...glucoseData,
+        allergies: patient.allergies ? [patient.allergies] : [],
+        medicalHistory: patient.selectedDiseases || [],
+      }),
+      ai.generateQuickFoodTips(glucoseData),
+      ai.generateGlucoseFeedback(glucoseData),
+    ]);
+
+    // Prepare comprehensive feedback input
+    const comprehensiveData = {
+      summary,
+      foodAdvice,
+      quickTips,
+      lifestyleFeedback: glucoseFeedback, // Using glucose feedback as lifestyle feedback
+      vitalData: glucoseData,
+      patientData: {
+        name: patientName,
+        age,
+        gender: patient.gender,
+        weight: patient.weight,
+        height: patient.height,
+      },
+      hasBloodPressure: !!(vitals.systolic && vitals.diastolic),
+      hasHeartRate: !!vitals.heartRate,
+      language: (vitals.language as "en" | "sw") || "en",
+      patientName: patientName, // ✅ CRITICAL: Add patient name here
+    };
+
+    // Generate final comprehensive feedback
+    const comprehensiveFeedback = await ai.generateComprehensiveFeedback(comprehensiveData);
+
+    res.status(200).json({
+      success: true,
+      comprehensiveFeedback,
+      patientName, // ✅ Return patient name
+      language: glucoseData.language,
+      components: {
+        summary,
+        foodAdvice,
+        quickTips,
+        glucoseFeedback,
+      },
+    });
+
+  } catch (error: any) {
+    console.error("❌ Comprehensive feedback error:", error.message);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to generate comprehensive feedback", 
       error: error.message 
     });
   }

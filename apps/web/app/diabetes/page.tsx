@@ -9,7 +9,7 @@ import LifestyleForm from "../components/diabetesPages/DiabetesLifestyle";
 import DiabetesMedications from "../components/diabetesPages/DiabetesMedications";
 import DiabetesFoodAdvice from "../components/diabetesPages/DiabetesFoodAdvice";
 import UserProfileHeader from "../components/UserProfileHeader";
-import MedicationReminders from "../hypertension/components/MedicationReminders";
+
 import { 
   Activity, 
   Heart, 

@@ -1,57 +1,112 @@
 // apps/web/app/components/diabetesPages/utils/voiceUtils.ts
 import { getDisplayValue } from './formUtils';
-import { diabetesValidationRules } from './formUtils';
+
+// Store the current audio element globally to control it
+let currentAudio: HTMLAudioElement | null = null;
 
 export const speak = async (
   text: string, 
   languageValue: string, 
   isMuted: boolean, 
   voiceModeActiveRef: React.MutableRefObject<boolean>,
+  pausedRef: React.MutableRefObject<boolean>,
   setState: (speaking: boolean, status: string) => void
 ): Promise<void> => {
+  // Check if paused before starting
+  if (pausedRef.current) {
+    console.log("Cannot speak while paused");
+    return Promise.resolve();
+  }
+  
   if (isMuted || !voiceModeActiveRef.current) return Promise.resolve();
 
   setState(true, languageValue === "sw" ? "Ninazungumza..." : "Speaking...");
 
   try {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    
-    // Convert language code: 'sw' for Swahili, 'en' for English
     const synthesisLang = languageValue === "sw" ? "sw" : "en";
+    
+    console.log(`🔊 Speaking: "${text}" (lang: ${synthesisLang})`);
+    
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     const response = await fetch(`${API_URL}/api/python-speech/synthesize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, language: synthesisLang }),
+      signal: controller.signal
     });
 
-    if (!response.ok) throw new Error("Failed to synthesize speech");
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.error("Speech synthesis failed:", response.status);
+      setState(false, "");
+      return Promise.resolve();
+    }
 
     const audioBlob = await response.blob();
     const audioUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio(audioUrl);
+    currentAudio = audio;
 
     return new Promise<void>((resolve) => {
+      // Check for pause during playback
+      const checkPauseInterval = setInterval(() => {
+        if (pausedRef.current) {
+          console.log("Pause detected during speech, stopping audio");
+          audio.pause();
+          audio.currentTime = 0;
+          clearInterval(checkPauseInterval);
+          URL.revokeObjectURL(audioUrl);
+          currentAudio = null;
+          setState(false, "");
+          resolve();
+        }
+      }, 100);
+
       audio.onended = () => {
+        clearInterval(checkPauseInterval);
         URL.revokeObjectURL(audioUrl);
+        currentAudio = null;
         setState(false, "");
         resolve();
       };
-      audio.onerror = () => {
+      
+      audio.onerror = (error) => {
+        console.error("Audio playback error:", error);
+        clearInterval(checkPauseInterval);
         URL.revokeObjectURL(audioUrl);
+        currentAudio = null;
         setState(false, "");
         resolve();
       };
-      audio.play().catch(() => {
+      
+      audio.play().catch((error) => {
+        console.error("Error playing audio:", error);
+        clearInterval(checkPauseInterval);
         URL.revokeObjectURL(audioUrl);
+        currentAudio = null;
         setState(false, "");
         resolve();
       });
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("TTS Error:", error);
     setState(false, "");
     return Promise.resolve();
+  }
+};
+
+// Function to stop any currently playing speech
+export const stopCurrentSpeech = () => {
+  if (currentAudio) {
+    console.log("Stopping current speech");
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    currentAudio = null;
   }
 };
 
@@ -109,7 +164,6 @@ export const parseSpokenInput = (text: string, languageValue: string, fieldType?
   const lowerText = text.toLowerCase().trim();
   console.log(`DEBUG parseSpokenInput: text="${text}", lowerText="${lowerText}", fieldType=${fieldType}`);
   
-  // Check for skip commands
   const skipWords = languageValue === "sw" 
     ? ['ruka', 'pass', 'next', 'none', 'sina', 'hapana']
     : ['skip', 'pass', 'next', 'none', "don't know", 'not sure'];
@@ -119,7 +173,6 @@ export const parseSpokenInput = (text: string, languageValue: string, fieldType?
     return { type: 'skip' };
   }
   
-  // Check for yes/no confirmation
   const yesWords = languageValue === "sw" 
     ? ['ndio', 'yes', 'correct', 'right', 'true', 'sawa']
     : ['yes', 'correct', 'right', 'true', 'yeah', 'yep'];
@@ -137,14 +190,11 @@ export const parseSpokenInput = (text: string, languageValue: string, fieldType?
     return { type: 'number', value: 0 };
   }
 
-  // For SELECT fields, we should return text even if it contains numbers
   if (fieldType === 'select') {
-    // For select fields, return the full text for mapping
     console.log(`DEBUG: Select field, returning full text: "${lowerText}"`);
     return { type: 'text', textValue: lowerText };
   }
 
-  // For NUMBER fields, parse numbers
   const numbers = lowerText.match(/\d+/g);
   if (numbers && numbers.length > 0) {
     const number = parseInt(numbers[0], 10);
@@ -154,7 +204,6 @@ export const parseSpokenInput = (text: string, languageValue: string, fieldType?
     }
   }
 
-  // For text inputs, return the text
   if (lowerText.length > 0) {
     console.log(`DEBUG: Returning text value: "${lowerText}"`);
     return { type: 'text', textValue: lowerText };
@@ -164,18 +213,15 @@ export const parseSpokenInput = (text: string, languageValue: string, fieldType?
   return { type: 'unknown' };
 };
 
-// Helper function to check if a match is clear
 const checkIfClearMatch = (spokenText: string, fieldName: string, currentLanguage: any): boolean => {
   const lowerText = spokenText.toLowerCase();
   const keywords = currentLanguage.optionKeywords;
   
   if (!keywords || !keywords[fieldName]) return false;
   
-  // Check if the spoken text clearly matches one option
   for (const option in keywords[fieldName]) {
     for (const keyword of keywords[fieldName][option]) {
       const normalizedKeyword = keyword.toLowerCase().trim();
-      // If it's an exact or very close match
       if (lowerText === normalizedKeyword || 
           lowerText.includes(normalizedKeyword + " ") ||
           lowerText.includes(" " + normalizedKeyword) ||
@@ -194,9 +240,7 @@ export const mapSpokenToOption = (spokenText: string, fieldName: string, current
   console.log(`DEBUG mapSpokenToOption: fieldName="${fieldName}", spokenText="${spokenText}"`);
   
   const keywords = currentLanguage.optionKeywords as any;
-  console.log(`DEBUG Keywords for ${fieldName}:`, keywords ? keywords[fieldName] || keywords : 'No keywords found');
   
-  // Get all possible options for this field
   let options: {dbValue: string, displayValue: string}[] = [];
   
   switch (fieldName) {
@@ -240,135 +284,143 @@ export const mapSpokenToOption = (spokenText: string, fieldName: string, current
       ];
       break;
     default:
-      console.log(`DEBUG: No mapping for field ${fieldName}`);
       return null;
   }
   
   const lowerSpoken = spokenText.toLowerCase().trim();
-  console.log(`DEBUG: Lower spoken text: "${lowerSpoken}"`);
-  console.log(`DEBUG: Options:`, options);
   
-  // First check each option's keywords
   if (keywords && keywords[fieldName]) {
     for (const option of options) {
       if (keywords[fieldName][option.dbValue]) {
         for (const keyword of keywords[fieldName][option.dbValue]) {
           const normalizedKeyword = keyword.toLowerCase().trim();
-          console.log(`DEBUG: Checking keyword "${normalizedKeyword}" against "${lowerSpoken}"`);
           
-          // Check for exact match or partial match
           if (lowerSpoken.includes(normalizedKeyword)) {
             console.log(`DEBUG: MATCH FOUND! Option: ${option.dbValue}`);
             return option.dbValue;
           }
         }
-      } else {
-        console.log(`DEBUG: No keywords found for option "${option.dbValue}" in field "${fieldName}"`);
       }
     }
   }
   
-  // Additional fallback matching for common patterns
-  console.log(`DEBUG: No keyword match found, trying fallback matching...`);
-  
+  // Fallback matching for common patterns
   if (fieldName === 'context') {
-    if (lowerSpoken.includes('fasting') || lowerSpoken.includes('fast') || lowerSpoken.includes('empty') || lowerSpoken.includes('morning')) {
-      console.log(`DEBUG: Fallback match for context: fasting -> Fasting`);
+    if (lowerSpoken.includes('fasting') || lowerSpoken.includes('fast') || lowerSpoken.includes('empty')) {
       return 'Fasting';
     }
-    if (lowerSpoken.includes('post') || lowerSpoken.includes('after') || lowerSpoken.includes('meal') || lowerSpoken.includes('eat')) {
-      console.log(`DEBUG: Fallback match for context: post meal -> Post-meal`);
+    if (lowerSpoken.includes('post') || lowerSpoken.includes('after') || lowerSpoken.includes('meal')) {
       return 'Post-meal';
     }
-    if (lowerSpoken.includes('random') || lowerSpoken.includes('anytime') || lowerSpoken.includes('any')) {
-      console.log(`DEBUG: Fallback match for context: random -> Random`);
+    if (lowerSpoken.includes('random') || lowerSpoken.includes('anytime')) {
       return 'Random';
     }
   }
   
-  if (fieldName === 'lastMealTime') {
-    if (lowerSpoken.includes('2') || lowerSpoken.includes('two') || lowerSpoken.includes('recent') || lowerSpoken.includes('just') || lowerSpoken.includes('couple')) {
-      console.log(`DEBUG: Fallback match for lastMealTime: 2 hours -> 2_hours`);
-      return '2_hours';
-    }
-    if (lowerSpoken.includes('4') || lowerSpoken.includes('four') || lowerSpoken.includes('few')) {
-      console.log(`DEBUG: Fallback match for lastMealTime: 4 hours -> 4_hours`);
-      return '4_hours';
-    }
-    if (lowerSpoken.includes('6') || lowerSpoken.includes('six') || lowerSpoken.includes('half') || lowerSpoken.includes('several')) {
-      console.log(`DEBUG: Fallback match for lastMealTime: 6 hours -> 6_hours`);
-      return '6_hours';
-    }
-    if (lowerSpoken.includes('more') || lowerSpoken.includes('over') || lowerSpoken.includes('long') || lowerSpoken.includes('many') || lowerSpoken.includes('hours ago')) {
-      console.log(`DEBUG: Fallback match for lastMealTime: more than 6 hours -> more_than_6_hours`);
-      return 'more_than_6_hours';
-    }
-    if (lowerSpoken.includes('hour')) {
-      // Try to extract number from phrases like "3 hours ago"
-      const hourMatch = lowerSpoken.match(/(\d+)\s*hour/);
-      if (hourMatch && hourMatch[1]) {
-        const hours = parseInt(hourMatch[1], 10);
-        if (hours <= 2) return '2_hours';
-        if (hours <= 4) return '4_hours';
-        if (hours <= 6) return '6_hours';
-        return 'more_than_6_hours';
-      }
-    }
-  }
-  
-  if (fieldName === 'mealType') {
-    if (lowerSpoken.includes('carb') || lowerSpoken.includes('bread') || lowerSpoken.includes('rice') || lowerSpoken.includes('pasta')) {
-      return 'carbohydrates';
-    }
-    if (lowerSpoken.includes('sugar') || lowerSpoken.includes('soda') || lowerSpoken.includes('juice') || lowerSpoken.includes('drink')) {
-      return 'sugary_drinks';
-    }
-    if (lowerSpoken.includes('protein') || lowerSpoken.includes('meat') || lowerSpoken.includes('chicken') || lowerSpoken.includes('fish')) {
-      return 'proteins';
-    }
-    if (lowerSpoken.includes('vegetable') || lowerSpoken.includes('salad') || lowerSpoken.includes('green') || lowerSpoken.includes('veggie')) {
-      return 'vegetables';
-    }
-    if (lowerSpoken.includes('mixed') || lowerSpoken.includes('combination') || lowerSpoken.includes('everything') || lowerSpoken.includes('balanced')) {
-      return 'mixed_meal';
-    }
-  }
-  
-  if (fieldName === 'exerciseRecent') {
-    if (lowerSpoken.includes('none') || lowerSpoken.includes('no') || lowerSpoken.includes('not') || lowerSpoken.includes('didnt')) {
-      console.log(`DEBUG: Fallback match for exerciseRecent: none -> none`);
-      return 'none';
-    }
-    if (lowerSpoken.includes('within') || lowerSpoken.includes('2') || lowerSpoken.includes('two') || lowerSpoken.includes('recent') || lowerSpoken.includes('just')) {
-      console.log(`DEBUG: Fallback match for exerciseRecent: within 2 hours -> within_2_hours`);
-      return 'within_2_hours';
-    }
-    if (lowerSpoken.includes('2 to 6') || lowerSpoken.includes('two to six') || lowerSpoken.includes('2-6') || lowerSpoken.includes('few hour') || lowerSpoken.includes('several hour')) {
-      console.log(`DEBUG: Fallback match for exerciseRecent: 2 to 6 hours -> 2_to_6_hours`);
-      return '2_to_6_hours';
-    }
-    if (lowerSpoken.includes('6 to 24') || lowerSpoken.includes('six to twenty four') || lowerSpoken.includes('6-24') || lowerSpoken.includes('yesterday') || lowerSpoken.includes('last day') || lowerSpoken.includes('earlier')) {
-      console.log(`DEBUG: Fallback match for exerciseRecent: 6 to 24 hours -> 6_to_24_hours`);
-      return '6_to_24_hours';
-    }
-  }
-  
-  if (fieldName === 'exerciseIntensity') {
-    if (lowerSpoken.includes('light') || lowerSpoken.includes('walk') || lowerSpoken.includes('easy') || lowerSpoken.includes('gentle')) {
-      return 'light';
-    }
-    if (lowerSpoken.includes('moderate') || lowerSpoken.includes('brisk') || lowerSpoken.includes('medium') || lowerSpoken.includes('cycle')) {
-      return 'moderate';
-    }
-    if (lowerSpoken.includes('vigorous') || lowerSpoken.includes('run') || lowerSpoken.includes('hard') || lowerSpoken.includes('intense')) {
-      return 'vigorous';
-    }
-  }
-  
-  console.log(`DEBUG: No match found for "${spokenText}" in field "${fieldName}"`);
   return null;
 };
 
+export const pauseVoiceMode = (params: {
+  voiceModeActiveRef: React.MutableRefObject<boolean>;
+  pausedRef: React.MutableRefObject<boolean>;
+  mediaRecorderRef: React.MutableRefObject<MediaRecorder | null>;
+  setVoiceModeState: (state: any) => void;
+  handleSpeak: (text: string) => Promise<void>;
+  languageValue: string;
+  isMuted: boolean;
+}) => {
+  const {
+    voiceModeActiveRef,
+    pausedRef,
+    mediaRecorderRef,
+    setVoiceModeState,
+    handleSpeak,
+    languageValue,
+    isMuted
+  } = params;
+
+  console.log("=== PAUSING VOICE MODE ===");
+  
+  pausedRef.current = true;
+  
+  if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+    try {
+      mediaRecorderRef.current.stop();
+    } catch (error) {
+      console.log("Error stopping recorder:", error);
+    }
+  }
+  
+  stopCurrentSpeech();
+  
+  setVoiceModeState((prev: any) => ({ 
+    ...prev, 
+    paused: true,
+    listening: false,
+    speaking: false,
+    status: languageValue === "sw" ? "Imesimamishwa" : "Paused"
+  }));
+  
+  if (!isMuted) {
+    setTimeout(() => {
+      handleSpeak(
+        languageValue === "sw" 
+          ? "Nimesimama." 
+          : "Paused."
+      ).catch(error => console.error("Error speaking pause message:", error));
+    }, 200);
+  }
+};
+
+export const resumeVoiceMode = async (params: {
+  voiceModeActiveRef: React.MutableRefObject<boolean>;
+  pausedRef: React.MutableRefObject<boolean>;
+  setVoiceModeState: (state: any) => void;
+  handleSpeak: (text: string) => Promise<void>;
+  languageValue: string;
+  isMuted: boolean;
+  currentField: string | null;
+}) => {
+  const {
+    voiceModeActiveRef,
+    pausedRef,
+    setVoiceModeState,
+    handleSpeak,
+    languageValue,
+    isMuted,
+    currentField
+  } = params;
+
+  console.log("=== RESUMING VOICE MODE ===");
+  
+  pausedRef.current = false;
+  
+  setVoiceModeState((prev: any) => ({ 
+    ...prev, 
+    paused: false,
+    listening: false,
+    speaking: false,
+    status: languageValue === "sw" ? "Inaendelea..." : "Resuming..."
+  }));
+  
+  if (!isMuted) {
+    try {
+      const resumeMsg = languageValue === "sw" ? "Tunaendelea." : "Resuming.";
+      await handleSpeak(resumeMsg);
+    } catch (error) {
+      console.error("Error speaking resume message:", error);
+    }
+  }
+  
+  setTimeout(() => {
+    setVoiceModeState((prev: any) => ({ 
+      ...prev, 
+      status: ""
+    }));
+  }, 1000);
+};
+
+// ============= ASK CONFIRMATION =============
 export const askConfirmation = async (
   value: string | number, 
   fieldName: string, 
@@ -377,7 +429,9 @@ export const askConfirmation = async (
   currentLanguage: any, 
   API_URL: string, 
   handleSpeak: (text: string) => Promise<void>,
-  setVoiceModeState: (state: any) => void
+  setVoiceModeState: (state: any) => void,
+  voiceModeActiveRef: React.MutableRefObject<boolean>,
+  pausedRef: React.MutableRefObject<boolean>
 ): Promise<boolean> => {
   const displayValue = typeof value === 'number' 
     ? value 
@@ -392,6 +446,18 @@ export const askConfirmation = async (
   
   return new Promise(async (resolve) => {
     try {
+      // Check pause status before starting
+      while (pausedRef.current && voiceModeActiveRef.current) {
+        console.log(`DEBUG: Voice mode paused during confirmation, waiting...`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      if (!voiceModeActiveRef.current) {
+        console.log(`DEBUG: Voice mode cancelled during confirmation`);
+        resolve(false);
+        return;
+      }
+      
       setVoiceModeState((prev: any) => ({ ...prev, listening: true, status: languageValue === "sw" ? "Ninasikiliza uthibitisho..." : "Listening for confirmation..." }));
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -413,8 +479,8 @@ export const askConfirmation = async (
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach(track => track.stop());
         
-        if (audioChunks.length === 0) {
-          console.log(`DEBUG: No audio chunks for confirmation`);
+        if (audioChunks.length === 0 || !voiceModeActiveRef.current) {
+          console.log(`DEBUG: No audio chunks or voice mode cancelled`);
           setVoiceModeState((prev: any) => ({ ...prev, listening: false, status: "" }));
           resolve(false);
           return;
@@ -433,29 +499,13 @@ export const askConfirmation = async (
           const response = await fetch(`${API_URL}/api/python-speech/transcribe`, {
             method: "POST",
             body: formData,
-            // Add timeout to prevent hanging
             signal: AbortSignal.timeout(10000)
           });
 
           if (!response.ok) {
             console.error(`DEBUG: Confirmation API error: HTTP ${response.status}`);
-            // Try to get error details from response
-            let errorDetails = '';
-            try {
-              const errorData = await response.text();
-              errorDetails = errorData;
-            } catch (e) {
-              errorDetails = 'No error details available';
-            }
-            console.error(`DEBUG: Error details: ${errorDetails}`);
-            
-            // Auto-confirm if API fails to prevent breaking the flow
-            console.log(`DEBUG: Auto-confirming due to API error (HTTP ${response.status})`);
             setVoiceModeState((prev: any) => ({ ...prev, listening: false, status: "" }));
-            
-            // For testing: auto-confirm to continue flow
-            // In production, you might want to resolve(false) to ask again
-            resolve(true); // Auto-confirm to continue
+            resolve(true); // Auto-confirm on API error
             return;
           }
 
@@ -470,7 +520,6 @@ export const askConfirmation = async (
             if (parsed.type === 'number') {
               resolve(parsed.value === 1);
             } else if (parsed.type === 'text') {
-              // Check for yes/no words in text
               const lowerText = parsed.textValue?.toLowerCase() || '';
               const yesWords = languageValue === "sw" 
                 ? ['ndio', 'yes', 'correct', 'right', 'true', 'sawa']
@@ -484,7 +533,6 @@ export const askConfirmation = async (
               } else if (noWords.some(word => lowerText.includes(word))) {
                 resolve(false);
               } else {
-                // If unclear, default to false (ask again)
                 resolve(false);
               }
             } else {
@@ -492,17 +540,12 @@ export const askConfirmation = async (
             }
           } else {
             console.log(`DEBUG: Confirmation failed - no text in response`);
-            // Auto-confirm if no response to continue flow
-            resolve(true);
+            resolve(true); // Auto-confirm
           }
         } catch (error: any) {
           console.error("Confirmation error:", error);
-          if (error.name === 'AbortError' || error.name === 'TimeoutError') {
-            console.log(`DEBUG: Confirmation API timeout`);
-          }
           setVoiceModeState((prev: any) => ({ ...prev, listening: false, status: "" }));
-          // Auto-confirm on error to prevent breaking flow
-          resolve(true);
+          resolve(true); // Auto-confirm on error
         }
       };
 
@@ -523,72 +566,57 @@ export const askConfirmation = async (
   });
 };
 
-export const listenForField = async (params: {
-  fieldName: string;
-  fieldLabel: string;
-  fieldType: 'number' | 'select';
-  min?: number;
-  max?: number;
-  languageValue: string;
-  currentLanguage: any;
-  voiceModeActiveRef: React.MutableRefObject<boolean>;
-  isProcessingRef: React.MutableRefObject<boolean>;
-  setVoiceModeState: (state: any) => void;
-  mediaRecorderRef: React.MutableRefObject<MediaRecorder | null>;
-  API_URL: string;
-  fieldRefs: React.MutableRefObject<{ [key: string]: HTMLDivElement | null }>;
-  handleSpeak: (text: string) => Promise<void>;
-  isRequired: boolean;
-}): Promise<string | number | 'skip' | null> => {
-  const {
-    fieldName,
-    fieldLabel,
-    fieldType,
-    min,
-    max,
-    languageValue,
-    currentLanguage,
-    voiceModeActiveRef,
-    isProcessingRef,
-    setVoiceModeState,
-    mediaRecorderRef,
-    API_URL,
-    fieldRefs,
-    handleSpeak,
-    isRequired
-  } = params;
-
+// ============= LISTEN FOR FIELD =============
+export const listenForField = async (
+  fieldName: string,
+  fieldLabel: string,
+  fieldType: 'number' | 'select',
+  min: number | undefined,
+  max: number | undefined,
+  languageValue: string,
+  currentLanguage: any,
+  voiceModeActiveRef: React.MutableRefObject<boolean>,
+  pausedRef: React.MutableRefObject<boolean>,
+  isProcessingRef: React.MutableRefObject<boolean>,
+  setVoiceModeState: (state: any) => void,
+  mediaRecorderRef: React.MutableRefObject<MediaRecorder | null>,
+  API_URL: string,
+  fieldRefs: React.MutableRefObject<{ [key: string]: HTMLDivElement | null }>,
+  handleSpeak: (text: string) => Promise<void>,
+  isRequired: boolean
+): Promise<string | number | 'skip' | null> => {
   console.log(`DEBUG listenForField: Starting for field "${fieldName}" (${fieldLabel}), required: ${isRequired}`);
+  
+  // Check if paused before starting
+  while (pausedRef.current && voiceModeActiveRef.current) {
+    console.log(`DEBUG: Voice mode paused, waiting...`);
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
   
   if (isProcessingRef.current || !voiceModeActiveRef.current) {
     console.log(`DEBUG: Already processing or voice mode not active`);
     return null;
   }
 
-  // Scroll to field and highlight
   if (fieldRefs.current[fieldName]) {
     fieldRefs.current[fieldName]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   setVoiceModeState((prev: any) => ({ ...prev, currentField: fieldName }));
 
-  // Announce field with instructions
   const fieldInstructionKey = fieldName as keyof typeof currentLanguage.fieldInstructions;
   const instruction = currentLanguage.fieldInstructions[fieldInstructionKey];
   
-  // For required fields, don't mention skipping
   const requiredNote = isRequired ? 
     (languageValue === "sw" ? " (Sehemu hii ni muhimu)" : " (This field is required)") : 
     "";
   
-  // Modify instructions for required fields
   let finalInstruction = instruction;
   if (isRequired) {
     finalInstruction = languageValue === "sw" 
       ? `Sehemu hii ni muhimu. ${instruction.replace("Sema 'ruka'", "Haiwezi kurukwa")}`
       : `This field is required. ${instruction.replace("Say 'skip'", "Cannot be skipped")}`;
   } else {
-    // For optional fields, mention skipping
     finalInstruction = languageValue === "sw"
       ? `${instruction} Unaweza kusema 'ruka' kama huna kipimo hiki.`
       : `${instruction} You can say 'skip' if you don't have this measurement.`;
@@ -598,7 +626,12 @@ export const listenForField = async (params: {
   console.log(`DEBUG: Speaking announcement: "${announcement}"`);
   await handleSpeak(announcement);
 
-  // Check if voice mode is still active after speaking
+  // Check pause status after speaking
+  while (pausedRef.current && voiceModeActiveRef.current) {
+    console.log(`DEBUG: Voice mode paused after announcement, waiting...`);
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
   if (!voiceModeActiveRef.current) {
     console.log(`DEBUG: Voice mode cancelled during speaking`);
     return null;
@@ -681,7 +714,6 @@ export const listenForField = async (params: {
             console.log(`DEBUG: Parsed input:`, parsed);
             
             if (parsed.type === 'skip') {
-              // For required fields, don't allow skipping
               if (isRequired) {
                 const requiredMsg = languageValue === "sw"
                   ? "Sehemu hii ni muhimu na haiwezi kurukwa. Tafadhali jaribu tena."
@@ -705,7 +737,9 @@ export const listenForField = async (params: {
                     currentLanguage, 
                     API_URL, 
                     handleSpeak, 
-                    setVoiceModeState
+                    setVoiceModeState,
+                    voiceModeActiveRef,
+                    pausedRef
                   );
                   if (confirmed) {
                     console.log(`DEBUG: Confirmed number value: ${parsed.value}`);
@@ -732,11 +766,9 @@ export const listenForField = async (params: {
               console.log(`DEBUG: Mapped "${parsed.textValue}" to: ${mappedValue}`);
               
               if (mappedValue) {
-                // Check if it's a clear match
                 const isClearMatch = checkIfClearMatch(parsed.textValue, fieldName, currentLanguage);
                 
                 if (isClearMatch) {
-                  // Skip confirmation for clear matches to avoid API errors
                   console.log(`DEBUG: Clear match detected, skipping confirmation`);
                   resolve(mappedValue);
                 } else {
@@ -750,7 +782,9 @@ export const listenForField = async (params: {
                     currentLanguage, 
                     API_URL, 
                     handleSpeak, 
-                    setVoiceModeState
+                    setVoiceModeState,
+                    voiceModeActiveRef,
+                    pausedRef
                   );
                   if (confirmed) {
                     console.log(`DEBUG: Confirmed mapped value: ${mappedValue}`);
@@ -823,34 +857,44 @@ export const listenForField = async (params: {
   });
 };
 
+// ============= START VOICE MODE =============
 export const startVoiceMode = async (params: {
   languageValue: string;
   currentLanguage: any;
   voiceModeActiveRef: React.MutableRefObject<boolean>;
+  pausedRef: React.MutableRefObject<boolean>;
   voiceModeState: any;
   setVoiceModeState: (state: any) => void;
   setValue: any;
   getValues: any;
   toast: any;
   handleSpeak: (text: string) => Promise<void>;
-  listenForField: any;
-}) => {
+  isProcessingRef: React.MutableRefObject<boolean>;
+  mediaRecorderRef: React.MutableRefObject<MediaRecorder | null>;
+  API_URL: string;
+  fieldRefs: React.MutableRefObject<{ [key: string]: HTMLDivElement | null }>;
+}): Promise<void> => {
   const {
     languageValue,
     currentLanguage,
     voiceModeActiveRef,
+    pausedRef,
     voiceModeState,
     setVoiceModeState,
     setValue,
     getValues,
     toast,
     handleSpeak,
-    listenForField
+    isProcessingRef,
+    mediaRecorderRef,
+    API_URL,
+    fieldRefs
   } = params;
 
-  console.log("Starting voice mode...");
+  console.log("=== STARTING VOICE MODE ===");
   setVoiceModeState((prev: any) => ({ ...prev, active: true }));
   voiceModeActiveRef.current = true;
+  pausedRef.current = false;
   
   const welcome = languageValue === "sw"
     ? "Karibu. Nitakusaidia kuweka vipimo vyako vya kiafya. Sehemu muhimu zisizoweza kurukwa zitahitaji thamani halisi. Sehemu za hiari zinaweza kurukwa kwa kusema 'ruka'. Tutaanza na sukari ya damu."
@@ -858,16 +902,14 @@ export const startVoiceMode = async (params: {
   
   await handleSpeak(welcome);
   
-  // Define ALL fields with correct required status based on validation rules
   const allFields = [
-    // Vital measurements - only glucose is required
     { 
       name: "glucose", 
       label: currentLanguage.glucoseLabel,
       type: "number" as const,
       min: 20, 
       max: 600,
-      required: true // Only glucose has required: "Glucose level is required"
+      required: true
     },
     { 
       name: "systolic", 
@@ -875,7 +917,7 @@ export const startVoiceMode = async (params: {
       type: "number" as const,
       min: 70, 
       max: 250,
-      required: false // No required validation for systolic
+      required: false
     },
     { 
       name: "diastolic", 
@@ -883,7 +925,7 @@ export const startVoiceMode = async (params: {
       type: "number" as const,
       min: 40, 
       max: 150,
-      required: false // No required validation for diastolic
+      required: false
     },
     { 
       name: "heartRate", 
@@ -891,21 +933,19 @@ export const startVoiceMode = async (params: {
       type: "number" as const,
       min: 40, 
       max: 200,
-      required: false // No required validation for heartRate
+      required: false
     },
-    // Measurement context (required)
     { 
       name: "context", 
       label: currentLanguage.contextLabel,
       type: "select" as const,
-      required: true // context has required: "Please select a context"
+      required: true
     },
-    // Meal details (conditional - only required if context is Post-meal)
     { 
       name: "lastMealTime", 
       label: currentLanguage.lastMealLabel,
       type: "select" as const,
-      required: true, // lastMealTime has required: "Please select when you last ate"
+      required: true,
       dependsOn: "context",
       dependsValue: "Post-meal"
     },
@@ -913,34 +953,43 @@ export const startVoiceMode = async (params: {
       name: "mealType", 
       label: currentLanguage.mealTypeLabel,
       type: "select" as const,
-      required: true, // mealType has required: "Please select the meal type"
+      required: true,
       dependsOn: "context",
       dependsValue: "Post-meal"
     },
-    // Exercise info (required)
     { 
       name: "exerciseRecent", 
       label: currentLanguage.exerciseRecentLabel,
       type: "select" as const,
-      required: true // exerciseRecent has required: "Please indicate if you exercised recently"
+      required: true
     },
     { 
       name: "exerciseIntensity", 
       label: currentLanguage.exerciseIntensityLabel,
       type: "select" as const,
-      required: true // exerciseIntensity has required: "Please select the exercise intensity"
+      required: true
     }
   ];
 
-  // Process all fields
   for (const field of allFields) {
     // Check if voice mode is still active
     if (!voiceModeActiveRef.current) {
       console.log("Voice mode cancelled, breaking loop");
       break;
     }
+    
+    // Wait while paused
+    while (pausedRef.current && voiceModeActiveRef.current) {
+      console.log(`Voice mode paused at field: ${field.name}`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // Check again after pause
+    if (!voiceModeActiveRef.current) {
+      console.log("Voice mode cancelled during pause, breaking loop");
+      break;
+    }
 
-    // Check if field should be shown based on dependencies
     if (field.dependsOn && field.dependsValue) {
       const dependentValue = getValues(field.dependsOn);
       console.log(`Checking dependency: ${field.name} depends on ${field.dependsOn}=${dependentValue}, needs ${field.dependsValue}`);
@@ -952,27 +1001,49 @@ export const startVoiceMode = async (params: {
 
     let validInput = false;
     let attempts = 0;
-    const maxAttempts = field.required ? 5 : 2; // More attempts for required fields
+    const maxAttempts = field.required ? 5 : 2;
     
     while (!validInput && attempts < maxAttempts && voiceModeActiveRef.current) {
+      // Wait while paused
+      while (pausedRef.current && voiceModeActiveRef.current) {
+        console.log(`Voice mode paused during field attempt: ${field.name}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      // Check again after pause
+      if (!voiceModeActiveRef.current) {
+        console.log("Voice mode cancelled during pause, breaking attempt loop");
+        break;
+      }
+      
       console.log(`Listening for ${field.name}, attempt ${attempts + 1}, required: ${field.required}`);
+      
+      // Call listenForField with individual parameters
       const result = await listenForField(
         field.name, 
         field.label, 
         field.type,
         field.min,
         field.max,
+        languageValue,
+        currentLanguage,
+        voiceModeActiveRef,
+        pausedRef,
+        isProcessingRef,
+        setVoiceModeState,
+        mediaRecorderRef,
+        API_URL,
+        fieldRefs,
+        handleSpeak,
         field.required
       );
       
-      // Check if voice mode was cancelled during listening
       if (!voiceModeActiveRef.current) {
         console.log("Voice mode cancelled during listening");
         break;
       }
       
       if (result === null) {
-        // No input received
         console.log("No input received");
         if (!voiceModeState.muted && voiceModeActiveRef.current) {
           if (field.required) {
@@ -992,7 +1063,6 @@ export const startVoiceMode = async (params: {
       }
 
       if (result === 'skip') {
-        // Skip command received - only allowed for optional fields
         if (!field.required) {
           console.log(`User skipped optional field: ${field.name}`);
           const skipMsg = languageValue === "sw"
@@ -1008,7 +1078,6 @@ export const startVoiceMode = async (params: {
           validInput = true;
           break;
         } else {
-          // Required field attempted to be skipped - try again
           console.log(`Required field attempted to be skipped: ${field.name}`);
           const requiredMsg = languageValue === "sw"
             ? "Sehemu hii ni muhimu na haiwezi kurukwa. Tafadhali jaribu tena."
@@ -1023,7 +1092,6 @@ export const startVoiceMode = async (params: {
         }
       }
 
-      // Valid value received
       console.log(`Setting value for ${field.name} to:`, result);
       setValue(field.name, result as any);
       
@@ -1047,7 +1115,6 @@ export const startVoiceMode = async (params: {
     if (!validInput && voiceModeActiveRef.current) {
       console.log(`Failed to get input for ${field.name} after ${maxAttempts} attempts`);
       if (field.required) {
-        // For required fields that couldn't be filled, ask user to enter manually
         const manualMsg = languageValue === "sw"
           ? `Haiwezekani kukusikia kwa ${field.label}. Tafadhali weka ${field.label} mwenyewe kwenye fomu kabla ya kuwasilisha.`
           : `Could not hear your ${field.label}. Please enter ${field.label} manually in the form before submitting.`;
@@ -1058,14 +1125,12 @@ export const startVoiceMode = async (params: {
           await handleSpeak(manualMsg);
         }
         
-        // Stop voice mode for this required field
         const stopMsg = languageValue === "sw"
           ? "Nitaacha hali ya sauti. Tafadhali tumia fomu mwenyewe."
           : "I will stop voice mode. Please use the form directly.";
         
         await handleSpeak(stopMsg);
         
-        // Stop voice mode completely
         setVoiceModeState((prev: any) => ({ 
           ...prev, 
           active: false,
@@ -1075,9 +1140,9 @@ export const startVoiceMode = async (params: {
           status: "" 
         }));
         voiceModeActiveRef.current = false;
+        pausedRef.current = false;
         return;
       } else {
-        // Optional field failed - just move on
         const moveOnMsg = languageValue === "sw"
           ? "Tutaenda kwenye kipimo kifuatacho."
           : "Let's move to the next measurement.";
@@ -1088,7 +1153,6 @@ export const startVoiceMode = async (params: {
       }
     }
 
-    // Small delay between fields if voice mode is still active
     if (voiceModeActiveRef.current) {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
@@ -1104,20 +1168,23 @@ export const startVoiceMode = async (params: {
     toast.success(currentLanguage.voiceComplete, { duration: 5000 });
   }
   
-  // Reset voice mode state
   setVoiceModeState((prev: any) => ({ 
     ...prev, 
     active: false, 
     currentField: null, 
     status: "",
     listening: false,
-    speaking: false
+    speaking: false,
+    paused: false
   }));
   voiceModeActiveRef.current = false;
+  pausedRef.current = false;
 };
 
+// ============= STOP VOICE MODE =============
 export const stopVoiceMode = (params: {
   voiceModeActiveRef: React.MutableRefObject<boolean>;
+  pausedRef: React.MutableRefObject<boolean>;
   mediaRecorderRef: React.MutableRefObject<MediaRecorder | null>;
   currentLanguage: any;
   setVoiceModeState: (state: any) => void;
@@ -1126,6 +1193,7 @@ export const stopVoiceMode = (params: {
 }) => {
   const {
     voiceModeActiveRef,
+    pausedRef,
     mediaRecorderRef,
     currentLanguage,
     setVoiceModeState,
@@ -1133,22 +1201,35 @@ export const stopVoiceMode = (params: {
     isMuted
   } = params;
 
-  console.log("Stopping voice mode");
+  console.log("=== STOPPING VOICE MODE ===");
+  
+  // Stop any current speech
+  stopCurrentSpeech();
+  
+  if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+    try {
+      mediaRecorderRef.current.stop();
+    } catch (error) {
+      console.log("Error stopping recorder:", error);
+    }
+  }
+  
   voiceModeActiveRef.current = false;
-  setVoiceModeState((prev: any) => ({ 
-    ...prev, 
+  pausedRef.current = false;
+  
+  setVoiceModeState({
     active: false,
     listening: false,
     speaking: false,
-    currentField: null, 
-    status: "" 
-  }));
-  
-  if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-    mediaRecorderRef.current.stop();
-  }
+    currentField: null,
+    muted: false,
+    paused: false,
+    status: ""
+  });
   
   if (!isMuted) {
-    handleSpeak(currentLanguage.voiceCancelled);
+    handleSpeak(currentLanguage.voiceCancelled).catch(error => 
+      console.error("Error speaking stop message:", error)
+    );
   }
 };

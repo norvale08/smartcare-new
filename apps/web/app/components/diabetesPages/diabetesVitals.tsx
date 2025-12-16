@@ -6,6 +6,7 @@ import { toast } from "react-hot-toast";
 import CustomToaster from "../ui/CustomToaster";
 import { diabetesType } from "@/types/diabetes";
 import VoiceControlPanel from "./components/VoiceControlPanel";
+import SectionVoiceControl from "./components/SectionVoiceControl";
 import GlucoseSection from "./components/GlucoseSection";
 import CardiovascularSection from "./components/CardiovascularSection";
 import ContextSection from "./components/ContextSection";
@@ -15,9 +16,10 @@ import AISettingsSection from "./components/AISettingsSection";
 import SubmitButton from "./components/SubmitButton";
 import { 
   startVoiceMode, 
-  stopVoiceMode, 
-  speak, 
-  listenForField 
+  stopVoiceMode,
+  pauseVoiceMode,
+  resumeVoiceMode,
+  speak
 } from "./utils/voiceUtils";
 import { 
   languageContent, 
@@ -55,6 +57,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
     speaking: false,
     currentField: null,
     muted: false,
+    paused: false,
     status: ""
   });
 
@@ -67,48 +70,61 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
   const fieldRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceModeActiveRef = useRef(false);
+  const pausedRef = useRef(false);
+
+  // Debug useEffect
+  useEffect(() => {
+    console.log("=== VOICE MODE STATE UPDATE ===");
+    console.log("Active:", voiceModeState.active);
+    console.log("Listening:", voiceModeState.listening);
+    console.log("Speaking:", voiceModeState.speaking);
+    console.log("Paused:", voiceModeState.paused);
+    console.log("Current Field:", voiceModeState.currentField);
+    console.log("Status:", voiceModeState.status);
+    console.log("pausedRef.current:", pausedRef.current);
+    console.log("voiceModeActiveRef.current:", voiceModeActiveRef.current);
+    console.log("=== END STATE UPDATE ===");
+  }, [voiceModeState]);
 
   useEffect(() => {
     setValue("language", initialLanguage);
   }, [initialLanguage, setValue]);
 
-  // Update voice mode ref when state changes
   useEffect(() => {
     voiceModeActiveRef.current = voiceModeState.active;
-  }, [voiceModeState.active]);
+    pausedRef.current = voiceModeState.paused;
+  }, [voiceModeState.active, voiceModeState.paused]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
       if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
+        try {
+          mediaRecorderRef.current.stop();
+        } catch (error) {
+          console.log("Cleanup error:", error);
+        }
       }
       voiceModeActiveRef.current = false;
+      pausedRef.current = false;
     };
   }, []);
 
-  // Text-to-Speech wrapper
   const handleSpeak = useCallback(async (text: string): Promise<void> => {
-    return speak(text, languageValue, voiceModeState.muted, voiceModeActiveRef, (speaking, status) => {
+    console.log("Speaking:", text);
+    return speak(text, languageValue, voiceModeState.muted, voiceModeActiveRef, pausedRef, (speaking: boolean, status: string) => {
+      console.log("Speak callback:", { speaking, status });
       setVoiceModeState(prev => ({ ...prev, speaking, status }));
     });
   }, [languageValue, voiceModeState.muted]);
 
-  // Define which fields are required based on validation rules
   const getFieldRequiredStatus = useCallback((fieldName: string): boolean => {
     const fieldRules = diabetesValidationRules[fieldName as keyof typeof diabetesValidationRules];
     
-    // Check if field has a "required" validation rule
     if (fieldRules) {
-      // Check if required rule exists
       if ('required' in fieldRules && fieldRules.required) {
         return true;
       }
       
-      // Check for validate function that might enforce required
       if ('validate' in fieldRules && fieldRules.validate) {
         const validateStr = fieldRules.validate.toString();
         if (validateStr.includes('required') || validateStr.includes('Required')) {
@@ -117,7 +133,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
       }
     }
     
-    // Default required fields based on the form structure
     switch (fieldName) {
       case 'glucose':
       case 'context':
@@ -126,70 +141,124 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
         return true;
       case 'lastMealTime':
       case 'mealType':
-        // These are only required if context is Post-meal
         return contextValue === "Post-meal";
       case 'systolic':
       case 'diastolic':
       case 'heartRate':
-        return false; // These are optional
+        return false;
       default:
         return false;
     }
   }, [contextValue]);
 
-  // Start voice mode
   const handleStartVoiceMode = async () => {
-    await startVoiceMode({
-      languageValue,
-      currentLanguage,
-      voiceModeActiveRef,
-      voiceModeState,
-      setVoiceModeState,
-      setValue,
-      getValues,
-      toast,
-      handleSpeak,
-      listenForField: (
-        fieldName: string,
-        fieldLabel: string,
-        fieldType: "number" | "select",
-        min?: number,
-        max?: number
-      ) => {
-        // Get the correct required status for this field
-        const isRequired = getFieldRequiredStatus(fieldName);
-        
-        return listenForField({
-          fieldName,
-          fieldLabel,
-          fieldType,
-          min,
-          max,
-          languageValue,
-          currentLanguage,
-          voiceModeActiveRef,
-          isProcessingRef,
-          setVoiceModeState,
-          mediaRecorderRef,
-          API_URL,
-          fieldRefs,
-          handleSpeak,
-          isRequired  // ← Now passing correct required status!
-        });
-      }
-    });
+    console.log("=== START VOICE MODE ===");
+    try {
+      await startVoiceMode({
+        languageValue,
+        currentLanguage,
+        voiceModeActiveRef,
+        pausedRef,
+        voiceModeState,
+        setVoiceModeState,
+        setValue,
+        getValues,
+        toast,
+        handleSpeak,
+        isProcessingRef,
+        mediaRecorderRef,
+        API_URL,
+        fieldRefs
+      });
+    } catch (error) {
+      console.error("Error starting voice mode:", error);
+      toast.error("Failed to start voice mode");
+      setVoiceModeState(prev => ({ ...prev, active: false }));
+      voiceModeActiveRef.current = false;
+    }
   };
 
-  // Stop voice mode
   const handleStopVoiceMode = () => {
+    console.log("=== STOP VOICE MODE ===");
     stopVoiceMode({
       voiceModeActiveRef,
+      pausedRef,
       mediaRecorderRef,
       currentLanguage,
       setVoiceModeState,
       handleSpeak,
       isMuted: voiceModeState.muted
     });
+  };
+
+  const handlePauseVoiceMode = useCallback(() => {
+    console.log("=== PAUSE VOICE MODE ===");
+    console.log("Before pause - pausedRef.current:", pausedRef.current);
+    console.log("Before pause - voiceModeState.paused:", voiceModeState.paused);
+    
+    pauseVoiceMode({
+      voiceModeActiveRef,
+      pausedRef,
+      mediaRecorderRef,
+      setVoiceModeState,
+      handleSpeak,
+      languageValue,
+      isMuted: voiceModeState.muted
+    });
+  }, [voiceModeActiveRef, pausedRef, mediaRecorderRef, setVoiceModeState, handleSpeak, languageValue, voiceModeState.muted]);
+
+  const handleResumeVoiceMode = useCallback(async () => {
+    console.log("=== RESUME VOICE MODE ===");
+    console.log("Before resume - pausedRef.current:", pausedRef.current);
+    console.log("Before resume - voiceModeState.paused:", voiceModeState.paused);
+    
+    await resumeVoiceMode({
+      voiceModeActiveRef,
+      pausedRef,
+      setVoiceModeState,
+      handleSpeak,
+      languageValue,
+      isMuted: voiceModeState.muted,
+      currentField: voiceModeState.currentField
+    });
+  }, [voiceModeActiveRef, pausedRef, setVoiceModeState, handleSpeak, languageValue, voiceModeState.muted, voiceModeState.currentField]);
+
+  // SIMPLIFIED PAUSE/RESUME HANDLER
+  const handlePauseResume = useCallback(() => {
+    console.log('=== Unified Pause/Resume Handler ===');
+    console.log('Current voice mode state:', voiceModeState);
+    console.log('pausedRef.current:', pausedRef.current);
+    console.log('voiceModeActiveRef.current:', voiceModeActiveRef.current);
+    
+    // Don't do anything if voice mode is not active
+    if (!voiceModeState.active) {
+      console.log('Voice mode not active, ignoring pause/resume');
+      toast.error("Voice mode is not active");
+      return;
+    }
+    
+    // If currently listening or speaking, we can still pause
+    if (voiceModeState.paused) {
+      console.log('>>> Calling Resume');
+      handleResumeVoiceMode();
+    } else {
+      console.log('>>> Calling Pause');
+      handlePauseVoiceMode();
+    }
+  }, [voiceModeState, handlePauseVoiceMode, handleResumeVoiceMode]);
+
+  const handleToggleMute = () => {
+    const newMutedState = !voiceModeState.muted;
+    console.log("Toggling mute to:", newMutedState);
+    setVoiceModeState(prev => ({ ...prev, muted: newMutedState }));
+    
+    if (!newMutedState && voiceModeState.active) {
+      handleSpeak(
+        languageValue === "sw" 
+          ? "Sauti imewashwa" 
+          : "Sound turned on"
+      ).catch(error => console.error("Error speaking mute status:", error));
+    }
   };
 
   const handleFormSubmit = async (data: diabetesType) => {
@@ -204,7 +273,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
     }
 
     try {
-      // Ensure numbers are properly converted, handling undefined values
       const submitData = {
         ...data,
         glucose: data.glucose ? Number(data.glucose) : undefined,
@@ -252,12 +320,10 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
     }
   };
 
-  // Set field ref
   const setFieldRef = useCallback((fieldName: string) => (el: HTMLDivElement | null) => {
     fieldRefs.current[fieldName] = el;
   }, []);
 
-  // Get field style
   const getFieldStyle = (fieldName: string) => {
     const isActive = voiceModeState.currentField === fieldName;
     return {
@@ -272,7 +338,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
       <CustomToaster />
       <div className="max-w-4xl mx-auto">
         
-        {/* Header */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 sm:w-40 sm:h-40 md:w-48 md:h-48 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full -mr-12 -mt-12 sm:-mr-20 sm:-mt-20 md:-mr-24 md:-mt-24"></div>
           <div className="relative z-10 text-center">
@@ -286,7 +351,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
           </div>
         </div>
 
-        {/* Success Message */}
         {submitSuccess && (
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-3 sm:p-4 mb-4 sm:mb-6 rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -301,50 +365,56 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
           </div>
         )}
 
-        {/* Voice Control Panel */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-gray-100 p-3 mb-4 rounded-lg text-xs">
+            <div className="font-bold mb-1">Debug Info:</div>
+            <div>Voice Active: {voiceModeState.active ? 'Yes' : 'No'}</div>
+            <div>Listening: {voiceModeState.listening ? 'Yes' : 'No'}</div>
+            <div>Speaking: {voiceModeState.speaking ? 'Yes' : 'No'}</div>
+            <div>Paused: {voiceModeState.paused ? 'Yes' : 'No'}</div>
+            <div>Current Field: {voiceModeState.currentField || 'None'}</div>
+            <div>Muted: {voiceModeState.muted ? 'Yes' : 'No'}</div>
+            <div>pausedRef.current: {pausedRef.current ? 'Yes' : 'No'}</div>
+            <div>voiceModeActiveRef.current: {voiceModeActiveRef.current ? 'Yes' : 'No'}</div>
+          </div>
+        )}
+
         <VoiceControlPanel
           voiceModeState={voiceModeState}
           currentLanguage={currentLanguage}
           languageValue={languageValue}
-          onToggleMute={() => setVoiceModeState(prev => ({ ...prev, muted: !prev.muted }))}
+          onToggleMute={handleToggleMute}
           onToggleVoiceMode={voiceModeState.active ? handleStopVoiceMode : handleStartVoiceMode}
+          onPauseResume={handlePauseResume}
         />
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-5 md:space-y-6">
           
-          {/* Glucose Level */}
-          <GlucoseSection
-            register={register}
-            errors={formState.errors}
-            currentLanguage={currentLanguage}
-            validationRules={diabetesValidationRules}
-            setFieldRef={setFieldRef}
-            fieldStyle={getFieldStyle('glucose')}
-          />
+          <div>
+            <SectionVoiceControl
+              sectionName="glucose"
+              voiceModeState={voiceModeState}
+              onPauseResume={handlePauseResume}
+              languageValue={languageValue}
+            />
+            <GlucoseSection
+              register={register}
+              errors={formState.errors}
+              currentLanguage={currentLanguage}
+              validationRules={diabetesValidationRules}
+              setFieldRef={setFieldRef}
+              fieldStyle={getFieldStyle('glucose')}
+            />
+          </div>
 
-          {/* Cardiovascular Vitals */}
-          <CardiovascularSection
-            register={register}
-            errors={formState.errors}
-            currentLanguage={currentLanguage}
-            validationRules={diabetesValidationRules}
-            setFieldRef={setFieldRef}
-            getFieldStyle={getFieldStyle}
-          />
-
-          {/* Context Section */}
-          <ContextSection
-            register={register}
-            errors={formState.errors}
-            currentLanguage={currentLanguage}
-            validationRules={diabetesValidationRules}
-            setFieldRef={setFieldRef}
-            fieldStyle={getFieldStyle('context')}
-          />
-
-          {/* Meal Details - Conditional */}
-          {contextValue === "Post-meal" && (
-            <MealSection
+          <div>
+            <SectionVoiceControl
+              sectionName="cardiovascular"
+              voiceModeState={voiceModeState}
+              onPauseResume={handlePauseResume}
+              languageValue={languageValue}
+            />
+            <CardiovascularSection
               register={register}
               errors={formState.errors}
               currentLanguage={currentLanguage}
@@ -352,26 +422,67 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
               setFieldRef={setFieldRef}
               getFieldStyle={getFieldStyle}
             />
+          </div>
+
+          <div>
+            <SectionVoiceControl
+              sectionName="context"
+              voiceModeState={voiceModeState}
+              onPauseResume={handlePauseResume}
+              languageValue={languageValue}
+            />
+            <ContextSection
+              register={register}
+              errors={formState.errors}
+              currentLanguage={currentLanguage}
+              validationRules={diabetesValidationRules}
+              setFieldRef={setFieldRef}
+              fieldStyle={getFieldStyle('context')}
+            />
+          </div>
+
+          {contextValue === "Post-meal" && (
+            <div>
+              <SectionVoiceControl
+                sectionName="meal"
+                voiceModeState={voiceModeState}
+                onPauseResume={handlePauseResume}
+                languageValue={languageValue}
+              />
+              <MealSection
+                register={register}
+                errors={formState.errors}
+                currentLanguage={currentLanguage}
+                validationRules={diabetesValidationRules}
+                setFieldRef={setFieldRef}
+                getFieldStyle={getFieldStyle}
+              />
+            </div>
           )}
 
-          {/* Exercise Section */}
-          <ExerciseSection
-            register={register}
-            errors={formState.errors}
-            currentLanguage={currentLanguage}
-            validationRules={diabetesValidationRules}
-            setFieldRef={setFieldRef}
-            getFieldStyle={getFieldStyle}
-          />
+          <div>
+            <SectionVoiceControl
+              sectionName="exercise"
+              voiceModeState={voiceModeState}
+              onPauseResume={handlePauseResume}
+              languageValue={languageValue}
+            />
+            <ExerciseSection
+              register={register}
+              errors={formState.errors}
+              currentLanguage={currentLanguage}
+              validationRules={diabetesValidationRules}
+              setFieldRef={setFieldRef}
+              getFieldStyle={getFieldStyle}
+            />
+          </div>
 
-          {/* AI Settings */}
           <AISettingsSection
             requestAI={requestAI}
             onToggleAI={() => setRequestAI(!requestAI)}
             currentLanguage={currentLanguage}
           />
 
-          {/* Submit Button */}
           <SubmitButton
             isLoading={isLoading}
             currentLanguage={currentLanguage}

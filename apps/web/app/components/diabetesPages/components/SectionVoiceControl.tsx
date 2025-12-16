@@ -1,157 +1,139 @@
-"use client";
-import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, Volume2, VolumeX, Pause, Play, Square } from 'lucide-react';
+// apps/web/app/components/diabetesPages/components/SectionVoiceControl.tsx
+import React from 'react';
+import { Pause, Play } from 'lucide-react';
 
 interface SectionVoiceControlProps {
-  sectionId: string;
-  sectionLabel: string;
-  languageValue: 'en' | 'sw';
-  currentLanguage: any;
-  onPause?: () => void;
-  onResume?: () => void;
-  onStop?: () => void;
-  onToggleMute?: () => void;
-  isActive?: boolean;
-  isListening?: boolean;
-  isSpeaking?: boolean;
-  isMuted?: boolean;
-  showAlways?: boolean;
+  sectionName: string;
+  voiceModeState: {
+    active: boolean;
+    listening: boolean;
+    speaking: boolean;
+    currentField: string | null;
+    paused: boolean;
+  };
+  onPauseResume: () => void;
+  languageValue: string;
 }
 
 const SectionVoiceControl: React.FC<SectionVoiceControlProps> = ({
-  sectionId,
-  sectionLabel,
-  languageValue,
-  currentLanguage,
-  onPause,
-  onResume,
-  onStop,
-  onToggleMute,
-  isActive = false,
-  isListening = false,
-  isSpeaking = false,
-  isMuted = false,
-  showAlways = false
+  sectionName,
+  voiceModeState,
+  onPauseResume,
+  languageValue
 }) => {
-  const [isPaused, setIsPaused] = useState(false);
-  const [localActive, setLocalActive] = useState(false);
+  const isPaused = voiceModeState.paused;
+  
+  // Check if this section is currently active
+  const getIsCurrentSection = () => {
+    if (!voiceModeState.currentField) return false;
+    
+    const currentField = voiceModeState.currentField.toLowerCase();
+    const normalizedSectionName = sectionName.toLowerCase();
+    
+    console.log(`[SectionVoiceControl] Checking: section="${sectionName}", currentField="${currentField}", paused=${isPaused}`);
+    
+    const sectionFieldMap: Record<string, string[]> = {
+      'glucose': ['glucose'],
+      'cardiovascular': ['systolic', 'diastolic', 'heartrate'],
+      'context': ['context'],
+      'meal': ['lastmealtime', 'mealtype', 'lastmeal', 'mealtype'],
+      'exercise': ['exerciserecent', 'exerciseintensity']
+    };
+    
+    // Check if any field in this section matches current field
+    const fieldsInSection = sectionFieldMap[normalizedSectionName] || [];
+    return fieldsInSection.some(field => 
+      currentField.includes(field) || field.includes(currentField)
+    );
+  };
+  
+  const isCurrentSection = getIsCurrentSection();
+  
+  // Show when voice mode is active AND this section is currently being processed
+  // OR when voice is paused (to allow resuming)
+  const shouldShow = voiceModeState.active && 
+                    (isCurrentSection || voiceModeState.paused);
+  
+  console.log(`[SectionVoiceControl] section="${sectionName}", shouldShow=${shouldShow}, isCurrentSection=${isCurrentSection}, paused=${isPaused}`);
 
-  // Update local active state when section becomes active
-  useEffect(() => {
-    if (isActive) {
-      setLocalActive(true);
-      setIsPaused(false);
-    } else if (!isListening && !isSpeaking) {
-      setLocalActive(false);
+  if (!shouldShow) return null;
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log(`[SectionVoiceControl] Button clicked for section: ${sectionName}`);
+    console.log('Current state:', voiceModeState);
+    
+    // Call the pause/resume handler
+    onPauseResume();
+  };
+
+  // Get appropriate button text and colors
+  const getButtonConfig = () => {
+    if (isPaused) {
+      return {
+        bgColor: 'bg-green-500 hover:bg-green-600',
+        ringColor: 'ring-green-300',
+        icon: <Play size={16} />,
+        text: languageValue === "sw" ? "Endelea" : "Resume",
+        title: languageValue === "sw" ? "Endelea na sauti" : "Resume voice mode",
+        disabled: false,
+        isActive: false,
+        animation: ''
+      };
+    } else {
+      // If this is the current section being read, use BRIGHT YELLOW with animation
+      const isActiveSection = isCurrentSection;
+      return {
+        bgColor: isActiveSection ? 'bg-yellow-400 hover:bg-yellow-500' : 'bg-yellow-500 hover:bg-yellow-600',
+        ringColor: isActiveSection ? 'ring-yellow-200' : 'ring-yellow-300',
+        icon: <Pause size={16} />,
+        text: languageValue === "sw" ? "Simamisha" : "Pause",
+        title: languageValue === "sw" ? "Simamisha sauti kwa muda" : "Pause voice mode temporarily",
+        disabled: false,
+        isActive: isActiveSection,
+        animation: isActiveSection ? 'animate-pulse' : ''
+      };
     }
-  }, [isActive, isListening, isSpeaking]);
-
-  const handlePause = () => {
-    setIsPaused(true);
-    onPause?.();
   };
 
-  const handleResume = () => {
-    setIsPaused(false);
-    onResume?.();
-  };
-
-  const handleStop = () => {
-    setIsPaused(false);
-    setLocalActive(false);
-    onStop?.();
-  };
-
-  // Only show controls if active or showAlways is true
-  if (!showAlways && !localActive && !isActive) {
-    return null;
-  }
+  const buttonConfig = getButtonConfig();
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 p-3 bg-gradient-to-r from-blue-50/50 to-purple-50/50 rounded-lg border border-blue-100">
-      <div className="flex items-center gap-2">
-        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-          isListening ? 'bg-green-500 animate-pulse' : 
-          isSpeaking ? 'bg-blue-500' : 
-          'bg-gray-300'
-        }`}>
-          {isListening ? (
-            <Mic className="w-3 h-3 text-white" />
-          ) : isSpeaking ? (
-            <Volume2 className="w-3 h-3 text-white" />
-          ) : null}
-        </div>
-        <span className="text-sm font-medium text-gray-700">
-          {sectionLabel}
+    <div className="flex justify-end mb-3 gap-2 z-10 relative animate-in fade-in slide-in-from-top-2 duration-300">
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={buttonConfig.disabled}
+        className={`
+          px-4 py-2 rounded-lg font-bold transition-all text-sm flex items-center gap-2
+          ${buttonConfig.bgColor} text-white shadow-lg
+          cursor-pointer hover:shadow-xl active:scale-95 transform
+          ring-2 ring-offset-2 ${buttonConfig.ringColor}
+          ${buttonConfig.disabled ? 'opacity-50 cursor-not-allowed' : ''}
+          ${buttonConfig.animation}
+        `}
+        title={buttonConfig.title}
+        aria-label={buttonConfig.title}
+      >
+        {buttonConfig.icon}
+        <span className="font-bold">{buttonConfig.text}</span>
+      </button>
+
+      {/* Status indicator */}
+      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium border border-blue-200">
+        <div className={`w-2 h-2 rounded-full ${isPaused ? 'bg-gray-400' : 'bg-blue-500 animate-ping'}`} />
+        <span className="font-semibold">
+          {isPaused 
+            ? (languageValue === "sw" ? "Imesimamishwa" : "Paused")
+            : voiceModeState.listening
+            ? (languageValue === "sw" ? "Inasikiliza" : "Listening")
+            : voiceModeState.speaking
+            ? (languageValue === "sw" ? "Inazungumza" : "Speaking")
+            : (languageValue === "sw" ? "Inatumika" : "Active")
+          }
         </span>
-        <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
-          {languageValue === 'sw' ? 'Sauti' : 'Voice'}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-1">
-        {/* Mute/Unmute Button */}
-        {onToggleMute && (
-          <button
-            type="button"
-            onClick={onToggleMute}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-            title={isMuted ? 
-              (languageValue === 'sw' ? 'Wezesha sauti' : 'Unmute') : 
-              (languageValue === 'sw' ? 'Zima sauti' : 'Mute')
-            }
-          >
-            {isMuted ? (
-              <VolumeX className="w-4 h-4 text-gray-600" />
-            ) : (
-              <Volume2 className="w-4 h-4 text-gray-600" />
-            )}
-          </button>
-        )}
-
-        {/* Pause/Resume Button */}
-        {(isListening || isSpeaking) && onPause && onResume && (
-          <button
-            type="button"
-            onClick={isPaused ? handleResume : handlePause}
-            className={`p-1.5 rounded-lg transition-colors ${
-              isPaused ? 'bg-yellow-100 hover:bg-yellow-200' : 'bg-blue-100 hover:bg-blue-200'
-            }`}
-            title={isPaused ? 
-              (languageValue === 'sw' ? 'Endelea' : 'Resume') : 
-              (languageValue === 'sw' ? 'Sitisha kwa muda' : 'Pause')
-            }
-          >
-            {isPaused ? (
-              <Play className="w-4 h-4 text-yellow-700" />
-            ) : (
-              <Pause className="w-4 h-4 text-blue-700" />
-            )}
-          </button>
-        )}
-
-        {/* Stop Button */}
-        {(isListening || isSpeaking || localActive) && onStop && (
-          <button
-            type="button"
-            onClick={handleStop}
-            className="p-1.5 rounded-lg bg-red-100 hover:bg-red-200 transition-colors"
-            title={languageValue === 'sw' ? 'Acha' : 'Stop'}
-          >
-            <Square className="w-4 h-4 text-red-700" />
-          </button>
-        )}
-      </div>
-
-      {/* Status Indicator */}
-      <div className="sm:hidden text-xs text-gray-500">
-        {isListening ? (
-          <span className="text-green-600">● {currentLanguage.listening || 'Listening...'}</span>
-        ) : isSpeaking ? (
-          <span className="text-blue-600">● {currentLanguage.speaking || 'Speaking...'}</span>
-        ) : isPaused ? (
-          <span className="text-yellow-600">● {languageValue === 'sw' ? 'Imezimwa kwa muda' : 'Paused'}</span>
-        ) : null}
       </div>
     </div>
   );
