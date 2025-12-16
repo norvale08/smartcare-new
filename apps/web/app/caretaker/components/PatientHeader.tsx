@@ -44,8 +44,8 @@ const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging 
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            <Phone className="w-4 h-4" />
-            <span>Call</span>
+            {/* <Phone className="w-4 h-4" />
+            <span>Call</span> */}
           </button>
         </div>
       </div>
