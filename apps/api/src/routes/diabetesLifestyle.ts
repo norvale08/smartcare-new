@@ -29,6 +29,38 @@ const calculateAge = (dob: Date | string | undefined): number => {
   return age > 0 ? age : 0;
 };
 
+// ✅ Helper function to get patient name
+const getPatientName = (patient: any): string => {
+  if (!patient) return "Patient";
+  
+  // Try fullName first
+  if (patient.fullName && patient.fullName.trim() !== "") {
+    return patient.fullName.trim();
+  }
+  
+  // Try firstname + lastname
+  if (patient.firstname && patient.lastname) {
+    return `${patient.firstname.trim()} ${patient.lastname.trim()}`.trim();
+  }
+  
+  // Try firstName + lastName (User model format)
+  if (patient.firstName && patient.lastName) {
+    return `${patient.firstName.trim()} ${patient.lastName.trim()}`.trim();
+  }
+  
+  // Try just firstname
+  if (patient.firstname) {
+    return patient.firstname.trim();
+  }
+  
+  // Try just firstName
+  if (patient.firstName) {
+    return patient.firstName.trim();
+  }
+  
+  return "Patient";
+};
+
 // ✅ GET latest lifestyle for user
 router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -82,6 +114,8 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
     }
 
     const age = calculateAge(patient.dob);
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    console.log(`👤 Patient found - Name: ${patientName}, Age: ${age}, Gender: ${patient.gender}`);
 
     // Get latest glucose reading with ALL context
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
@@ -115,7 +149,9 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
         readingDate: latestVitals?.createdAt || new Date(),
       },
       language: userLanguage, // ✅ SAVE LANGUAGE TO DATABASE
-      aiAdvice: "Generating personalized advice...", // Placeholder
+      aiAdvice: userLanguage === "sw" 
+        ? "Inaendeleza ushauri wa kibinafsi..." 
+        : "Generating personalized advice...", // Placeholder
     });
     await lifestyleDoc.save();
     console.log("✅ Lifestyle record saved:", lifestyleDoc._id);
@@ -127,6 +163,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       heartRate?: number;
       exerciseRecent?: string;
       exerciseIntensity?: string;
+      patientName?: string; // ✅ ADDED THIS
     } = {
       glucose,
       context,
@@ -136,6 +173,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       weight: patient.weight,
       height: patient.height,
       lifestyle: { alcohol, smoking, exercise, sleep },
+      patientName: patientName, // ✅ ADDED PATIENT NAME
       // ✅ ADDITIONAL CONTEXT from latest vitals
       systolic: latestVitals?.systolic,
       diastolic: latestVitals?.diastolic,
@@ -148,6 +186,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       glucose: aiInput.glucose,
       context: aiInput.context,
       language: aiInput.language,
+      patientName: aiInput.patientName, // ✅ LOG PATIENT NAME
       bp: `${aiInput.systolic || 'N/A'}/${aiInput.diastolic || 'N/A'}`,
       hr: aiInput.heartRate || 'N/A',
       exercise: `${aiInput.exerciseRecent || 'N/A'} (${aiInput.exerciseIntensity || 'N/A'})`
@@ -171,10 +210,12 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
         success: true, 
         recordId: lifestyleDoc._id, 
         aiAdvice,
+        patientName, // ✅ RETURN PATIENT NAME
         language: userLanguage,
         contextUsed: {
           glucose,
           context,
+          patientName: patientName,
           language: userLanguage,
           bloodPressure: aiInput.systolic && aiInput.diastolic ? 
             `${aiInput.systolic}/${aiInput.diastolic}` : 'Not provided',
@@ -200,6 +241,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
         success: true, 
         recordId: lifestyleDoc._id, 
         aiAdvice: lifestyleDoc.aiAdvice,
+        patientName, // ✅ STILL RETURN PATIENT NAME
         aiError: true,
         language: userLanguage,
         errorDetails: aiError.message
@@ -241,6 +283,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
     if (!patient) return res.status(404).json({ message: "Patient profile not found" });
 
     const age = calculateAge(patient.dob);
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
 
     // Get latest vitals
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
@@ -275,6 +318,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
       heartRate?: number;
       exerciseRecent?: string;
       exerciseIntensity?: string;
+      patientName?: string; // ✅ ADDED THIS
     } = {
       glucose,
       context,
@@ -283,6 +327,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
       gender: patient.gender,
       weight: patient.weight,
       height: patient.height,
+      patientName: patientName, // ✅ ADDED PATIENT NAME
       lifestyle: { 
         alcohol: lifestyleDoc.alcohol, 
         smoking: lifestyleDoc.smoking, 
@@ -298,6 +343,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
 
     console.log("🤖 Regenerating lifestyle feedback with:", {
       language: userLanguage,
+      patientName: patientName, // ✅ LOG PATIENT NAME
       glucose,
       context
     });
@@ -314,6 +360,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
         success: true, 
         recordId: lifestyleDoc._id, 
         aiAdvice,
+        patientName, // ✅ RETURN PATIENT NAME
         language: userLanguage,
         updated: true
       });
@@ -331,6 +378,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
         success: true, 
         recordId: lifestyleDoc._id, 
         aiAdvice: lifestyleDoc.aiAdvice,
+        patientName, // ✅ STILL RETURN PATIENT NAME
         aiError: true,
         language: userLanguage,
         errorDetails: aiError.message
@@ -363,6 +411,7 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
     if (!patient) return res.status(404).json({ message: "Patient profile not found" });
 
     const age = calculateAge(patient.dob);
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
 
     // Get latest vitals for most current context
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
@@ -393,6 +442,7 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       heartRate?: number;
       exerciseRecent?: string;
       exerciseIntensity?: string;
+      patientName?: string; // ✅ ADDED THIS
     } = {
       glucose,
       context,
@@ -401,6 +451,7 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       gender: patient.gender,
       weight: patient.weight,
       height: patient.height,
+      patientName: patientName, // ✅ ADDED PATIENT NAME
       lifestyle: { 
         alcohol: lifestyleDoc.alcohol, 
         smoking: lifestyleDoc.smoking, 
@@ -416,6 +467,7 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
 
     console.log("🤖 Regenerating with full context:", {
       language: userLanguage,
+      patientName: patientName, // ✅ LOG PATIENT NAME
       glucose,
       context,
       hasBP: !!(latestVitals?.systolic && latestVitals?.diastolic),
@@ -436,6 +488,7 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       res.status(200).json({ 
         success: true, 
         aiAdvice,
+        patientName, // ✅ RETURN PATIENT NAME
         language: userLanguage,
         regenerated: true,
         timestamp: new Date()
@@ -466,11 +519,19 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
 router.get("/advice/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const lifestyle = await Lifestyle.findById(id);
+    const userId = req.user?.userId;
+    
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const lifestyle = await Lifestyle.findOne({ _id: id, userId });
 
     if (!lifestyle) {
       return res.status(404).json({ success: false, message: "Lifestyle record not found" });
     }
+
+    // Get patient info for name
+    const patient = await Patient.findOne({ userId });
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
 
     // Check if AI advice is being generated
     const isGenerating = !lifestyle.aiAdvice || 
@@ -484,6 +545,7 @@ router.get("/advice/:id", verifyToken, async (req: AuthenticatedRequest, res: Re
         success: true,
         isGenerating: true,
         aiAdvice: lifestyle.aiAdvice || "Generating personalized advice...",
+        patientName, // ✅ RETURN PATIENT NAME
         lastUpdated: lifestyle.updatedAt,
         language: lifestyle.language || 'en'
       });
@@ -494,6 +556,7 @@ router.get("/advice/:id", verifyToken, async (req: AuthenticatedRequest, res: Re
       success: true,
       isGenerating: false,
       aiAdvice: lifestyle.aiAdvice,
+      patientName, // ✅ RETURN PATIENT NAME
       lastUpdated: lifestyle.updatedAt,
       language: lifestyle.language || 'en'
     });
@@ -522,9 +585,14 @@ router.get("/history", verifyToken, async (req: AuthenticatedRequest, res: Respo
 
     const totalRecords = await Lifestyle.countDocuments({ userId });
 
+    // Get patient info for name
+    const patient = await Patient.findOne({ userId });
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+
     res.status(200).json({
       success: true,
       data: lifestyleRecords,
+      patientName, // ✅ RETURN PATIENT NAME
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalRecords / limit),

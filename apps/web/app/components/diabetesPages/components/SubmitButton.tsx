@@ -1,31 +1,41 @@
 // apps/web/app/components/diabetesPages/components/SubmitButton.tsx
 import React from 'react';
-import { Button } from "@repo/ui";
+import { Send } from 'lucide-react';
 
 interface SubmitButtonProps {
   isLoading: boolean;
   currentLanguage: any;
 }
 
-const SubmitButton: React.FC<SubmitButtonProps> = ({
-  isLoading,
-  currentLanguage
-}) => {
+const SubmitButton: React.FC<SubmitButtonProps> = ({ isLoading, currentLanguage }) => {
   return (
-    <Button 
-      type="submit" 
+    <button
+      type="submit"
       disabled={isLoading}
-      className="w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white text-sm sm:text-base md:text-lg font-bold py-3 sm:py-4 md:py-5 rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+      className={`
+        w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 
+        text-white font-bold py-3 sm:py-4 px-6 rounded-xl sm:rounded-2xl 
+        shadow-lg hover:shadow-xl transition-all duration-300 
+        flex items-center justify-center gap-2 sm:gap-3
+        text-sm sm:text-base md:text-lg
+        ${isLoading 
+          ? 'opacity-50 cursor-not-allowed' 
+          : 'hover:scale-[1.02] active:scale-[0.98]'
+        }
+      `}
     >
       {isLoading ? (
-        <span className="flex items-center justify-center gap-2">
-          <div className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-          <span>{currentLanguage.submitting}</span>
-        </span>
+        <>
+          <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
+          <span>{currentLanguage.submitting || "Submitting..."}</span>
+        </>
       ) : (
-        currentLanguage.submit
+        <>
+          <Send size={20} />
+          <span>{currentLanguage.submitButton || "Submit Vitals"}</span>
+        </>
       )}
-    </Button>
+    </button>
   );
 };
 

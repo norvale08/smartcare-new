@@ -268,12 +268,14 @@ export interface FieldConfig {
   optional?: boolean;
 }
 
+// UPDATED: Make paused property required
 export interface VoiceModeState {
   active: boolean;
   listening: boolean;
   speaking: boolean;
   currentField: string | null;
   muted: boolean;
+  paused: boolean;  // ✅ Changed from `paused?: boolean` to `paused: boolean`
   status: string;
 }
 

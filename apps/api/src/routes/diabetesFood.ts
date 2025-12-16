@@ -17,6 +17,38 @@ const calculateAge = (dob: Date | string | undefined): number => {
   return age > 0 ? age : 0;
 };
 
+// ✅ Helper function to get patient name
+const getPatientName = (patient: any): string => {
+  if (!patient) return "Patient";
+  
+  // Try fullName first
+  if (patient.fullName && patient.fullName.trim() !== "") {
+    return patient.fullName.trim();
+  }
+  
+  // Try firstname + lastname
+  if (patient.firstname && patient.lastname) {
+    return `${patient.firstname.trim()} ${patient.lastname.trim()}`.trim();
+  }
+  
+  // Try firstName + lastName (User model format)
+  if (patient.firstName && patient.lastName) {
+    return `${patient.firstName.trim()} ${patient.lastName.trim()}`.trim();
+  }
+  
+  // Try just firstname
+  if (patient.firstname) {
+    return patient.firstname.trim();
+  }
+  
+  // Try just firstName
+  if (patient.firstName) {
+    return patient.firstName.trim();
+  }
+  
+  return "Patient";
+};
+
 // ✅ GET latest food advice for logged-in user
 router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -26,9 +58,17 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
     const patient = await Patient.findOne({ userId });
     if (!patient) return res.status(404).json({ message: "Patient not found" });
 
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    console.log(`👤 Patient: ${patientName}`);
+
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
     if (!latestVitals) {
-      return res.status(200).json({ success: true, data: null, message: "No recent glucose data found" });
+      return res.status(200).json({ 
+        success: true, 
+        data: null, 
+        patientName, // ✅ RETURN PATIENT NAME
+        message: "No recent glucose data found" 
+      });
     }
 
     const age = calculateAge(patient.dob);
@@ -37,11 +77,10 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
     const language = (latestVitals.language as "en" | "sw") || "en";
     console.log(`🌐 Using language from vitals: ${language}`);
 
-    // ✅ UPDATED: Use the correct interface structure
+    // ✅ UPDATED: Use the correct interface structure with patient name
     const foodInput: FoodAdviceInput = {
       glucose: latestVitals.glucose,
       context: (latestVitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
-      // ✅ CORRECT: Use systolic/diastolic directly instead of bloodPressure object
       systolic: latestVitals.systolic,
       diastolic: latestVitals.diastolic,
       heartRate: latestVitals.heartRate,
@@ -50,6 +89,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
       age,
       gender: patient.gender,
       language, // ✅ FROM VITALS!
+      patientName: patientName, // ✅ ADDED PATIENT NAME
       // ✅ ADD: Exercise context from vitals
       exerciseRecent: latestVitals.exerciseRecent,
       exerciseIntensity: latestVitals.exerciseIntensity,
@@ -78,7 +118,8 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
     console.log("🍽️ Food input prepared:", {
       glucose: foodInput.glucose,
       context: foodInput.context,
-      language: foodInput.language, // ✅ LOG IT
+      language: foodInput.language,
+      patientName: foodInput.patientName, // ✅ LOG PATIENT NAME
       bp: `${foodInput.systolic || 'N/A'}/${foodInput.diastolic || 'N/A'}`,
       hr: foodInput.heartRate || 'N/A',
       exercise: `${foodInput.exerciseRecent || 'N/A'} (${foodInput.exerciseIntensity || 'N/A'})`,
@@ -95,7 +136,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
         language, // ✅ RETURN THE LANGUAGE
         advice,
         patient: {
-          name: patient.name,
+          name: patientName, // ✅ USE PROPER NAME
           age,
           gender: patient.gender,
           weight: patient.weight,
@@ -108,8 +149,10 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
             ? `${latestVitals.exerciseRecent} (${latestVitals.exerciseIntensity})`
             : 'Not recorded'
         },
+        patientName, // ✅ ALSO RETURN AT TOP LEVEL
         contextUsed: {
           language,
+          patientName: patientName,
           bloodPressure: foodInput.systolic && foodInput.diastolic ? 
             `${foodInput.systolic}/${foodInput.diastolic}` : 'Not provided',
           heartRate: foodInput.heartRate || 'Not provided',
@@ -135,11 +178,23 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    // ✅ UPDATED: Use the correct input structure
+    // Get patient info for name
+    const patient = await Patient.findOne({ userId });
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const age = calculateAge(patient.dob);
+
+    // ✅ UPDATED: Use the correct input structure with patient name
     const input: FoodAdviceInput = {
       ...req.body,
       context: (req.body.context as "Fasting" | "Post-meal" | "Random") || "Random",
-      language: (req.body.language as "en" | "sw") || "en", // ✅ This one is OK since it's from request body
+      language: (req.body.language as "en" | "sw") || "en",
+      patientName: patientName, // ✅ ADDED PATIENT NAME
+      age: req.body.age || age, // Use provided age or calculate
+      gender: req.body.gender || patient.gender,
+      weight: req.body.weight || patient.weight,
+      height: req.body.height || patient.height,
       // Ensure optional fields are properly set
       systolic: req.body.systolic || undefined,
       diastolic: req.body.diastolic || undefined,
@@ -169,7 +224,8 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
     console.log("🤖 Generating advice for manual input:", {
       glucose: input.glucose,
       context: input.context,
-      language: input.language, // ✅ LOG IT
+      language: input.language,
+      patientName: input.patientName, // ✅ LOG PATIENT NAME
       bp: `${input.systolic || 'N/A'}/${input.diastolic || 'N/A'}`,
       hr: input.heartRate || 'N/A',
       exercise: `${input.exerciseRecent || 'N/A'} (${input.exerciseIntensity || 'N/A'})`
@@ -180,9 +236,11 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
     res.status(200).json({ 
       success: true, 
       advice,
-      language: input.language, // ✅ RETURN IT
+      patientName, // ✅ RETURN PATIENT NAME
+      language: input.language,
       contextUsed: {
         language: input.language,
+        patientName: patientName,
         bloodPressure: input.systolic && input.diastolic ? 
           `${input.systolic}/${input.diastolic}` : 'Not provided',
         heartRate: input.heartRate || 'Not provided',
@@ -218,6 +276,7 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
     const patient = await Patient.findOne({ userId });
     if (!patient) return res.status(404).json({ message: "Patient not found" });
 
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
     const age = calculateAge(patient.dob);
 
     // ✅ FIXED: Get language from vitals, not patient
@@ -235,6 +294,7 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
       age,
       gender: patient.gender,
       language, // ✅ FROM VITALS!
+      patientName: patientName, // ✅ ADDED PATIENT NAME
       exerciseRecent: vital.exerciseRecent,
       exerciseIntensity: vital.exerciseIntensity,
       lastMealTime: vital.lastMealTime,
@@ -260,7 +320,8 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
     console.log(`🍽️ Food advice for vital ${vitalId}:`, {
       glucose: foodInput.glucose,
       context: foodInput.context,
-      language: foodInput.language, // ✅ LOG IT
+      language: foodInput.language,
+      patientName: foodInput.patientName, // ✅ LOG PATIENT NAME
       bp: `${foodInput.systolic || 'N/A'}/${foodInput.diastolic || 'N/A'}`,
       exercise: `${foodInput.exerciseRecent || 'N/A'} (${foodInput.exerciseIntensity || 'N/A'})`
     });
@@ -275,8 +336,10 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
         context: vital.context,
         language, // ✅ RETURN IT
         advice,
+        patientName, // ✅ RETURN PATIENT NAME
         contextUsed: {
           language,
+          patientName: patientName,
           bloodPressure: foodInput.systolic && foodInput.diastolic ? 
             `${foodInput.systolic}/${foodInput.diastolic}` : 'Not provided',
           heartRate: foodInput.heartRate || 'Not provided',

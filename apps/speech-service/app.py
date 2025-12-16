@@ -25,6 +25,9 @@ def transcribe_audio():
             }), 400
 
         audio_file = request.files['audio']
+        # Get language from form data, default to en-US
+        language = request.form.get('language', 'en-US')
+        
         if audio_file.filename == '':
             logger.error("Empty filename")
             return jsonify({
@@ -34,7 +37,7 @@ def transcribe_audio():
 
         file_size = len(audio_file.read())
         audio_file.seek(0)  # Reset file pointer
-        logger.info(f"📁 Received audio file: {audio_file.filename}, size: {file_size} bytes")
+        logger.info(f"📁 Received audio file: {audio_file.filename}, size: {file_size} bytes, language: {language}")
 
         # Save to temporary file
         temp_audio_path = tempfile.mktemp(suffix='.wav')
@@ -68,13 +71,13 @@ def transcribe_audio():
             audio_data = recognizer.record(source)
             logger.info("✅ Audio recording complete")
             
-            logger.info("🤖 Transcribing with Google Speech Recognition...")
+            logger.info(f"🤖 Transcribing with Google Speech Recognition (language: {language})...")
             
-            # Transcribe with Google Speech Recognition
+            # Transcribe with Google Speech Recognition using provided language
             try:
                 text = recognizer.recognize_google(
                     audio_data,
-                    language='en-US',
+                    language=language,
                     show_all=False
                 )
                 
@@ -83,7 +86,7 @@ def transcribe_audio():
                 return jsonify({
                     'success': True,
                     'text': text,
-                    'language': 'en'
+                    'language': language
                 })
                 
             except sr.UnknownValueError:
@@ -154,6 +157,7 @@ def synthesize_speech():
         logger.info(f"🔊 Synthesizing speech: '{text}' in language: {language}")
         
         # Create speech using gTTS (Google Text-to-Speech)
+        # Use 'sw' for Swahili, 'en' for English
         tts = gTTS(text=text, lang=language, slow=False)
         
         # Save to bytes buffer
@@ -185,6 +189,10 @@ def health_check():
         'status': 'healthy', 
         'version': '1.0.0',
         'features': ['speech-to-text', 'text-to-speech'],
+        'supported_languages': {
+            'english': 'en-US (transcription), en (synthesis)',
+            'swahili': 'sw (transcription & synthesis)'
+        },
         'timestamp': datetime.now().isoformat()
     })
 
@@ -196,6 +204,7 @@ if __name__ == '__main__':
     logger.info("❤️ Health check: http://localhost:5000/health")
     logger.info("🎤 Transcribe endpoint: http://localhost:5000/transcribe")
     logger.info("🔊 Synthesize endpoint: http://localhost:5000/synthesize")
+    logger.info("🗣️  Supports: English (en-US/en) & Swahili (sw)")
     logger.info("=" * 60)
     
     app.run(host='0.0.0.0', port=5000, debug=True)
