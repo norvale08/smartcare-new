@@ -1,11 +1,44 @@
 import express, { Request, Response } from "express";
 import Diabetes from "../models/diabetesModel";
+import Patient from "../models/patient"; // ✅ IMPORT PATIENT MODEL
 import { connectMongoDB } from "../lib/mongodb";
 import { verifyToken, AuthenticatedRequest } from "../middleware/verifyToken";
 
 const router = express.Router();
 
 connectMongoDB();
+
+// ✅ Helper function to get patient name
+const getPatientName = (patient: any): string => {
+  if (!patient) return "Patient";
+  
+  // Try fullName first
+  if (patient.fullName && patient.fullName.trim() !== "") {
+    return patient.fullName.trim();
+  }
+  
+  // Try firstname + lastname
+  if (patient.firstname && patient.lastname) {
+    return `${patient.firstname.trim()} ${patient.lastname.trim()}`.trim();
+  }
+  
+  // Try firstName + lastName (User model format)
+  if (patient.firstName && patient.lastName) {
+    return `${patient.firstName.trim()} ${patient.lastName.trim()}`.trim();
+  }
+  
+  // Try just firstname
+  if (patient.firstname) {
+    return patient.firstname.trim();
+  }
+  
+  // Try just firstName
+  if (patient.firstName) {
+    return patient.firstName.trim();
+  }
+  
+  return "Patient";
+};
 
 router.options("*", (_req, res) => res.sendStatus(200));
 
@@ -14,6 +47,12 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
     if (!req.user?.userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
+
+    const userId = req.user.userId;
+    
+    // Get patient info for name
+    const patient = await Patient.findOne({ userId });
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
 
     const { 
       glucose, 
@@ -68,7 +107,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
     }
 
     const newVitals = new Diabetes({
-      userId: req.user.userId,
+      userId,
       glucose: Number(glucose),
       systolic: systolic ? Number(systolic) : undefined,
       diastolic: diastolic ? Number(diastolic) : undefined,
@@ -84,14 +123,19 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
 
     const saved = await newVitals.save();
 
+    console.log(`💾 New vitals saved for user ${userId}: ${saved._id}`);
+    console.log(`📊 Data: Glucose=${glucose}, BP=${systolic || 'N/A'}/${diastolic || 'N/A'}, HR=${heartRate || 'N/A'}, Context=${context}`);
+
     res.status(201).json({
       message: "✅ Diabetes vitals saved successfully",
       id: saved._id,
-      data: saved,
+      patientName, // ✅ RETURN PATIENT NAME
+      data: {
+        ...saved.toObject(),
+        patientName, // ✅ ALSO INCLUDE IN DATA OBJECT
+      },
     });
 
-    console.log(`💾 New vitals saved for user ${req.user.userId}: ${saved._id}`);
-    console.log(`📊 Data: Glucose=${glucose}, BP=${systolic || 'N/A'}/${diastolic || 'N/A'}, HR=${heartRate || 'N/A'}, Context=${context}`);
   } catch (error: any) {
     console.error("❌ Database error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -109,15 +153,30 @@ router.get("/me", verifyToken, async (req: AuthenticatedRequest, res: Response) 
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    // Get patient info for name
+    const patient = await Patient.findOne({ userId });
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+
     const vitals = await Diabetes.find({ userId }).sort({ createdAt: -1 });
 
     if (!vitals.length) {
-      return res.status(404).json({ message: "No vitals found for this user" });
+      return res.status(200).json({ 
+        success: true,
+        message: "No vitals found for this user",
+        patientName, // ✅ STILL RETURN NAME
+        data: [],
+        count: 0,
+      });
     }
 
     res.status(200).json({
+      success: true,
       message: "✅ User vitals retrieved successfully",
-      data: vitals,
+      patientName, // ✅ RETURN PATIENT NAME
+      data: vitals.map(vital => ({
+        ...vital.toObject(),
+        patientName, // ✅ ADD NAME TO EACH VITAL
+      })),
       count: vitals.length,
     });
   } catch (error: any) {
@@ -137,15 +196,28 @@ router.get("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    // Get patient info for name
+    const patient = await Patient.findOne({ userId });
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+
     const vitals = await Diabetes.findOne({ _id: req.params.id, userId });
 
     if (!vitals) {
-      return res.status(404).json({ message: "Vitals not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "Vitals not found",
+        patientName, // ✅ STILL RETURN NAME
+      });
     }
 
     res.status(200).json({
+      success: true,
       message: "✅ Vitals record retrieved successfully",
-      data: vitals,
+      patientName, // ✅ RETURN PATIENT NAME
+      data: {
+        ...vitals.toObject(),
+        patientName, // ✅ ADD NAME TO VITAL DATA
+      },
     });
   } catch (error: any) {
     console.error("❌ Error retrieving vitals:", error.message);
@@ -164,10 +236,35 @@ router.get("/stats/summary", verifyToken, async (req: AuthenticatedRequest, res:
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    // Get patient info for name
+    const patient = await Patient.findOne({ userId });
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+
     const vitals = await Diabetes.find({ userId });
 
     if (!vitals.length) {
-      return res.status(404).json({ message: "No vitals found for statistics" });
+      return res.status(200).json({
+        success: true,
+        message: "No vitals found for statistics",
+        patientName, // ✅ STILL RETURN NAME
+        data: {
+          totalReadings: 0,
+          averages: {
+            glucose: 0,
+            systolic: 0,
+            diastolic: 0,
+            heartRate: 0,
+          },
+          readingsCount: {
+            glucose: 0,
+            systolic: 0,
+            diastolic: 0,
+            heartRate: 0,
+          },
+          latest: null,
+          patientName, // ✅ INCLUDE IN DATA TOO
+        },
+      });
     }
 
     // Calculate averages only for fields that exist
@@ -196,7 +293,9 @@ router.get("/stats/summary", verifyToken, async (req: AuthenticatedRequest, res:
     const latest = vitals[0];
 
     res.status(200).json({
+      success: true,
       message: "✅ Statistics retrieved successfully",
+      patientName, // ✅ RETURN PATIENT NAME
       data: {
         totalReadings: vitals.length,
         averages: {
@@ -211,12 +310,20 @@ router.get("/stats/summary", verifyToken, async (req: AuthenticatedRequest, res:
           diastolic: diastolicReadings.length,
           heartRate: heartRateReadings.length,
         },
-        latest: latest,
+        latest: {
+          ...latest.toObject(),
+          patientName, // ✅ ADD NAME TO LATEST
+        },
+        patientName, // ✅ ALSO INCLUDE AT DATA LEVEL
       },
     });
   } catch (error: any) {
     console.error("❌ Error retrieving statistics:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error", 
+      error: error.message 
+    });
   }
 });
 
@@ -231,31 +338,29 @@ router.get("/glucose/latest", verifyToken, async (req: AuthenticatedRequest, res
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    // Get patient info for name
+    const patient = await Patient.findOne({ userId });
+    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+
     const latestVital = await Diabetes.findOne({ userId })
       .sort({ createdAt: -1 })
       .select('glucose context systolic diastolic heartRate exerciseRecent exerciseIntensity lastMealTime mealType language createdAt');
 
     if (!latestVital) {
-      return res.status(404).json({ 
-        success: false,
-        message: "No glucose readings found" 
+      return res.status(200).json({ 
+        success: true,
+        message: "No glucose readings found",
+        patientName, // ✅ STILL RETURN NAME
+        data: null,
       });
     }
 
     res.status(200).json({
       success: true,
+      patientName, // ✅ RETURN PATIENT NAME
       data: {
-        glucose: latestVital.glucose,
-        context: latestVital.context,
-        systolic: latestVital.systolic,
-        diastolic: latestVital.diastolic,
-        heartRate: latestVital.heartRate,
-        exerciseRecent: latestVital.exerciseRecent,
-        exerciseIntensity: latestVital.exerciseIntensity,
-        lastMealTime: latestVital.lastMealTime,
-        mealType: latestVital.mealType,
-        language: latestVital.language,
-        createdAt: latestVital.createdAt
+        ...latestVital.toObject(),
+        patientName, // ✅ ADD NAME TO DATA
       }
     });
   } catch (error: any) {

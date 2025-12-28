@@ -106,7 +106,7 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
 
           if (pollAttempts >= maxPollAttempts) stopPolling();
         } else {
-          setAiAdvice(data.aiAdvice || "🤖 AI advice generated but empty.");
+          setAiAdvice(data.aiAdvice || " AI advice generated but empty.");
           setIsGeneratingAI(false);
           setPollAttempts(0);
           stopPolling();
@@ -199,7 +199,7 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
       if (data.recordId) {
         if (currentRecordId !== data.recordId || !isGeneratingAI) {
           setCurrentRecordId(data.recordId);
-          setAiAdvice("🤖 Generating personalized lifestyle advice...");
+          setAiAdvice("Generating personalized lifestyle advice...");
           setIsGeneratingAI(true);
           setPollAttempts(0);
           startPolling(data.recordId);
@@ -222,7 +222,7 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
     } else if (!currentRecordId) {
       toast.error("Please save your lifestyle data first");
     } else if (isGeneratingAI) {
-      toast("AI advice is already being generated", { icon: "ℹ️" });
+      toast("AI advice is already being generated", );
     }
   };
 

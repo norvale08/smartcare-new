@@ -47,11 +47,11 @@ export const languageContent = {
     },
     mealTypeOptions: {
       empty: "Select type",
-      carbs: "🍞 Carbohydrates",
-      sugaryDrinks: "🥤 Sugary Drinks",
-      proteins: "🍖 Proteins",
-      vegetables: "🥗 Vegetables",
-      mixed: "🍱 Mixed Meal"
+      carbs: " Carbohydrates",
+      sugaryDrinks: " Sugary Drinks",
+      proteins: " Proteins",
+      vegetables: "Vegetables",
+      mixed: " Mixed Meal"
     },
     exerciseTitle: "Physical Activity",
     exerciseSubtitle: "Recent exercise impacts glucose",
@@ -60,16 +60,16 @@ export const languageContent = {
     exerciseIntensityLabel: "Exercise Intensity",
     exerciseOptions: {
       empty: "Select option",
-      none: "❌ No recent exercise",
-      within2Hours: "⏱️ Within last 2 hours",
-      twoToSixHours: "🕐 2-6 hours ago",
-      sixTo24Hours: "📅 6-24 hours ago"
+      none: " No recent exercise",
+      within2Hours: "Within last 2 hours",
+      twoToSixHours: " 2-6 hours ago",
+      sixTo24Hours: " 6-24 hours ago"
     },
     intensityOptions: {
       empty: "Select intensity",
-      light: "🚶 Light (Walking, stretching)",
-      moderate: "🚴 Moderate (Brisk walk, cycling)",
-      vigorous: "🏃 Vigorous (Running, sports)"
+      light: "Light (Walking, stretching)",
+      moderate: "Moderate (Brisk walk, cycling)",
+      vigorous: "Vigorous (Running, sports)"
     },
     aiInsights: "Get AI Health Insights",
     submitting: "Submitting...",
@@ -170,11 +170,11 @@ export const languageContent = {
     },
     mealTypeOptions: {
       empty: "Chagua aina",
-      carbs: "🍞 Wanga",
-      sugaryDrinks: "🥤 Vinywaji vilivyo na sukari",
-      proteins: "🍖 Protini",
-      vegetables: "🥗 Mboga mboga",
-      mixed: "🍱 Chakula mchanganyiko"
+      carbs: "Wanga",
+      sugaryDrinks: " Vinywaji vilivyo na sukari",
+      proteins: "Protini",
+      vegetables: "Mboga mboga",
+      mixed: " Chakula mchanganyiko"
     },
     exerciseTitle: "Shughuli za Mwili",
     exerciseSubtitle: "Mazoezi ya hivi karibuni yanaathiri sukari damu",
@@ -183,16 +183,16 @@ export const languageContent = {
     exerciseIntensityLabel: "Ukali wa Mazoezi",
     exerciseOptions: {
       empty: "Chagua chaguo",
-      none: "❌ Hakuna mazoezi ya hivi karibuni",
-      within2Hours: "⏱️ Ndani ya masaa 2 yaliyopita",
-      twoToSixHours: "🕐 Masaa 2-6 yaliyopita",
-      sixTo24Hours: "📅 Masaa 6-24 yaliyopita"
+      none: "Hakuna mazoezi ya hivi karibuni",
+      within2Hours: " Ndani ya masaa 2 yaliyopita",
+      twoToSixHours: " Masaa 2-6 yaliyopita",
+      sixTo24Hours: "Masaa 6-24 yaliyopita"
     },
     intensityOptions: {
       empty: "Chagua ukali",
-      light: "🚶 Mwepesi (Kutembea, kunyoosha)",
-      moderate: "🚴 Wastani (Kutembea kwa kasi, baiskeli)",
-      vigorous: "🏃 Mizito (Kukimbia, michezo)"
+      light: " Mwepesi (Kutembea, kunyoosha)",
+      moderate: "Wastani (Kutembea kwa kasi, baiskeli)",
+      vigorous: "Mizito (Kukimbia, michezo)"
     },
     aiInsights: "Pata Uchambuzi wa Afya kutoka kwa AI",
     submitting: "Inatumwa...",

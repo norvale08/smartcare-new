@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TriangleAlert, CheckCircle, MapPin } from "lucide-react";
+import { TriangleAlert, CheckCircle, MapPin, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 type DiabetesStatus = {
@@ -87,135 +87,153 @@ export default function DiabetesAlerts({ refreshToken }: Props) {
     fetchTodayVitals();
   }, [refreshToken]);
 
-  if (loading) return (
-    <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">
-      Loading diabetes alert...
-    </div>
-  );
-  
-  if (error) return (
-    <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6">
-      <div className="text-red-600 mb-4">{error}</div>
-      <Link href="/map">
-        <button className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all font-medium flex items-center gap-2">
-          <MapPin className="w-4 h-4" />
-          Find Medical Facilities
-        </button>
-      </Link>
-    </div>
-  );
-  
-  if (!statusData) return (
-    <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6">
-      <div className="text-gray-600 mb-4">No glucose data for today. Please enter your vitals.</div>
-      <Link href="/map">
-        <button className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all font-medium flex items-center gap-2">
-          <MapPin className="w-4 h-4" />
-          Find Medical Facilities
-        </button>
-      </Link>
-    </div>
-  );
-
   function getGlucoseCategory(glucose: number, context: string) {
     if (glucose < 70) return { 
       title: "Low Blood Sugar", 
-      color: "bg-blue-50 border-blue-600", 
-      text: "text-blue-700", 
-      icon: <TriangleAlert color="#2563eb" size={20} />, 
+      color: "bg-blue-50 border-cyan-600", 
+      text: "text-blue-950", 
+      icon: <TriangleAlert className="text-cyan-600" size={18} />, 
       message: "Glucose too low!",
-      buttonText: "Find Emergency Help",
-      buttonColor: "from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+      buttonText: "Find Help",
+      buttonGradient: "from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700"
     };
     
     if (context === "Fasting") return glucose <= 125
       ? { 
-        title: "Normal Fasting Glucose", 
-        color: "bg-green-50 border-green-600", 
-        text: "text-green-700", 
-        icon: <CheckCircle color="#16a34a" size={20} />, 
+        title: "Normal Fasting", 
+        color: "bg-emerald-50 border-emerald-600", 
+        text: "text-emerald-950", 
+        icon: <CheckCircle className="text-emerald-600" size={18} />, 
         message: "Fasting glucose normal",
-        buttonText: "Find Medical Facilities",
-        buttonColor: "from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+        buttonText: "Find Facilities",
+        buttonGradient: "from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700"
       }
       : { 
-        title: "High Fasting Glucose", 
+        title: "High Fasting", 
         color: "bg-red-50 border-red-600", 
-        text: "text-red-700", 
-        icon: <TriangleAlert color="#dc2626" size={20} />, 
+        text: "text-red-950", 
+        icon: <TriangleAlert className="text-red-600" size={18} />, 
         message: "Fasting glucose high",
-        buttonText: "Find Nearby Doctor",
-        buttonColor: "from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
+        buttonText: "Find Doctor",
+        buttonGradient: "from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
       };
     
     if (context === "Post-meal") return glucose <= 180
       ? { 
-        title: "Normal Post-meal Glucose", 
-        color: "bg-green-50 border-green-600", 
-        text: "text-green-700", 
-        icon: <CheckCircle color="#16a34a" size={20} />, 
+        title: "Normal Post-meal", 
+        color: "bg-emerald-50 border-emerald-600", 
+        text: "text-emerald-950", 
+        icon: <CheckCircle className="text-emerald-600" size={18} />, 
         message: "Post-meal glucose normal",
-        buttonText: "Find Medical Facilities",
-        buttonColor: "from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+        buttonText: "Find Facilities",
+        buttonGradient: "from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700"
       }
       : { 
-        title: "High Post-meal Glucose", 
+        title: "High Post-meal", 
         color: "bg-red-50 border-red-600", 
-        text: "text-red-700", 
-        icon: <TriangleAlert color="#dc2626" size={20} />, 
+        text: "text-red-950", 
+        icon: <TriangleAlert className="text-red-600" size={18} />, 
         message: "Post-meal glucose high",
-        buttonText: "Find Diabetes Specialist",
-        buttonColor: "from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
+        buttonText: "Find Specialist",
+        buttonGradient: "from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
       };
     
     return glucose <= 200
       ? { 
-        title: "Normal Random Glucose", 
-        color: "bg-green-50 border-green-600", 
-        text: "text-green-700", 
-        icon: <CheckCircle color="#16a34a" size={20} />, 
+        title: "Normal Random", 
+        color: "bg-emerald-50 border-emerald-600", 
+        text: "text-emerald-950", 
+        icon: <CheckCircle className="text-emerald-600" size={18} />, 
         message: "Random glucose normal",
-        buttonText: "Find Medical Facilities",
-        buttonColor: "from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+        buttonText: "Find Facilities",
+        buttonGradient: "from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700"
       }
       : { 
-        title: "High Random Glucose", 
+        title: "High Random", 
         color: "bg-red-50 border-red-600", 
-        text: "text-red-700", 
-        icon: <TriangleAlert color="#dc2626" size={20} />, 
+        text: "text-red-950", 
+        icon: <TriangleAlert className="text-red-600" size={18} />, 
         message: "Random glucose high",
-        buttonText: "Emergency Medical Help",
-        buttonColor: "from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
+        buttonText: "Get Help Now",
+        buttonGradient: "from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
       };
   }
 
+  // Loading State - Compact
+  if (loading) return (
+    <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-3 sm:p-4 flex items-center justify-center">
+      <Loader2 className="w-5 h-5 text-cyan-600 animate-spin mr-2" />
+      <span className="text-sm text-gray-600">Loading alert...</span>
+    </div>
+  );
+  
+  // Error State - Compact
+  if (error) return (
+    <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-3 sm:p-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+        <p className="text-xs sm:text-sm text-red-600 flex-1">{error}</p>
+        <Link href="/map" className="flex-shrink-0">
+          <button className="w-full sm:w-auto bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5">
+            <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+            Find Facilities
+          </button>
+        </Link>
+      </div>
+    </div>
+  );
+  
+  // No Data State - Compact
+  if (!statusData) return (
+    <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-3 sm:p-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+        <p className="text-xs sm:text-sm text-gray-600 flex-1">No glucose data for today. Enter vitals.</p>
+        <Link href="/map" className="flex-shrink-0">
+          <button className="w-full sm:w-auto bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5">
+            <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+            Find Facilities
+          </button>
+        </Link>
+      </div>
+    </div>
+  );
+
   const glucoseCategory = getGlucoseCategory(statusData.glucose, statusData.context);
 
+  // Alert Display - Compact & Mobile-First
   return (
-    <div className={`bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 border-l-4 ${glucoseCategory.color}`}>
-      <div className="flex items-center gap-2 mb-2">
-        {glucoseCategory.icon}
-        <h3 className={`text-lg font-bold ${glucoseCategory.text}`}>
-          {glucoseCategory.title}
-        </h3>
+    <div className={`${glucoseCategory.color} shadow-sm rounded-lg border-l-4 p-3 sm:p-4`}>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+        {/* Left Side - Status Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            {glucoseCategory.icon}
+            <h3 className={`text-sm sm:text-base font-bold ${glucoseCategory.text} truncate`}>
+              {glucoseCategory.title}
+            </h3>
+          </div>
+          
+          <p className={`text-xs sm:text-sm ${glucoseCategory.text} mb-2`}>
+            {glucoseCategory.message}
+          </p>
+          
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
+            <span className="font-semibold">
+              <span className={glucoseCategory.text}>Glucose:</span> {statusData.glucose} mg/dL
+            </span>
+            <span className={`px-2 py-0.5 rounded-full ${glucoseCategory.color} ${glucoseCategory.text} font-medium`}>
+              {statusData.context}
+            </span>
+          </div>
+        </div>
+        
+        {/* Right Side - Action Button */}
+        <Link href="/map" className="flex-shrink-0 w-full sm:w-auto">
+          <button className={`w-full sm:w-auto bg-gradient-to-r ${glucoseCategory.buttonGradient} text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg transition-all text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 shadow-sm`}>
+            <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            {glucoseCategory.buttonText}
+          </button>
+        </Link>
       </div>
-      
-      <p className={`text-sm ${glucoseCategory.text} mb-4`}>
-        {glucoseCategory.message}
-      </p>
-      
-      <div className="text-sm mb-2">
-        <p><strong>Glucose:</strong> {statusData.glucose} mg/dL</p>
-        <p><strong>Context:</strong> {statusData.context}</p>
-      </div>
-      
-      {/* SINGLE BUTTON THAT TAKES USER TO /map PAGE */}
-      <Link href="/map">
-        <button className={`bg-gradient-to-r ${glucoseCategory.buttonColor} text-white px-4 py-2 rounded-lg transition-all font-medium flex items-center gap-2`}>
-          <MapPin className="w-4 h-4" />
-          {glucoseCategory.buttonText}
-        </button>
-      </Link>
     </div>
   );
 }

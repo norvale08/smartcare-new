@@ -1,4 +1,4 @@
-// apps/web/app/diabetes/page.tsx - FIXED VERSION
+// apps/web/app/diabetes/page.tsx - REDESIGNED WITH SIDE NAVIGATION
 "use client";
 import React, { useState } from "react";
 import DiabetesAlerts from "../components/diabetesPages/DiabetesAlerts";
@@ -9,7 +9,7 @@ import LifestyleForm from "../components/diabetesPages/DiabetesLifestyle";
 import DiabetesMedications from "../components/diabetesPages/DiabetesMedications";
 import DiabetesFoodAdvice from "../components/diabetesPages/DiabetesFoodAdvice";
 import UserProfileHeader from "../components/UserProfileHeader";
-
+import DiabetesVitalsGraph from "../components/diabetesPages/components/DiabetesVitalsGraph";
 import { 
   Activity, 
   Heart, 
@@ -18,11 +18,13 @@ import {
   Brain, 
   CheckCircle,
   RotateCcw,
-  Menu,
-  X
+  Info,
+  TrendingUp,
+  BarChart3,
+  ChevronRight
 } from "lucide-react";
 
-type TabType = "vitals" | "lifestyle" | "medications" | "food" | "final";
+type TabType = "vitals" | "lifestyle" | "medications" | "food" | "final" | "trends";
 type LanguageType = "en" | "sw";
 
 // Language content for the main page
@@ -31,48 +33,93 @@ const languageContent = {
     title: "Diabetes Health Assessment",
     alerts: "Alerts",
     vitals: "Vitals",
+    trends: "Trends",
     lifestyle: "Lifestyle",
     medications: "Medications",
     food: "Food",
     final: "AI Report",
+    continueToTrends: "View Trends",
+    continueToLifestyle: "Continue to Lifestyle",
     continueToMeds: "Continue to Medications",
     continueToFood: "Continue to Food Advice",
+    continueToFinal: "Generate AI Report",
     startNew: "Start New Assessment",
     latestReport: "Latest Report Generated",
     reportSuccess: "Your comprehensive health analysis has been successfully generated and is displayed above.",
     step: "Step",
     of: "of",
-    mobileLabels: {
-      vitals: "Vitals",
-      lifestyle: "Lifestyle", 
-      medications: "Meds",
-      food: "Food",
-      final: "Report"
-    }
+    progress: "Progress",
+    steps: "Steps",
+    aiDisclaimer: {
+      title: "AI-Generated Content",
+      content: "This AI analysis is for informational purposes only and does not replace professional medical advice. Always consult your healthcare provider for medical decisions."
+    },
+    viewTrends: "View Your Health Trends",
+    trendsDescription: "Track your glucose and blood pressure patterns over time to better understand your health journey.",
+    vitalsTitle: "Enter Today's Vitals",
+    vitalsDescription: "Record your current glucose and blood pressure readings to get personalized insights.",
+    backToForm: "Back to Vitals Form",
+    trendsTitle: "Your Health Trends",
+    trendsSubtitle: "Visualize your glucose and blood pressure patterns over time"
   },
   sw: {
     title: "Tathmini ya Afya ya Kisukari",
     alerts: "Taarifa",
     vitals: "Viwango",
+    trends: "Mwenendo",
     lifestyle: "Mtindo wa Maisha",
     medications: "Dawa",
     food: "Chakula",
     final: "Ripoti ya AI",
+    continueToTrends: "Angalia Mwenendo",
+    continueToLifestyle: "Endelea kwa Mtindo wa Maisha",
     continueToMeds: "Endelea kwa Dawa",
     continueToFood: "Endelea kwa Ushauri wa Chakula",
+    continueToFinal: "Tengeneza Ripoti ya AI",
     startNew: "Anza Tathmini Mpya",
     latestReport: "Ripoti ya Hivi Karibuni Imetengenezwa",
     reportSuccess: "Uchambuzi wako wa kina wa afya umeundwa kikamilifu na unaonyeshwa hapo juu.",
     step: "Hatua",
     of: "ya",
-    mobileLabels: {
-      vitals: "Viwango",
-      lifestyle: "Maisha",
-      medications: "Dawa",
-      food: "Chakula",
-      final: "Ripoti"
-    }
+    progress: "Maendeleo",
+    steps: "Hatua",
+    aiDisclaimer: {
+      title: "Onyo la Maudhui Yaliyotengenezwa na AI",
+      content: "Uchambuzi huu umetengenezwa na akili bandia na unalenga kutoa maelezo tu. HAUFAI kuchukua nafasi ya ushauri wa kitaalamu wa kimatibabu, utambuzi, au matibabu. Daima wasiliana na watoa huduma za afya wenye sifa kabla ya kufanya maamuzi yoyote ya kiafya au mabadiliko kwenye mpango wako wa matibabu. Ikiwa unakumbana na dharura ya kimatibabu, wasiliana na huduma za dharura mara moja."
+    },
+    viewTrends: "Angalia Mwenendo wa Afya Yako",
+    trendsDescription: "Fuatilia mifumo yako ya sukari ya damu na shinikizo la damu kwa muda kwa muda ili kuelewa vyema safari yako ya afya.",
+    vitalsTitle: "Ingiza Viwango vya Leo",
+    vitalsDescription: "Rekodi usomaji wako wa sasa wa sukari ya damu na shinikizo la damu ili kupata ufahamu wa kibinafsi.",
+    backToForm: "Rudi kwa Fomu ya Viwango",
+    trendsTitle: "Mwenendo wa Afya Yako",
+    trendsSubtitle: "Angalia mifumo yako ya sukari ya damu na shinikizo la damu kwa muda"
   }
+};
+
+// AI Disclaimer Component
+const AIDisclaimerBox = ({ language }: { language: LanguageType }) => {
+  const content = languageContent[language].aiDisclaimer;
+  
+  return (
+    <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border-2 border-blue-900 rounded-xl p-4 lg:p-6 shadow-sm">
+      <div className="flex items-start gap-3 lg:gap-4">
+        <div className="flex-shrink-0">
+          <div className="bg-blue-900 rounded-full p-2 lg:p-2.5">
+            <Info className="w-5 h-5 lg:w-6 lg:h-6 text-cyan-100" />
+          </div>
+        </div>
+        <div className="flex-1">
+          <h3 className="font-bold text-blue-900 text-base lg:text-lg mb-2 flex items-center gap-2">
+            {content.title}
+          </h3>
+          <p className="text-emerald-900 text-sm lg:text-base leading-relaxed">
+            {content.content}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const Page = () => {
@@ -80,9 +127,9 @@ const Page = () => {
   const [vitalsId, setVitalsId] = useState<string | undefined>();
   const [requestAI, setRequestAI] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<TabType>("vitals");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [language, setLanguage] = useState<LanguageType>("en");
 
+  const [vitalsDone, setVitalsDone] = useState<boolean>(false);
   const [lifestyleDone, setLifestyleDone] = useState<boolean>(false);
   const [medicationsDone, setMedicationsDone] = useState<boolean>(false);
   const [foodDone, setFoodDone] = useState<boolean>(false);
@@ -94,11 +141,11 @@ const Page = () => {
     setRefreshToken((prev) => prev + 1);
     setVitalsId(id);
     setRequestAI(aiRequested);
+    setVitalsDone(true);
   };
 
   const handleTabChange = (tab: TabType): void => {
     setActiveTab(tab);
-    setMobileMenuOpen(false);
   };
 
   const handleFeedbackGenerated = (feedback: string): void => {
@@ -112,9 +159,9 @@ const Page = () => {
   const isTabDisabled = (tab: TabType): boolean => {
     switch (tab) {
       case "lifestyle":
-        return !vitalsId;
+        return !vitalsDone;
       case "medications":
-        return !lifestyleDone;
+        return false; // Always accessible
       case "food":
         return !medicationsDone;
       case "final":
@@ -124,41 +171,22 @@ const Page = () => {
     }
   };
 
-  const tabConfig: Record<TabType, { label: string; icon: React.ReactNode; mobileLabel: string }> = {
-    vitals: { 
-      label: currentLanguage.vitals, 
-      icon: <Activity className="w-4 h-4 md:w-5 md:h-5" />, 
-      mobileLabel: currentLanguage.mobileLabels.vitals
-    },
-    lifestyle: { 
-      label: currentLanguage.lifestyle, 
-      icon: <Heart className="w-4 h-4 md:w-5 md:h-5" />, 
-      mobileLabel: currentLanguage.mobileLabels.lifestyle
-    },
-    medications: { 
-      label: currentLanguage.medications, 
-      icon: <Pill className="w-4 h-4 md:w-5 md:h-5" />, 
-      mobileLabel: currentLanguage.mobileLabels.medications
-    },
-    food: { 
-      label: currentLanguage.food, 
-      icon: <Apple className="w-4 h-4 md:w-5 md:h-5" />, 
-      mobileLabel: currentLanguage.mobileLabels.food
-    },
-    final: { 
-      label: currentLanguage.final, 
-      icon: <Brain className="w-4 h-4 md:w-5 md:h-5" />, 
-      mobileLabel: currentLanguage.mobileLabels.final
-    }
-  };
+  // Main steps (excluding trends)
+  const mainSteps: Array<{ id: TabType; label: string; icon: any; done: boolean }> = [
+    { id: "vitals", label: currentLanguage.vitals, icon: Activity, done: vitalsDone },
+    { id: "lifestyle", label: currentLanguage.lifestyle, icon: Heart, done: lifestyleDone },
+    { id: "medications", label: currentLanguage.medications, icon: Pill, done: medicationsDone },
+    { id: "food", label: currentLanguage.food, icon: Apple, done: foodDone },
+    { id: "final", label: currentLanguage.final, icon: Brain, done: false }
+  ];
 
-  const tabs: TabType[] = ["vitals", "lifestyle", "medications", "food", "final"];
-  const currentStepIndex = tabs.indexOf(activeTab) + 1;
+  const completedSteps = mainSteps.filter(s => s.done).length;
+  const progressPercentage = (completedSteps / mainSteps.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-blue-50 to-emerald-50">
       {/* User Profile Header - Full Width with Language Selector */}
-      <div className="w-full bg-white shadow-sm">
+      <div className="w-full bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <UserProfileHeader 
           currentLanguage={language}
           onLanguageChange={handleLanguageChange}
@@ -166,198 +194,338 @@ const Page = () => {
       </div>
 
       {/* Main Content Container */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8 space-y-6">
-        {/* Alerts */}
-        <DiabetesAlerts refreshToken={refreshToken} />
-
-        {/* Mobile Menu Button */}
-        <div className="lg:hidden sticky top-0 z-20 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0">
-                {tabConfig[activeTab].icon}
-              </div>
-              <div>
-                <div className="text-sm text-blue-900 font-medium">
-                  {currentLanguage.step} {currentStepIndex} {currentLanguage.of} 5
-                </div>
-                <div className="text-lg font-semibold text-emerald-900">
-                  {tabConfig[activeTab].label}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg bg-cyan-100 text-blue-900 hover:bg-cyan-200 transition-colors"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="w-full bg-cyan-100 rounded-full h-2 mt-3">
-            <div 
-              className="bg-emerald-900 h-2 rounded-full transition-all duration-300"
-              style={{ 
-                width: `${(currentStepIndex / 5) * 100}%` 
-              }}
-            ></div>
-          </div>
-
-          {/* Mobile Dropdown Menu */}
-          {mobileMenuOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-30">
-              <div className="p-2 space-y-1">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => handleTabChange(tab)}
-                    disabled={isTabDisabled(tab)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-colors ${
-                      activeTab === tab
-                        ? "bg-emerald-900 text-white"
-                        : "text-blue-900 hover:bg-cyan-50"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {tabConfig[tab].icon}
-                    <span className="font-medium flex-1">{tabConfig[tab].label}</span>
-                    {(tab === "lifestyle" && lifestyleDone) ||
-                    (tab === "medications" && medicationsDone) ||
-                    (tab === "food" && foodDone) ? (
-                      <CheckCircle className="w-4 h-4 text-cyan-100" />
-                    ) : null}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Alerts - Full Width */}
+        <div className="mb-6">
+          <DiabetesAlerts refreshToken={refreshToken} />
         </div>
 
-        {/* Desktop Tab Navigation */}
-        <div className="hidden lg:block sticky top-0 z-10 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => handleTabChange(tab)}
-                disabled={isTabDisabled(tab)}
-                className={`flex items-center px-4 py-3 font-medium transition-colors whitespace-nowrap rounded-lg text-base min-w-[140px] justify-center gap-2 ${
-                  activeTab === tab
-                    ? "bg-emerald-900 text-white shadow-sm"
-                    : "text-blue-900 hover:bg-cyan-100 hover:text-emerald-900"
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {tabConfig[tab].icon}
-                <span>{tabConfig[tab].label}</span>
-                {(tab === "lifestyle" && lifestyleDone) ||
-                (tab === "medications" && medicationsDone) ||
-                (tab === "food" && foodDone) ? (
-                  <CheckCircle className="w-4 h-4 text-cyan-100" />
-                ) : null}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <div className="min-h-[500px]">
-          {activeTab === "vitals" && (
-            <div className="space-y-6">
-              <DiabetesVitalsForm 
-                onVitalsSubmitted={handleVitalsSubmit} 
-                initialLanguage={language}
-              />
-              {vitalsId && requestAI && <DiabetesAISummary vitalsId={vitalsId} />}
-            </div>
-          )}
-
-          {activeTab === "lifestyle" && (
-            <div className="space-y-6">
-              <LifestyleForm />
-              <div className="sticky bottom-6 lg:static mt-8">
-                <button
-                  onClick={() => {
-                    setLifestyleDone(true);
-                    setTimeout(() => setActiveTab("medications"), 500);
-                  }}
-                  className="w-full lg:w-auto bg-emerald-900 text-white px-8 py-4 lg:py-3 rounded-lg hover:bg-emerald-800 transition-colors font-semibold flex items-center justify-center gap-3 text-lg lg:text-base"
-                >
-                  {currentLanguage.continueToMeds}
-                  <Pill className="w-5 h-5 lg:w-4 lg:h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "medications" && (
-            <div className="space-y-6">
-              <DiabetesMedications />
-              <div className="sticky bottom-6 lg:static mt-8">
-                <button
-                  onClick={() => {
-                    setMedicationsDone(true);
-                    setTimeout(() => setActiveTab("food"), 500);
-                  }}
-                  className="w-full lg:w-auto bg-emerald-900 text-white px-8 py-4 lg:py-3 rounded-lg hover:bg-emerald-800 transition-colors font-semibold flex items-center justify-center gap-3 text-lg lg:text-base"
-                >
-                  {currentLanguage.continueToFood}
-                  <Apple className="w-5 h-5 lg:w-4 lg:h-4" />
-                </button>
-              </div>
+        {/* Main Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Side Navigation - Desktop Only */}
+          <div className="hidden lg:block lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sticky top-24">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
+                {currentLanguage.steps}
+              </h2>
               
-            </div>
-          )}
+              <nav className="space-y-2">
+                {mainSteps.map((step, index) => {
+                  const Icon = step.icon;
+                  const isActive = activeTab === step.id;
+                  const isCompleted = step.done;
+                  const isDisabled = isTabDisabled(step.id);
+                  
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => !isDisabled && handleTabChange(step.id)}
+                      disabled={isDisabled}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-left group ${
+                        isActive
+                          ? "bg-emerald-900 text-white shadow-md"
+                          : isDisabled
+                          ? "text-gray-400 cursor-not-allowed opacity-50"
+                          : "text-gray-700 hover:bg-cyan-50"
+                      }`}
+                    >
+                      <div className={`flex-shrink-0 ${
+                        isActive 
+                          ? "text-cyan-100" 
+                          : isDisabled 
+                          ? "text-gray-300" 
+                          : "text-gray-400 group-hover:text-emerald-900"
+                      }`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-medium ${
+                            isActive ? "text-cyan-100" : "text-gray-500"
+                          }`}>
+                            {index + 1}
+                          </span>
+                          <span className="font-medium text-sm truncate">
+                            {step.label}
+                          </span>
+                        </div>
+                      </div>
+                      {isCompleted && (
+                        <CheckCircle className={`w-4 h-4 flex-shrink-0 ${
+                          isActive ? "text-cyan-100" : "text-emerald-600"
+                        }`} />
+                      )}
+                    </button>
+                  );
+                })}
 
-          {activeTab === "food" && (
-            <div className="space-y-6">
-              <DiabetesFoodAdvice 
-                enabled={requestAI}
-                onComplete={() => {
-                  setFoodDone(true);
-                  setTimeout(() => setActiveTab("final"), 500);
-                }}
-              />
-            </div>
-          )}
-
-          {activeTab === "final" && (
-            <div className="space-y-6">
-              <FinalFeedback onFeedbackGenerated={handleFeedbackGenerated} />
-
-              {finalFeedback && (
-                <div className="bg-cyan-100 border border-emerald-900/20 rounded-lg p-6">
-                  <div className="flex items-center gap-3 text-emerald-900 mb-3">
-                    <CheckCircle className="w-6 h-6 lg:w-5 lg:h-5" />
-                    <h4 className="font-semibold text-lg lg:text-base">
-                      {currentLanguage.latestReport}
-                    </h4>
-                  </div>
-                  <p className="text-blue-900 text-base lg:text-sm">
-                    {currentLanguage.reportSuccess}
-                  </p>
+                {/* Trends - Separate from main steps - Always visible */}
+                <div className="pt-4 mt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => handleTabChange("trends")}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-left group ${
+                      activeTab === "trends"
+                        ? "bg-blue-900 text-white shadow-md"
+                        : "text-gray-700 hover:bg-cyan-50"
+                    }`}
+                  >
+                    <div className={`flex-shrink-0 ${
+                      activeTab === "trends" ? "text-cyan-100" : "text-gray-400 group-hover:text-blue-900"
+                    }`}>
+                      <BarChart3 className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium text-sm truncate flex-1">
+                      {currentLanguage.trends}
+                    </span>
+                  </button>
                 </div>
-              )}
+              </nav>
 
-              <div className="sticky bottom-6 lg:static mt-8">
-                <button
-                  onClick={() => {
-                    setActiveTab("vitals");
-                    setVitalsId(undefined);
-                    setRequestAI(false);
-                    setLifestyleDone(false);
-                    setMedicationsDone(false);
-                    setFoodDone(false);
-                    setFinalFeedback("");
-                    setRefreshToken((prev) => prev + 1);
-                  }}
-                  className="w-full bg-blue-900 text-white py-4 lg:py-3 px-6 rounded-lg hover:bg-blue-800 transition-colors font-semibold flex items-center justify-center gap-3 text-lg lg:text-base"
-                >
-                  <RotateCcw className="w-5 h-5 lg:w-4 lg:h-4" />
-                  {currentLanguage.startNew}
-                </button>
+              {/* Progress */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-gray-600 font-medium">{currentLanguage.progress}</span>
+                  <span className="text-emerald-900 font-bold">
+                    {completedSteps}/{mainSteps.length}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="bg-gradient-to-r from-emerald-900 to-cyan-600 h-2.5 rounded-full transition-all duration-500"
+                    style={{ width: `${progressPercentage}%` }}
+                  />
+                </div>
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Mobile Navigation */}
+          <div className="lg:hidden bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-600">
+                {currentLanguage.step} {mainSteps.findIndex(s => s.id === activeTab) + 1} {currentLanguage.of} {mainSteps.length}
+              </h2>
+              <span className="text-xs text-emerald-900 font-bold">
+                {completedSteps}/{mainSteps.length}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+              <div 
+                className="bg-gradient-to-r from-emerald-900 to-cyan-600 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+            <div className="flex items-center overflow-x-auto gap-2 pb-2">
+              {mainSteps.map((step, index) => {
+                const Icon = step.icon;
+                const isActive = activeTab === step.id;
+                const isDisabled = isTabDisabled(step.id);
+                
+                return (
+                  <button
+                    key={step.id}
+                    onClick={() => !isDisabled && handleTabChange(step.id)}
+                    disabled={isDisabled}
+                    className={`flex-shrink-0 flex flex-col items-center gap-1.5 px-3 py-2 rounded-lg transition-all min-w-[70px] ${
+                      isActive
+                        ? "bg-emerald-900 text-white"
+                        : isDisabled
+                        ? "text-gray-300 cursor-not-allowed"
+                        : "text-gray-600 hover:bg-cyan-50"
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="text-xs font-medium">{step.label}</span>
+                    {step.done && (
+                      <CheckCircle className={`w-3 h-3 ${isActive ? "text-cyan-100" : "text-emerald-600"}`} />
+                    )}
+                  </button>
+                );
+              })}
+              {/* Trends - Always visible on mobile */}
+              <button
+                onClick={() => handleTabChange("trends")}
+                className={`flex-shrink-0 flex flex-col items-center gap-1.5 px-3 py-2 rounded-lg transition-all min-w-[70px] ${
+                  activeTab === "trends"
+                    ? "bg-blue-900 text-white"
+                    : "text-gray-600 hover:bg-cyan-50"
+                }`}
+              >
+                <BarChart3 className="w-5 h-5" />
+                <span className="text-xs font-medium">{currentLanguage.trends}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="lg:col-span-3">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              {/* Content Header */}
+              <div className="bg-gradient-to-r from-blue-900 to-emerald-900 text-white p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  {activeTab === "vitals" && <Activity className="w-6 h-6" />}
+                  {activeTab === "trends" && <BarChart3 className="w-6 h-6" />}
+                  {activeTab === "lifestyle" && <Heart className="w-6 h-6" />}
+                  {activeTab === "medications" && <Pill className="w-6 h-6" />}
+                  {activeTab === "food" && <Apple className="w-6 h-6" />}
+                  {activeTab === "final" && <Brain className="w-6 h-6" />}
+                  <h2 className="text-2xl font-bold">
+                    {activeTab === "vitals" && currentLanguage.vitalsTitle}
+                    {activeTab === "trends" && currentLanguage.trendsTitle}
+                    {activeTab === "lifestyle" && currentLanguage.lifestyle}
+                    {activeTab === "medications" && currentLanguage.medications}
+                    {activeTab === "food" && currentLanguage.food}
+                    {activeTab === "final" && currentLanguage.final}
+                  </h2>
+                </div>
+                <p className="text-cyan-100 text-sm">
+                  {activeTab === "vitals" && currentLanguage.vitalsDescription}
+                  {activeTab === "trends" && currentLanguage.trendsSubtitle}
+                  {activeTab === "lifestyle" && "Record your daily lifestyle habits and activities"}
+                  {activeTab === "medications" && "Track your current medications and supplements"}
+                  {activeTab === "food" && "Get personalized dietary recommendations"}
+                  {activeTab === "final" && "View your comprehensive health analysis"}
+                </p>
+              </div>
+
+              {/* Content Body */}
+              <div className="p-6">
+                {activeTab === "vitals" && (
+                  <div className="space-y-6">
+                    <DiabetesVitalsForm 
+                      onVitalsSubmitted={handleVitalsSubmit} 
+                      initialLanguage={language}
+                    />
+
+                    {vitalsId && requestAI && (
+                      <>
+                        <DiabetesAISummary vitalsId={vitalsId} />
+                        <AIDisclaimerBox language={language} />
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <button
+                            onClick={() => setActiveTab("trends")}
+                            className="bg-blue-900 text-white px-6 py-3 rounded-lg hover:bg-blue-800 transition-colors font-semibold flex items-center justify-center gap-2"
+                          >
+                            <BarChart3 className="w-5 h-5" />
+                            {currentLanguage.continueToTrends}
+                          </button>
+                          
+                          <button
+                            onClick={() => setActiveTab("lifestyle")}
+                            className="bg-emerald-900 text-white px-6 py-3 rounded-lg hover:bg-emerald-800 transition-colors font-semibold flex items-center justify-center gap-2"
+                          >
+                            {currentLanguage.continueToLifestyle}
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "trends" && (
+                  <div className="space-y-6">
+                    <DiabetesVitalsGraph language={language} />
+                    
+                    <div className="pt-6 border-t border-gray-200">
+                      <button
+                        onClick={() => setActiveTab("lifestyle")}
+                        className="w-full sm:w-auto bg-emerald-900 text-white px-8 py-3 rounded-lg hover:bg-emerald-800 transition-colors font-semibold flex items-center justify-center gap-2"
+                      >
+                        {currentLanguage.continueToLifestyle}
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "lifestyle" && (
+                  <div className="space-y-6">
+                    <LifestyleForm />
+                    <button
+                      onClick={() => {
+                        setLifestyleDone(true);
+                        setTimeout(() => setActiveTab("medications"), 500);
+                      }}
+                      className="w-full sm:w-auto bg-emerald-900 text-white px-8 py-3 rounded-lg hover:bg-emerald-800 transition-colors font-semibold flex items-center justify-center gap-2"
+                    >
+                      {currentLanguage.continueToMeds}
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+
+                {activeTab === "medications" && (
+                  <div className="space-y-6">
+                    <DiabetesMedications />
+                    <button
+                      onClick={() => {
+                        setMedicationsDone(true);
+                        setTimeout(() => setActiveTab("food"), 500);
+                      }}
+                      className="w-full sm:w-auto bg-emerald-900 text-white px-8 py-3 rounded-lg hover:bg-emerald-800 transition-colors font-semibold flex items-center justify-center gap-2"
+                    >
+                      {currentLanguage.continueToFood}
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+
+                {activeTab === "food" && (
+                  <div className="space-y-6">
+                    <DiabetesFoodAdvice 
+                      enabled={requestAI}
+                      onComplete={() => {
+                        setFoodDone(true);
+                        setTimeout(() => setActiveTab("final"), 500);
+                      }}
+                    />
+                  </div>
+                )}
+
+                {activeTab === "final" && (
+                  <div className="space-y-6">
+                    <FinalFeedback onFeedbackGenerated={handleFeedbackGenerated} />
+                    
+                    <AIDisclaimerBox language={language} />
+
+                    {finalFeedback && (
+                      <div className="bg-cyan-100 border border-emerald-900/20 rounded-lg p-6">
+                        <div className="flex items-center gap-3 text-emerald-900 mb-3">
+                          <CheckCircle className="w-6 h-6 lg:w-5 lg:h-5" />
+                          <h4 className="font-semibold text-lg lg:text-base">
+                            {currentLanguage.latestReport}
+                          </h4>
+                        </div>
+                        <p className="text-blue-900 text-base lg:text-sm">
+                          {currentLanguage.reportSuccess}
+                        </p>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setActiveTab("vitals");
+                        setVitalsId(undefined);
+                        setRequestAI(false);
+                        setVitalsDone(false);
+                        setLifestyleDone(false);
+                        setMedicationsDone(false);
+                        setFoodDone(false);
+                        setFinalFeedback("");
+                        setRefreshToken((prev) => prev + 1);
+                      }}
+                      className="w-full sm:w-auto bg-blue-900 text-white py-3 px-8 rounded-lg hover:bg-blue-800 transition-colors font-semibold flex items-center justify-center gap-2"
+                    >
+                      <RotateCcw className="w-5 h-5" />
+                      {currentLanguage.startNew}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

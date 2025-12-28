@@ -7,7 +7,7 @@ import CustomToaster from "../ui/CustomToaster";
 import { diabetesType } from "@/types/diabetes";
 import VoiceControlPanel from "./components/VoiceControlPanel";
 import SectionVoiceControl from "./components/SectionVoiceControl";
-import GlucoseSection from "./components/GlucoseSection";
+import GlucoseContextSection from "./components/GlucoseSection";
 import CardiovascularSection from "./components/CardiovascularSection";
 import ContextSection from "./components/ContextSection";
 import MealSection from "./components/MealSection";
@@ -338,19 +338,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
       <CustomToaster />
       <div className="max-w-4xl mx-auto">
         
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 sm:w-40 sm:h-40 md:w-48 md:h-48 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full -mr-12 -mt-12 sm:-mr-20 sm:-mt-20 md:-mr-24 md:-mt-24"></div>
-          <div className="relative z-10 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-xl mb-2 sm:mb-3 shadow-md">
-              <div className="text-white text-xl">🏥</div>
-            </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-1 sm:mb-2">
-              {currentLanguage.title}
-            </h1>
-            <p className="text-xs sm:text-sm md:text-base text-gray-600 px-2">{currentLanguage.subtitle}</p>
-          </div>
-        </div>
-
+      
         {submitSuccess && (
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-3 sm:p-4 mb-4 sm:mb-6 rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -384,7 +372,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
               onPauseResume={handlePauseResume}
               languageValue={languageValue}
             />
-            <GlucoseSection
+            <GlucoseContextSection
               register={register}
               errors={formState.errors}
               currentLanguage={currentLanguage}
@@ -411,22 +399,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
             />
           </div>
 
-          <div>
-            <SectionVoiceControl
-              sectionName="context"
-              voiceModeState={voiceModeState}
-              onPauseResume={handlePauseResume}
-              languageValue={languageValue}
-            />
-            <ContextSection
-              register={register}
-              errors={formState.errors}
-              currentLanguage={currentLanguage}
-              validationRules={diabetesValidationRules}
-              setFieldRef={setFieldRef}
-              fieldStyle={getFieldStyle('context')}
-            />
-          </div>
+         
 
           {contextValue === "Post-meal" && (
             <div>

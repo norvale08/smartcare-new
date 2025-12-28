@@ -151,14 +151,16 @@ export class SmartCareAI {
 - Address patient directly using "wewe" (you)
 - MUST start with "${greeting}" 
 - Be warm, encouraging, and supportive
-- Keep it detailed but concise: 120-180 words
-- Focus on what patient CAN do, not restrictions`
+- Keep it detailed: 150-200 words
+- Focus on what patient CAN do, not restrictions
+- Include specific medical insights about their readings`
         : `\n\nIMPORTANT LANGUAGE & TONE RULES:
 - Use English with second-person POV ("you", "your")
 - MUST start with "${greeting}"
 - Be warm, encouraging, and motivating
-- Keep it detailed but concise: 120-180 words
-- Focus on empowerment and achievable actions`;
+- Keep it detailed: 150-200 words
+- Focus on empowerment and achievable actions
+- Include specific medical insights about their readings`;
 
       const prompt = `You are a compassionate healthcare provider giving diabetes management feedback.
 
@@ -176,29 +178,32 @@ FOOD RECOMMENDATIONS:
 QUICK TIPS: ${data.quickTips}
 LIFESTYLE: ${data.lifestyleFeedback}
 
-TASK: Create a detailed yet concise, motivating summary that:
+TASK: Create a detailed, motivating summary that:
 1. MUST start with "${greeting}" followed by acknowledging their commitment
-2. Provide a clear overview of their current health status (be specific with numbers if important)
-3. Give 3-4 detailed, actionable food/lifestyle recommendations with WHY they matter
-4. Connect the advice to their specific readings and context
-5. End with strong encouragement and next steps
-6. Uses "you" and "your" throughout (second-person POV)
-7. Be detailed but keep it 120-180 words (informative without being overwhelming)
-8. Make it feel personal and tailored to ${patientName}
+2. Provide a clear overview of their current health status with specific numbers and medical significance
+3. Explain what their readings mean for their body and long-term health
+4. Give 4-5 detailed, actionable food/lifestyle recommendations with clear explanations of WHY they matter
+5. Connect the advice to their specific readings and how it will improve their health
+6. Include positive medical aspects - what they're doing right physiologically
+7. End with strong encouragement about achievable health improvements
+8. Uses "you" and "your" throughout (second-person POV)
+9. Be detailed and informative: 150-200 words
+10. Make it feel personal and tailored to ${patientName}
 
 MEDICAL COMMUNICATION STANDARDS:
 ✓ Patient-centered language
-✓ Clear, simple terms (avoid jargon)
+✓ Clear explanations of medical significance
 ✓ Empathetic and non-judgmental
-✓ Action-oriented guidance
+✓ Action-oriented guidance with reasoning
 ✓ Respectful and encouraging tone
-✓ Include specific details that show you understand their situation${languageInstruction}`;
+✓ Include specific details that show you understand their situation
+✓ Mention positive physiological indicators${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
         model: this.model,
         temperature: 0.7,
-        max_tokens: 400,
+        max_tokens: 500,
       });
 
       const text = completion.choices[0]?.message?.content || "";
@@ -232,10 +237,10 @@ MEDICAL COMMUNICATION STANDARDS:
       }
 
       const languageInstruction = data.language === "sw"
-        ? "\n\nUse Kiswahili and second-person 'wewe' (you). Keep detailed but concise: 50-80 words (2-3 sentences)."
-        : "\n\nUse English and second-person 'you/your'. Keep detailed but concise: 50-80 words (2-3 sentences).";
+        ? "\n\nUse Kiswahili and second-person 'wewe' (you). Keep detailed: 80-120 words (3-4 sentences with medical insights)."
+        : "\n\nUse English and second-person 'you/your'. Keep detailed: 80-120 words (3-4 sentences with medical insights).";
 
-      const prompt = `Provide a detailed but concise clinical summary addressing ${patientName} directly.
+      const prompt = `Provide a detailed clinical summary addressing ${patientName} directly.
 
 PATIENT NAME: ${patientName}
 
@@ -252,19 +257,20 @@ YOUR DATA:
 ${data.age ? `- Age: ${data.age}` : ""}
 ${data.weight ? `- Weight: ${data.weight} kg` : ""}
 
-Write 2-3 sentences that:
-1. Address ${patientName} directly and state their glucose status clearly with context
-2. Mention other vitals with specific values and what they mean
-3. Give ONE specific observation about their overall health picture
-4. Use second-person ("you", "your") throughout
-5. Be detailed but stay 50-80 words
-6. Be factual, specific, yet encouraging${languageInstruction}`;
+Write 3-4 detailed sentences that:
+1. Address ${patientName} directly and state their glucose status clearly with medical context
+2. Explain what their specific number means for their body and health
+3. Mention other vitals with specific values and medical significance
+4. Give specific observations about their overall health picture with positive aspects
+5. Use second-person ("you", "your") throughout
+6. Be detailed and informative: 80-120 words
+7. Be factual, specific, medically informative yet encouraging${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
         model: this.model,
         temperature: 0.7,
-        max_tokens: 200,
+        max_tokens: 280,
       });
 
       const text = completion.choices[0]?.message?.content || "";
@@ -290,13 +296,13 @@ Write 2-3 sentences that:
 - Use "wewe/unaweza" (you/you can)
 - MUST start: "${greeting}"
 - Encouraging, supportive
-- Detailed but concise: 80-120 words`
+- Detailed with medical insights: 100-140 words`
         : `\n\nTONE & LANGUAGE:
 - English only
 - Use "you/your/you can"
 - MUST start: "${greeting}"
 - Encouraging, motivating
-- Detailed but concise: 80-120 words`;
+- Detailed with medical insights: 100-140 words`;
 
       const prompt = `Detailed glucose analysis speaking directly to ${patientName}.
 
@@ -314,25 +320,27 @@ ${data.systolic && data.diastolic ? `Blood Pressure: ${data.systolic}/${data.dia
 ${data.heartRate ? `Heart Rate: ${data.heartRate} bpm` : ""}
 ${data.exerciseRecent ? `Recent Exercise: ${data.exerciseRecent} (${data.exerciseIntensity})` : ""}
 
-Write 3-4 detailed sentences:
-1. MUST start "${greeting}" then explain what your specific glucose reading means in ${data.context} context
-2. ${category.needsAction ? "Explain clearly what you need to do and WHY it matters" : "Affirm what you're doing right and encourage you to maintain it"}
-3. If other vitals provided, explain how they relate to your glucose
-4. Give ONE specific, personalized recommendation with reasoning
+Write 4-5 detailed sentences:
+1. MUST start "${greeting}" then explain what your specific glucose reading means medically in ${data.context} context
+2. Explain the physiological significance - what's happening in your body
+3. ${category.needsAction ? "Explain clearly what you need to do, WHY it matters for your health, and the medical benefits" : "Affirm what you're doing right physiologically and encourage you to maintain it"}
+4. If other vitals provided, explain how they relate to your glucose and overall cardiovascular health
+5. Give 2 specific, personalized recommendations with clear medical reasoning
 
 COMMUNICATION STANDARDS:
 ✓ Direct address (you/your) to ${patientName}
-✓ Positive framing with specific details
-✓ Clear action steps with reasons
+✓ Positive framing with specific medical details
+✓ Clear action steps with health reasons
 ✓ Empowering language
 ✓ Non-judgmental
-✓ 80-120 words (detailed but not overwhelming)${languageInstruction}`;
+✓ Include positive physiological aspects
+✓ 100-140 words (detailed and informative)${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
         model: this.model,
         temperature: 0.7,
-        max_tokens: 280,
+        max_tokens: 340,
       });
 
       const text = completion.choices[0]?.message?.content || "";
@@ -357,12 +365,12 @@ COMMUNICATION STANDARDS:
 - Kiswahili + "wewe/unaweza"
 - MUST start: "${greeting}"
 - Positive, motivating
-- Detailed but concise: 100-140 words`
+- Detailed with medical benefits: 120-160 words`
         : `\n\nUSE:
 - English + "you/your/you can"
 - MUST start: "${greeting}"
 - Positive, motivating
-- Detailed but concise: 100-140 words`;
+- Detailed with medical benefits: 120-160 words`;
 
       const prompt = `Detailed lifestyle guidance addressing ${patientName} directly.
 
@@ -381,26 +389,27 @@ YOUR LIFESTYLE:
 - Exercise: ${data.lifestyle.exercise ?? "N/A"}
 - Sleep: ${data.lifestyle.sleep ?? "N/A"}
 
-Write 4-5 detailed sentences:
-1. MUST start "${greeting}" + acknowledge what ${patientName} is already doing right
-2. Explain specifically HOW your lifestyle habits are affecting your glucose levels (be detailed)
-3. If vitals show concerns, connect them to lifestyle factors with clear reasoning
-4. Give 2 specific, achievable changes you can make with explanation of benefits
-5. End with strong encouragement about your ability to improve
+Write 5-6 detailed sentences:
+1. MUST start "${greeting}" + acknowledge what ${patientName} is already doing right with medical benefits
+2. Explain specifically HOW your lifestyle habits are affecting your glucose levels physiologically (be detailed with medical reasoning)
+3. If vitals show concerns, connect them to lifestyle factors with clear health explanations
+4. Highlight any positive physiological indicators from their lifestyle choices
+5. Give 2-3 specific, achievable changes you can make with detailed explanation of health benefits
+6. End with strong encouragement about your body's ability to respond positively to these changes
 
 PATIENT COMMUNICATION:
 ✓ "You" language throughout
-✓ Celebrate specific wins
-✓ Two clear actions with reasoning
+✓ Celebrate specific physiological wins
+✓ Clear actions with detailed medical reasoning
 ✓ Supportive, detailed tone
-✓ Build confidence
-✓ 100-140 words (informative without overwhelming)${languageInstruction}`;
+✓ Build confidence with medical facts
+✓ 120-160 words (informative and motivating)${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
         model: this.model,
         temperature: 0.7,
-        max_tokens: 320,
+        max_tokens: 380,
       });
 
       const text = completion.choices[0]?.message?.content || "";
@@ -420,10 +429,10 @@ PATIENT COMMUNICATION:
       const category = getGlucoseCategory(data.glucose, data.context);
 
       const languageInstruction = data.language === "sw"
-        ? "\n\nKiswahili + 'unaweza kula' (you can eat). Be detailed and encouraging."
-        : "\n\nEnglish + 'you can eat/try'. Be detailed and encouraging.";
+        ? "\n\nKiswahili + 'unaweza kula' (you can eat). Be realistic and encouraging. NO PORTIONS."
+        : "\n\nEnglish + 'you can eat/try'. Be realistic and encouraging. NO PORTIONS.";
 
-      const prompt = `Create detailed Kenyan meal plan addressing ${patientName} directly.
+      const prompt = `Create realistic Kenyan meal plan addressing ${patientName} directly.
 
 PATIENT NAME: ${patientName}
 GLUCOSE: ${data.glucose} mg/dL (${data.context}) = ${category.status}
@@ -431,34 +440,40 @@ ${data.systolic && data.diastolic ? `BP: ${data.systolic}/${data.diastolic} mmHg
 ${data.age ? `Age: ${data.age}` : ""} ${data.weight ? `Weight: ${data.weight} kg` : ""}
 ${data.allergies && data.allergies.length > 0 ? `Allergies: ${data.allergies.join(", ")}` : ""}
 
-KENYAN FOODS:
-Starches: Ugali (whole maize), arrow roots, sweet potatoes, brown rice, millet
-Proteins: Omena, tilapia, beans, ndengu, njahi, kunde, eggs, chicken
-Vegetables: Sukuma wiki, managu, terere, kunde leaves, spinach
-Fruits: Pawpaw, guava, bananas, oranges, avocado
+KENYAN MEAL PATTERNS:
+BREAKFAST (7-9am): Tea (black/milk), bread, mandazi, uji, arrow roots, sweet potatoes, eggs, porridge
+LUNCH (12-2pm): Ugali, rice, chapati WITH sukuma wiki, cabbage, beans, meat stew, chicken, fish
+SUPPER (7-9pm): Similar to lunch OR lighter like githeri, tea with bread, porridge
+
+REALISTIC KENYAN FOODS BY MEAL:
+Breakfast: Tea with milk/black, uji (millet/wimbi/fermented), porridge, bread, mandazi, boiled eggs, arrow roots, sweet potatoes, bananas
+Lunch/Supper: Ugali (maize/brown), rice (white/brown), chapati, githeri, mukimo, irio, sukuma wiki, cabbage, managu, terere, kunde leaves, spinach, beans, ndengu, njahi, beef stew, chicken, tilapia, omena, matumbo
+Fruits: Bananas, oranges, pawpaw, guava, watermelon, mangoes, avocado
 
 RESPOND IN JSON:
 {
-  "breakfast": "YOU CAN START YOUR DAY WITH... (use 'you', be specific with portions, explain why it's good for you, mention 2-3 options, 3-4 sentences)",
-  "lunch": "FOR LUNCH, YOU CAN ENJOY... (use 'you', specific Kenyan foods with portions, cooking method, explain benefits, 3-4 sentences)",
-  "supper": "YOUR EVENING MEAL CAN INCLUDE... (use 'you', lighter options, portions, why it's appropriate for evening, 3-4 sentences)",
-  "foods_to_avoid": "YOU SHOULD LIMIT... (use 'you', explain clearly WHY each food affects your glucose/BP, 2-3 sentences)"
+  "breakfast": "YOU CAN HAVE... (realistic Kenyan breakfast items that people actually eat in the morning, explain why good for glucose/health, 2-3 sentences, NO PORTIONS)",
+  "lunch": "FOR LUNCH, TRY... (realistic Kenyan lunch combinations like ugali with sukuma and meat/fish, explain benefits, 2-3 sentences, NO PORTIONS)",
+  "supper": "IN THE EVENING, YOU CAN ENJOY... (realistic dinner options Kenyans eat, explain why appropriate, 2-3 sentences, NO PORTIONS)",
+  "foods_to_avoid": "IT'S BETTER TO LIMIT... (realistic foods Kenyans commonly eat that affect glucose/BP, explain WHY briefly, 2 sentences, NO PORTIONS)"
 }
 
-RULES:
+CRITICAL RULES:
 ✓ Use "you" and "your" throughout - address ${patientName} directly
-✓ Very encouraging tone ("you can", "try", "enjoy")
-✓ Specific portions (half plate, 1 kiganja, 1 bakuli, 2 cups)
-✓ Multiple affordable options per meal
-✓ Explain WHY foods are good/bad for ${patientName}'s condition
-✓ ${category.status === "HIGH" ? "Focus on low GI, high fiber foods" : category.status === "LOW" ? "Include quick and sustained energy foods" : "Balanced nutrition"}
-✓ Each meal description: 3-4 detailed sentences${languageInstruction}`;
+✓ Encouraging tone ("you can", "try", "enjoy")
+✓ NO PORTIONS - just list realistic food options
+✓ Be realistic about what Kenyans actually eat for each meal time
+✓ DON'T recommend ugali for breakfast - that's unrealistic
+✓ Multiple affordable, common options per meal
+✓ Brief explanation of WHY foods are good/bad for health
+✓ ${category.status === "HIGH" ? "Focus on whole grains, vegetables, lean proteins" : category.status === "LOW" ? "Include quick energy foods with sustained options" : "Balanced, everyday nutrition"}
+✓ Each meal: 2-3 sentences only (realistic and brief)${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
         model: this.model,
         temperature: 0.8,
-        max_tokens: 1500,
+        max_tokens: 900,
         response_format: { type: "json_object" },
       });
 
@@ -468,17 +483,17 @@ RULES:
       if (!parsedAdvice.breakfast || !parsedAdvice.lunch || !parsedAdvice.supper || !parsedAdvice.foods_to_avoid) {
         return {
           breakfast: data.language === "sw" 
-            ? "Unaweza kuanza siku yako na uji wa wimbi (bakuli 1) pamoja na yai la kuchemsha au viazi vitamu (vidogo 2). Chakula hiki kitakupa nguvu pole pole na kutasaidia kudhibiti sukari yako. Ongeza ndizi mbivu kwa ajili ya nguvu zaidi."
-            : "You can start your day with millet porridge (1 bowl) and a boiled egg or sweet potato (2 small). This meal will give you steady energy and help control your blood sugar. Add a ripe banana for extra energy.",
+            ? "Unaweza kunywa chai na mkate au kuandaa uji wa wimbi. Viazi vitamu vya kuchemsha na yai ni chaguo nzuri pia. Chakula hiki kitakupa nguvu na kudhibiti sukari."
+            : "You can have tea with bread or prepare millet porridge. Boiled sweet potatoes with an egg is also a good choice. This meal will give you energy and help control your sugar.",
           lunch: data.language === "sw"
-            ? "Kwa chakula cha mchana, unaweza kufurahia ugali wa mahindi ngano (nusu sahani) na sukuma wiki (rundo moja) pamoja na omena (kiganja 1) au ndengu (kopo 1). Pika kwa kupikia au kuchemsha bila mafuta mengi. Mboga hizi zina fiber nyingi na protein inayosaidia kudhibiti sukari."
-            : "For lunch, you can enjoy brown ugali (half plate) with sukuma wiki (1 bunch) and omena (1 handful) or ndengu (1 cup). Cook by steaming or boiling without excess oil. These vegetables have lots of fiber and the protein helps control your sugar.",
+            ? "Unaweza kula ugali na sukuma wiki pamoja na samaki au nyama. Githeri au maharagwe pia ni vizuri. Mboga na protini zinasaidia kudhibiti sukari."
+            : "You can eat ugali with sukuma wiki and fish or meat. Githeri or beans are also good options. Vegetables and protein help control your sugar.",
           supper: data.language === "sw"
-            ? "Jioni, chakula chako kinaweza kuwa na githeri nyepesi (bakuli 1) pamoja na managu au kunde wa kusteam (rundo dogo). Unaweza ongeza parachichi kidogo (nusu). Chakula hiki ni nyepesi kwa tumbo na hakitaongeza sukari usiku."
-            : "In the evening, your meal can include light githeri (1 bowl) with steamed managu or kunde (small bunch). You can add a small avocado (half). This meal is light on your stomach and won't spike your sugar at night.",
+            ? "Jioni unaweza kula chakula sawa na mchana lakini kidogo zaidi, au githeri na mboga. Chai na mkate pia ni sawa."
+            : "In the evening you can eat similar to lunch but lighter, or githeri with vegetables. Tea with bread is also fine.",
           foods_to_avoid: data.language === "sw"
-            ? "Unapaswa kupunguza mkate mweupe, chapati, na mandazi kwa sababu vinaongeza sukari haraka sana. Epuka pia soda na juisi zenye sukari nyingi. Punguza nyama yenye mafuta mengi na vyakula vilivyokaangwa kwani vinazidisha shinikizo la damu."
-            : "You should limit white bread, chapati, and mandazi because they raise your blood sugar very quickly. Also avoid soda and sugary juices. Reduce fatty meat and fried foods as they increase your blood pressure.",
+            ? "Punguza soda, sukari nyingi, na mandazi mara kwa mara. Vyakula hivyo vinaongeza sukari haraka sana."
+            : "Reduce soda, excess sugar, and frequent mandazi. These foods raise your sugar very quickly.",
         };
       }
 
@@ -486,17 +501,17 @@ RULES:
     } catch (err: any) {
       return {
         breakfast: data.language === "sw" 
-          ? "Unaweza kula uji wa wimbi na ndizi au yai."
-          : "You can eat millet porridge with banana or egg.",
+          ? "Chai na mkate au uji."
+          : "Tea with bread or porridge.",
         lunch: data.language === "sw"
-          ? "Unaweza kula ugali wa mahindi ngano na sukuma wiki."
-          : "You can eat brown ugali with sukuma wiki.",
+          ? "Ugali na sukuma wiki."
+          : "Ugali with sukuma wiki.",
         supper: data.language === "sw"
-          ? "Unaweza kula githeri na mboga."
-          : "You can eat githeri with vegetables.",
+          ? "Githeri au chakula cha kawaida."
+          : "Githeri or regular meal.",
         foods_to_avoid: data.language === "sw"
-          ? "Punguza sukari, chapati, na mandazi."
-          : "Reduce sugar, chapati, and mandazi.",
+          ? "Punguza sukari na soda."
+          : "Reduce sugar and soda.",
       };
     }
   }
@@ -512,31 +527,31 @@ RULES:
       const greeting = getPatientGreeting(patientName, data.language);
 
       const languageInstruction = data.language === "sw"
-        ? `\n\nKiswahili + "unaweza" (you can). MUST start: "${greeting}". Detailed but quick: 60-90 words. ENCOURAGING!`
-        : `\n\nEnglish + "you can/try". MUST start: "${greeting}". Detailed but quick: 60-90 words. ENCOURAGING!`;
+        ? `\n\nKiswahili + "unaweza" (you can). MUST start: "${greeting}". Quick and practical: 60-90 words. ENCOURAGING!`
+        : `\n\nEnglish + "you can/try". MUST start: "${greeting}". Quick and practical: 60-90 words. ENCOURAGING!`;
 
-      const prompt = `Give 2-3 immediate, detailed Kenyan food tips directly to ${patientName}.
+      const prompt = `Give 2-3 immediate, practical Kenyan food tips directly to ${patientName}.
 
 PATIENT NAME: ${patientName}
 GLUCOSE: ${data.glucose} mg/dL (${data.context}) = ${category.status}
 ${data.systolic && data.diastolic ? `BP: ${data.systolic}/${data.diastolic} mmHg` : ""}
 ${data.exerciseRecent ? `Recent Exercise: ${data.exerciseRecent} (${data.exerciseIntensity})` : ""}
 
-KENYAN FOODS: ugali (brown/whole maize), sukuma wiki, managu, githeri, ndengu, omena, tilapia, viazi vitamu, arrow roots, kunde
+REALISTIC KENYAN FOODS: chai, uji, mkate, mandazi, viazi vitamu, arrow roots, ugali, rice, chapati, sukuma wiki, cabbage, githeri, beans, ndengu, beef, chicken, tilafish, omena
 
 Write tips that:
 1. MUST start "${greeting}" 
-2. Give specific Kenyan foods you can eat RIGHT NOW with portions
-3. What you can do for your next meal with reasoning
+2. Give specific Kenyan foods you can eat RIGHT NOW (realistic for the time of day)
+3. What you can do for your next meal with brief reasoning
 4. Quick practical tip based on your ${category.status} glucose
 5. End with motivating statement
 
 USE:
 ✓ "You can..." language to ${patientName}
-✓ Specific Kenyan foods with portions
-✓ Motivating, detailed tone
-✓ Practical, immediate actions
-✓ 60-90 words (detailed but quick)${languageInstruction}`;
+✓ Realistic Kenyan foods (no portions)
+✓ Motivating, practical tone
+✓ Immediate, achievable actions
+✓ 60-90 words (quick and encouraging)${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],

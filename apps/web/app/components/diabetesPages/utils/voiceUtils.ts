@@ -788,7 +788,7 @@ export const listenForField = async (
         if (mediaRecorder.state === "recording" && voiceModeActiveRef.current) {
           mediaRecorder.stop();
         }
-      }, 3000); // Reduced from 7s to 3s
+      }, 4000); // Reduced from 7s to 3s
 
     } catch (error) {
       setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));

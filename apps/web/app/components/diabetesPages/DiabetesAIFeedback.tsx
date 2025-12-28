@@ -121,7 +121,7 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({ onFeedbackGenerated }) =>
     if (!isGenerating) {
       await generateComprehensiveFeedback();
     } else {
-      toast("Feedback is already being generated", { icon: "ℹ️" });
+      toast("Feedback is already being generated");
     }
   };
 
