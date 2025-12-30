@@ -66,12 +66,16 @@ router.get("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =>
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const { limit = "50", read } = req.query;
+    const { limit = "50", read, archived } = req.query;
     
     let query: any = { userId };
     
     if (read === "false" || read === "true") {
       query.read = read === "true";
+    }
+
+    if (archived === "false" || archived === "true") {
+      query.archived = archived === "true";
     }
 
     const notifications = await Notification.find(query)
@@ -101,12 +105,16 @@ router.get("/patient/:patientId", verifyToken, async (req: AuthenticatedRequest,
     }
 
     const { patientId } = req.params;
-    const { limit = "20", read } = req.query;
+    const { limit = "20", read, archived } = req.query;
     
     let query: any = { userId, patientId };
     
     if (read === "false" || read === "true") {
       query.read = read === "true";
+    }
+
+    if (archived === "false" || archived === "true") {
+      query.archived = archived === "true";
     }
 
     const notifications = await Notification.find(query)
@@ -209,6 +217,42 @@ router.post("/read-all", verifyToken, async (req: AuthenticatedRequest, res: Res
     res.status(500).json({ 
       success: false, 
       message: "Failed to mark all notifications as read" 
+    });
+  }
+});
+
+// Archive or unarchive a notification
+router.post("/:id/archive", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { archived = true } = req.body as { archived?: boolean };
+
+    const notification = await Notification.findOneAndUpdate(
+      { _id: req.params.id, userId },
+      { archived },
+      { new: true }
+    );
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: notification,
+    });
+  } catch (error: any) {
+    console.error("❌ Error archiving notification:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to archive notification"
     });
   }
 });
