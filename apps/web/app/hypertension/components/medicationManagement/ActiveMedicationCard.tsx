@@ -65,27 +65,34 @@ const ActiveMedicationCard: React.FC<ActiveMedicationCardProps> = ({
   };
 
   return (
-    <div key={medication._id} className="bg-white rounded-lg border p-4 shadow-sm">
+    <div key={medication._id} className="bg-white rounded-xl border border-cyan-100 p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           {/* Medication Header */}
           <div className="flex items-center space-x-2 mb-2">
-            <Pill className="w-5 h-5 text-blue-600" />
+            <Pill className="w-5 h-5 text-emerald-600" />
             <h4 className="font-medium text-gray-900">{medication.medicationName}</h4>
-            <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
+            <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
               {isEnglish() ? 'Active' : 'Inatumika'}
             </span>
             {medication.lastTaken && (
-              <span className="text-xs text-green-600">
-                {isEnglish() ? 'Last taken:' : 'Ilinyonywa:'} {new Date(medication.lastTaken).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+              <span className="text-xs text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-100">
+                {isEnglish() ? 'Last taken:' : 'Ilinyonywa:'}{" "}
+                {new Date(medication.lastTaken).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
           </div>
           
           {/* Medication Details */}
           <div className="text-sm text-gray-600 space-y-1">
-            <p><strong>{isEnglish() ? 'Dosage:' : 'Kipimo:'}</strong> {medication.dosage}</p>
-            <p><strong>{isEnglish() ? 'Frequency:' : 'Mara ngapi:'}</strong> {medication.frequency}</p>
+            <p>
+              <strong className="text-blue-700">{isEnglish() ? 'Dosage:' : 'Kipimo:'}</strong>{" "}
+              {medication.dosage}
+            </p>
+            <p>
+              <strong className="text-blue-700">{isEnglish() ? 'Frequency:' : 'Mara ngapi:'}</strong>{" "}
+              {medication.frequency}
+            </p>
             {medication.instructions && (
               <p><strong>{isEnglish() ? 'Instructions:' : 'Maelekezo:'}</strong> {medication.instructions}</p>
             )}
@@ -131,7 +138,7 @@ const ActiveMedicationCard: React.FC<ActiveMedicationCardProps> = ({
         <div className="flex flex-col space-y-2 ml-4">
           <button
             onClick={() => onMarkAsTaken(medication._id)}
-            className="px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg text-sm flex items-center transition-colors whitespace-nowrap"
+            className="px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg text-sm flex items-center transition-colors whitespace-nowrap"
           >
             <CheckCircle className="w-4 h-4 mr-1" />
             {isEnglish() ? 'Taken' : 'Imenywewa'}
@@ -145,7 +152,7 @@ const ActiveMedicationCard: React.FC<ActiveMedicationCardProps> = ({
           </button>
           <button
             onClick={() => setShowStopDialog(true)}
-            className="px-3 py-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm flex items-center transition-colors whitespace-nowrap"
+            className="px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-sm flex items-center transition-colors whitespace-nowrap"
           >
             <Pause className="w-4 h-4 mr-1" />
             {isEnglish() ? 'Stop' : 'Acha'}

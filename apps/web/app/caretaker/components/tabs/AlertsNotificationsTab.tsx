@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
+  Bell, 
   AlertTriangle, 
   CheckCircle, 
   Info,
-  Bell,
   Clock,
   ArrowRight,
   RefreshCw,
@@ -11,14 +11,9 @@ import {
   MessageSquare,
   Phone,
   Activity,
-  Calendar,
-  AlertCircle
+  Calendar
 } from 'lucide-react';
-import { Patient } from '../types';
-
-type GlucoseContext = 'Fasting' | 'Post-meal' | 'Random';
-
-type GlucoseAlertType = 'high_fasting' | 'high_post_meal' | 'high_random';
+import { Patient } from '../../types';
 
 interface Notification {
   id: string;
@@ -33,172 +28,89 @@ interface Notification {
   bpCategory?: 'Stage 1' | 'Stage 2' | 'Hypertensive Crisis';
   systolic?: number;
   diastolic?: number;
-  // Diabetes / glucose specific fields
-  glucose?: number;
-  glucoseContext?: GlucoseContext;
-  glucoseAlertType?: GlucoseAlertType;
+  heartRate?: number;
 }
 
-interface AlertsPanelProps {
+interface AlertsNotificationsTabProps {
   patient: Patient;
 }
 
-const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const AlertsNotificationsTab: React.FC<AlertsNotificationsTabProps> = ({
+  patient
+}) => {
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const getGlucoseAlertType = (glucose?: number, context?: GlucoseContext): GlucoseAlertType | undefined => {
-    if (!glucose || !context) return undefined;
-
-    // Mirror backend SmartCareAI glucose thresholds, but only surface HIGH values
-    if (glucose < 70) {
-      return undefined; // low glucose handled by generic vital alert UI
-    }
-
-    if (context === 'Fasting') {
-      if (glucose > 125) return 'high_fasting';
-      return undefined;
-    }
-
-    if (context === 'Post-meal') {
-      if (glucose > 180) return 'high_post_meal';
-      return undefined;
-    }
-
-    // Random
-    if (glucose > 200) return 'high_random';
-    return undefined;
-  };
-
-  // Fetch ALL real notifications from API for this specific patient (no mock data)
-  const fetchNotifications = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('No authentication token found');
+  // Mock data for demonstration - in real app, this would come from API
+  React.useEffect(() => {
+    // Simulate API call
+    const mockNotifications: Notification[] = [
+      {
+        id: '1',
+        type: 'hypertension_alert',
+        title: 'High Blood Pressure Alert',
+        message: 'Patient BP reading shows Stage 1 Hypertension',
+        patientId: patient.id,
+        patientName: patient.fullName,
+        timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+        read: false,
+        priority: 'high',
+        bpCategory: 'Stage 1',
+        systolic: 145,
+        diastolic: 92
+      },
+      {
+        id: '2',
+        type: 'vital_alert',
+        title: 'Abnormal Heart Rate',
+        message: 'Patient heart rate is elevated at 110 bpm',
+        patientId: patient.id,
+        patientName: patient.fullName,
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        read: false,
+        priority: 'medium',
+        systolic: 130,
+        diastolic: 85,
+        heartRate: 110
+      },
+      {
+        id: '3',
+        type: 'appointment',
+        title: 'Upcoming Appointment',
+        message: 'Follow-up appointment scheduled for tomorrow at 2:00 PM',
+        patientId: patient.id,
+        patientName: patient.fullName,
+        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
+        read: true,
+        priority: 'low'
+      },
+      {
+        id: '4',
+        type: 'message',
+        title: 'New Patient Message',
+        message: 'Patient has a question about their medication dosage',
+        patientId: patient.id,
+        patientName: patient.fullName,
+        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
+        read: true,
+        priority: 'medium'
       }
+    ];
 
-      // Use patient.id or patient.userId as fallback
-      const patientIdentifier = patient.id || patient.userId;
-      if (!patientIdentifier) {
-        setError('Patient identifier not found');
-        setNotifications([]);
-        return;
-      }
-
-      // Fetch ALL notifications for this specific patient (read + unread, no filters)
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/notifications/patient/${patientIdentifier}?limit=100`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          // No notifications found for this patient - this is fine, just show empty state
-          setNotifications([]);
-          return;
-        }
-        throw new Error(`Failed to fetch notifications: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success && result.data) {
-        const realNotifications: Notification[] = result.data.map((notification: any) => {
-          const glucose = notification.metadata?.glucose as number | undefined;
-          const glucoseContext = notification.metadata?.context as GlucoseContext | undefined;
-          const glucoseAlertType = getGlucoseAlertType(glucose, glucoseContext);
-
-          return {
-            id: notification._id,
-            type: notification.type,
-            title: notification.title,
-            message: notification.message,
-            patientId: notification.patientId,
-            patientName: notification.patientName,
-            timestamp: new Date(notification.createdAt),
-            read: notification.read || false,
-            priority: notification.priority || 'medium',
-            bpCategory: notification.bpCategory,
-            systolic: notification.systolic,
-            diastolic: notification.diastolic,
-            glucose,
-            glucoseContext,
-            glucoseAlertType
-          };
-        });
-        
-        setNotifications(realNotifications);
-      } else {
-        // No notifications found - show empty state
-        setNotifications([]);
-      }
-    } catch (error: any) {
-      console.error('Failed to fetch notifications:', error);
-      setError(error.message);
-      // NO mock data fallback - show error state instead
-      setNotifications([]);
-    } finally {
+    // Simulate loading delay
+    const timer = setTimeout(() => {
+      setNotifications(mockNotifications);
       setLoading(false);
-    }
-  };
+    }, 1000);
 
-  // Mark notification as read
-  const markAsRead = async (notificationId: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/notifications/${notificationId}/read`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.ok) {
-        // Update the notification as read in the local state
-        setNotifications(prev => 
-          prev.map(notification => 
-            notification.id === notificationId 
-              ? { ...notification, read: true }
-              : notification
-          )
-        );
-      }
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-    }
-  };
-
-  // Setup polling for new notifications
-  useEffect(() => {
-    // Initial fetch
-    fetchNotifications();
-
-    // Poll for new notifications every 10 seconds (more frequent for critical alerts)
-    const interval = setInterval(fetchNotifications, 10000);
-
-    return () => clearInterval(interval);
-  }, [patient.id, patient.userId]); // Re-fetch when patient changes
+    return () => clearTimeout(timer);
+  }, [patient.id, patient.fullName]);
 
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
       case 'vital_alert':
-        return <Activity className="w-4 h-4 text-emerald-500" />;
+        return <Activity className="w-4 h-4 text-red-500" />;
       case 'hypertension_alert':
         return <Heart className="w-4 h-4 text-red-500" />;
       case 'message':
@@ -213,11 +125,6 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
   };
 
   const getNotificationColor = (notification: Notification) => {
-    // Special styling for diabetes glucose alerts
-    if (notification.glucoseAlertType) {
-      return 'bg-gradient-to-r from-cyan-50 via-emerald-50 to-blue-50 border-cyan-200 border-l-4 border-l-emerald-500';
-    }
-
     // Special handling for hypertension alerts
     if (notification.type === 'hypertension_alert') {
       const bpColors = {
@@ -278,11 +185,6 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
       default:
         console.log('Viewing notification details');
     }
-    
-    // Mark as read when clicked
-    if (!notification.read) {
-      markAsRead(notification.id);
-    }
   };
 
   // Sort notifications with critical priority first
@@ -308,19 +210,21 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg border shadow-sm p-4">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg flex items-center justify-center">
-            <Bell className="w-5 h-5 text-yellow-600" />
+      <div className="bg-white rounded-lg border shadow-sm p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg flex items-center justify-center">
+              <Bell className="w-5 h-5 text-yellow-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">Alerts & Notifications</h3>
+              <p className="text-sm text-gray-500">Real-time updates</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Alerts & Notifications</h3>
-            <p className="text-xs text-gray-500">Real-time updates</p>
-          </div>
-          <RefreshCw className="w-4 h-4 animate-spin text-gray-400 ml-auto" />
+          <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />
         </div>
         <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       </div>
     );
@@ -328,14 +232,14 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg border shadow-sm p-4">
-        <div className="flex items-center space-x-3 mb-4">
+      <div className="bg-white rounded-lg border shadow-sm p-6">
+        <div className="flex items-center space-x-3 mb-6">
           <div className="w-10 h-10 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg flex items-center justify-center">
-            <AlertCircle className="w-5 h-5 text-yellow-600" />
+            <AlertTriangle className="w-5 h-5 text-yellow-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">Alerts & Notifications</h3>
-            <p className="text-xs text-gray-500">Real-time updates</p>
+            <h3 className="text-xl font-semibold text-gray-900">Alerts & Notifications</h3>
+            <p className="text-sm text-gray-500">Real-time updates</p>
           </div>
         </div>
         <div className="text-center py-4 text-red-600 text-sm">
@@ -346,19 +250,25 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg border shadow-sm p-4">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white rounded-lg border shadow-sm p-6">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg flex items-center justify-center">
             <Bell className="w-5 h-5 text-yellow-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">Alerts & Notifications</h3>
-            <p className="text-xs text-gray-500">Real-time updates</p>
+            <h3 className="text-xl font-semibold text-gray-900">Alerts & Notifications</h3>
+            <p className="text-sm text-gray-500">Real-time updates for {patient.fullName}</p>
           </div>
         </div>
         <button
-          onClick={fetchNotifications}
+          onClick={() => {
+            // Refresh notifications
+            setLoading(true);
+            setTimeout(() => {
+              setLoading(false);
+            }, 1000);
+          }}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           title="Refresh notifications"
         >
@@ -366,7 +276,7 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
         </button>
       </div>
 
-      <div className="space-y-3 max-h-80 overflow-y-auto">
+      <div className="space-y-3 max-h-96 overflow-y-auto">
         {sortedNotifications.length === 0 ? (
           <div className="text-center py-8">
             <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -417,28 +327,17 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
                     <p className="text-sm text-gray-600 mb-2">
                       {notification.message}
                     </p>
-                    {/* Diabetes-specific glucose indicators */}
-                    {notification.glucoseAlertType && notification.glucose && (
-                      <div className="flex flex-wrap items-center gap-2 text-xs mb-2">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-medium">
-                          {notification.glucoseAlertType === 'high_fasting' && 'High fasting blood sugar'}
-                          {notification.glucoseAlertType === 'high_post_meal' && 'High post-meal blood sugar'}
-                          {notification.glucoseAlertType === 'high_random' && 'High random blood sugar'}
-                        </span>
-                        <span className="inline-flex items-center px-2 py-1 rounded-full bg-cyan-100 text-cyan-800">
-                          Glucose: {notification.glucose} mg/dL
-                          {notification.glucoseContext && (
-                            <span className="ml-1">
-                              ({notification.glucoseContext})
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    )}
                     {notification.systolic && notification.diastolic && (
                       <div className="flex items-center space-x-2 text-xs">
                         <div className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
                           BP: {notification.systolic}/{notification.diastolic} mmHg
+                        </div>
+                      </div>
+                    )}
+                    {notification.heartRate && (
+                      <div className="flex items-center space-x-2 text-xs">
+                        <div className="px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                          HR: {notification.heartRate} bpm
                         </div>
                       </div>
                     )}
@@ -452,7 +351,7 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
                   className="flex-shrink-0 p-1 hover:bg-gray-200 rounded transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
-                    markAsRead(notification.id);
+                    // Mark as read functionality would go here
                   }}
                   title="Mark as read"
                 >
@@ -512,9 +411,7 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
               className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
               onClick={() => {
                 // Mark all notifications as read
-                sortedNotifications
-                  .filter(n => !n.read)
-                  .forEach(notification => markAsRead(notification.id));
+                console.log('Mark all as read');
               }}
             >
               Mark All Read
@@ -526,4 +423,4 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ patient }) => {
   );
 };
 
-export default AlertsPanel;
+export default AlertsNotificationsTab;

@@ -11,6 +11,7 @@ export interface INotification extends Document {
   vitalId?: string;
   priority: 'low' | 'medium' | 'high' | 'critical';
   read: boolean;
+  archived?: boolean;
   metadata?: any;
   createdAt: Date;
   updatedAt: Date;
@@ -51,6 +52,10 @@ const NotificationSchema = new Schema(
       default: 'medium',
     },
     read: {
+      type: Boolean,
+      default: false,
+    },
+    archived: {
       type: Boolean,
       default: false,
     },

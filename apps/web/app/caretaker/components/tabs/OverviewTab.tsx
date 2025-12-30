@@ -3,7 +3,7 @@ import React from 'react';
 import { Patient, VitalSigns } from '../../types';
 import CurrentVitals from '../CurrentVitals';
 import HealthTrends from '../HealthTrends';
-import QuickActions from '../QuickActions';
+import TabbedQuickActions from '../TabbedQuickActions';
 import AlertsPanel from '../AlertsPanel';
 import VitalsPredictions from '../VitalsPredictions';
 
@@ -11,12 +11,16 @@ interface OverviewTabProps {
   patient: Patient;
   patientVitals: VitalSigns[];
   isLoading: boolean;
+  onOpenMessaging: () => void;
+  onPrescribeMedication: () => void;
 }
 
 const OverviewTab: React.FC<OverviewTabProps> = ({
   patient,
   patientVitals,
   isLoading,
+  onOpenMessaging,
+  onPrescribeMedication,
 }) => {
   // Add age to each vital reading for predictions
   const predictionVitals = patientVitals.map(vital => ({
@@ -45,7 +49,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           vitals={predictionVitals} // Use the transformed vitals with age
         />
         
-        <QuickActions patient={patient} />
+        <TabbedQuickActions 
+          patient={patient}
+          onOpenMessaging={onOpenMessaging}
+          onPrescribeMedication={onPrescribeMedication}
+        />
         
         <AlertsPanel patient={patient} />
       </div>

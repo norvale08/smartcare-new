@@ -3,6 +3,7 @@ import HypertensionAlert from "../../components/hypertension/alert";
 import VitalsWithActivityInput from "./VitalsWithActivityInput";
 import VoiceControlPanel from "./VoiceControlPanel";
 import HealthTrends from "./HealthTrends";
+import HypertensionRiskAssessment from "./HypertensionRiskAssessment";
 import DoctorManagement from "../../components/DoctorManagement";
 import NearbyClinics from "./NearbyClinics";
 import MedicationAnalysisPage from "../../components/hypertension/medicationAnalysis";
@@ -69,6 +70,7 @@ const TabContent: React.FC<TabContentProps> = ({
 
           <VitalsWithActivityInput onAfterSave={() => setAlertRefreshToken(Date.now())} />
           <HealthTrends vitals={vitals} />
+          <HypertensionRiskAssessment vitals={vitals} />
         </>
       );
     

@@ -10,6 +10,11 @@ export interface Patient {
   status: "stable" | "warning" | "critical";
   phoneNumber?: string;
   email?: string;
+  allergies?: Array<{
+    allergyName: string;
+    severity: string;
+    reaction: string;
+  }>;
 }
 
 export interface VitalSigns {
