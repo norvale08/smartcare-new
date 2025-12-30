@@ -242,22 +242,22 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
 
   const currentLangContent = languageContent[language];
 
-  // Loading state
+  // Loading state - COMPACT
   if (loading) {
     return (
-      <div className="w-full bg-cyan-100 border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+      <div className="w-full bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-300 rounded-full animate-pulse" />
-              <div className="space-y-2 hidden sm:block">
-                <div className="h-4 bg-gray-300 rounded w-24 sm:w-32 animate-pulse" />
-                <div className="h-3 bg-gray-300 rounded w-20 sm:w-24 animate-pulse" />
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-300 rounded-full animate-pulse" />
+              <div className="space-y-1.5 hidden sm:block">
+                <div className="h-3 bg-gray-300 rounded w-24 animate-pulse" />
+                <div className="h-2.5 bg-gray-300 rounded w-20 animate-pulse" />
               </div>
             </div>
             <div className="flex space-x-2">
-              <div className="h-9 bg-gray-300 rounded-lg w-20 animate-pulse" />
-              <div className="h-9 bg-gray-300 rounded-lg w-20 animate-pulse" />
+              <div className="h-7 bg-gray-300 rounded-lg w-16 animate-pulse" />
+              <div className="h-7 bg-gray-300 rounded-lg w-16 animate-pulse" />
             </div>
           </div>
         </div>
@@ -265,27 +265,27 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
     );
   }
 
-  // Error state
+  // Error state - COMPACT
   if (error && !userProfile) {
     return (
-      <div className="w-full bg-cyan-100 border-b border-red-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+      <div className="w-full bg-white border-b border-red-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center border border-red-200">
-                <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-full flex items-center justify-center border border-red-200">
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
               <div className="hidden sm:block">
-                <h3 className="text-lg font-semibold text-gray-900">{currentLangContent.profileError}</h3>
-                <p className="text-sm text-gray-600">{error}</p>
+                <h3 className="text-sm font-semibold text-gray-900">{currentLangContent.profileError}</h3>
+                <p className="text-xs text-gray-600">{error}</p>
               </div>
             </div>
             <div className="flex space-x-2">
               <button
                 onClick={handleRetry}
-                className="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center space-x-2 text-sm"
+                className="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center space-x-1.5 text-xs"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="w-3.5 h-3.5" />
                 <span>Retry</span>
               </button>
             </div>
@@ -295,26 +295,26 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
     );
   }
 
-  // No profile state
+  // No profile state - COMPACT
   if (!userProfile) {
     return (
-      <div className="w-full bg-cyan-100 border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+      <div className="w-full bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div className="hidden sm:block">
-                <h3 className="text-lg font-semibold text-gray-900">{currentLangContent.noProfile}</h3>
-                <p className="text-sm text-gray-600">{currentLangContent.completeProfile}</p>
+                <h3 className="text-sm font-semibold text-gray-900">{currentLangContent.noProfile}</h3>
+                <p className="text-xs text-gray-600">{currentLangContent.completeProfile}</p>
               </div>
             </div>
             <button
               onClick={handleViewProfile}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center space-x-2 text-sm shadow-md hover:shadow-lg"
+              className="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-1.5 text-xs"
             >
-              <User className="w-4 h-4" />
+              <User className="w-3.5 h-3.5" />
               <span>{currentLangContent.createProfile}</span>
             </button>
           </div>
@@ -329,161 +329,111 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
   if (userProfile.cardiovascular) healthConditions.push("Cardiovascular");
 
   return (
-    <div className="w-full bg-gray-100 border-b border-gray-200 shadow-sm">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+    <div className="w-full bg-white border-b border-gray-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
         <div className="flex items-center justify-between">
-          {/* User Info Section */}
-          <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-            {/* Profile Picture */}
+          {/* User Info Section - COMPACT */}
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+            {/* Profile Picture - Smaller */}
             {userProfile.picture ? (
               <img
                 src={userProfile.picture}
                 alt={`${userProfile.fullName}'s profile`}
-                className="w-10 h-10 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-cyan-50 shadow-sm sm:shadow-md"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-blue-100 shadow-sm"
               />
             ) : (
-              <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-sm sm:shadow-md">
-                <User className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-sm">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
             )}
 
-            {/* User Details */}
+            {/* User Details - COMPACT */}
             <div className="min-w-0 flex-1">
               {/* Mobile Layout */}
               <div className="sm:hidden">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 flex-wrap">
-                    <h1 className="text-base font-bold text-gray-900 truncate max-w-[120px]">
-                      {userProfile.fullName}
-                    </h1>
-                  </div>
-                </div>
-                
-                {/* Health Conditions - below name on mobile */}
-                {healthConditions.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {healthConditions.slice(0, 2).map((condition) => (
-                      <span
-                        key={condition}
-                        className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded-full border border-red-200"
-                      >
-                        {condition}
-                      </span>
-                    ))}
-                    {healthConditions.length > 2 && (
-                      <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded-full border border-red-200">
-                        +{healthConditions.length - 2}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop Layout */}
-              <div className="hidden sm:block">
-                <div className="flex items-center space-x-3 flex-wrap">
-                  <h1 className="text-2xl font-bold text-gray-900">
+                <div className="flex items-center space-x-1.5">
+                  <h1 className="text-sm font-semibold text-gray-900 truncate max-w-[120px]">
                     {userProfile.fullName}
                   </h1>
                   {healthConditions.length > 0 && (
-                    <div className="flex space-x-2 flex-wrap gap-1">
-                      {healthConditions.map((condition) => (
+                    <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-medium rounded-full">
+                      {healthConditions[0]}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Desktop Layout - COMPACT */}
+              <div className="hidden sm:block">
+                <div className="flex items-center space-x-2">
+                  <h1 className="text-base font-semibold text-gray-900">
+                    {userProfile.fullName}
+                  </h1>
+                  {healthConditions.length > 0 && (
+                    <div className="flex space-x-1.5">
+                      {healthConditions.slice(0, 2).map((condition) => (
                         <span
                           key={condition}
-                          className="px-3 py-1 bg-red-100 text-red-700 text-sm font-semibold rounded-full border border-red-200"
+                          className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full"
                         >
                           {condition}
                         </span>
                       ))}
+                      {healthConditions.length > 2 && (
+                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                          +{healthConditions.length - 2}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
                 
-                {/* Detailed stats - Only on desktop */}
-                <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-                  <div className="flex items-center space-x-1 bg-blue-50 px-3 py-1 rounded-full">
-                    <Calendar className="w-4 h-4 text-blue-600" />
-                    <span className="font-medium text-blue-700">{userProfile.age || "N/A"} years</span>
-                  </div>
-                  <div className="flex items-center space-x-1 bg-cyan-50 px-3 py-1 rounded-full">
-                    <Activity className="w-4 h-4 text-cyan-600" />
-                    <span className="font-medium text-cyan-700">{userProfile.weight || "N/A"} kg</span>
-                  </div>
-                  <div className="flex items-center space-x-1 bg-blue-50 px-3 py-1 rounded-full">
-                    <Activity className="w-4 h-4 text-blue-600" />
-                    <span className="font-medium text-blue-700">{userProfile.height || "N/A"} cm</span>
-                  </div>
+                {/* Detailed stats - Compact */}
+                <div className="flex items-center space-x-3 text-xs text-gray-600 mt-0.5">
+                  <span>{userProfile.age || "N/A"} years</span>
+                  <span>•</span>
+                  <span>{userProfile.weight || "N/A"} kg</span>
+                  <span>•</span>
+                  <span>{userProfile.height || "N/A"} cm</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Action Buttons - Including Language Selector */}
+          {/* Action Buttons - COMPACT */}
           <div className="flex items-center space-x-2 ml-3">
-            {/* Language Selector */}
-            <div className="relative group">
-              <select
-                value={language}
-                onChange={(e) => handleLanguageChange(e.target.value as "en" | "sw")}
-                className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm font-medium text-gray-700 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all cursor-pointer"
-              >
-                <option value="en">🇬🇧 EN</option>
-                <option value="sw">🇰🇪 SW</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                <Languages className="w-4 h-4" />
-              </div>
-            </div>
+            {/* Language Selector - Compact */}
+            <select
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value as "en" | "sw")}
+              className="appearance-none bg-gray-50 border border-gray-300 rounded-lg px-2 py-1.5 text-xs font-medium text-gray-700 hover:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-200 cursor-pointer"
+            >
+              <option value="en">EN</option>
+              <option value="sw">SW</option>
+            </select>
 
-            {/* Manage Doctors Button */}
+            {/* Manage Doctors Button - Compact */}
             <button
               onClick={handleShowDoctors}
-              className={`px-3 py-2 rounded-lg transition-all duration-200 font-semibold flex items-center space-x-2 border text-sm ${
+              className={`px-3 py-1.5 rounded-lg transition-all font-medium flex items-center space-x-1.5 border text-xs ${
                 showDoctors 
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-lg scale-105' 
-                  : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white shadow-md hover:shadow-lg'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                  : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white'
               }`}
             >
-              <Stethoscope className="w-4 h-4" />
-              <span className="hidden xs:inline">{currentLangContent.doctors}</span>
-              <span className="xs:hidden">{currentLangContent.dr}</span>
+              <Stethoscope className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{currentLangContent.doctors}</span>
             </button>
 
-            {/* View Profile Button */}
+            {/* View Profile Button - Compact */}
             <button
               onClick={handleViewProfile}
-              className="px-3 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 font-semibold flex items-center space-x-2 text-sm shadow-md hover:shadow-lg"
+              className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-colors font-medium flex items-center space-x-1.5 text-xs"
             >
-              <User className="w-4 h-4" />
-              <span className="hidden xs:inline">{currentLangContent.profile}</span>
-              <span className="xs:hidden">{currentLangContent.view}</span>
+              <User className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{currentLangContent.profile}</span>
             </button>
           </div>
-        </div>
-
-        {/* Minimal mobile stats */}
-        <div className="sm:hidden flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-1 text-xs text-gray-600">
-              <Calendar className="w-3 h-3 text-blue-600" />
-              <span className="font-medium">{userProfile.age || "N/A"}y</span>
-            </div>
-            <div className="flex items-center space-x-1 text-xs text-gray-600">
-              <Activity className="w-3 h-3 text-cyan-600" />
-              <span className="font-medium">{userProfile.weight || "N/A"}kg</span>
-            </div>
-            <div className="flex items-center space-x-1 text-xs text-gray-600">
-              <Activity className="w-3 h-3 text-blue-600" />
-              <span className="font-medium">{userProfile.height || "N/A"}cm</span>
-            </div>
-          </div>
-          
-          {/* Show remaining health conditions count if any */}
-          {healthConditions.length > 2 && (
-            <div className="text-xs text-gray-500">
-              +{healthConditions.length - 2} more
-            </div>
-          )}
         </div>
       </div>
 

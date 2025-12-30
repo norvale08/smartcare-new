@@ -381,6 +381,25 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
               fieldStyle={getFieldStyle('glucose')}
             />
           </div>
+          {contextValue === "Post-meal" && (
+            <div>
+              <SectionVoiceControl
+                sectionName="meal"
+                voiceModeState={voiceModeState}
+                onPauseResume={handlePauseResume}
+                languageValue={languageValue}
+              />
+              <MealSection
+                register={register}
+                errors={formState.errors}
+                currentLanguage={currentLanguage}
+                validationRules={diabetesValidationRules}
+                setFieldRef={setFieldRef}
+                getFieldStyle={getFieldStyle}
+              />
+            </div>
+          )}
+
 
           <div>
             <SectionVoiceControl
@@ -401,25 +420,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
 
          
 
-          {contextValue === "Post-meal" && (
-            <div>
-              <SectionVoiceControl
-                sectionName="meal"
-                voiceModeState={voiceModeState}
-                onPauseResume={handlePauseResume}
-                languageValue={languageValue}
-              />
-              <MealSection
-                register={register}
-                errors={formState.errors}
-                currentLanguage={currentLanguage}
-                validationRules={diabetesValidationRules}
-                setFieldRef={setFieldRef}
-                getFieldStyle={getFieldStyle}
-              />
-            </div>
-          )}
-
+          
           <div>
             <SectionVoiceControl
               sectionName="exercise"
