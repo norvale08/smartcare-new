@@ -50,32 +50,53 @@ const isValidSummary = (summary: string | undefined): boolean => {
 const getPatientName = (patient: any): string => {
   if (!patient) return "Patient";
   
-  // Try fullName first
   if (patient.fullName && patient.fullName.trim() !== "") {
     return patient.fullName.trim();
   }
   
-  // Try firstname + lastname
   if (patient.firstname && patient.lastname) {
     return `${patient.firstname.trim()} ${patient.lastname.trim()}`.trim();
   }
   
-  // Try firstName + lastName (User model format)
   if (patient.firstName && patient.lastName) {
     return `${patient.firstName.trim()} ${patient.lastName.trim()}`.trim();
   }
   
-  // Try just firstname
   if (patient.firstname) {
     return patient.firstname.trim();
   }
   
-  // Try just firstName
   if (patient.firstName) {
     return patient.firstName.trim();
   }
   
   return "Patient";
+};
+
+// ✅ NEW: HELPER FUNCTION TO GET SELECTED DISEASES FROM PATIENT PROFILE
+const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
+  const diseases: ("diabetes" | "hypertension")[] = [];
+  
+  if (!patient) {
+    return ["diabetes"]; // Default
+  }
+  
+  // Check diabetes flag
+  if (patient.diabetes === true) {
+    diseases.push("diabetes");
+  }
+  
+  // Check hypertension flag
+  if (patient.hypertension === true) {
+    diseases.push("hypertension");
+  }
+  
+  // If no diseases found, default to diabetes
+  if (diseases.length === 0) {
+    diseases.push("diabetes");
+  }
+  
+  return diseases;
 };
 
 // ✅ MAIN ENDPOINT: GET /api/diabetesAi/summary/:id
@@ -128,7 +149,8 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
         aiFeedback: vitals.aiFeedback, 
         cached: true,
         cacheAge: ageMinutes,
-        language: vitals.language
+        language: vitals.language,
+        selectedDiseases: vitals.selectedDiseases || ["diabetes"]
       });
     }
 
@@ -148,9 +170,20 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
 
     const age = calculateAge(patient.dob);
     const patientName = getPatientName(patient);
+    
+    // ✅ 4. GET SELECTED DISEASES FROM PATIENT PROFILE
+    const selectedDiseases = vitals.selectedDiseases || getPatientDiseases(patient);
+    const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
+    
     console.log(`👤 Patient found - Name: ${patientName}, Age: ${age}, Gender: ${patient.gender}`);
+    console.log(`🏥 Disease Profile:`, {
+      diseases: selectedDiseases,
+      diabetes: selectedDiseases.includes("diabetes"),
+      hypertension: selectedDiseases.includes("hypertension"),
+      managementType: hasBothConditions ? "DUAL (Diabetes + Hypertension)" : "DIABETES ONLY"
+    });
 
-    // ✅ 4. Prepare COMPLETE glucose data with patient name
+    // ✅ 5. Prepare COMPLETE glucose data with patient name AND diseases
     const glucoseData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -166,27 +199,26 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
       mealType: vitals.mealType,
-      patientName: patientName, // ✅ ADDED PATIENT NAME
+      patientName: patientName,
+      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
     };
 
     console.log("📋 Complete glucose data prepared:", {
       glucose: glucoseData.glucose,
       context: glucoseData.context,
       language: glucoseData.language,
-      patientName: glucoseData.patientName, // ✅ LOG PATIENT NAME
+      patientName: glucoseData.patientName,
+      selectedDiseases: glucoseData.selectedDiseases,
+      diseaseManagement: hasBothConditions ? "DUAL" : "DIABETES ONLY",
       bp: `${glucoseData.systolic || 'N/A'}/${glucoseData.diastolic || 'N/A'}`,
       hr: glucoseData.heartRate || 'N/A',
       exercise: `${glucoseData.exerciseRecent || 'N/A'} (${glucoseData.exerciseIntensity || 'N/A'})`,
       meal: glucoseData.lastMealTime ? `${glucoseData.mealType} (${glucoseData.lastMealTime} ago)` : 'N/A'
     });
 
-    // ✅ 5. Check if GROQ_API_KEY exists
+    // ✅ 6. Check if GROQ_API_KEY exists
     if (!process.env.GROQ_API_KEY) {
       console.error("❌ GROQ_API_KEY not found in environment");
-      console.error("Available env vars:", Object.keys(process.env).filter(k => 
-        !k.includes("SECRET") && !k.includes("PASSWORD")
-      ));
-      
       return res.status(503).json({
         success: false,
         message: "AI service not configured. Please contact support.",
@@ -196,8 +228,8 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
 
     console.log("✅ GROQ_API_KEY is configured");
 
-    // ✅ 6. Generate AI summary with patient name
-    console.log(`🤖 Calling SmartCareAI.generateSummary() for ${patientName} with language: ${glucoseData.language}...`);
+    // ✅ 7. Generate AI summary with patient name AND diseases
+    console.log(`🤖 Calling SmartCareAI.generateSummary() for ${patientName} with language: ${glucoseData.language} and diseases: ${selectedDiseases.join(", ")}...`);
     const aiStartTime = Date.now();
     
     const ai = getAIService();
@@ -207,7 +239,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     console.log(`🤖 AI responded in ${aiDuration}ms`);
     console.log(`📝 Generated feedback for ${patientName} (${glucoseData.language}): ${aiFeedback?.substring(0, 150)}...`);
 
-    // ✅ 7. Check if AI generation failed
+    // ✅ 8. Check if AI generation failed
     if (!isValidSummary(aiFeedback)) {
       console.error("❌ AI generated invalid summary:", aiFeedback);
       
@@ -220,6 +252,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
           vitalId,
           patientName,
           language: glucoseData.language,
+          selectedDiseases,
           glucoseData: {
             glucose: glucoseData.glucose,
             context: glucoseData.context,
@@ -231,7 +264,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       });
     }
 
-    // ✅ 8. Save to database
+    // ✅ 9. Save to database
     console.log("💾 Saving summary to database...");
     vitals.aiFeedback = aiFeedback;
     await vitals.save();
@@ -241,12 +274,18 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     console.log(`⏱️  Total request time: ${totalDuration}ms`);
     console.log("=".repeat(60));
 
-    // ✅ 9. Return success response
+    // ✅ 10. Return success response
     res.status(200).json({ 
       success: true,
       aiFeedback, 
       cached: false,
-      patientName, // ✅ Return patient name in response
+      patientName,
+      selectedDiseases,
+      diseaseManagement: hasBothConditions ? "dual" : "diabetes-only",
+      conditions: {
+        diabetes: selectedDiseases.includes("diabetes"),
+        hypertension: selectedDiseases.includes("hypertension"),
+      },
       language: glucoseData.language,
       generationTime: aiDuration,
       totalTime: totalDuration,
@@ -255,6 +294,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
         context: glucoseData.context,
         language: glucoseData.language,
         patientName: patientName,
+        selectedDiseases,
         bloodPressure: glucoseData.systolic && glucoseData.diastolic ? 
           `${glucoseData.systolic}/${glucoseData.diastolic}` : 'Not provided',
         heartRate: glucoseData.heartRate || 'Not provided',
@@ -286,7 +326,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
   }
 });
 
-// ✅ Food Advice Endpoint - Updated to include patient name
+// ✅ Food Advice Endpoint - Updated to include patient name and diseases
 router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
@@ -308,9 +348,18 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
     }
 
     const age = calculateAge(patient.dob);
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const patientName = getPatientName(patient);
+    
+    // ✅ GET SELECTED DISEASES
+    const selectedDiseases = vitals.selectedDiseases || getPatientDiseases(patient);
+    const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
 
-    // ✅ Prepare food advice data with patient name
+    console.log(`🏥 Disease context for food advice:`, {
+      diseases: selectedDiseases,
+      managementType: hasBothConditions ? "DUAL" : "DIABETES ONLY"
+    });
+
+    // ✅ Prepare food advice data with patient name and diseases
     const foodAdviceData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -326,7 +375,8 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
       mealType: vitals.mealType,
-      patientName: patientName, // ✅ ADDED PATIENT NAME
+      patientName: patientName,
+      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
       allergies: patient.allergies ? [patient.allergies] : [],
       medicalHistory: patient.selectedDiseases || [],
     };
@@ -335,7 +385,8 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
       glucose: foodAdviceData.glucose,
       context: foodAdviceData.context,
       language: foodAdviceData.language,
-      patientName: foodAdviceData.patientName, // ✅ LOG PATIENT NAME
+      patientName: foodAdviceData.patientName,
+      selectedDiseases: foodAdviceData.selectedDiseases,
       bp: `${foodAdviceData.systolic || 'N/A'}/${foodAdviceData.diastolic || 'N/A'}`,
       exercise: `${foodAdviceData.exerciseRecent || 'N/A'} (${foodAdviceData.exerciseIntensity || 'N/A'})`,
       allergies: foodAdviceData.allergies || [],
@@ -348,13 +399,20 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
     res.status(200).json({
       success: true,
       foodAdvice,
-      patientName, // ✅ Return patient name
+      patientName,
+      selectedDiseases,
+      diseaseManagement: hasBothConditions ? "dual" : "diabetes-only",
+      conditions: {
+        diabetes: selectedDiseases.includes("diabetes"),
+        hypertension: selectedDiseases.includes("hypertension"),
+      },
       language: foodAdviceData.language,
       contextUsed: {
         glucose: foodAdviceData.glucose,
         context: foodAdviceData.context,
         language: foodAdviceData.language,
         patientName: patientName,
+        selectedDiseases,
         bloodPressure: foodAdviceData.systolic && foodAdviceData.diastolic ? 
           `${foodAdviceData.systolic}/${foodAdviceData.diastolic}` : 'Not provided',
         exercise: foodAdviceData.exerciseRecent && foodAdviceData.exerciseIntensity ? 
@@ -374,7 +432,7 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
   }
 });
 
-// ✅ Quick Tips Endpoint - Updated to include patient name
+// ✅ Quick Tips Endpoint - Updated to include patient name and diseases
 router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
@@ -396,7 +454,11 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
     }
 
     const age = calculateAge(patient.dob);
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const patientName = getPatientName(patient);
+    
+    // ✅ GET SELECTED DISEASES
+    const selectedDiseases = vitals.selectedDiseases || getPatientDiseases(patient);
+    const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
 
     const quickTipsData = {
       glucose: vitals.glucose,
@@ -413,25 +475,33 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
       mealType: vitals.mealType,
-      patientName: patientName, // ✅ ADDED PATIENT NAME
+      patientName: patientName,
+      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
     };
 
     console.log("💡 Quick tips data:", {
       glucose: quickTipsData.glucose,
       context: quickTipsData.context,
       language: quickTipsData.language,
-      patientName: quickTipsData.patientName, // ✅ LOG PATIENT NAME
+      patientName: quickTipsData.patientName,
+      selectedDiseases: quickTipsData.selectedDiseases,
       bp: `${quickTipsData.systolic || 'N/A'}/${quickTipsData.diastolic || 'N/A'}`,
       exercise: `${quickTipsData.exerciseRecent || 'N/A'} (${quickTipsData.exerciseIntensity || 'N/A'})`
     });
 
     const ai = getAIService();
-    const quickTips = await ai.generateQuickFoodTips(quickTipsData);
+    const quickTips = await ai.generateQuickTips(quickTipsData);
 
     res.status(200).json({
       success: true,
       quickTips,
-      patientName, // ✅ Return patient name
+      patientName,
+      selectedDiseases,
+      diseaseManagement: hasBothConditions ? "dual" : "diabetes-only",
+      conditions: {
+        diabetes: selectedDiseases.includes("diabetes"),
+        hypertension: selectedDiseases.includes("hypertension"),
+      },
       language: quickTipsData.language,
     });
 
@@ -445,7 +515,7 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
   }
 });
 
-// ✅ Comprehensive Feedback Endpoint
+// ✅ Comprehensive Feedback Endpoint - Updated with diseases
 router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
@@ -467,9 +537,12 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
     }
 
     const age = calculateAge(patient.dob);
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const patientName = getPatientName(patient);
+    
+    // ✅ GET SELECTED DISEASES
+    const selectedDiseases = vitals.selectedDiseases || getPatientDiseases(patient);
+    const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
 
-    // First, get all the individual components
     const glucoseData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -485,10 +558,11 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
       mealType: vitals.mealType,
-      patientName: patientName, // ✅ ADDED PATIENT NAME
+      patientName: patientName,
+      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
     };
 
-    console.log("📋 Generating comprehensive feedback for:", patientName);
+    console.log("📋 Generating comprehensive feedback for:", patientName, "with diseases:", selectedDiseases);
 
     const ai = getAIService();
 
@@ -500,7 +574,7 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
         allergies: patient.allergies ? [patient.allergies] : [],
         medicalHistory: patient.selectedDiseases || [],
       }),
-      ai.generateQuickFoodTips(glucoseData),
+      ai.generateQuickTips(glucoseData),
       ai.generateGlucoseFeedback(glucoseData),
     ]);
 
@@ -509,7 +583,7 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
       summary,
       foodAdvice,
       quickTips,
-      lifestyleFeedback: glucoseFeedback, // Using glucose feedback as lifestyle feedback
+      lifestyleFeedback: glucoseFeedback,
       vitalData: glucoseData,
       patientData: {
         name: patientName,
@@ -521,16 +595,22 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
       hasBloodPressure: !!(vitals.systolic && vitals.diastolic),
       hasHeartRate: !!vitals.heartRate,
       language: (vitals.language as "en" | "sw") || "en",
-      patientName: patientName, // ✅ CRITICAL: Add patient name here
+      patientName: patientName,
+      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
     };
 
-    // Generate final comprehensive feedback
     const comprehensiveFeedback = await ai.generateComprehensiveFeedback(comprehensiveData);
 
     res.status(200).json({
       success: true,
       comprehensiveFeedback,
-      patientName, // ✅ Return patient name
+      patientName,
+      selectedDiseases,
+      diseaseManagement: hasBothConditions ? "dual" : "diabetes-only",
+      conditions: {
+        diabetes: selectedDiseases.includes("diabetes"),
+        hypertension: selectedDiseases.includes("hypertension"),
+      },
       language: glucoseData.language,
       components: {
         summary,
@@ -568,6 +648,7 @@ router.get("/summary-status/:id", verifyToken, async (req: Request, res: Respons
       isGenerating: !hasSummary,
       aiFeedback: hasSummary ? vitals.aiFeedback : null,
       language: vitals.language,
+      selectedDiseases: vitals.selectedDiseases || ["diabetes"],
       lastUpdated: vitals.updatedAt,
     });
   } catch (error: any) {

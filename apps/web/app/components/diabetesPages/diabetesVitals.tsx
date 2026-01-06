@@ -30,9 +30,15 @@ import {
 interface Props {
   onVitalsSubmitted?: (id: string, requestAI: boolean) => void;
   initialLanguage?: "en" | "sw";
+  // ✅ NEW: Pass user's disease information
+  userDiseases?: string[]; // e.g., ["diabetes", "hypertension"]
 }
 
-const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguage = "en" }) => {
+const DiabetesVitalsForm: React.FC<Props> = ({ 
+  onVitalsSubmitted, 
+  initialLanguage = "en",
+  userDiseases = []
+}) => {
   const { register, handleSubmit, formState, reset, setValue, control, getValues } = useForm<diabetesType>({
     defaultValues: { 
       language: initialLanguage,
@@ -60,6 +66,28 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
     paused: false,
     status: ""
   });
+
+  // ✅ Detect if user has hypertension
+  const hasHypertension = userDiseases.some(disease => 
+    disease.toLowerCase().includes('hypertension') || 
+    disease.toLowerCase().includes('high blood pressure')
+  );
+  
+  const hasDiabetes = userDiseases.some(disease => 
+    disease.toLowerCase().includes('diabetes')
+  );
+  
+  const hasBothConditions = hasHypertension && hasDiabetes;
+
+  // ✅ Log disease status for debugging
+  useEffect(() => {
+    console.log("🔍 DiabetesVitalsForm - Disease Status:", {
+      userDiseases,
+      hasHypertension,
+      hasDiabetes,
+      hasBothConditions
+    });
+  }, [userDiseases, hasHypertension, hasDiabetes, hasBothConditions]);
 
   const contextValue = useWatch({ control, name: "context" });
   const languageValue = (useWatch({ control, name: "language" }) as "en" | "sw") || initialLanguage;
@@ -117,6 +145,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
     });
   }, [languageValue, voiceModeState.muted]);
 
+  // ✅ UPDATED: Include BP fields in required check when user has hypertension
   const getFieldRequiredStatus = useCallback((fieldName: string): boolean => {
     const fieldRules = diabetesValidationRules[fieldName as keyof typeof diabetesValidationRules];
     
@@ -142,14 +171,16 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
       case 'lastMealTime':
       case 'mealType':
         return contextValue === "Post-meal";
+      // ✅ BP fields required if user has hypertension
       case 'systolic':
       case 'diastolic':
+        return hasHypertension || hasBothConditions;
       case 'heartRate':
         return false;
       default:
         return false;
     }
-  }, [contextValue]);
+  }, [contextValue, hasHypertension, hasBothConditions]);
 
   const handleStartVoiceMode = async () => {
     console.log("=== START VOICE MODE ===");
@@ -223,21 +254,18 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
     });
   }, [voiceModeActiveRef, pausedRef, setVoiceModeState, handleSpeak, languageValue, voiceModeState.muted, voiceModeState.currentField]);
 
-  // SIMPLIFIED PAUSE/RESUME HANDLER
   const handlePauseResume = useCallback(() => {
     console.log('=== Unified Pause/Resume Handler ===');
     console.log('Current voice mode state:', voiceModeState);
     console.log('pausedRef.current:', pausedRef.current);
     console.log('voiceModeActiveRef.current:', voiceModeActiveRef.current);
     
-    // Don't do anything if voice mode is not active
     if (!voiceModeState.active) {
       console.log('Voice mode not active, ignoring pause/resume');
       toast.error("Voice mode is not active");
       return;
     }
     
-    // If currently listening or speaking, we can still pause
     if (voiceModeState.paused) {
       console.log('>>> Calling Resume');
       handleResumeVoiceMode();
@@ -273,6 +301,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
     }
 
     try {
+      // ✅ FIXED: Include selectedDiseases in submission
       const submitData = {
         ...data,
         glucose: data.glucose ? Number(data.glucose) : undefined,
@@ -280,7 +309,19 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
         diastolic: data.diastolic ? Number(data.diastolic) : undefined,
         heartRate: data.heartRate ? Number(data.heartRate) : undefined,
         requestAI,
+        selectedDiseases: userDiseases.length > 0 ? userDiseases as ("diabetes" | "hypertension")[] : undefined,
       };
+
+      // ✅ LOG for debugging
+      console.log("📤 Submitting vitals with diseases:", {
+        diseases: submitData.selectedDiseases,
+        userDiseases: userDiseases,
+        hasBoth: hasHypertension && hasDiabetes,
+        hasHypertension: hasHypertension,
+        hasDiabetes: hasDiabetes,
+        systolic: submitData.systolic,
+        diastolic: submitData.diastolic
+      });
 
       const response = await fetch(`${API_URL}/api/diabetesVitals`, {
         method: "POST",
@@ -338,7 +379,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
       <CustomToaster />
       <div className="max-w-4xl mx-auto">
         
-      
         {submitSuccess && (
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-3 sm:p-4 mb-4 sm:mb-6 rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -353,7 +393,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
           </div>
         )}
 
-      
         <VoiceControlPanel
           voiceModeState={voiceModeState}
           currentLanguage={currentLanguage}
@@ -381,6 +420,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
               fieldStyle={getFieldStyle('glucose')}
             />
           </div>
+
           {contextValue === "Post-meal" && (
             <div>
               <SectionVoiceControl
@@ -400,7 +440,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
             </div>
           )}
 
-
+          {/* ✅ UPDATED: Pass hypertension status to CardiovascularSection */}
           <div>
             <SectionVoiceControl
               sectionName="cardiovascular"
@@ -415,12 +455,11 @@ const DiabetesVitalsForm: React.FC<Props> = ({ onVitalsSubmitted, initialLanguag
               validationRules={diabetesValidationRules}
               setFieldRef={setFieldRef}
               getFieldStyle={getFieldStyle}
+              hasHypertension={hasHypertension}
+              hasBothConditions={hasBothConditions}
             />
           </div>
 
-         
-
-          
           <div>
             <SectionVoiceControl
               sectionName="exercise"

@@ -19,6 +19,56 @@ const calculateAge = (dob: Date | string | undefined): number => {
   return age > 0 ? age : 0;
 };
 
+// ✅ Helper function to get patient name
+const getPatientName = (patient: any): string => {
+  if (!patient) return "Patient";
+  
+  if (patient.fullName && patient.fullName.trim() !== "") {
+    return patient.fullName.trim();
+  }
+  
+  if (patient.firstname && patient.lastname) {
+    return `${patient.firstname.trim()} ${patient.lastname.trim()}`.trim();
+  }
+  
+  if (patient.firstName && patient.lastName) {
+    return `${patient.firstName.trim()} ${patient.lastName.trim()}`.trim();
+  }
+  
+  if (patient.firstname) {
+    return patient.firstname.trim();
+  }
+  
+  if (patient.firstName) {
+    return patient.firstName.trim();
+  }
+  
+  return "Patient";
+};
+
+// ✅ NEW: Helper function to get selected diseases
+const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
+  const diseases: ("diabetes" | "hypertension")[] = [];
+  
+  if (!patient) {
+    return ["diabetes"];
+  }
+  
+  if (patient.diabetes === true) {
+    diseases.push("diabetes");
+  }
+  
+  if (patient.hypertension === true) {
+    diseases.push("hypertension");
+  }
+  
+  if (diseases.length === 0) {
+    diseases.push("diabetes");
+  }
+  
+  return diseases;
+};
+
 // ✅ GET comprehensive AI feedback combining summary, food, lifestyle, and encouragement
 router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -59,8 +109,19 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
     }
     
     const age = calculateAge(patient.dob);
+    const patientName = getPatientName(patient);
+    
+    // ✅ GET SELECTED DISEASES
+    const selectedDiseases = vital.selectedDiseases || getPatientDiseases(patient);
+    const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
 
-    // Prepare data for AI
+    console.log(`🏥 Disease context for comprehensive feedback:`, {
+      patientName,
+      diseases: selectedDiseases,
+      managementType: hasBothConditions ? "DUAL (Diabetes + Hypertension)" : "DIABETES ONLY"
+    });
+
+    // Prepare data for AI with diseases
     const foodInput: FoodAdviceInput = {
       glucose: vital.glucose,
       context: (vital.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -76,6 +137,8 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       exerciseIntensity: vital.exerciseIntensity,
       lastMealTime: vital.lastMealTime,
       mealType: vital.mealType,
+      patientName: patientName,
+      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
       lifestyle: patient.lifestyle ? {
         alcohol: patient.lifestyle.alcohol || "Unknown",
         smoking: patient.lifestyle.smoking || "Unknown",
@@ -94,13 +157,20 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
         : [],
     };
 
-    console.log("🔄 Generating comprehensive AI feedback...");
+    console.log("🔄 Generating comprehensive AI feedback with context:", {
+      glucose: foodInput.glucose,
+      context: foodInput.context,
+      patientName: foodInput.patientName,
+      selectedDiseases: foodInput.selectedDiseases,
+      language: foodInput.language,
+      hasBP: !!(foodInput.systolic && foodInput.diastolic)
+    });
 
     // Generate all AI components in parallel for better performance
     const [summary, foodAdvice, quickTips] = await Promise.all([
       aiService.generateSummary(foodInput),
       aiService.generateKenyanFoodAdvice(foodInput),
-      aiService.generateQuickFoodTips(foodInput)
+      aiService.generateQuickTips(foodInput)
     ]);
 
     // Generate lifestyle feedback if available
@@ -118,7 +188,7 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       lifestyleFeedback = await aiService.generateLifestyleFeedback(lifestyleInput);
     }
 
-    // Generate comprehensive final feedback
+    // Generate comprehensive final feedback with diseases
     const comprehensiveInput: ComprehensiveFeedbackInput = {
       summary,
       foodAdvice,
@@ -128,7 +198,9 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       patientData: patient,
       hasBloodPressure: !!(vital.systolic && vital.diastolic),
       hasHeartRate: !!vital.heartRate,
-      language: (patient.language as "en" | "sw") || "en"
+      language: (patient.language as "en" | "sw") || "en",
+      patientName: patientName,
+      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
     };
 
     const finalFeedback = await aiService.generateComprehensiveFeedback(comprehensiveInput);
@@ -143,6 +215,15 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
           quickTips,
           lifestyleFeedback: latestLifestyle ? lifestyleFeedback : "No lifestyle data available"
         },
+        patientInfo: {
+          name: patientName,
+          selectedDiseases,
+          diseaseManagement: hasBothConditions ? "dual" : "diabetes-only",
+          conditions: {
+            diabetes: selectedDiseases.includes("diabetes"),
+            hypertension: selectedDiseases.includes("hypertension"),
+          }
+        },
         context: {
           glucose: vital.glucose,
           context: vital.context,
@@ -156,7 +237,8 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
         recommendations: {
           recordBloodPressure: !vital.systolic || !vital.diastolic,
           recordHeartRate: !vital.heartRate,
-          completeLifestyle: !latestLifestyle
+          completeLifestyle: !latestLifestyle,
+          bloodPressureRequired: selectedDiseases.includes("hypertension") && (!vital.systolic || !vital.diastolic)
         }
       },
     });

@@ -73,12 +73,27 @@ const getPatientRedirect = (user: UserDocument, diseases: string[]): RedirectRes
     };
   }
 
+  // ✅ CRITICAL FIX: If user has both diabetes and hypertension, always redirect to /diabetes
+  // The diabetes page will handle both conditions together
+  if (diseases.includes("diabetes") && diseases.includes("hypertension")) {
+    console.log("🏥 User has BOTH diabetes and hypertension - redirecting to /diabetes for dual management");
+    return {
+      redirectTo: "/diabetes",
+      message: "Welcome to your diabetes and hypertension management dashboard."
+    };
+  }
+
+  // ✅ If user has diabetes (alone), redirect to diabetes
+  if (diseases.includes("diabetes")) {
+    return {
+      redirectTo: "/diabetes",
+      message: "Welcome to your diabetes management dashboard."
+    };
+  }
+
+  // Single condition handling for other diseases
   if (diseases.length === 1) {
     const diseaseRoutes: Record<string, RedirectResult> = {
-      diabetes: {
-        redirectTo: "/diabetes",
-        message: "Welcome to your diabetes management dashboard."
-      },
       hypertension: {
         redirectTo: "/hypertension",
         message: "Welcome to your hypertension management dashboard."
@@ -96,6 +111,17 @@ const getPatientRedirect = (user: UserDocument, diseases: string[]): RedirectRes
     };
   }
 
+  // ✅ Multiple conditions (but not diabetes+hypertension combo)
+  // This handles cases like cardiovascular + hypertension, or all three conditions
+  if (diseases.includes("diabetes")) {
+    // If diabetes is one of multiple conditions, prioritize diabetes
+    return {
+      redirectTo: "/diabetes",
+      message: "Welcome to your health management dashboard."
+    };
+  }
+
+  // For other multiple condition combinations, show selection page
   return {
     redirectTo: "/select-disease",
     message: "Please select which condition to manage."
@@ -191,6 +217,18 @@ router.post("/", async (req, res) => {
     // Process diseases for patients
     const diseases = user.role === "patient" ? extractDiseases(user) : [];
 
+    // ✅ LOG DISEASE STATUS FOR DEBUGGING
+    if (user.role === "patient") {
+      console.log("🔍 Patient Login - Disease Status:", {
+        email: user.email,
+        diabetes: user.diabetes,
+        hypertension: user.hypertension,
+        cardiovascular: user.cardiovascular,
+        extractedDiseases: diseases,
+        hasBothDiabetesAndHypertension: diseases.includes("diabetes") && diseases.includes("hypertension")
+      });
+    }
+
     // Update first login flag if needed (non-blocking)
     if (user.isFirstLogin) {
       User.findByIdAndUpdate(user._id, { isFirstLogin: false }).exec();
@@ -198,6 +236,16 @@ router.post("/", async (req, res) => {
 
     // Determine redirect
     const { redirectTo, message } = determineRedirect(user, diseases);
+
+    // ✅ LOG REDIRECT DECISION
+    if (user.role === "patient") {
+      console.log("📍 Redirect Decision:", {
+        email: user.email,
+        diseases: diseases,
+        redirectTo: redirectTo,
+        message: message
+      });
+    }
 
     // Get user name
     const userName = getUserName(user);
@@ -233,6 +281,8 @@ router.post("/", async (req, res) => {
 
     if (user.role === "patient") {
       safeUser.selectedDiseases = diseases;
+      // ✅ Add flag for dual condition management
+      safeUser.hasDualConditions = diseases.includes("diabetes") && diseases.includes("hypertension");
     }
 
     if (user.role === "relative") {
