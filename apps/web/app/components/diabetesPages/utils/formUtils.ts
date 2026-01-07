@@ -2,10 +2,9 @@
 import { diabetesType } from "@/types/diabetes";
 import { diabetesValidationRules as uiValidationRules } from "@repo/ui";
 
-// Re-export validation rules
 export const diabetesValidationRules = uiValidationRules;
 
-// Language content
+// ✅ UPDATED: Shorter prompts with reordered flow matching voiceUtils
 export const languageContent = {
   en: {
     title: "Health Vitals Tracker",
@@ -14,248 +13,249 @@ export const languageContent = {
     successMessage: "Your vitals have been securely recorded.",
     glucoseTitle: "Glucose Level",
     glucoseSubtitle: "Primary diabetes indicator",
-    glucoseLabel: "Blood Glucose (mg/dL)",
+    glucoseLabel: "Blood Glucose",
     glucosePlaceholder: "e.g., 120",
-    cardioTitle: "Cardiovascular Vitals",
-    cardioSubtitle: "Heart and circulation metrics",
-    proTip: "Pro Tip: Regular monitoring helps protect your heart and kidneys.",
-    systolicLabel: "Systolic Blood Pressure",
-    systolicPlaceholder: "120",
-    diastolicLabel: "Diastolic Blood Pressure",
-    diastolicPlaceholder: "80",
-    heartRateLabel: "Heart Rate (bpm)",
-    heartRatePlaceholder: "72",
     contextTitle: "Measurement Context",
     contextSubtitle: "When did you measure?",
-    contextLabel: "Measurement Context",
+    contextLabel: "Context",
     contextOptions: {
-      empty: "Select measurement context",
-      fasting: "Fasting (8+ hours without food)",
-      postMeal: "Post-Meal (after eating)",
-      random: "Random (any time)"
+      empty: "Select context",
+      fasting: "Fasting",
+      postMeal: "Post-Meal",
+      random: "Random"
     },
     mealTitle: "Meal Details",
     mealSubtitle: "What did you eat?",
-    lastMealLabel: "When did you last eat?",
+    lastMealLabel: "Last Meal",
     mealTypeLabel: "Meal Type",
     lastMealOptions: {
       empty: "Select time",
-      twoHours: "Last 2 hours",
-      fourHours: "Last 4 hours",
-      sixHours: "Last 6 hours",
-      moreThanSix: "More than 6 hours"
+      twoHours: "2 hours",
+      fourHours: "4 hours",
+      sixHours: "6 hours",
+      moreThanSix: "6+ hours"
     },
     mealTypeOptions: {
       empty: "Select type",
-      carbs: " Carbohydrates",
-      sugaryDrinks: " Sugary Drinks",
-      proteins: " Proteins",
+      carbs: "Carbs",
+      sugaryDrinks: "Sugary Drinks",
+      proteins: "Proteins",
       vegetables: "Vegetables",
-      mixed: " Mixed Meal"
+      mixed: "Mixed"
     },
+    cardioTitle: "Cardiovascular Vitals",
+    cardioSubtitle: "Heart and circulation metrics",
+    proTip: "Pro Tip: Regular monitoring helps protect your heart and kidneys.",
+    systolicLabel: "Systolic BP",
+    systolicPlaceholder: "120",
+    diastolicLabel: "Diastolic BP",
+    diastolicPlaceholder: "80",
+    heartRateLabel: "Heart Rate",
+    heartRatePlaceholder: "72",
     exerciseTitle: "Physical Activity",
     exerciseSubtitle: "Recent exercise impacts glucose",
     exerciseImportant: "Important: Exercise can lower blood glucose levels.",
-    exerciseRecentLabel: "Recent Exercise?",
-    exerciseIntensityLabel: "Exercise Intensity",
+    exerciseRecentLabel: "Recent Exercise",
+    exerciseIntensityLabel: "Intensity",
     exerciseOptions: {
       empty: "Select option",
-      none: " No recent exercise",
-      within2Hours: "Within last 2 hours",
-      twoToSixHours: " 2-6 hours ago",
-      sixTo24Hours: " 6-24 hours ago"
+      none: "None",
+      within2Hours: "Within 2 hours",
+      twoToSixHours: "2-6 hours",
+      sixTo24Hours: "6-24 hours"
     },
     intensityOptions: {
       empty: "Select intensity",
-      light: "Light (Walking, stretching)",
-      moderate: "Moderate (Brisk walk, cycling)",
-      vigorous: "Vigorous (Running, sports)"
+      light: "Light",
+      moderate: "Moderate",
+      vigorous: "Vigorous"
     },
     aiInsights: "Get AI Health Insights",
     submitting: "Submitting...",
     submit: "Submit Vitals",
-    voiceMode: "Voice Assistant Mode",
-    startVoice: "Start Voice Input",
-    stopVoice: "Stop Voice Input",
+    voiceMode: "Voice Mode",
+    startVoice: "Start Voice",
+    stopVoice: "Stop Voice",
     listening: "Listening...",
-    currentlyReading: "Currently reading",
-    speakNow: "Speak now",
-    voiceComplete: "Voice input complete! Please continue with the form.",
-    voiceCancelled: "Voice input cancelled.",
-    skipField: "Skip this measurement",
-    confirmQuestion: "Did you say",
+    currentlyReading: "Reading",
+    speakNow: "Speak",
+    voiceComplete: "Voice complete!",
+    voiceCancelled: "Cancelled",
+    skipField: "Skip",
+    confirmQuestion: "Confirm",
     yes: "Yes",
-    no: "No, try again",
-    skip: "Skip this measurement",
+    no: "No",
+    skip: "Skip",
+    // ✅ MUCH SHORTER field instructions - just the field name
     fieldInstructions: {
-      glucose: "Please say your blood glucose level in milligrams per deciliter. For example, say 'one twenty' for 120. Say 'skip' if you don't have this measurement.",
-      systolic: "Please say your systolic blood pressure. This is the top number. For example, say 'one twenty' for 120. Say 'skip' if you don't have this measurement.",
-      diastolic: "Please say your diastolic blood pressure. This is the bottom number. For example, say 'eighty' for 80. Say 'skip' if you don't have this measurement.",
-      heartRate: "Please say your heart rate in beats per minute. For example, say 'seventy two' for 72. Say 'skip' if you don't have this measurement.",
-      context: "Please say your measurement context. Options are: 'fasting', 'post meal', or 'random'. Say 'skip' if you don't know.",
-      lastMealTime: "Please say when you last ate. Options are: 'two hours', 'four hours', 'six hours', or 'more than six hours'. Say 'skip' if you don't know.",
-      mealType: "Please say your meal type. Options are: 'carbohydrates', 'sugary drinks', 'proteins', 'vegetables', or 'mixed meal'. Say 'skip' if you don't know.",
-      exerciseRecent: "Please say if you had recent exercise. Options are: 'none', 'within two hours', 'two to six hours', or 'six to twenty four hours'. Say 'skip' if you don't know.",
-      exerciseIntensity: "Please say your exercise intensity. Options are: 'light', 'moderate', or 'vigorous'. Say 'skip' if you don't know."
+      glucose: "Glucose",
+      context: "Context",
+      systolic: "Systolic",
+      diastolic: "Diastolic",
+      heartRate: "Heart rate",
+      lastMealTime: "Last meal time",
+      mealType: "Meal type",
+      exerciseRecent: "Exercise recent",
+      exerciseIntensity: "Intensity"
     },
     optionKeywords: {
       context: {
-        fasting: ["fasting", "fast", "empty stomach", "morning", "before eating", "before food"],
-        postMeal: ["post meal", "after eating", "after food", "after meal", "postprandial", "postmill", "just ate", "after lunch", "after dinner"],
-        random: ["random", "anytime", "any time", "whenever", "casual", "no specific time"]
+        fasting: ["fasting", "fast", "empty stomach", "morning", "before eating"],
+        postMeal: ["post meal", "after eating", "after food", "after meal"],
+        random: ["random", "anytime", "any time"]
       },
       lastMealTime: {
-        twoHours: ["two hours", "2 hours", "recently", "just ate", "2 hours ago", "two hours ago", "couple hours", "recent meal", "just now", "within two hours", "within 2 hours"],
-        fourHours: ["four hours", "4 hours", "few hours", "4 hours ago", "four hours ago", "several hours", "some hours", "3-4 hours"],
-        sixHours: ["six hours", "6 hours", "half day", "6 hours ago", "six hours ago", "half a day", "several hours ago", "5-6 hours"],
-        moreThanSix: ["more than six", "more than 6", "long time", "many hours", "more than 6 hours", "over 6 hours", "earlier today", "this morning", "yesterday", "long ago", "hours ago"]
+        twoHours: ["two hours", "2 hours", "recently", "2"],
+        fourHours: ["four hours", "4 hours", "4"],
+        sixHours: ["six hours", "6 hours", "6"],
+        moreThanSix: ["more than six", "more than 6", "6 plus", "6+", "6 +", "over 6", "longer than 6", "+ hours"]
       },
       mealType: {
-        carbs: ["carbohydrates", "carbs", "bread", "rice", "pasta", "potatoes", "grains", "cereal", "starch"],
-        sugaryDrinks: ["sugary drinks", "soda", "juice", "sweet drinks", "soft drinks", "sugary beverages", "cola", "pop", "sweetened beverage"],
-        proteins: ["proteins", "meat", "chicken", "fish", "eggs", "beef", "pork", "turkey", "protein meal", "animal protein"],
-        vegetables: ["vegetables", "salad", "greens", "veggies", "leafy greens", "broccoli", "carrots", "vegetable meal", "plant-based"],
-        mixed: ["mixed", "combination", "everything", "balanced", "mixed meal", "variety", "complete meal", "full meal"]
+        carbs: ["carbohydrates", "carbs", "bread", "rice", "pasta"],
+        sugaryDrinks: ["sugary drinks", "soda", "juice", "sweet drinks"],
+        proteins: ["proteins", "meat", "chicken", "fish", "eggs"],
+        vegetables: ["vegetables", "salad", "greens", "veggies"],
+        mixed: ["mixed", "combination", "everything", "balanced"]
       },
       exerciseRecent: {
-        none: ["none", "no", "didn't exercise", "no exercise", "no recent exercise", "haven't exercised", "not exercised", "no workout"],
-        within2Hours: ["within two hours", "within 2 hours", "recent exercise", "just exercised", "just now", "recently", "within the last two hours", "recent workout"],
-        twoToSixHours: ["two to six hours", "2 to 6 hours", "few hours ago", "earlier today", "2-6 hours", "2 to 6", "several hours ago", "today"],
-        sixTo24Hours: ["six to twenty four", "6 to 24", "yesterday", "day before", "6-24 hours", "6 to 24 hours", "six to 24 hours", "within 24 hours", "last day"]
+        none: ["none", "no", "nope", "non", "not", "nah", "no exercise", "did not exercise", "didn't exercise", "haven't exercised", "no workout", "not exercised", "i did not", "i have not"],
+        within2Hours: ["within two hours", "within 2 hours", "recent", "2"],
+        twoToSixHours: ["two to six hours", "2 to 6 hours", "2 to 6"],
+        sixTo24Hours: ["six to twenty four", "6 to 24", "yesterday", "6 to 24 hours"]
       },
       exerciseIntensity: {
-        light: ["light", "walking", "stretching", "gentle", "easy", "light exercise", "leisurely", "slow", "casual"],
-        moderate: ["moderate", "brisk", "cycling", "medium", "moderate exercise", "brisk walking", "steady", "medium intensity"],
-        vigorous: ["vigorous", "running", "sports", "intense", "hard", "vigorous exercise", "high intensity", "heavy", "strenuous"]
+        light: ["light", "walking", "easy", "gentle"],
+        moderate: ["moderate", "brisk", "cycling", "medium"],
+        vigorous: ["vigorous", "running", "sports", "intense"]
       }
     }
   },
   sw: {
     title: "Kifaa cha Kufuatilia Viwango vya Afya",
     subtitle: "Fuatilia viwango vya sukari damu na ishara muhimu za kiafya kwa usahihi",
-    successTitle: "Data Imehifadhiwa Kikamilifu!",
+    successTitle: "Data Imehifadhiwa!",
     successMessage: "Viwango vyako vya kiafya vimeandikwa kwa usalama.",
     glucoseTitle: "Kiwango cha Sukari Damu",
     glucoseSubtitle: "Kionyeshi kikuu cha kisukari",
-    glucoseLabel: "Sukari Damu (mg/dL)",
+    glucoseLabel: "Sukari Damu",
     glucosePlaceholder: "mfano, 120",
-    cardioTitle: "Viwango vya Mfumo wa Moyo na Mishipa",
-    cardioSubtitle: "Vipimo vya moyo na mzunguko wa damu",
-    proTip: "Ushauri: Ufuatiliaji wa mara kwa mara husaidia kulinda moyo na figo zako.",
-    systolicLabel: "Shinikizo la Damu la Sistolic",
-    systolicPlaceholder: "120",
-    diastolicLabel: "Shinikizo la Damu la Diastolic",
-    diastolicPlaceholder: "80",
-    heartRateLabel: "Kiwango cha Mapigo ya Moyo (bpm)",
-    heartRatePlaceholder: "72",
-    contextTitle: "Muktadha wa Kipimo",
+    contextTitle: "Muktadha",
     contextSubtitle: "Ulipima lini?",
-    contextLabel: "Muktadha wa Kipimo",
+    contextLabel: "Muktadha",
     contextOptions: {
-      empty: "Chagua muktadha wa kipimo",
-      fasting: "Kifunga (saa 8+ bila chakula)",
+      empty: "Chagua muktadha",
+      fasting: "Kifunga",
       postMeal: "Baada ya chakula",
-      random: "Ovyo ovyo (wakati wowote)"
+      random: "Ovyo ovyo"
     },
     mealTitle: "Maelezo ya Chakula",
     mealSubtitle: "Ulikula nini?",
-    lastMealLabel: "Ulimaliza kula lini?",
+    lastMealLabel: "Chakula cha Mwisho",
     mealTypeLabel: "Aina ya Chakula",
     lastMealOptions: {
       empty: "Chagua muda",
-      twoHours: "Masaa 2 zilizopita",
-      fourHours: "Masaa 4 zilizopita",
-      sixHours: "Masaa 6 zilizopita",
-      moreThanSix: "Zaidi ya masaa 6"
+      twoHours: "Masaa 2",
+      fourHours: "Masaa 4",
+      sixHours: "Masaa 6",
+      moreThanSix: "Zaidi ya 6"
     },
     mealTypeOptions: {
       empty: "Chagua aina",
       carbs: "Wanga",
-      sugaryDrinks: " Vinywaji vilivyo na sukari",
+      sugaryDrinks: "Vinywaji tamu",
       proteins: "Protini",
-      vegetables: "Mboga mboga",
-      mixed: " Chakula mchanganyiko"
+      vegetables: "Mboga",
+      mixed: "Mchanganyiko"
     },
+    cardioTitle: "Viwango vya Mfumo wa Moyo",
+    cardioSubtitle: "Vipimo vya moyo na mzunguko wa damu",
+    proTip: "Ushauri: Ufuatiliaji wa mara kwa mara husaidia kulinda moyo na figo zako.",
+    systolicLabel: "Systolic",
+    systolicPlaceholder: "120",
+    diastolicLabel: "Diastolic",
+    diastolicPlaceholder: "80",
+    heartRateLabel: "Mapigo ya Moyo",
+    heartRatePlaceholder: "72",
     exerciseTitle: "Shughuli za Mwili",
     exerciseSubtitle: "Mazoezi ya hivi karibuni yanaathiri sukari damu",
-    exerciseImportant: "Muhimu: Mazoezi yanaweza kupunguza kiwango cha sukari damu.",
-    exerciseRecentLabel: "Mazoezi ya Hivi Karibuni?",
-    exerciseIntensityLabel: "Ukali wa Mazoezi",
+    exerciseImportant: "Muhimu: Mazoezi yanaweza kupunguza sukari damu.",
+    exerciseRecentLabel: "Mazoezi ya Karibuni",
+    exerciseIntensityLabel: "Ukali",
     exerciseOptions: {
       empty: "Chagua chaguo",
-      none: "Hakuna mazoezi ya hivi karibuni",
-      within2Hours: " Ndani ya masaa 2 yaliyopita",
-      twoToSixHours: " Masaa 2-6 yaliyopita",
-      sixTo24Hours: "Masaa 6-24 yaliyopita"
+      none: "Hakuna",
+      within2Hours: "Masaa 2",
+      twoToSixHours: "Masaa 2-6",
+      sixTo24Hours: "Masaa 6-24"
     },
     intensityOptions: {
       empty: "Chagua ukali",
-      light: " Mwepesi (Kutembea, kunyoosha)",
-      moderate: "Wastani (Kutembea kwa kasi, baiskeli)",
-      vigorous: "Mizito (Kukimbia, michezo)"
+      light: "Mwepesi",
+      moderate: "Wastani",
+      vigorous: "Mizito"
     },
-    aiInsights: "Pata Uchambuzi wa Afya kutoka kwa AI",
+    aiInsights: "Pata Uchambuzi wa AI",
     submitting: "Inatumwa...",
-    submit: "Wasilisha Viwango vya Kiafya",
-    voiceMode: "Hali ya Msaidizi wa Sauti",
-    startVoice: "Anza Kuingiza kwa Sauti",
-    stopVoice: "Acha Kuingiza kwa Sauti",
+    submit: "Wasilisha",
+    voiceMode: "Hali ya Sauti",
+    startVoice: "Anza Sauti",
+    stopVoice: "Acha Sauti",
     listening: "Ninasikiliza...",
-    currentlyReading: "Ninasoma sasa",
-    speakNow: "Zungumza sasa",
-    voiceComplete: "Kuingiza kwa sauti kumekamilika! Tafadhali endelea na fomu.",
-    voiceCancelled: "Kuingiza kwa sauti kumesitishwa.",
-    skipField: "Ruka kipimo hiki",
-    confirmQuestion: "Ulisema",
+    currentlyReading: "Ninasoma",
+    speakNow: "Zungumza",
+    voiceComplete: "Imekamilika!",
+    voiceCancelled: "Imesitishwa",
+    skipField: "Ruka",
+    confirmQuestion: "Thibitisha",
     yes: "Ndio",
-    no: "Hapana, jaribu tena",
-    skip: "Ruka kipimo hiki",
+    no: "Hapana",
+    skip: "Ruka",
+    // ✅ SHORTER Swahili instructions
     fieldInstructions: {
-      glucose: "Tafadhali sema kiwango chako cha sukari damu kwenye miligramu kwa desilita. Kwa mfano, sema 'mia moja ishirini' kwa 120. Sema 'ruka' kama huna kipimo hiki.",
-      systolic: "Tafadhali sema shinikizo lako la damu la systolic. Hii ni nambari ya juu. Kwa mfano, sema 'mia moja ishirini' kwa 120. Sema 'ruka' kama huna kipimo hiki.",
-      diastolic: "Tafadhali sema shinikizo lako la damu la diastolic. Hii ni nambari ya chini. Kwa mfano, sema 'themanini' kwa 80. Sema 'ruka' kama huna kipimo hiki.",
-      heartRate: "Tafadhali sema kiwango chako cha mapigo ya moyo kwa dakika. Kwa mfano, sema 'sabini na mbili' kwa 72. Sema 'ruka' kama huna kipimo hiki.",
-      context: "Tafadhali sema muktadha wa kipimo chako. Chaguo ni: 'kifunga', 'baada ya chakula', au 'ovyo ovyo'. Sema 'ruka' kama hujui.",
-      lastMealTime: "Tafadhali sema ulimaliza kula lini. Chaguo ni: 'masaa mawili', 'masaa manne', 'masaa sita', au 'zaidi ya masaa sita'. Sema 'ruka' kama hujui.",
-      mealType: "Tafadhali sema aina ya chakula chako. Chaguo ni: 'wanga', 'vinywaji vya sukari', 'protini', 'mboga mboga', au 'chakula mchanganyiko'. Sema 'ruka' kama hujui.",
-      exerciseRecent: "Tafadhali sema kama umefanya mazoezi ya hivi karibuni. Chaguo ni: 'hakuna', 'ndani ya masaa mawili', 'masaa mawili hadi sita', au 'masaa sita hadi ishirini na nne'. Sema 'ruka' kama hujui.",
-      exerciseIntensity: "Tafadhali sema ukali wa mazoezi yako. Chaguo ni: 'mwepesi', 'wastani', au 'mizito'. Sema 'ruka' kama hujui."
+      glucose: "Sukari",
+      systolic: "Systolic",
+      diastolic: "Diastolic",
+      heartRate: "Mapigo",
+      context: "Muktadha",
+      lastMealTime: "Muda wa chakula",
+      mealType: "Aina ya chakula",
+      exerciseRecent: "Mazoezi",
+      exerciseIntensity: "Ukali"
     },
     optionKeywords: {
       context: {
-        fasting: ["kifunga", "tumbo tupu", "asubuhi", "bila chakula", "kabla ya chakula", "kabla ya kula", "chini ya kifunga"],
-        postMeal: ["baada ya chakula", "baada ya kula", "chakula", "kisha chakula", "baada ya mlo", "nilikula", "baada ya breakfast"],
-        random: ["ovyo ovyo", "wakati wowote", "muda wowote", "bila mpangilio", "sio maalum", "kwa bahati nasibu"]
+        fasting: ["kifunga", "tumbo tupu", "asubuhi"],
+        postMeal: ["baada ya chakula", "baada ya kula", "chakula"],
+        random: ["ovyo ovyo", "wakati wowote", "muda wowote"]
       },
       lastMealTime: {
-        twoHours: ["masaa mawili", "masaa 2", "hivi karibuni", "karibu", "masaa mawili zilizopita", "2 masaa", "dakika mia mbili", "saa mbili", "ndani ya masaa mawili", "hivi punde"],
-        fourHours: ["masaa manne", "masaa 4", "muda mfupi", "masaa manne zilizopita", "4 masaa", "saa nne", "masaa kadhaa", "masaa 3-4"],
-        sixHours: ["masaa sita", "masaa 6", "nusu siku", "masaa sita zilizopita", "6 masaa", "saa sita", "masaa kadhaa zilizopita", "masaa 5-6"],
-        moreThanSix: ["zaidi ya masaa sita", "zaidi ya 6", "muda mrefu", "masaa mengi", "zaidi ya masaa 6", "zaidi ya sita", "siku", "muda mrefu sana", "asubuhi", "jana", "zamani"]
+        twoHours: ["masaa mawili", "masaa 2", "2"],
+        fourHours: ["masaa manne", "masaa 4", "4"],
+        sixHours: ["masaa sita", "masaa 6", "6"],
+        moreThanSix: ["zaidi ya masaa sita", "zaidi ya 6", "zaidi", "6 plus", "6 +", "+ masaa"]
       },
       mealType: {
-        carbs: ["wanga", "carbohydrates", "mkate", "wali", "ugali", "ndizi", "viazi", "nafaka", "starch"],
-        sugaryDrinks: ["vinywaji vya sukari", "soda", "juisi", "vinywaji tamu", "soda tamu", "maji ya matunda", "cola", "vinywaji vilivyo na sukari nyingi"],
-        proteins: ["protini", "nyama", "kuku", "samaki", "mayai", "nyama ya ng'ombe", "nyama ya mbuzi", "nyama ya nguruwe", "protini za wanyama"],
-        vegetables: ["mboga mboga", "saladi", "majani", "mboga", "majani ya kijani", "broccoli", "karoti", "chakula cha mimea", "mboga za majani"],
-        mixed: ["mchanganyiko", "changanya", "kila kitu", "usawa", "chakula mchanganyiko", "mchanganyiko wa chakula", "chakula kamili", "chakula cha aina mbalimbali"]
+        carbs: ["wanga", "mkate", "wali", "ugali"],
+        sugaryDrinks: ["vinywaji vya sukari", "soda", "juisi"],
+        proteins: ["protini", "nyama", "kuku", "samaki"],
+        vegetables: ["mboga mboga", "saladi", "majani"],
+        mixed: ["mchanganyiko", "changanya", "kila kitu"]
       },
       exerciseRecent: {
-        none: ["hakuna", "hapana", "sikufanya mazoezi", "hakuna mazoezi", "sijafanya mazoezi", "bila mazoezi", "sio mazoezi", "bila workout"],
-        within2Hours: ["ndani ya masaa mawili", "ndani ya masaa 2", "mazoezi ya hivi karibuni", "hivi karibuni", "sasa hivi", "karibuni sana", "ndani ya masaa mawili yaliyopita", "workout ya hivi karibuni"],
-        twoToSixHours: ["masaa mawili hadi sita", "masaa 2 hadi 6", "muda mfupi uliopita", "mapema leo", "2 hadi 6 masaa", "2-6 masaa", "masaa kadhaa uliyopita", "leo"],
-        sixTo24Hours: ["masaa sita hadi ishirini na nne", "masaa 6 hadi 24", "jana", "siku mbili zilizopita", "6 hadi 24 masaa", "6-24 masaa", "ndani ya masaa 24", "siku iliyopita"]
+        none: ["hakuna", "hapana", "hakuna mazoezi", "sijafanya mazoezi", "la", "hapana mazoezi"],
+        within2Hours: ["ndani ya masaa mawili", "masaa 2", "2"],
+        twoToSixHours: ["masaa mawili hadi sita", "masaa 2 hadi 6", "2 hadi 6"],
+        sixTo24Hours: ["masaa sita hadi ishirini na nne", "masaa 6 hadi 24", "6 hadi 24"]
       },
       exerciseIntensity: {
-        light: ["mwepesi", "kutembea", "kunyoosha", "taratibu", "rahisi", "mazoezi mwepesi", "polepole", "kwa urahisi"],
-        moderate: ["wastani", "kasi", "baiskeli", "wastani", "mazoezi wastani", "kutembea kwa kasi", "kwa kasi ya wastani", "mazoezi ya kiwango cha wastani"],
-        vigorous: ["mizito", "kukimbia", "michezo", "ngumu", "kali", "mazoezi mizito", "ukali", "mazoezi magumu", "mazoezi ya kiwango cha juu"]
+        light: ["mwepesi", "kutembea", "rahisi"],
+        moderate: ["wastani", "kasi", "baiskeli"],
+        vigorous: ["mizito", "kukimbia", "michezo"]
       }
     }
   }
 };
 
-// Types
 export interface FieldConfig {
   name: keyof diabetesType;
   label: string;
@@ -268,18 +268,16 @@ export interface FieldConfig {
   optional?: boolean;
 }
 
-// UPDATED: Make paused property required
 export interface VoiceModeState {
   active: boolean;
   listening: boolean;
   speaking: boolean;
   currentField: string | null;
   muted: boolean;
-  paused: boolean;  // ✅ Changed from `paused?: boolean` to `paused: boolean`
+  paused: boolean;
   status: string;
 }
 
-// Helper functions
 export const getDisplayValue = (fieldName: string, value: string, currentLanguage: any): string => {
   const lang = currentLanguage;
   
