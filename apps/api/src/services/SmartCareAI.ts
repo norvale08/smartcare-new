@@ -11,6 +11,7 @@ export interface GlucoseData {
   height?: number;
   gender?: string;
   patientName?: string;
+  selectedDiseases?: ("diabetes" | "hypertension")[]; // NEW
 }
 
 export interface LifestyleData {
@@ -40,6 +41,7 @@ export interface VitalsData {
   lastMealTime?: string;
   mealType?: string;
   patientName?: string;
+  selectedDiseases?: ("diabetes" | "hypertension")[]; // NEW
 }
 
 export interface FoodAdviceInput extends VitalsData {
@@ -66,6 +68,7 @@ export interface ComprehensiveFeedbackInput {
   hasHeartRate: boolean;
   language: "en" | "sw";
   patientName?: string;
+  selectedDiseases?: ("diabetes" | "hypertension")[]; // NEW
 }
 
 function getGlucoseCategory(glucose: number, context: "Fasting" | "Post-meal" | "Random") {
@@ -88,6 +91,63 @@ function getGlucoseCategory(glucose: number, context: "Fasting" | "Post-meal" | 
   return glucose <= 200
     ? { status: "NORMAL", severity: "GOOD", needsAction: false }
     : { status: "HIGH", severity: "WARNING", needsAction: true };
+}
+
+// NEW: Blood pressure categorization
+function getBloodPressureCategory(systolic?: number, diastolic?: number) {
+  if (!systolic || !diastolic) {
+    return { status: "UNKNOWN", severity: "NEUTRAL", needsAction: false };
+  }
+  
+  if (systolic >= 180 || diastolic >= 120) {
+    return { status: "HYPERTENSIVE CRISIS", severity: "CRITICAL", needsAction: true };
+  }
+  if (systolic >= 140 || diastolic >= 90) {
+    return { status: "HIGH", severity: "WARNING", needsAction: true };
+  }
+  if (systolic >= 130 || diastolic >= 80) {
+    return { status: "ELEVATED", severity: "CAUTION", needsAction: true };
+  }
+  return { status: "NORMAL", severity: "GOOD", needsAction: false };
+}
+
+// NEW: Determine disease focus (only diabetes or diabetes+hypertension)
+function getDiseaseContext(selectedDiseases?: ("diabetes" | "hypertension")[]): {
+  hasDiabetes: boolean;
+  hasHypertension: boolean;
+  isBoth: boolean;
+  focusText: string;
+} {
+  // Default is diabetes only
+  if (!selectedDiseases || selectedDiseases.length === 0) {
+    return {
+      hasDiabetes: true,
+      hasHypertension: false,
+      isBoth: false,
+      focusText: "diabetes management"
+    };
+  }
+  
+  const hasDiabetes = selectedDiseases.includes("diabetes");
+  const hasHypertension = selectedDiseases.includes("hypertension");
+  
+  // Only two valid cases: diabetes alone OR diabetes + hypertension
+  const isBoth = hasDiabetes && hasHypertension;
+  
+  let focusText = "";
+  if (isBoth) {
+    focusText = "diabetes AND hypertension management";
+  } else {
+    // Default to diabetes if only diabetes is selected
+    focusText = "diabetes management";
+  }
+  
+  return { 
+    hasDiabetes: true, // Always true since we only have diabetes or diabetes+hypertension
+    hasHypertension, 
+    isBoth, 
+    focusText 
+  };
 }
 
 function getPatientGreeting(name: string | undefined, language: "en" | "sw" = "en"): string {
@@ -144,6 +204,7 @@ export class SmartCareAI {
     try {
       const patientName = data.patientName || data.patientData?.patientName || "Patient";
       const greeting = getPatientGreeting(patientName, data.language);
+      const diseaseContext = getDiseaseContext(data.selectedDiseases);
       
       const languageInstruction = data.language === "sw"
         ? `\n\nIMPORTANT LANGUAGE & TONE RULES:
@@ -153,18 +214,20 @@ export class SmartCareAI {
 - Be warm, encouraging, and supportive
 - Keep it detailed: 150-200 words
 - Focus on what patient CAN do, not restrictions
-- Include specific medical insights about their readings`
+- Include specific medical insights about their readings FOR ${diseaseContext.focusText.toUpperCase()}`
         : `\n\nIMPORTANT LANGUAGE & TONE RULES:
 - Use English with second-person POV ("you", "your")
 - MUST start with "${greeting}"
 - Be warm, encouraging, and motivating
 - Keep it detailed: 150-200 words
 - Focus on empowerment and achievable actions
-- Include specific medical insights about their readings`;
+- Include specific medical insights about their readings FOR ${diseaseContext.focusText.toUpperCase()}`;
 
-      const prompt = `You are a compassionate healthcare provider giving diabetes management feedback.
+      const prompt = `You are a compassionate healthcare provider giving ${diseaseContext.focusText} feedback.
 
 PATIENT NAME: ${patientName}
+DISEASE FOCUS: ${diseaseContext.focusText.toUpperCase()}
+${diseaseContext.isBoth ? "⚠️ DUAL CONDITION: Address BOTH diabetes AND hypertension together!" : ""}
 
 CONTEXT PROVIDED:
 ${data.summary}
@@ -179,16 +242,33 @@ QUICK TIPS: ${data.quickTips}
 LIFESTYLE: ${data.lifestyleFeedback}
 
 TASK: Create a detailed, motivating summary that:
-1. MUST start with "${greeting}" followed by acknowledging their commitment
-2. Provide a clear overview of their current health status with specific numbers and medical significance
-3. Explain what their readings mean for their body and long-term health
-4. Give 4-5 detailed, actionable food/lifestyle recommendations with clear explanations of WHY they matter
-5. Connect the advice to their specific readings and how it will improve their health
+1. MUST start with "${greeting}" followed by acknowledging their commitment to managing ${diseaseContext.focusText}
+2. Provide a clear overview of their current health status with specific numbers and medical significance for ${diseaseContext.isBoth ? "BOTH conditions" : "their condition"}
+3. Explain what their readings mean for their body and long-term health ${diseaseContext.isBoth ? "(address glucose AND blood pressure together)" : ""}
+4. Give 4-5 detailed, actionable food/lifestyle recommendations with clear explanations of WHY they matter for ${diseaseContext.focusText}
+5. Connect the advice to their specific readings and how it will improve their ${diseaseContext.isBoth ? "blood sugar AND blood pressure" : diseaseContext.hasDiabetes ? "blood sugar" : "blood pressure"}
 6. Include positive medical aspects - what they're doing right physiologically
 7. End with strong encouragement about achievable health improvements
 8. Uses "you" and "your" throughout (second-person POV)
 9. Be detailed and informative: 150-200 words
 10. Make it feel personal and tailored to ${patientName}
+
+${diseaseContext.isBoth ? `
+CRITICAL FOR DUAL CONDITIONS:
+- Mention how food/lifestyle affects BOTH glucose AND blood pressure
+- Explain the connection between diabetes and hypertension
+- Give advice that benefits BOTH conditions simultaneously
+` : diseaseContext.hasHypertension ? `
+FOCUS ON HYPERTENSION:
+- Emphasize blood pressure management
+- Discuss sodium intake, stress, and cardiovascular health
+- Explain how lifestyle affects blood pressure specifically
+` : `
+FOCUS ON DIABETES:
+- Emphasize glucose control and insulin sensitivity
+- Discuss carbohydrate management and energy balance
+- Explain how lifestyle affects blood sugar specifically
+`}
 
 MEDICAL COMMUNICATION STANDARDS:
 ✓ Patient-centered language
@@ -220,13 +300,13 @@ MEDICAL COMMUNICATION STANDARDS:
 
     try {
       const patientName = data.patientName || "Patient";
-      const category = getGlucoseCategory(data.glucose, data.context);
+      const glucoseCategory = getGlucoseCategory(data.glucose, data.context);
+      const bpCategory = getBloodPressureCategory(data.systolic, data.diastolic);
+      const diseaseContext = getDiseaseContext(data.selectedDiseases);
 
       let bpInfo = "No blood pressure recorded";
       if (data.systolic && data.diastolic) {
-        const bpStatus = data.systolic >= 140 || data.diastolic >= 90 ? "High" :
-                        data.systolic >= 120 || data.diastolic >= 80 ? "Elevated" : "Normal";
-        bpInfo = `${data.systolic}/${data.diastolic} mmHg (${bpStatus})`;
+        bpInfo = `${data.systolic}/${data.diastolic} mmHg (${bpCategory.status})`;
       }
 
       let hrInfo = "No heart rate recorded";
@@ -240,9 +320,10 @@ MEDICAL COMMUNICATION STANDARDS:
         ? "\n\nUse Kiswahili and second-person 'wewe' (you). Keep detailed: 80-120 words (3-4 sentences with medical insights)."
         : "\n\nUse English and second-person 'you/your'. Keep detailed: 80-120 words (3-4 sentences with medical insights).";
 
-      const prompt = `Provide a detailed clinical summary addressing ${patientName} directly.
+      const prompt = `Provide a detailed clinical summary addressing ${patientName} directly for ${diseaseContext.focusText}.
 
 PATIENT NAME: ${patientName}
+DISEASE FOCUS: ${diseaseContext.focusText.toUpperCase()}
 
 GLUCOSE THRESHOLDS:
 - LOW: < 70 mg/dL (Critical)
@@ -250,17 +331,23 @@ GLUCOSE THRESHOLDS:
 - POST-MEAL: Normal ≤180, High >180  
 - RANDOM: Normal ≤200, High >200
 
+BLOOD PRESSURE THRESHOLDS:
+- NORMAL: <120/80
+- ELEVATED: 120-129/<80
+- HIGH: ≥130/80 or ≥140/90
+- CRISIS: ≥180/120
+
 YOUR DATA:
-- Glucose: ${data.glucose} mg/dL (${data.context}) - ${category.status}
-- Blood Pressure: ${bpInfo}
+- Glucose: ${data.glucose} mg/dL (${data.context}) - ${glucoseCategory.status}
+- Blood Pressure: ${bpInfo} - ${bpCategory.status}
 - Heart Rate: ${hrInfo}
 ${data.age ? `- Age: ${data.age}` : ""}
 ${data.weight ? `- Weight: ${data.weight} kg` : ""}
 
 Write 3-4 detailed sentences that:
-1. Address ${patientName} directly and state their glucose status clearly with medical context
-2. Explain what their specific number means for their body and health
-3. Mention other vitals with specific values and medical significance
+1. Address ${patientName} directly and state their ${diseaseContext.isBoth ? "glucose AND blood pressure status" : diseaseContext.hasDiabetes ? "glucose status" : "blood pressure status"} clearly with medical context
+2. Explain what their specific number(s) mean for their body and health ${diseaseContext.isBoth ? "(for BOTH conditions)" : ""}
+3. Mention ${diseaseContext.isBoth ? "how these readings interact and affect overall cardiovascular and metabolic health" : diseaseContext.hasHypertension ? "cardiovascular implications" : "metabolic health implications"}
 4. Give specific observations about their overall health picture with positive aspects
 5. Use second-person ("you", "your") throughout
 6. Be detailed and informative: 80-120 words
@@ -287,8 +374,10 @@ Write 3-4 detailed sentences that:
 
     try {
       const patientName = data.patientName || "Patient";
-      const category = getGlucoseCategory(data.glucose, data.context);
+      const glucoseCategory = getGlucoseCategory(data.glucose, data.context);
+      const bpCategory = getBloodPressureCategory(data.systolic, data.diastolic);
       const greeting = getPatientGreeting(patientName, data.language);
+      const diseaseContext = getDiseaseContext(data.selectedDiseases);
 
       const languageInstruction = data.language === "sw"
         ? `\n\nTONE & LANGUAGE:
@@ -304,28 +393,51 @@ Write 3-4 detailed sentences that:
 - Encouraging, motivating
 - Detailed with medical insights: 100-140 words`;
 
-      const prompt = `Detailed glucose analysis speaking directly to ${patientName}.
+      const prompt = `Detailed health analysis speaking directly to ${patientName} for ${diseaseContext.focusText}.
 
 PATIENT NAME: ${patientName}
+DISEASE FOCUS: ${diseaseContext.focusText.toUpperCase()}
 
 THRESHOLDS:
+GLUCOSE:
 - LOW: <70 → Immediate action
 - FASTING: Normal ≤125, High >125
 - POST-MEAL: Normal ≤180, High >180
 - RANDOM: Normal ≤200, High >200
 
+BLOOD PRESSURE:
+- NORMAL: <120/80
+- ELEVATED: 120-129/<80
+- HIGH: ≥130/80 or ≥140/90
+- CRISIS: ≥180/120
+
 YOUR READING:
-${data.glucose} mg/dL (${data.context}) = ${category.status}
-${data.systolic && data.diastolic ? `Blood Pressure: ${data.systolic}/${data.diastolic} mmHg` : ""}
+Glucose: ${data.glucose} mg/dL (${data.context}) = ${glucoseCategory.status}
+${diseaseContext.isBoth && data.systolic && data.diastolic ? `Blood Pressure: ${data.systolic}/${data.diastolic} mmHg = ${bpCategory.status}` : ""}
+${diseaseContext.isBoth && data.systolic && data.diastolic ? `⚠️ Managing BOTH: Glucose ${glucoseCategory.status}, BP ${bpCategory.status}` : ""}
 ${data.heartRate ? `Heart Rate: ${data.heartRate} bpm` : ""}
 ${data.exerciseRecent ? `Recent Exercise: ${data.exerciseRecent} (${data.exerciseIntensity})` : ""}
 
 Write 4-5 detailed sentences:
-1. MUST start "${greeting}" then explain what your specific glucose reading means medically in ${data.context} context
-2. Explain the physiological significance - what's happening in your body
-3. ${category.needsAction ? "Explain clearly what you need to do, WHY it matters for your health, and the medical benefits" : "Affirm what you're doing right physiologically and encourage you to maintain it"}
-4. If other vitals provided, explain how they relate to your glucose and overall cardiovascular health
-5. Give 2 specific, personalized recommendations with clear medical reasoning
+1. MUST start "${greeting}" then explain what your specific glucose reading${diseaseContext.isBoth ? " and blood pressure" : ""} mean medically
+2. Explain the physiological significance - what's happening in your body ${diseaseContext.isBoth ? "(address metabolic AND cardiovascular effects together)" : "(focus on metabolic health and glucose control)"}
+3. ${glucoseCategory.needsAction || bpCategory.needsAction ? "Explain clearly what you need to do, WHY it matters for your health, and the medical benefits" : "Affirm what you're doing right physiologically and encourage you to maintain it"}
+4. ${diseaseContext.isBoth ? "Explain how diabetes and hypertension interact in your body and why managing both together is crucial for your heart and blood vessels" : "Focus on diabetes-specific impacts on your energy, organs, and long-term health"}
+5. Give 2 specific, personalized recommendations with clear medical reasoning for ${diseaseContext.focusText}
+
+${diseaseContext.isBoth ? `
+CRITICAL FOR DUAL CONDITIONS (DIABETES + HYPERTENSION):
+- Address BOTH glucose AND blood pressure together
+- Explain the synergistic risk of having both conditions on cardiovascular health
+- Give recommendations that benefit BOTH simultaneously (exercise, diet, stress management)
+- Mention increased risk for heart disease, stroke, kidney disease when both are present
+` : `
+DIABETES ONLY FOCUS:
+- Emphasize metabolic health and insulin function
+- Discuss glucose control and energy management
+- Explain blood sugar impact on organs, nerves, and long-term complications
+- Focus on carbohydrate management, physical activity, and consistent eating patterns
+`}
 
 COMMUNICATION STANDARDS:
 ✓ Direct address (you/your) to ${patientName}
@@ -357,8 +469,10 @@ COMMUNICATION STANDARDS:
 
     try {
       const patientName = data.patientName || "Patient";
-      const category = getGlucoseCategory(data.glucose, data.context);
+      const glucoseCategory = getGlucoseCategory(data.glucose, data.context);
+      const bpCategory = getBloodPressureCategory(data.systolic, data.diastolic);
       const greeting = getPatientGreeting(patientName, data.language);
+      const diseaseContext = getDiseaseContext(data.selectedDiseases);
 
       const languageInstruction = data.language === "sw"
         ? `\n\nUSE:
@@ -372,13 +486,14 @@ COMMUNICATION STANDARDS:
 - Positive, motivating
 - Detailed with medical benefits: 120-160 words`;
 
-      const prompt = `Detailed lifestyle guidance addressing ${patientName} directly.
+      const prompt = `Detailed lifestyle guidance addressing ${patientName} directly for ${diseaseContext.focusText}.
 
 PATIENT NAME: ${patientName}
+DISEASE FOCUS: ${diseaseContext.focusText.toUpperCase()}
 
 YOUR STATUS:
-- Glucose: ${data.glucose} mg/dL (${data.context}) = ${category.status}
-${data.systolic && data.diastolic ? `- Blood Pressure: ${data.systolic}/${data.diastolic} mmHg` : ""}
+- Glucose: ${data.glucose} mg/dL (${data.context}) = ${glucoseCategory.status}
+${diseaseContext.isBoth && data.systolic && data.diastolic ? `- Blood Pressure: ${data.systolic}/${data.diastolic} mmHg = ${bpCategory.status}` : ""}
 ${data.heartRate ? `- Heart Rate: ${data.heartRate} bpm` : ""}
 ${data.age ? `- Age: ${data.age}` : ""}
 ${data.weight ? `- Weight: ${data.weight} kg` : ""}
@@ -390,12 +505,26 @@ YOUR LIFESTYLE:
 - Sleep: ${data.lifestyle.sleep ?? "N/A"}
 
 Write 5-6 detailed sentences:
-1. MUST start "${greeting}" + acknowledge what ${patientName} is already doing right with medical benefits
-2. Explain specifically HOW your lifestyle habits are affecting your glucose levels physiologically (be detailed with medical reasoning)
-3. If vitals show concerns, connect them to lifestyle factors with clear health explanations
+1. MUST start "${greeting}" + acknowledge what ${patientName} is already doing right with medical benefits for ${diseaseContext.focusText}
+2. Explain specifically HOW your lifestyle habits are affecting your glucose levels${diseaseContext.isBoth ? " AND blood pressure" : ""} physiologically (be detailed with medical reasoning)
+3. ${diseaseContext.isBoth ? "Address the dual impact - how lifestyle affects BOTH metabolic and cardiovascular health simultaneously (e.g., exercise improves insulin sensitivity AND lowers blood pressure)" : "Focus on how lifestyle choices affect your blood sugar control, insulin sensitivity, and diabetes-related health outcomes"}
 4. Highlight any positive physiological indicators from their lifestyle choices
-5. Give 2-3 specific, achievable changes you can make with detailed explanation of health benefits
+5. Give 2-3 specific, achievable changes you can make with detailed explanation of health benefits for ${diseaseContext.focusText}
 6. End with strong encouragement about your body's ability to respond positively to these changes
+
+${diseaseContext.isBoth ? `
+DUAL CONDITION LIFESTYLE GUIDANCE (DIABETES + HYPERTENSION):
+- Show how lifestyle changes benefit BOTH conditions simultaneously
+- Emphasize synergistic effects (e.g., exercise lowers glucose AND BP, stress management helps both)
+- Address compound cardiovascular and metabolic risks but frame positively
+- Focus on: regular exercise, low-sodium + low-sugar diet, stress reduction, quality sleep, limiting alcohol
+` : `
+DIABETES ONLY LIFESTYLE GUIDANCE:
+- Focus on activity levels, consistent meal timing, carbohydrate management
+- Discuss sleep impact on insulin sensitivity and glucose control
+- Emphasize blood sugar-friendly habits: regular physical activity, balanced meals, stress management
+- Address how alcohol and smoking affect glucose regulation
+`}
 
 PATIENT COMMUNICATION:
 ✓ "You" language throughout
@@ -426,17 +555,21 @@ PATIENT COMMUNICATION:
 
     try {
       const patientName = data.patientName || "Patient";
-      const category = getGlucoseCategory(data.glucose, data.context);
+      const glucoseCategory = getGlucoseCategory(data.glucose, data.context);
+      const bpCategory = getBloodPressureCategory(data.systolic, data.diastolic);
+      const diseaseContext = getDiseaseContext(data.selectedDiseases);
 
       const languageInstruction = data.language === "sw"
         ? "\n\nKiswahili + 'unaweza kula' (you can eat). Be realistic and encouraging. NO PORTIONS."
         : "\n\nEnglish + 'you can eat/try'. Be realistic and encouraging. NO PORTIONS.";
 
-      const prompt = `Create realistic Kenyan meal plan addressing ${patientName} directly.
+      const prompt = `Create realistic Kenyan meal plan addressing ${patientName} directly for ${diseaseContext.focusText}.
 
 PATIENT NAME: ${patientName}
-GLUCOSE: ${data.glucose} mg/dL (${data.context}) = ${category.status}
-${data.systolic && data.diastolic ? `BP: ${data.systolic}/${data.diastolic} mmHg` : ""}
+DISEASE FOCUS: ${diseaseContext.focusText.toUpperCase()}
+
+GLUCOSE: ${data.glucose} mg/dL (${data.context}) = ${glucoseCategory.status}
+${diseaseContext.isBoth && data.systolic && data.diastolic ? `BP: ${data.systolic}/${data.diastolic} mmHg = ${bpCategory.status}` : ""}
 ${data.age ? `Age: ${data.age}` : ""} ${data.weight ? `Weight: ${data.weight} kg` : ""}
 ${data.allergies && data.allergies.length > 0 ? `Allergies: ${data.allergies.join(", ")}` : ""}
 
@@ -450,12 +583,30 @@ Breakfast: Tea with milk/black, uji (millet/wimbi/fermented), porridge, bread, m
 Lunch/Supper: Ugali (maize/brown), rice (white/brown), chapati, githeri, mukimo, irio, sukuma wiki, cabbage, managu, terere, kunde leaves, spinach, beans, ndengu, njahi, beef stew, chicken, tilapia, omena, matumbo
 Fruits: Bananas, oranges, pawpaw, guava, watermelon, mangoes, avocado
 
+${diseaseContext.isBoth ? `
+⚠️ CRITICAL - DUAL CONDITION RECOMMENDATIONS (DIABETES + HYPERTENSION):
+- Prioritize foods that benefit BOTH glucose control AND blood pressure
+- Low sodium + low glycemic index foods are essential
+- Emphasize: vegetables (sukuma, managu, cabbage), lean proteins (fish, chicken), whole grains (brown ugali, arrow roots), potassium-rich foods (bananas, avocado, beans)
+- Avoid: high sodium (processed meats, excess salt) AND high sugar foods (soda, excess mandazi, white ugali)
+- Explain benefits for BOTH conditions in each meal description
+- Focus on cardiovascular AND metabolic health together
+` : `
+DIABETES ONLY RECOMMENDATIONS:
+- Focus on LOW GLYCEMIC INDEX options that stabilize blood sugar
+- Complex carbs: brown ugali, brown rice, arrow roots, sweet potatoes (in moderation)
+- High fiber: vegetables (sukuma wiki, cabbage, managu), beans, ndengu, whole grains
+- Lean proteins: fish (tilapia, omena), chicken, eggs, beans
+- Limit: white ugali, white rice, sugary drinks, excess mandazi, processed foods
+- Explain glucose control benefits and how foods affect blood sugar
+`}
+
 RESPOND IN JSON:
 {
-  "breakfast": "YOU CAN HAVE... (realistic Kenyan breakfast items that people actually eat in the morning, explain why good for glucose/health, 2-3 sentences, NO PORTIONS)",
-  "lunch": "FOR LUNCH, TRY... (realistic Kenyan lunch combinations like ugali with sukuma and meat/fish, explain benefits, 2-3 sentences, NO PORTIONS)",
-  "supper": "IN THE EVENING, YOU CAN ENJOY... (realistic dinner options Kenyans eat, explain why appropriate, 2-3 sentences, NO PORTIONS)",
-  "foods_to_avoid": "IT'S BETTER TO LIMIT... (realistic foods Kenyans commonly eat that affect glucose/BP, explain WHY briefly, 2 sentences, NO PORTIONS)"
+  "breakfast": "YOU CAN HAVE... (realistic Kenyan breakfast for ${diseaseContext.focusText}, explain why good, 2-3 sentences, NO PORTIONS)",
+  "lunch": "FOR LUNCH, TRY... (realistic Kenyan lunch for ${diseaseContext.focusText}, explain benefits, 2-3 sentences, NO PORTIONS)",
+  "supper": "IN THE EVENING, YOU CAN ENJOY... (realistic dinner for ${diseaseContext.focusText}, explain why appropriate, 2-3 sentences, NO PORTIONS)",
+  "foods_to_avoid": "IT'S BETTER TO LIMIT... (foods that affect ${diseaseContext.focusText}, explain WHY briefly, 2 sentences, NO PORTIONS)"
 }
 
 CRITICAL RULES:
@@ -465,8 +616,8 @@ CRITICAL RULES:
 ✓ Be realistic about what Kenyans actually eat for each meal time
 ✓ DON'T recommend ugali for breakfast - that's unrealistic
 ✓ Multiple affordable, common options per meal
-✓ Brief explanation of WHY foods are good/bad for health
-✓ ${category.status === "HIGH" ? "Focus on whole grains, vegetables, lean proteins" : category.status === "LOW" ? "Include quick energy foods with sustained options" : "Balanced, everyday nutrition"}
+✓ Brief explanation of WHY foods are good/bad for ${diseaseContext.focusText}
+✓ ${diseaseContext.isBoth ? "Emphasize foods that benefit BOTH conditions!" : ""}
 ✓ Each meal: 2-3 sentences only (realistic and brief)${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
@@ -480,78 +631,49 @@ CRITICAL RULES:
       const text = completion.choices[0]?.message?.content || "{}";
       const parsedAdvice = JSON.parse(text);
 
-      if (!parsedAdvice.breakfast || !parsedAdvice.lunch || !parsedAdvice.supper || !parsedAdvice.foods_to_avoid) {
-        return {
-          breakfast: data.language === "sw" 
-            ? "Unaweza kunywa chai na mkate au kuandaa uji wa wimbi. Viazi vitamu vya kuchemsha na yai ni chaguo nzuri pia. Chakula hiki kitakupa nguvu na kudhibiti sukari."
-            : "You can have tea with bread or prepare millet porridge. Boiled sweet potatoes with an egg is also a good choice. This meal will give you energy and help control your sugar.",
-          lunch: data.language === "sw"
-            ? "Unaweza kula ugali na sukuma wiki pamoja na samaki au nyama. Githeri au maharagwe pia ni vizuri. Mboga na protini zinasaidia kudhibiti sukari."
-            : "You can eat ugali with sukuma wiki and fish or meat. Githeri or beans are also good options. Vegetables and protein help control your sugar.",
-          supper: data.language === "sw"
-            ? "Jioni unaweza kula chakula sawa na mchana lakini kidogo zaidi, au githeri na mboga. Chai na mkate pia ni sawa."
-            : "In the evening you can eat similar to lunch but lighter, or githeri with vegetables. Tea with bread is also fine.",
-          foods_to_avoid: data.language === "sw"
-            ? "Punguza soda, sukari nyingi, na mandazi mara kwa mara. Vyakula hivyo vinaongeza sukari haraka sana."
-            : "Reduce soda, excess sugar, and frequent mandazi. These foods raise your sugar very quickly.",
-        };
-      }
-
-      return parsedAdvice as FoodAdviceResponse;
-    } catch (err: any) {
       return {
-        breakfast: data.language === "sw" 
-          ? "Chai na mkate au uji."
-          : "Tea with bread or porridge.",
-        lunch: data.language === "sw"
-          ? "Ugali na sukuma wiki."
-          : "Ugali with sukuma wiki.",
-        supper: data.language === "sw"
-          ? "Githeri au chakula cha kawaida."
-          : "Githeri or regular meal.",
-        foods_to_avoid: data.language === "sw"
-          ? "Punguza sukari na soda."
-          : "Reduce sugar and soda.",
+        breakfast: parsedAdvice.breakfast || "⚠️ Breakfast advice unavailable",
+        lunch: parsedAdvice.lunch || "⚠️ Lunch advice unavailable",
+        supper: parsedAdvice.supper || "⚠️ Supper advice unavailable",
+        foods_to_avoid: parsedAdvice.foods_to_avoid || "⚠️ Foods to avoid list unavailable",
       };
+    } catch (err: any) {
+      console.error("Food advice error:", err);
+      throw new Error(this.handleAIError(err));
     }
   }
 
-  async generateQuickFoodTips(data: VitalsData): Promise<string> {
+  async generateQuickTips(data: VitalsData): Promise<string> {
     if (!this.checkApiKey()) {
       return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
     }
 
     try {
       const patientName = data.patientName || "Patient";
-      const category = getGlucoseCategory(data.glucose, data.context);
-      const greeting = getPatientGreeting(patientName, data.language);
+      const glucoseCategory = getGlucoseCategory(data.glucose, data.context);
+      const bpCategory = getBloodPressureCategory(data.systolic, data.diastolic);
+      const diseaseContext = getDiseaseContext(data.selectedDiseases);
 
       const languageInstruction = data.language === "sw"
-        ? `\n\nKiswahili + "unaweza" (you can). MUST start: "${greeting}". Quick and practical: 60-90 words. ENCOURAGING!`
-        : `\n\nEnglish + "you can/try". MUST start: "${greeting}". Quick and practical: 60-90 words. ENCOURAGING!`;
+        ? "\n\nKiswahili + 'unaweza' (you can). Be encouraging and specific with medical benefits. 60-90 words."
+        : "\n\nEnglish + 'you can'. Be encouraging and specific with medical benefits. 60-90 words.";
 
-      const prompt = `Give 2-3 immediate, practical Kenyan food tips directly to ${patientName}.
+      const prompt = `Give 3 quick, actionable tips addressing ${patientName} directly for ${diseaseContext.focusText}.
 
-PATIENT NAME: ${patientName}
-GLUCOSE: ${data.glucose} mg/dL (${data.context}) = ${category.status}
-${data.systolic && data.diastolic ? `BP: ${data.systolic}/${data.diastolic} mmHg` : ""}
-${data.exerciseRecent ? `Recent Exercise: ${data.exerciseRecent} (${data.exerciseIntensity})` : ""}
+PATIENT: ${patientName}
+DISEASE FOCUS: ${diseaseContext.focusText.toUpperCase()}
 
-REALISTIC KENYAN FOODS: chai, uji, mkate, mandazi, viazi vitamu, arrow roots, ugali, rice, chapati, sukuma wiki, cabbage, githeri, beans, ndengu, beef, chicken, tilafish, omena
+STATUS:
+- Glucose: ${data.glucose} mg/dL (${data.context}) = ${glucoseCategory.status}
+${diseaseContext.isBoth && data.systolic && data.diastolic ? `- BP: ${data.systolic}/${data.diastolic} mmHg = ${bpCategory.status}` : ""}
 
-Write tips that:
-1. MUST start "${greeting}" 
-2. Give specific Kenyan foods you can eat RIGHT NOW (realistic for the time of day)
-3. What you can do for your next meal with brief reasoning
-4. Quick practical tip based on your ${category.status} glucose
-5. End with motivating statement
-
-USE:
-✓ "You can..." language to ${patientName}
-✓ Realistic Kenyan foods (no portions)
-✓ Motivating, practical tone
-✓ Immediate, achievable actions
-✓ 60-90 words (quick and encouraging)${languageInstruction}`;
+Provide 3 specific tips that:
+1. Address immediate priorities based on readings for ${diseaseContext.focusText}
+2. Are simple, realistic actions you can take today
+3. Include WHY each tip helps (medical benefit)
+4. Use "you" language throughout
+5. ${diseaseContext.isBoth ? "Address BOTH glucose AND blood pressure together when relevant" : "Focus on diabetes-specific benefits"}
+6. Be encouraging and detailed: 60-90 words total${languageInstruction}`;
 
       const completion = await this.groq!.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
@@ -568,15 +690,24 @@ USE:
   }
 
   private handleAIError(err: any): string {
-    if (err.status === 401) {
-      return "❌ Invalid API key. Please contact support.";
+    console.error("❌ AI Error:", err);
+
+    if (err.message?.includes("API key")) {
+      return "⚠️ AI service authentication failed. Please check configuration.";
     }
-    if (err.status === 429) {
-      return "❌ Rate limit exceeded. Please try again in a few minutes.";
+
+    if (err.message?.includes("rate limit") || err.status === 429) {
+      return "⚠️ AI service temporarily busy. Please try again in a moment.";
     }
-    if (err.code === "ENOTFOUND" || err.code === "ECONNREFUSED") {
-      return "❌ Network error. Cannot reach AI service.";
+
+    if (err.message?.includes("timeout") || err.code === "ETIMEDOUT") {
+      return "⚠️ AI service took too long to respond. Please try again.";
     }
-    return `❌ AI temporarily unavailable: ${err.message}`;
+
+    if (err.status === 503 || err.message?.includes("unavailable")) {
+      return "⚠️ AI service temporarily unavailable. Please try again shortly.";
+    }
+
+    return "⚠️ AI feedback temporarily unavailable. Please try again.";
   }
 }

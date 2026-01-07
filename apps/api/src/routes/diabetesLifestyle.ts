@@ -33,32 +33,50 @@ const calculateAge = (dob: Date | string | undefined): number => {
 const getPatientName = (patient: any): string => {
   if (!patient) return "Patient";
   
-  // Try fullName first
   if (patient.fullName && patient.fullName.trim() !== "") {
     return patient.fullName.trim();
   }
   
-  // Try firstname + lastname
   if (patient.firstname && patient.lastname) {
     return `${patient.firstname.trim()} ${patient.lastname.trim()}`.trim();
   }
   
-  // Try firstName + lastName (User model format)
   if (patient.firstName && patient.lastName) {
     return `${patient.firstName.trim()} ${patient.lastName.trim()}`.trim();
   }
   
-  // Try just firstname
   if (patient.firstname) {
     return patient.firstname.trim();
   }
   
-  // Try just firstName
   if (patient.firstName) {
     return patient.firstName.trim();
   }
   
   return "Patient";
+};
+
+// ✅ NEW: Helper function to get selected diseases
+const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
+  const diseases: ("diabetes" | "hypertension")[] = [];
+  
+  if (!patient) {
+    return ["diabetes"];
+  }
+  
+  if (patient.diabetes === true) {
+    diseases.push("diabetes");
+  }
+  
+  if (patient.hypertension === true) {
+    diseases.push("hypertension");
+  }
+  
+  if (diseases.length === 0) {
+    diseases.push("diabetes");
+  }
+  
+  return diseases;
 };
 
 // ✅ GET latest lifestyle for user
@@ -114,19 +132,32 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
     }
 
     const age = calculateAge(patient.dob);
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const patientName = getPatientName(patient);
+    
+    // ✅ GET SELECTED DISEASES
+    const selectedDiseases = getPatientDiseases(patient);
+    const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
+    
     console.log(`👤 Patient found - Name: ${patientName}, Age: ${age}, Gender: ${patient.gender}`);
+    console.log(`🏥 Disease Profile:`, {
+      diseases: selectedDiseases,
+      managementType: hasBothConditions ? "DUAL (Diabetes + Hypertension)" : "DIABETES ONLY"
+    });
 
     // Get latest glucose reading with ALL context
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
     const glucose = latestVitals?.glucose || 0;
     const context = (latestVitals?.context as "Fasting" | "Post-meal" | "Random") || "Random";
+    
+    // Use diseases from vitals if available, otherwise from patient profile
+    const vitalDiseases = latestVitals?.selectedDiseases || selectedDiseases;
 
     console.log("🩺 Latest vitals context:", {
       glucose,
       context,
       vitalsDate: latestVitals?.createdAt,
       vitalsLanguage: latestVitals?.language,
+      selectedDiseases: vitalDiseases,
       systolic: latestVitals?.systolic,
       diastolic: latestVitals?.diastolic,
       heartRate: latestVitals?.heartRate
@@ -148,33 +179,34 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
         context,
         readingDate: latestVitals?.createdAt || new Date(),
       },
-      language: userLanguage, // ✅ SAVE LANGUAGE TO DATABASE
+      language: userLanguage,
       aiAdvice: userLanguage === "sw" 
         ? "Inaendeleza ushauri wa kibinafsi..." 
-        : "Generating personalized advice...", // Placeholder
+        : "Generating personalized advice...",
     });
     await lifestyleDoc.save();
     console.log("✅ Lifestyle record saved:", lifestyleDoc._id);
 
-    // Prepare COMPLETE input for AI with all available context
+    // Prepare COMPLETE input for AI with all available context and diseases
     const aiInput: LifestyleAIInput & {
       systolic?: number;
       diastolic?: number;
       heartRate?: number;
       exerciseRecent?: string;
       exerciseIntensity?: string;
-      patientName?: string; // ✅ ADDED THIS
+      patientName?: string;
+      selectedDiseases?: ("diabetes" | "hypertension")[];
     } = {
       glucose,
       context,
-      language: userLanguage, // ✅ USE PRIORITIZED LANGUAGE
+      language: userLanguage,
       age,
       gender: patient.gender,
       weight: patient.weight,
       height: patient.height,
       lifestyle: { alcohol, smoking, exercise, sleep },
-      patientName: patientName, // ✅ ADDED PATIENT NAME
-      // ✅ ADDITIONAL CONTEXT from latest vitals
+      patientName: patientName,
+      selectedDiseases: vitalDiseases, // ✅ ADDED DISEASES
       systolic: latestVitals?.systolic,
       diastolic: latestVitals?.diastolic,
       heartRate: latestVitals?.heartRate,
@@ -182,11 +214,15 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       exerciseIntensity: latestVitals?.exerciseIntensity,
     };
 
+    const hasBoth = vitalDiseases.includes("diabetes") && vitalDiseases.includes("hypertension");
+
     console.log("🤖 Generating lifestyle feedback with context:", {
       glucose: aiInput.glucose,
       context: aiInput.context,
       language: aiInput.language,
-      patientName: aiInput.patientName, // ✅ LOG PATIENT NAME
+      patientName: aiInput.patientName,
+      selectedDiseases: aiInput.selectedDiseases,
+      managementType: hasBoth ? "DUAL" : "DIABETES ONLY",
       bp: `${aiInput.systolic || 'N/A'}/${aiInput.diastolic || 'N/A'}`,
       hr: aiInput.heartRate || 'N/A',
       exercise: `${aiInput.exerciseRecent || 'N/A'} (${aiInput.exerciseIntensity || 'N/A'})`
@@ -200,6 +236,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       console.log("- Length:", aiAdvice.length);
       console.log("- First 100 chars:", aiAdvice.substring(0, 100));
       console.log("- Language used:", userLanguage);
+      console.log("- Disease focus:", hasBoth ? "DUAL" : "DIABETES ONLY");
       
       // Update the document with AI advice
       lifestyleDoc.aiAdvice = aiAdvice;
@@ -210,12 +247,19 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
         success: true, 
         recordId: lifestyleDoc._id, 
         aiAdvice,
-        patientName, // ✅ RETURN PATIENT NAME
+        patientName,
+        selectedDiseases: vitalDiseases,
+        diseaseManagement: hasBoth ? "dual" : "diabetes-only",
+        conditions: {
+          diabetes: vitalDiseases.includes("diabetes"),
+          hypertension: vitalDiseases.includes("hypertension"),
+        },
         language: userLanguage,
         contextUsed: {
           glucose,
           context,
           patientName: patientName,
+          selectedDiseases: vitalDiseases,
           language: userLanguage,
           bloodPressure: aiInput.systolic && aiInput.diastolic ? 
             `${aiInput.systolic}/${aiInput.diastolic}` : 'Not provided',
@@ -228,7 +272,6 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       console.error("❌ AI generation failed:", aiError.message);
       console.error("Full error:", aiError);
       
-      // Save error message as advice
       const errorMessage = userLanguage === "sw" 
         ? "Haiwezekani kutengeneza ushauri wa kibinafsi kwa sasa. Tafadhali jaribu tena baadaye."
         : "Unable to generate personalized advice at this time. Please try again later.";
@@ -236,12 +279,12 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       lifestyleDoc.aiAdvice = errorMessage;
       await lifestyleDoc.save();
       
-      // Still return success but with error flag
       res.status(200).json({ 
         success: true, 
         recordId: lifestyleDoc._id, 
         aiAdvice: lifestyleDoc.aiAdvice,
-        patientName, // ✅ STILL RETURN PATIENT NAME
+        patientName,
+        selectedDiseases: vitalDiseases,
         aiError: true,
         language: userLanguage,
         errorDetails: aiError.message
@@ -266,7 +309,6 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
     console.log("📝 Updating lifestyle record:", id);
     console.log("Update data:", { alcohol, smoking, exercise, sleep, language });
 
-    // Find existing lifestyle record
     const lifestyleDoc = await Lifestyle.findOne({ _id: id, userId });
     if (!lifestyleDoc) {
       return res.status(404).json({ message: "Lifestyle record not found" });
@@ -278,47 +320,45 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
     if (exercise) lifestyleDoc.exercise = exercise;
     if (sleep) lifestyleDoc.sleep = sleep;
 
-    // Fetch patient info
     const patient = await Patient.findOne({ userId });
     if (!patient) return res.status(404).json({ message: "Patient profile not found" });
 
     const age = calculateAge(patient.dob);
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const patientName = getPatientName(patient);
+    
+    // ✅ GET SELECTED DISEASES
+    const selectedDiseases = getPatientDiseases(patient);
 
-    // Get latest vitals
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
     const glucose = latestVitals?.glucose || lifestyleDoc.glucoseContext?.glucose || 0;
     const context = (latestVitals?.context as "Fasting" | "Post-meal" | "Random") || 
                     lifestyleDoc.glucoseContext?.context || "Random";
+    
+    const vitalDiseases = latestVitals?.selectedDiseases || selectedDiseases;
 
-    // Update glucose context if new vitals available
     lifestyleDoc.glucoseContext = {
       glucose,
       context,
       readingDate: latestVitals?.createdAt || new Date(),
     };
 
-    // ✅ PRIORITY: Use language from request, then existing, then vitals, then default
     const userLanguage = language || lifestyleDoc.language || (latestVitals?.language as "en" | "sw") || "en";
     console.log(`🌐 Using language for update: ${userLanguage}`);
     
-    // Update language in document
     lifestyleDoc.language = userLanguage;
-
-    // Save with placeholder
     lifestyleDoc.aiAdvice = userLanguage === "sw" 
       ? "Inaendeleza ushauri wa kibinafsi upya..."
       : "Regenerating personalized advice...";
     await lifestyleDoc.save();
 
-    // Prepare AI input
     const aiInput: LifestyleAIInput & {
       systolic?: number;
       diastolic?: number;
       heartRate?: number;
       exerciseRecent?: string;
       exerciseIntensity?: string;
-      patientName?: string; // ✅ ADDED THIS
+      patientName?: string;
+      selectedDiseases?: ("diabetes" | "hypertension")[];
     } = {
       glucose,
       context,
@@ -327,7 +367,8 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
       gender: patient.gender,
       weight: patient.weight,
       height: patient.height,
-      patientName: patientName, // ✅ ADDED PATIENT NAME
+      patientName: patientName,
+      selectedDiseases: vitalDiseases, // ✅ ADDED DISEASES
       lifestyle: { 
         alcohol: lifestyleDoc.alcohol, 
         smoking: lifestyleDoc.smoking, 
@@ -341,9 +382,13 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
       exerciseIntensity: latestVitals?.exerciseIntensity,
     };
 
+    const hasBoth = vitalDiseases.includes("diabetes") && vitalDiseases.includes("hypertension");
+
     console.log("🤖 Regenerating lifestyle feedback with:", {
       language: userLanguage,
-      patientName: patientName, // ✅ LOG PATIENT NAME
+      patientName: patientName,
+      selectedDiseases: vitalDiseases,
+      managementType: hasBoth ? "DUAL" : "DIABETES ONLY",
       glucose,
       context
     });
@@ -360,7 +405,13 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
         success: true, 
         recordId: lifestyleDoc._id, 
         aiAdvice,
-        patientName, // ✅ RETURN PATIENT NAME
+        patientName,
+        selectedDiseases: vitalDiseases,
+        diseaseManagement: hasBoth ? "dual" : "diabetes-only",
+        conditions: {
+          diabetes: vitalDiseases.includes("diabetes"),
+          hypertension: vitalDiseases.includes("hypertension"),
+        },
         language: userLanguage,
         updated: true
       });
@@ -378,7 +429,8 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
         success: true, 
         recordId: lifestyleDoc._id, 
         aiAdvice: lifestyleDoc.aiAdvice,
-        patientName, // ✅ STILL RETURN PATIENT NAME
+        patientName,
+        selectedDiseases: vitalDiseases,
         aiError: true,
         language: userLanguage,
         errorDetails: aiError.message
@@ -397,7 +449,7 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const { id } = req.params;
-    const { language } = req.body; // Optional language override
+    const { language } = req.body;
 
     console.log("🔄 Regenerating AI advice for record:", id);
 
@@ -406,31 +458,30 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       return res.status(404).json({ message: "Lifestyle record not found" });
     }
 
-    // Fetch patient info
     const patient = await Patient.findOne({ userId });
     if (!patient) return res.status(404).json({ message: "Patient profile not found" });
 
     const age = calculateAge(patient.dob);
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const patientName = getPatientName(patient);
+    
+    // ✅ GET SELECTED DISEASES
+    const selectedDiseases = getPatientDiseases(patient);
 
-    // Get latest vitals for most current context
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
     const glucose = latestVitals?.glucose || lifestyleDoc.glucoseContext?.glucose || 0;
     const context = (latestVitals?.context as "Fasting" | "Post-meal" | "Random") || 
                     lifestyleDoc.glucoseContext?.context || "Random";
+    
+    const vitalDiseases = latestVitals?.selectedDiseases || selectedDiseases;
 
-    // Update glucose context
     lifestyleDoc.glucoseContext = {
       glucose,
       context,
       readingDate: latestVitals?.createdAt || new Date(),
     };
 
-    // Determine language
     const userLanguage = language || lifestyleDoc.language || (latestVitals?.language as "en" | "sw") || "en";
     lifestyleDoc.language = userLanguage;
-
-    // Mark as regenerating
     lifestyleDoc.aiAdvice = userLanguage === "sw" 
       ? "Inaendeleza ushauri wa kibinafsi upya..."
       : "Regenerating personalized advice...";
@@ -442,7 +493,8 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       heartRate?: number;
       exerciseRecent?: string;
       exerciseIntensity?: string;
-      patientName?: string; // ✅ ADDED THIS
+      patientName?: string;
+      selectedDiseases?: ("diabetes" | "hypertension")[];
     } = {
       glucose,
       context,
@@ -451,7 +503,8 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       gender: patient.gender,
       weight: patient.weight,
       height: patient.height,
-      patientName: patientName, // ✅ ADDED PATIENT NAME
+      patientName: patientName,
+      selectedDiseases: vitalDiseases, // ✅ ADDED DISEASES
       lifestyle: { 
         alcohol: lifestyleDoc.alcohol, 
         smoking: lifestyleDoc.smoking, 
@@ -465,9 +518,13 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       exerciseIntensity: latestVitals?.exerciseIntensity,
     };
 
+    const hasBoth = vitalDiseases.includes("diabetes") && vitalDiseases.includes("hypertension");
+
     console.log("🤖 Regenerating with full context:", {
       language: userLanguage,
-      patientName: patientName, // ✅ LOG PATIENT NAME
+      patientName: patientName,
+      selectedDiseases: vitalDiseases,
+      managementType: hasBoth ? "DUAL" : "DIABETES ONLY",
       glucose,
       context,
       hasBP: !!(latestVitals?.systolic && latestVitals?.diastolic),
@@ -488,7 +545,13 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       res.status(200).json({ 
         success: true, 
         aiAdvice,
-        patientName, // ✅ RETURN PATIENT NAME
+        patientName,
+        selectedDiseases: vitalDiseases,
+        diseaseManagement: hasBoth ? "dual" : "diabetes-only",
+        conditions: {
+          diabetes: vitalDiseases.includes("diabetes"),
+          hypertension: vitalDiseases.includes("hypertension"),
+        },
         language: userLanguage,
         regenerated: true,
         timestamp: new Date()
@@ -529,11 +592,9 @@ router.get("/advice/:id", verifyToken, async (req: AuthenticatedRequest, res: Re
       return res.status(404).json({ success: false, message: "Lifestyle record not found" });
     }
 
-    // Get patient info for name
     const patient = await Patient.findOne({ userId });
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const patientName = getPatientName(patient);
 
-    // Check if AI advice is being generated
     const isGenerating = !lifestyle.aiAdvice || 
                         lifestyle.aiAdvice === "" ||
                         lifestyle.aiAdvice.includes("Generating") ||
@@ -545,18 +606,17 @@ router.get("/advice/:id", verifyToken, async (req: AuthenticatedRequest, res: Re
         success: true,
         isGenerating: true,
         aiAdvice: lifestyle.aiAdvice || "Generating personalized advice...",
-        patientName, // ✅ RETURN PATIENT NAME
+        patientName,
         lastUpdated: lifestyle.updatedAt,
         language: lifestyle.language || 'en'
       });
     }
 
-    // AI advice available
     res.status(200).json({
       success: true,
       isGenerating: false,
       aiAdvice: lifestyle.aiAdvice,
-      patientName, // ✅ RETURN PATIENT NAME
+      patientName,
       lastUpdated: lifestyle.updatedAt,
       language: lifestyle.language || 'en'
     });
@@ -585,14 +645,13 @@ router.get("/history", verifyToken, async (req: AuthenticatedRequest, res: Respo
 
     const totalRecords = await Lifestyle.countDocuments({ userId });
 
-    // Get patient info for name
     const patient = await Patient.findOne({ userId });
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const patientName = getPatientName(patient);
 
     res.status(200).json({
       success: true,
       data: lifestyleRecords,
-      patientName, // ✅ RETURN PATIENT NAME
+      patientName,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalRecords / limit),

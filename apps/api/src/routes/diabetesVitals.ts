@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import Diabetes from "../models/diabetesModel";
-import Patient from "../models/patient"; // ✅ IMPORT PATIENT MODEL
+import Patient from "../models/patient";
 import { connectMongoDB } from "../lib/mongodb";
 import { verifyToken, AuthenticatedRequest } from "../middleware/verifyToken";
 
@@ -40,8 +40,39 @@ const getPatientName = (patient: any): string => {
   return "Patient";
 };
 
+// ✅ Helper function to extract diseases from patient profile
+const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
+  const diseases: ("diabetes" | "hypertension")[] = [];
+  
+  if (!patient) {
+    // Default to diabetes only if no patient found
+    return ["diabetes"];
+  }
+  
+  // Check diabetes
+  if (patient.diabetes === true) {
+    diseases.push("diabetes");
+  }
+  
+  // Check hypertension
+  if (patient.hypertension === true) {
+    diseases.push("hypertension");
+  }
+  
+  // If no diseases found, default to diabetes
+  if (diseases.length === 0) {
+    diseases.push("diabetes");
+  }
+  
+  return diseases;
+};
+
 router.options("*", (_req, res) => res.sendStatus(200));
 
+/**
+ * ✅ POST /api/diabetesVitals
+ * Create new vitals record with automatic disease detection from patient profile
+ */
 router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user?.userId) {
@@ -50,9 +81,30 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
 
     const userId = req.user.userId;
     
-    // Get patient info for name
+    // ✅ GET PATIENT INFO (includes diseases)
     const patient = await Patient.findOne({ userId });
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    
+    if (!patient) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Patient profile not found. Please complete your profile first." 
+      });
+    }
+
+    const patientName = getPatientName(patient);
+    
+    // ✅ EXTRACT DISEASES FROM PATIENT PROFILE
+    const selectedDiseases = getPatientDiseases(patient);
+    
+    // ✅ LOG DISEASE STATUS
+    const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
+    console.log("🏥 Patient Disease Profile:", {
+      patientName,
+      diabetes: patient.diabetes,
+      hypertension: patient.hypertension,
+      selectedDiseases,
+      managementType: hasBothConditions ? "DUAL (Diabetes + Hypertension)" : "DIABETES ONLY"
+    });
 
     const { 
       glucose, 
@@ -83,6 +135,17 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ message: "Exercise intensity is required" });
     }
 
+    // ✅ VALIDATE HYPERTENSION REQUIREMENTS
+    // If patient has hypertension, blood pressure readings are REQUIRED
+    if (selectedDiseases.includes("hypertension")) {
+      if (!systolic || !diastolic) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Blood pressure readings are required for patients with hypertension. Please provide both systolic and diastolic values." 
+        });
+      }
+    }
+
     // Validate Post-meal requirements
     if (context === "Post-meal" && (!lastMealTime || !mealType)) {
       return res.status(400).json({ 
@@ -106,6 +169,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ message: "Heart rate must be between 40 and 200 bpm" });
     }
 
+    // ✅ CREATE VITALS RECORD WITH DISEASES FROM PROFILE
     const newVitals = new Diabetes({
       userId,
       glucose: Number(glucose),
@@ -119,26 +183,51 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       exerciseIntensity,
       language: language || "en",
       aiRequested: requestAI || false,
+      selectedDiseases: selectedDiseases, // ✅ FROM PATIENT PROFILE
     });
 
     const saved = await newVitals.save();
 
-    console.log(`💾 New vitals saved for user ${userId}: ${saved._id}`);
-    console.log(`📊 Data: Glucose=${glucose}, BP=${systolic || 'N/A'}/${diastolic || 'N/A'}, HR=${heartRate || 'N/A'}, Context=${context}`);
+    // ✅ LOG COMPREHENSIVE INFO
+    const diseaseInfo = hasBothConditions 
+      ? "🏥 DUAL MANAGEMENT: Diabetes + Hypertension" 
+      : "🏥 DIABETES ONLY";
 
+    console.log(`💾 Vitals saved successfully`);
+    console.log(`👤 Patient: ${patientName} (${userId})`);
+    console.log(`📊 Glucose: ${glucose} mg/dL (${context})`);
+    console.log(`💉 Blood Pressure: ${systolic || 'N/A'}/${diastolic || 'N/A'} mmHg`);
+    console.log(`❤️ Heart Rate: ${heartRate || 'N/A'} bpm`);
+    console.log(`🏃 Exercise: ${exerciseRecent} - ${exerciseIntensity}`);
+    console.log(diseaseInfo);
+    console.log(`📝 Record ID: ${saved._id}`);
+
+    // ✅ RETURN COMPREHENSIVE RESPONSE
     res.status(201).json({
+      success: true,
       message: "✅ Diabetes vitals saved successfully",
       id: saved._id,
-      patientName, // ✅ RETURN PATIENT NAME
+      patientName,
+      diseaseManagement: hasBothConditions ? "dual" : "diabetes-only",
+      conditions: {
+        diabetes: selectedDiseases.includes("diabetes"),
+        hypertension: selectedDiseases.includes("hypertension"),
+      },
+      requiresBPMonitoring: selectedDiseases.includes("hypertension"),
       data: {
         ...saved.toObject(),
-        patientName, // ✅ ALSO INCLUDE IN DATA OBJECT
+        patientName,
+        selectedDiseases,
       },
     });
 
   } catch (error: any) {
     console.error("❌ Database error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error", 
+      error: error.message 
+    });
   }
 });
 
@@ -153,9 +242,10 @@ router.get("/me", verifyToken, async (req: AuthenticatedRequest, res: Response) 
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Get patient info for name
+    // Get patient info for name and diseases
     const patient = await Patient.findOne({ userId });
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const patientName = getPatientName(patient);
+    const selectedDiseases = getPatientDiseases(patient);
 
     const vitals = await Diabetes.find({ userId }).sort({ createdAt: -1 });
 
@@ -163,7 +253,8 @@ router.get("/me", verifyToken, async (req: AuthenticatedRequest, res: Response) 
       return res.status(200).json({ 
         success: true,
         message: "No vitals found for this user",
-        patientName, // ✅ STILL RETURN NAME
+        patientName,
+        selectedDiseases,
         data: [],
         count: 0,
       });
@@ -172,16 +263,26 @@ router.get("/me", verifyToken, async (req: AuthenticatedRequest, res: Response) 
     res.status(200).json({
       success: true,
       message: "✅ User vitals retrieved successfully",
-      patientName, // ✅ RETURN PATIENT NAME
+      patientName,
+      selectedDiseases,
+      conditions: {
+        diabetes: selectedDiseases.includes("diabetes"),
+        hypertension: selectedDiseases.includes("hypertension"),
+      },
       data: vitals.map(vital => ({
         ...vital.toObject(),
-        patientName, // ✅ ADD NAME TO EACH VITAL
+        patientName,
+        selectedDiseases: vital.selectedDiseases || selectedDiseases, // Use stored or current
       })),
       count: vitals.length,
     });
   } catch (error: any) {
     console.error("❌ Error retrieving vitals:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error", 
+      error: error.message 
+    });
   }
 });
 
@@ -196,9 +297,10 @@ router.get("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Get patient info for name
+    // Get patient info for name and diseases
     const patient = await Patient.findOne({ userId });
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const patientName = getPatientName(patient);
+    const selectedDiseases = getPatientDiseases(patient);
 
     const vitals = await Diabetes.findOne({ _id: req.params.id, userId });
 
@@ -206,22 +308,32 @@ router.get("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
       return res.status(404).json({ 
         success: false,
         message: "Vitals not found",
-        patientName, // ✅ STILL RETURN NAME
+        patientName,
       });
     }
 
     res.status(200).json({
       success: true,
       message: "✅ Vitals record retrieved successfully",
-      patientName, // ✅ RETURN PATIENT NAME
+      patientName,
+      selectedDiseases: vitals.selectedDiseases || selectedDiseases,
+      conditions: {
+        diabetes: (vitals.selectedDiseases || selectedDiseases).includes("diabetes"),
+        hypertension: (vitals.selectedDiseases || selectedDiseases).includes("hypertension"),
+      },
       data: {
         ...vitals.toObject(),
-        patientName, // ✅ ADD NAME TO VITAL DATA
+        patientName,
+        selectedDiseases: vitals.selectedDiseases || selectedDiseases,
       },
     });
   } catch (error: any) {
     console.error("❌ Error retrieving vitals:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error", 
+      error: error.message 
+    });
   }
 });
 
@@ -236,9 +348,10 @@ router.get("/stats/summary", verifyToken, async (req: AuthenticatedRequest, res:
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Get patient info for name
+    // Get patient info for name and diseases
     const patient = await Patient.findOne({ userId });
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const patientName = getPatientName(patient);
+    const selectedDiseases = getPatientDiseases(patient);
 
     const vitals = await Diabetes.find({ userId });
 
@@ -246,7 +359,12 @@ router.get("/stats/summary", verifyToken, async (req: AuthenticatedRequest, res:
       return res.status(200).json({
         success: true,
         message: "No vitals found for statistics",
-        patientName, // ✅ STILL RETURN NAME
+        patientName,
+        selectedDiseases,
+        conditions: {
+          diabetes: selectedDiseases.includes("diabetes"),
+          hypertension: selectedDiseases.includes("hypertension"),
+        },
         data: {
           totalReadings: 0,
           averages: {
@@ -262,7 +380,8 @@ router.get("/stats/summary", verifyToken, async (req: AuthenticatedRequest, res:
             heartRate: 0,
           },
           latest: null,
-          patientName, // ✅ INCLUDE IN DATA TOO
+          patientName,
+          selectedDiseases,
         },
       });
     }
@@ -295,7 +414,12 @@ router.get("/stats/summary", verifyToken, async (req: AuthenticatedRequest, res:
     res.status(200).json({
       success: true,
       message: "✅ Statistics retrieved successfully",
-      patientName, // ✅ RETURN PATIENT NAME
+      patientName,
+      selectedDiseases,
+      conditions: {
+        diabetes: selectedDiseases.includes("diabetes"),
+        hypertension: selectedDiseases.includes("hypertension"),
+      },
       data: {
         totalReadings: vitals.length,
         averages: {
@@ -312,9 +436,11 @@ router.get("/stats/summary", verifyToken, async (req: AuthenticatedRequest, res:
         },
         latest: {
           ...latest.toObject(),
-          patientName, // ✅ ADD NAME TO LATEST
+          patientName,
+          selectedDiseases: latest.selectedDiseases || selectedDiseases,
         },
-        patientName, // ✅ ALSO INCLUDE AT DATA LEVEL
+        patientName,
+        selectedDiseases,
       },
     });
   } catch (error: any) {
@@ -338,29 +464,37 @@ router.get("/glucose/latest", verifyToken, async (req: AuthenticatedRequest, res
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Get patient info for name
+    // Get patient info for name and diseases
     const patient = await Patient.findOne({ userId });
-    const patientName = getPatientName(patient); // ✅ GET PATIENT NAME
+    const patientName = getPatientName(patient);
+    const selectedDiseases = getPatientDiseases(patient);
 
     const latestVital = await Diabetes.findOne({ userId })
       .sort({ createdAt: -1 })
-      .select('glucose context systolic diastolic heartRate exerciseRecent exerciseIntensity lastMealTime mealType language createdAt');
+      .select('glucose context systolic diastolic heartRate exerciseRecent exerciseIntensity lastMealTime mealType language selectedDiseases createdAt');
 
     if (!latestVital) {
       return res.status(200).json({ 
         success: true,
         message: "No glucose readings found",
-        patientName, // ✅ STILL RETURN NAME
+        patientName,
+        selectedDiseases,
         data: null,
       });
     }
 
     res.status(200).json({
       success: true,
-      patientName, // ✅ RETURN PATIENT NAME
+      patientName,
+      selectedDiseases: latestVital.selectedDiseases || selectedDiseases,
+      conditions: {
+        diabetes: (latestVital.selectedDiseases || selectedDiseases).includes("diabetes"),
+        hypertension: (latestVital.selectedDiseases || selectedDiseases).includes("hypertension"),
+      },
       data: {
         ...latestVital.toObject(),
-        patientName, // ✅ ADD NAME TO DATA
+        patientName,
+        selectedDiseases: latestVital.selectedDiseases || selectedDiseases,
       }
     });
   } catch (error: any) {
