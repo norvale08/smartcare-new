@@ -4,6 +4,7 @@ import VitalsWithActivityInput from "./VitalsWithActivityInput";
 import VoiceControlPanel from "./VoiceControlPanel";
 import HealthTrends from "./HealthTrends";
 import HypertensionRiskAssessment from "./HypertensionRiskAssessment";
+import HealthTrendsAndRiskTab from "./tabs/HealthTrendsAndRiskTab";
 import DoctorManagement from "../../components/DoctorManagement";
 import NearbyClinics from "./NearbyClinics";
 import MedicationAnalysisPage from "../../components/hypertension/medicationAnalysis";
@@ -63,15 +64,22 @@ const TabContent: React.FC<TabContentProps> = ({
   };
 
   switch (activeTab) {
-  case 'vitals':
+    case 'vitals':
       return (
         <>
           <HypertensionAlert refreshToken={alertRefreshToken} />
-
           <VitalsWithActivityInput onAfterSave={() => setAlertRefreshToken(Date.now())} />
           <HealthTrends vitals={vitals} />
           <HypertensionRiskAssessment vitals={vitals} />
         </>
+      );
+    
+    case 'health-trends':
+      return (
+        <HealthTrendsAndRiskTab
+          patient={patient}
+          patientVitals={vitals}
+        />
       );
     
     case 'doctor':

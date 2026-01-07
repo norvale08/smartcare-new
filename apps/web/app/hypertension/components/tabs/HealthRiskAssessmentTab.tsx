@@ -1,20 +1,25 @@
 import React from 'react';
-import { AlertTriangle, Shield, HeartPulse, Activity, Droplets, User, Clock, CheckCircle, TrendingUp } from 'lucide-react';
-import { Patient, VitalSigns } from '../../types';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  ComposedChart,
-  Area
-} from 'recharts';
+import { AlertTriangle, Shield, HeartPulse, Activity, Droplets, User, Clock, CheckCircle } from 'lucide-react';
+
+interface Patient {
+  id: string;
+  userId?: string;
+  fullName: string;
+  age: number;
+  gender: string;
+  condition: "hypertension" | "diabetes" | "both";
+}
+
+interface VitalSigns {
+  id?: string;
+  systolic?: number;
+  diastolic?: number;
+  heartRate?: number;
+  glucose?: number;
+  timestamp: string;
+  patientId: string;
+  age?: number;
+}
 
 interface HealthRiskAssessmentTabProps {
   patient: Patient;
@@ -130,70 +135,6 @@ const HealthRiskAssessmentTab: React.FC<HealthRiskAssessmentTabProps> = ({
   };
 
   const riskAssessment = calculateRiskLevel();
-
-  // Prepare chart data for risk trends
-  const riskChartData = patientVitalsFiltered.map((vital, index) => {
-    let riskScore = 0;
-    
-    if (vital.systolic && vital.diastolic) {
-      if (vital.systolic >= 180 || vital.diastolic >= 110) riskScore += 30;
-      else if (vital.systolic >= 160 || vital.diastolic >= 100) riskScore += 20;
-      else if (vital.systolic >= 140 || vital.diastolic >= 90) riskScore += 15;
-      else if (vital.systolic >= 130 || vital.diastolic >= 85) riskScore += 10;
-    }
-    
-    if (vital.heartRate) {
-      if (vital.heartRate > 100 || vital.heartRate < 60) riskScore += 10;
-    }
-    
-    if (vital.glucose) {
-      if (vital.glucose >= 300 || vital.glucose < 70) riskScore += 25;
-      else if (vital.glucose >= 200) riskScore += 20;
-      else if (vital.glucose >= 180) riskScore += 15;
-    }
-    
-    return {
-      date: new Date(vital.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      timestamp: vital.timestamp,
-      riskScore,
-      systolic: vital.systolic || null,
-      diastolic: vital.diastolic || null,
-      heartRate: vital.heartRate || null,
-      glucose: vital.glucose || null,
-    };
-  }).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-  // Calculate trend direction for risk scores
-  const getRiskTrend = () => {
-    if (riskChartData.length < 2) return 'stable';
-    
-    const recent = riskChartData.slice(-3);
-    const older = riskChartData.slice(0, -3);
-    
-    if (recent.length === 0 || older.length === 0) return 'stable';
-    
-    const recentAvg = recent.reduce((sum, v) => sum + v.riskScore, 0) / recent.length;
-    const olderAvg = older.reduce((sum, v) => sum + v.riskScore, 0) / older.length;
-    
-    const diff = ((recentAvg - olderAvg) / (olderAvg || 1)) * 100;
-    
-    if (diff > 10) return 'increasing';
-    if (diff < -10) return 'decreasing';
-    return 'stable';
-  };
-
-  const riskTrend = getRiskTrend();
-
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case 'increasing':
-        return <TrendingUp className="w-4 h-4 text-red-500" />;
-      case 'decreasing':
-        return <TrendingUp className="w-4 h-4 text-green-500 transform rotate-180" />;
-      default:
-        return <Activity className="w-4 h-4 text-gray-500" />;
-    }
-  };
 
   const getRiskColor = (level: string) => {
     switch (level) {
@@ -351,13 +292,6 @@ const HealthRiskAssessmentTab: React.FC<HealthRiskAssessmentTabProps> = ({
                 }`}
               ></div>
             </div>
-            <div className="flex items-center justify-between mt-3 text-xs text-gray-600">
-              <span>Risk Trend</span>
-              <div className="flex items-center space-x-1">
-                {getTrendIcon(riskTrend)}
-                <span className="capitalize">{riskTrend}</span>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -442,100 +376,6 @@ const HealthRiskAssessmentTab: React.FC<HealthRiskAssessmentTabProps> = ({
         )}
       </div>
 
-      {/* Risk Trend Visualization */}
-      {riskChartData.length > 1 && (
-        <div className="border border-gray-200 rounded-lg p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <TrendingUp className="w-5 h-5 text-purple-500" />
-              <h4 className="text-lg font-medium text-gray-900">Risk Score Trend</h4>
-              <span className="text-xs text-gray-500">Last {riskChartData.length} readings</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-              <span className="text-xs text-gray-600">Risk Score</span>
-            </div>
-          </div>
-          
-          <div className="h-64 mb-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={riskChartData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: 12 }}
-                  interval="preserveStartEnd"
-                />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
-                  domain={[0, 100]}
-                  label={{ value: 'Risk Score', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                  }}
-                  formatter={(value, name) => {
-                    if (name === 'riskScore') return [`${value}/100`, 'Risk Score'];
-                    if (name === 'systolic' || name === 'diastolic') return [`${value} mmHg`, name];
-                    if (name === 'heartRate') return [`${value} bpm`, name];
-                    if (name === 'glucose') return [`${value} mg/dL`, name];
-                    return [value, name];
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="riskScore" 
-                  fill="rgba(147, 51, 234, 0.1)" 
-                  fillOpacity={0.6}
-                  stroke="none"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="riskScore" 
-                  stroke="#9333ea" 
-                  strokeWidth={3}
-                  dot={{ fill: '#9333ea', strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, stroke: '#9333ea', strokeWidth: 2 }}
-                  name="Risk Score"
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Risk Trend Analysis */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100">
-            <div>
-              <h5 className="text-sm font-medium text-gray-900 mb-2">Current Risk</h5>
-              <div className="text-2xl font-bold text-gray-900">{riskAssessment.score}</div>
-              <p className="text-xs text-gray-600">out of 100</p>
-            </div>
-            <div>
-              <h5 className="text-sm font-medium text-gray-900 mb-2">Trend Direction</h5>
-              <div className="flex items-center space-x-2">
-                {getTrendIcon(riskTrend)}
-                <span className="text-sm font-medium text-gray-900 capitalize">{riskTrend}</span>
-              </div>
-              <p className="text-xs text-gray-600 mt-1">
-                {riskTrend === 'increasing' ? 'Risk is increasing - monitor closely' :
-                 riskTrend === 'decreasing' ? 'Risk is decreasing - positive trend' :
-                 'Risk is stable'}
-              </p>
-            </div>
-            <div>
-              <h5 className="text-sm font-medium text-gray-900 mb-2">Peak Risk</h5>
-              <div className="text-2xl font-bold text-red-600">
-                {Math.max(...riskChartData.map(d => d.riskScore))}
-              </div>
-              <p className="text-xs text-gray-600">highest recorded</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Recommendations */}
       <div className="border border-gray-200 rounded-lg p-6">
         <div className="flex items-center space-x-3 mb-4">
@@ -575,61 +415,7 @@ const HealthRiskAssessmentTab: React.FC<HealthRiskAssessmentTabProps> = ({
             <Activity className="w-4 h-4 inline mr-2" />
             Add to Monitor
           </button>
-
-          {riskTrend === 'increasing' && (
-            <button className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium">
-              <TrendingUp className="w-4 h-4 inline mr-2" />
-              Review Treatment
-            </button>
-          )}
         </div>
-
-        {/* Hypertension-Specific Insights */}
-        {(patient.condition === 'hypertension' || patient.condition === 'both') && latestVitals?.systolic && latestVitals?.diastolic && (
-          <div className="mt-6 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-100">
-            <h5 className="text-sm font-medium text-gray-900 mb-3">Hypertension Risk Analysis</h5>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-gray-600 mb-1">Blood Pressure Classification</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {latestVitals.systolic >= 180 || latestVitals.diastolic >= 110 ? 'Hypertensive Crisis' :
-                   latestVitals.systolic >= 140 || latestVitals.diastolic >= 90 ? 'Stage 2 Hypertension' :
-                   latestVitals.systolic >= 130 || latestVitals.diastolic >= 85 ? 'Stage 1 Hypertension' :
-                   'Normal/Elevated'}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 mb-1">Recommended Actions</p>
-                <div className="space-y-1">
-                  {riskAssessment.level === 'critical' && (
-                    <>
-                      <p className="text-xs text-red-700">• Immediate medical attention</p>
-                      <p className="text-xs text-red-700">• Emergency consultation</p>
-                    </>
-                  )}
-                  {riskAssessment.level === 'high' && (
-                    <>
-                      <p className="text-xs text-orange-700">• Urgent follow-up needed</p>
-                      <p className="text-xs text-orange-700">• Review medication</p>
-                    </>
-                  )}
-                  {riskAssessment.level === 'moderate' && (
-                    <>
-                      <p className="text-xs text-yellow-700">• Lifestyle modifications</p>
-                      <p className="text-xs text-yellow-700">• Increase monitoring</p>
-                    </>
-                  )}
-                  {riskAssessment.level === 'low' && (
-                    <>
-                      <p className="text-xs text-green-700">• Continue current plan</p>
-                      <p className="text-xs text-green-700">• Maintain healthy lifestyle</p>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
