@@ -17,7 +17,8 @@ import PatientMessages from "./components/PatientMessages";
 import QuickStats from "./components/QuickStats";
 import DoctorMedicationManagement from './components/DoctorMedicationManagement';
 import AppointmentsView from './components/AppointmentsView';
-import MedicationPrescriptionModal from './components/MedicationPrescriptionModal'; // Import the modal
+import MedicationPrescriptionModal from './components/MedicationPrescriptionModal';
+import AssignedPatientsGrid from './components/AssignedPatientsGrid';
 
 interface Patient {
   id: string;
@@ -322,7 +323,7 @@ const CaretakerDashboard = () => {
       p.id === patientId ? { ...p, lastVisit: new Date().toISOString() } : p
     ));
     
-    if (selectedPatient?.id === patientId) {
+    if (selectedPatient && selectedPatient.id === patientId) {
       setSelectedPatient(prev => 
         prev ? { ...prev, lastVisit: new Date().toISOString() } : null
       );
@@ -475,8 +476,68 @@ const CaretakerDashboard = () => {
         )}
 
         <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Sidebar - Stats, Requests, and Patient Tabs */}
+          {/* Left Sidebar - Stats, Requests, and Patient Actions */}
           <div className="lg:col-span-1 space-y-6">
+            {/* Patient Actions / Tabs in Sidebar - Show at top when patient is selected */}
+            {selectedPatient && (
+              <Card className="shadow-lg border-emerald-100">
+                <CardHeader className="bg-gradient-to-r from-emerald-50 via-cyan-50 to-blue-50 rounded-t-lg">
+                  <CardTitle className="flex items-center justify-between text-sm font-semibold text-gray-900">
+                    <span className="flex items-center space-x-2">
+                      <Activity className="w-4 h-4 text-emerald-600" />
+                      <span>Patient Actions</span>
+                    </span>
+                    <button
+                      onClick={() => setSelectedPatient(null)}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Back to Patients
+                    </button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-2">
+                  {[
+                    { id: 'overview', label: 'Overview', icon: Users },
+                    { id: 'current-vitals', label: 'Current Vitals', icon: Activity },
+                    { id: 'health-trends', label: 'Health Trends', icon: TrendingUp },
+                    { id: 'risk-assessment', label: 'Risk Assessment', icon: Shield },
+                    { id: 'alerts', label: 'Alerts & Notifications', icon: Bell },
+                    { id: 'medications', label: 'Medications', icon: Pill },
+                    { id: 'appointments', label: 'Appointments', icon: Calendar },
+                    { id: 'messages', label: 'Messages', icon: MessageSquare },
+                  ].map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activePatientTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActivePatientTab(tab.id as any)}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                          isActive
+                            ? 'bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 text-white shadow-md'
+                            : 'bg-white text-gray-700 border border-gray-100 hover:border-emerald-300 hover:bg-emerald-50'
+                        }`}
+                      >
+                        <span className="flex items-center space-x-2">
+                          <span
+                            className={`w-6 h-6 rounded-md flex items-center justify-center ${
+                              isActive
+                                ? 'bg-white/20'
+                                : 'bg-gradient-to-br from-emerald-50 via-cyan-50 to-blue-50'
+                            }`}
+                          >
+                            <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-emerald-600'}`} />
+                          </span>
+                          <span>{tab.label}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Quick Stats Section */}
             <QuickStats patients={patients} />
 
@@ -497,156 +558,84 @@ const CaretakerDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Patient Actions / Tabs in Sidebar */}
-            <Card className="shadow-lg border-emerald-100">
-              <CardHeader className="bg-gradient-to-r from-emerald-50 via-cyan-50 to-blue-50 rounded-t-lg">
-                <CardTitle className="flex items-center space-x-2 text-sm font-semibold text-gray-900">
-                  <Activity className="w-4 h-4 text-emerald-600" />
-                  <span>Patient Actions</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4 space-y-2">
-                {[
-                  { id: 'overview', label: 'Overview', icon: Users },
-                  { id: 'current-vitals', label: 'Current Vitals', icon: Activity },
-                  { id: 'health-trends', label: 'Health Trends', icon: TrendingUp },
-                  { id: 'risk-assessment', label: 'Risk Assessment', icon: Shield },
-                  { id: 'alerts', label: 'Alerts & Notifications', icon: Bell },
-                  { id: 'medications', label: 'Medications', icon: Pill },
-                  { id: 'appointments', label: 'Appointments', icon: Calendar },
-                  { id: 'messages', label: 'Messages', icon: MessageSquare },
-                ].map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activePatientTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActivePatientTab(tab.id as any)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                        isActive
-                          ? 'bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 text-white shadow-md'
-                          : 'bg-white text-gray-700 border border-gray-100 hover:border-emerald-300 hover:bg-emerald-50'
-                      }`}
-                    >
-                      <span className="flex items-center space-x-2">
-                        <span
-                          className={`w-6 h-6 rounded-md flex items-center justify-center ${
-                            isActive
-                              ? 'bg-white/20'
-                              : 'bg-gradient-to-br from-emerald-50 via-cyan-50 to-blue-50'
+            {/* Assigned Patients List in Sidebar - Show when no patient is selected */}
+            {!selectedPatient && (
+              <Card className="shadow-lg border-emerald-100">
+                <CardHeader className="bg-gradient-to-r from-emerald-50 via-cyan-50 to-blue-50 rounded-t-lg">
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center space-x-2">
+                      <Users className="w-4 h-4 text-emerald-700" />
+                      <span className="text-sm font-semibold text-gray-900">Patients</span>
+                    </span>
+                    <span className="text-xs text-gray-600">
+                      {filteredPatients.length}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-4 max-h-96 overflow-y-auto">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3" />
+                    <Input
+                      type="text"
+                      placeholder="Search..."
+                      className="w-full pl-8 text-xs h-8"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {filteredPatients.map((patient) => {
+                      const isSelected = selectedPatient ? selectedPatient.id === patient.id : false;
+                      return (
+                        <div
+                          key={patient.id}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all text-xs ${
+                            isSelected
+                              ? 'bg-gradient-to-r from-emerald-50 via-cyan-50 to-blue-50 border-emerald-300 shadow-md'
+                              : 'bg-white border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/40'
                           }`}
+                          onClick={() => {
+                            handlePatientSelect(patient);
+                            setActivePatientTab('overview');
+                          }}
                         >
-                          <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-emerald-600'}`} />
-                        </span>
-                        <span>{tab.label}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </CardContent>
-            </Card>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-gray-900 truncate">{patient.fullName}</h4>
+                            {getStatusIcon(patient.status)}
+                          </div>
+                          <div className="flex items-center justify-between text-gray-600">
+                            <span className="truncate">{patient.age}y • {patient.gender}</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${getConditionColor(patient.condition)}`}>
+                              {getConditionIcon(patient.condition)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {filteredPatients.length === 0 && (
+                      <div className="py-6 text-center text-gray-500">
+                        <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                        <p className="text-xs font-medium">No patients found</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Right Main Content */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Assigned Patients full-width list */}
-            <Card className="shadow-lg border-emerald-100">
-              <CardHeader className="bg-gradient-to-r from-emerald-50 via-cyan-50 to-blue-50 rounded-t-lg">
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center space-x-2">
-                    <Users className="w-5 h-5 text-emerald-700" />
-                    <span className="text-base font-semibold text-gray-900">Assigned Patients</span>
-                  </span>
-                  <span className="text-xs text-gray-600">
-                    {filteredPatients.length} of {patients.length} showing
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="md:col-span-2 space-y-3">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input
-                        type="text"
-                        placeholder="Search patients..."
-                        className="w-full pl-10"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <select
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                      value={filterCondition}
-                      onChange={(e) => setFilterCondition(e.target.value as any)}
-                    >
-                      <option value="all">All Conditions</option>
-                      <option value="hypertension">Hypertension</option>
-                      <option value="diabetes">Diabetes</option>
-                      <option value="both">Both</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-3 max-h-[26rem] overflow-y-auto pr-1">
-                  {visiblePatients.map((patient) => (
-                    <div
-                      key={patient.id}
-                      className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                        selectedPatient?.id === patient.id
-                          ? 'bg-gradient-to-r from-emerald-50 via-cyan-50 to-blue-50 border-emerald-300 shadow-md'
-                          : 'bg-white border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/40'
-                      }`}
-                      onClick={() => {
-                        handlePatientSelect(patient);
-                        setActivePatientTab('overview');
-                      }}
-                    >
-                      <div className="flex justify-between items-start gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center flex-wrap gap-2">
-                            <h3 className="font-semibold text-gray-900">{patient.fullName}</h3>
-                            {getStatusIcon(patient.status)}
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${getConditionColor(patient.condition)}`}>
-                              {getConditionIcon(patient.condition)}
-                              <span className="ml-1 capitalize">{patient.condition}</span>
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {patient.age}y • {patient.gender} • Last visit:{' '}
-                            {patient.lastVisit ? new Date(patient.lastVisit).toLocaleDateString() : 'Never'}
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSignInPatient(patient.id);
-                          }}
-                        >
-                          Sign In
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {visiblePatients.length === 0 && (
-                    <div className="py-10 text-center text-gray-500">
-                      <Users className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-                      <p className="font-medium">No patients found</p>
-                      <p className="text-xs mt-1">Adjust your search or filters to see more patients.</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Patient detail + tabs */}
-            {selectedPatient ? (
+            {/* Show assigned patients grid when no patient is selected */}
+            {!selectedPatient ? (
+              <AssignedPatientsGrid
+                patients={filteredPatients}
+                onPatientSelect={handlePatientSelect}
+                selectedPatient={selectedPatient}
+              />
+            ) : (
               <>
                 <PatientHeader 
                   patient={selectedPatient} 
@@ -664,14 +653,6 @@ const CaretakerDashboard = () => {
                   onTabChange={setActivePatientTab}
                 />
               </>
-            ) : (
-              <Card className="shadow-lg">
-                <CardContent className="text-center py-12">
-                  <Users className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Patient Selected</h3>
-                  <p className="text-gray-500">Select a patient from the list to view their details</p>
-                </CardContent>
-              </Card>
             )}
           </div>
         </div>

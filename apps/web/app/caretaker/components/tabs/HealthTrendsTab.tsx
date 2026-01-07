@@ -1,6 +1,18 @@
 import React from 'react';
-import { TrendingUp, Clock, Calendar, Activity, HeartPulse, Droplets, User } from 'lucide-react';
+import { TrendingUp, Clock, Calendar, Activity, HeartPulse, Droplets, User, LineChart } from 'lucide-react';
 import { Patient, VitalSigns } from '../../types';
+import {
+  LineChart as RechartsLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ComposedChart,
+  Area
+} from 'recharts';
 
 interface HealthTrendsTabProps {
   patient: Patient;
@@ -102,6 +114,84 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
   const bpTrend = getTrendDirection(last7DaysVitals.filter(v => v.systolic).map(v => v.systolic!));
   const heartRateTrend = getTrendDirection(last7DaysVitals.filter(v => v.heartRate).map(v => v.heartRate!));
   const glucoseTrend = getTrendDirection(last7DaysVitals.filter(v => v.glucose).map(v => v.glucose!));
+
+  // Prepare chart data with proper formatting
+  const chartData = last7DaysVitals.map(vital => ({
+    date: new Date(vital.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    timestamp: vital.timestamp,
+    systolic: vital.systolic || null,
+    diastolic: vital.diastolic || null,
+    heartRate: vital.heartRate || null,
+    glucose: vital.glucose || null,
+  })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  // Calculate averages for hypertension analysis
+  const calculateAverages = () => {
+    const bpReadings = patientVitalsFiltered.filter(v => v.systolic && v.diastolic);
+    const hrReadings = patientVitalsFiltered.filter(v => v.heartRate);
+    const glucoseReadings = patientVitalsFiltered.filter(v => v.glucose);
+
+    return {
+      avgSystolic: bpReadings.length > 0 
+        ? bpReadings.reduce((sum, v) => sum + v.systolic!, 0) / bpReadings.length 
+        : null,
+      avgDiastolic: bpReadings.length > 0 
+        ? bpReadings.reduce((sum, v) => sum + v.diastolic!, 0) / bpReadings.length 
+        : null,
+      avgHeartRate: hrReadings.length > 0 
+        ? hrReadings.reduce((sum, v) => sum + v.heartRate!, 0) / hrReadings.length 
+        : null,
+      avgGlucose: glucoseReadings.length > 0 
+        ? glucoseReadings.reduce((sum, v) => sum + v.glucose!, 0) / glucoseReadings.length 
+        : null,
+    };
+  };
+
+  const averages = calculateAverages();
+
+  // Hypertension-specific analysis
+  const getHypertensionAnalysis = () => {
+    if (patient.condition !== 'hypertension' && patient.condition !== 'both') return null;
+    
+    const analysis = {
+      severity: 'Normal',
+      riskLevel: 'low',
+      recommendations: [] as string[],
+      controlStatus: 'Well Controlled'
+    };
+
+    if (averages.avgSystolic && averages.avgDiastolic) {
+      if (averages.avgSystolic >= 180 || averages.avgDiastolic >= 110) {
+        analysis.severity = 'Hypertensive Crisis';
+        analysis.riskLevel = 'critical';
+        analysis.controlStatus = 'Uncontrolled';
+        analysis.recommendations.push('Immediate medical attention required');
+        analysis.recommendations.push('Emergency consultation needed');
+      } else if (averages.avgSystolic >= 140 || averages.avgDiastolic >= 90) {
+        analysis.severity = 'Stage 2 Hypertension';
+        analysis.riskLevel = 'high';
+        analysis.controlStatus = 'Poorly Controlled';
+        analysis.recommendations.push('Urgent follow-up with healthcare provider');
+        analysis.recommendations.push('Review medication regimen');
+      } else if (averages.avgSystolic >= 130 || averages.avgDiastolic >= 85) {
+        analysis.severity = 'Stage 1 Hypertension';
+        analysis.riskLevel = 'moderate';
+        analysis.controlStatus = 'Moderately Controlled';
+        analysis.recommendations.push('Lifestyle modifications recommended');
+        analysis.recommendations.push('Increase monitoring frequency');
+      } else {
+        analysis.severity = 'Normal/Elevated';
+        analysis.riskLevel = 'low';
+        analysis.controlStatus = 'Well Controlled';
+        analysis.recommendations.push('Continue current management');
+        analysis.recommendations.push('Maintain healthy lifestyle');
+      }
+    }
+
+    return analysis;
+  };
+
+  const hypertensionAnalysis = getHypertensionAnalysis();
 
   const getLatestReading = () => {
     if (sortedVitals.length === 0) return null;
@@ -217,133 +307,349 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
         )}
       </div>
 
-      {/* Health Data Trends */}
+      {/* Interactive Charts Section */}
       <div className="space-y-8">
-        {/* Blood Pressure Trends */}
-        {(patient.condition === 'hypertension' || patient.condition === 'both') && healthData.bpData.length > 0 && (
+        {/* Blood Pressure Chart */}
+        {(patient.condition === 'hypertension' || patient.condition === 'both') && chartData.filter(d => d.systolic && d.diastolic).length > 0 && (
           <div className="border border-gray-200 rounded-lg p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <HeartPulse className="w-5 h-5 text-blue-500" />
-              <h4 className="text-lg font-medium text-gray-900">Blood Pressure Trends</h4>
-              <span className="text-xs text-gray-500">Last {healthData.bpData.length} readings</span>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <HeartPulse className="w-5 h-5 text-red-500" />
+                <h4 className="text-lg font-medium text-gray-900">Blood Pressure Trends</h4>
+                <span className="text-xs text-gray-500">Last {chartData.filter(d => d.systolic && d.diastolic).length} readings</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span className="text-xs text-gray-600">Systolic</span>
+                <div className="w-3 h-3 bg-blue-500 rounded-full ml-2"></div>
+                <span className="text-xs text-gray-600">Diastolic</span>
+              </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <h5 className="text-sm font-medium text-gray-700 mb-2">Systolic Trend</h5>
-                <div className="space-y-2">
-                  {healthData.bpData.slice(-5).map((reading, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <span className="text-xs text-gray-600">{reading.date}</span>
-                      <span className="text-sm font-medium text-gray-900">{reading.systolic} mmHg</span>
-                    </div>
-                  ))}
+            <div className="h-64 mb-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={chartData.filter(d => d.systolic && d.diastolic)}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 12 }}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    domain={[60, 200]}
+                    label={{ value: 'mmHg', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                    formatter={(value, name) => [`${value} mmHg`, name]}
+                  />
+                  <Legend />
+                  <Area 
+                    type="monotone" 
+                    dataKey="systolic" 
+                    stackId="1" 
+                    stroke="none" 
+                    fill="rgba(239, 68, 68, 0.1)" 
+                    fillOpacity={0.6} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="systolic" 
+                    stroke="#ef4444" 
+                    strokeWidth={3}
+                    dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: '#ef4444', strokeWidth: 2 }}
+                    name="Systolic"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="diastolic" 
+                    stackId="2" 
+                    stroke="none" 
+                    fill="rgba(59, 130, 246, 0.1)" 
+                    fillOpacity={0.6} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="diastolic" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3}
+                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
+                    name="Diastolic"
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Hypertension Analysis */}
+            {hypertensionAnalysis && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-100">
+                <div>
+                  <h5 className="text-sm font-medium text-gray-900 mb-2">Hypertension Control Status</h5>
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-3 h-3 rounded-full ${
+                      hypertensionAnalysis.riskLevel === 'critical' ? 'bg-red-500' :
+                      hypertensionAnalysis.riskLevel === 'high' ? 'bg-orange-500' :
+                      hypertensionAnalysis.riskLevel === 'moderate' ? 'bg-yellow-500' :
+                      'bg-green-500'
+                    }`}></div>
+                    <span className="text-sm font-medium text-gray-900">{hypertensionAnalysis.controlStatus}</span>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">{hypertensionAnalysis.severity}</p>
+                </div>
+                <div>
+                  <h5 className="text-sm font-medium text-gray-900 mb-2">Average Readings</h5>
+                  <div className="text-sm text-gray-700">
+                    {averages.avgSystolic && averages.avgDiastolic ? (
+                      <span className="font-medium">{averages.avgSystolic.toFixed(0)}/{averages.avgDiastolic.toFixed(0)} mmHg</span>
+                    ) : (
+                      <span className="text-gray-500">No data</span>
+                    )}
+                  </div>
                 </div>
               </div>
-              
-              <div className="space-y-3">
-                <h5 className="text-sm font-medium text-gray-700 mb-2">Diastolic Trend</h5>
-                <div className="space-y-2">
-                  {healthData.bpData.slice(-5).map((reading, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <span className="text-xs text-gray-600">{reading.date}</span>
-                      <span className="text-sm font-medium text-gray-900">{reading.diastolic} mmHg</span>
-                    </div>
-                  ))}
+            )}
+          </div>
+        )}
+
+        {/* Heart Rate Chart */}
+        {(patient.condition === 'hypertension' || patient.condition === 'both') && chartData.filter(d => d.heartRate).length > 0 && (
+          <div className="border border-gray-200 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <Activity className="w-5 h-5 text-green-500" />
+                <h4 className="text-lg font-medium text-gray-900">Heart Rate Trends</h4>
+                <span className="text-xs text-gray-500">Last {chartData.filter(d => d.heartRate).length} readings</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-xs text-gray-600">Heart Rate</span>
+              </div>
+            </div>
+            
+            <div className="h-64 mb-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsLineChart data={chartData.filter(d => d.heartRate)}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 12 }}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    domain={[40, 140]}
+                    label={{ value: 'bpm', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                    formatter={(value) => [`${value} bpm`, 'Heart Rate']}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="heartRate" 
+                    stroke="#10b981" 
+                    strokeWidth={3}
+                    dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2 }}
+                  />
+                </RechartsLineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Heart Rate Analysis */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
+              <div>
+                <h5 className="text-sm font-medium text-gray-900 mb-2">Average Heart Rate</h5>
+                <div className="text-sm text-gray-700">
+                  {averages.avgHeartRate ? (
+                    <span className="font-medium">{averages.avgHeartRate.toFixed(0)} bpm</span>
+                  ) : (
+                    <span className="text-gray-500">No data</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <h5 className="text-sm font-medium text-gray-900 mb-2">Status</h5>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-3 h-3 rounded-full ${
+                    heartRateTrend === 'increasing' ? 'bg-red-500' :
+                    heartRateTrend === 'decreasing' ? 'bg-green-500' :
+                    'bg-gray-500'
+                  }`}></div>
+                  <span className="text-sm font-medium text-gray-900 capitalize">{heartRateTrend}</span>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Heart Rate Trends */}
-        {(patient.condition === 'hypertension' || patient.condition === 'both') && healthData.heartRateData.length > 0 && (
+        {/* Glucose Chart */}
+        {(patient.condition === 'diabetes' || patient.condition === 'both') && chartData.filter(d => d.glucose).length > 0 && (
           <div className="border border-gray-200 rounded-lg p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <Activity className="w-5 h-5 text-green-500" />
-              <h4 className="text-lg font-medium text-gray-900">Heart Rate Trends</h4>
-              <span className="text-xs text-gray-500">Last {healthData.heartRateData.length} readings</span>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <Droplets className="w-5 h-5 text-orange-500" />
+                <h4 className="text-lg font-medium text-gray-900">Glucose Trends</h4>
+                <span className="text-xs text-gray-500">Last {chartData.filter(d => d.glucose).length} readings</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                <span className="text-xs text-gray-600">Glucose</span>
+              </div>
             </div>
             
-            <div className="space-y-2">
-              {healthData.heartRateData.slice(-5).map((reading, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                  <span className="text-sm text-gray-600">{reading.date}</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-gray-900">{reading.heartRate} bpm</span>
-                    {index === healthData.heartRateData.length - 1 && (
-                      <div className={`px-2 py-1 rounded text-xs font-medium ${getTrendColor(heartRateTrend)}`}>
-                        {heartRateTrend}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="h-64 mb-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsLineChart data={chartData.filter(d => d.glucose)}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 12 }}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    domain={[50, 300]}
+                    label={{ value: 'mg/dL', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                    formatter={(value) => [`${value} mg/dL`, 'Glucose']}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="glucose" 
+                    stroke="#f97316" 
+                    strokeWidth={3}
+                    dot={{ fill: '#f97316', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: '#f97316', strokeWidth: 2 }}
+                  />
+                </RechartsLineChart>
+              </ResponsiveContainer>
             </div>
-          </div>
-        )}
 
-        {/* Glucose Trends */}
-        {(patient.condition === 'diabetes' || patient.condition === 'both') && healthData.glucoseData.length > 0 && (
-          <div className="border border-gray-200 rounded-lg p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <Droplets className="w-5 h-5 text-orange-500" />
-              <h4 className="text-lg font-medium text-gray-900">Glucose Trends</h4>
-              <span className="text-xs text-gray-500">Last {healthData.glucoseData.length} readings</span>
-            </div>
-            
-            <div className="space-y-2">
-              {healthData.glucoseData.slice(-5).map((reading, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                  <span className="text-sm text-gray-600">{reading.date}</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-gray-900">{reading.glucose} mg/dL</span>
-                    {index === healthData.glucoseData.length - 1 && (
-                      <div className={`px-2 py-1 rounded text-xs font-medium ${getTrendColor(glucoseTrend)}`}>
-                        {glucoseTrend}
-                      </div>
-                    )}
-                  </div>
+            {/* Glucose Analysis */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border border-orange-100">
+              <div>
+                <h5 className="text-sm font-medium text-gray-900 mb-2">Average Glucose</h5>
+                <div className="text-sm text-gray-700">
+                  {averages.avgGlucose ? (
+                    <span className="font-medium">{averages.avgGlucose.toFixed(0)} mg/dL</span>
+                  ) : (
+                    <span className="text-gray-500">No data</span>
+                  )}
                 </div>
-              ))}
+              </div>
+              <div>
+                <h5 className="text-sm font-medium text-gray-900 mb-2">Status</h5>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-3 h-3 rounded-full ${
+                    glucoseTrend === 'increasing' ? 'bg-red-500' :
+                    glucoseTrend === 'decreasing' ? 'bg-green-500' :
+                    'bg-gray-500'
+                  }`}></div>
+                  <span className="text-sm font-medium text-gray-900 capitalize">{glucoseTrend}</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Insights Section */}
-      <div className="mt-8 p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
-        <h4 className="text-lg font-medium text-gray-900 mb-4">Health Insights</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-white rounded border">
+      {/* Enhanced Insights Section */}
+      <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+        <div className="flex items-center space-x-3 mb-6">
+          <LineChart className="w-6 h-6 text-blue-600" />
+          <h4 className="text-xl font-semibold text-gray-900">Comprehensive Health Analysis</h4>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="p-4 bg-white rounded-lg border border-gray-200">
             <h5 className="text-sm font-medium text-gray-700 mb-2">Monitoring Frequency</h5>
-            <p className="text-xs text-gray-600">
-              Average readings per week: {(patientVitalsFiltered.length / 4).toFixed(1)}
-            </p>
+            <p className="text-2xl font-bold text-blue-600">{(patientVitalsFiltered.length / 4).toFixed(1)}</p>
+            <p className="text-xs text-gray-600">readings per week</p>
           </div>
           
           {(patient.condition === 'hypertension' || patient.condition === 'both') && (
-            <div className="p-4 bg-white rounded border">
-              <h5 className="text-sm font-medium text-gray-700 mb-2">BP Stability</h5>
-              <p className="text-xs text-gray-600">
-                {bpTrend === 'stable' ? 'Blood pressure is stable' : 
-                 bpTrend === 'increasing' ? 'Blood pressure trending upward - monitor closely' :
-                 'Blood pressure trending downward - positive trend'}
-              </p>
-            </div>
+            <>
+              <div className="p-4 bg-white rounded-lg border border-gray-200">
+                <h5 className="text-sm font-medium text-gray-700 mb-2">BP Trend Analysis</h5>
+                <div className="flex items-center space-x-2 mb-2">
+                  {getTrendIcon(bpTrend)}
+                  <span className="text-lg font-semibold text-gray-900 capitalize">{bpTrend}</span>
+                </div>
+                <p className="text-xs text-gray-600">
+                  {bpTrend === 'stable' ? 'Consistent readings indicate good control' : 
+                   bpTrend === 'increasing' ? 'Upward trend requires attention' :
+                   'Positive improvement trend'}
+                </p>
+              </div>
+              
+              {hypertensionAnalysis && (
+                <div className="p-4 bg-white rounded-lg border border-gray-200">
+                  <h5 className="text-sm font-medium text-gray-700 mb-2">Control Status</h5>
+                  <div className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                    hypertensionAnalysis.riskLevel === 'critical' ? 'bg-red-100 text-red-800' :
+                    hypertensionAnalysis.riskLevel === 'high' ? 'bg-orange-100 text-orange-800' :
+                    hypertensionAnalysis.riskLevel === 'moderate' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {hypertensionAnalysis.controlStatus}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-2">{hypertensionAnalysis.severity}</p>
+                </div>
+              )}
+            </>
           )}
           
           {(patient.condition === 'diabetes' || patient.condition === 'both') && (
-            <div className="p-4 bg-white rounded border">
+            <div className="p-4 bg-white rounded-lg border border-gray-200">
               <h5 className="text-sm font-medium text-gray-700 mb-2">Glucose Control</h5>
+              <div className="flex items-center space-x-2 mb-2">
+                {getTrendIcon(glucoseTrend)}
+                <span className="text-lg font-semibold text-gray-900 capitalize">{glucoseTrend}</span>
+              </div>
               <p className="text-xs text-gray-600">
-                {glucoseTrend === 'stable' ? 'Glucose levels are stable' : 
-                 glucoseTrend === 'increasing' ? 'Glucose levels trending upward - review diet' :
-                 'Glucose levels trending downward - good control'}
+                {glucoseTrend === 'stable' ? 'Consistent glucose management' : 
+                 glucoseTrend === 'increasing' ? 'Review diet and medication' :
+                 'Improving glucose control'}
               </p>
             </div>
           )}
         </div>
+
+        {/* Hypertension-Specific Recommendations */}
+        {hypertensionAnalysis && hypertensionAnalysis.recommendations.length > 0 && (
+          <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
+            <h5 className="text-sm font-medium text-gray-900 mb-3">Recommendations for Hypertension Management</h5>
+            <div className="space-y-2">
+              {hypertensionAnalysis.recommendations.map((rec, index) => (
+                <div key={index} className="flex items-start space-x-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                  <p className="text-sm text-gray-700">{rec}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
