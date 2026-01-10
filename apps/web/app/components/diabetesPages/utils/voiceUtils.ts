@@ -144,9 +144,15 @@ export const convertWebmToWav = async (webmBlob: Blob): Promise<Blob> => {
 export const parseSpokenInput = (text: string, languageValue: string, fieldType?: 'number' | 'select'): { type: 'number' | 'text' | 'skip' | 'unknown'; value?: number; textValue?: string } => {
   const lowerText = text.toLowerCase().trim();
   
+  console.log(`🔊 Parsing spoken input: "${text}" -> "${lowerText}"`);
+  console.log(`   Field type: ${fieldType}`);
+  
+  // ✅ FIXED: "none" should NEVER be a skip word - it's a valid option
   const skipWords = languageValue === "sw" 
-    ? ['ruka', 'pass', 'next', 'none', 'sina', 'hapana']
-    : ['skip', 'pass', 'next', 'none', "don't know", 'not sure'];
+    ? ['ruka', 'pass', 'next', 'sina', 'hapana']
+    : ['skip', 'pass', 'next', "don't know", 'not sure'];
+  
+  console.log(`   Skip words check: ${skipWords.some(word => lowerText.includes(word))}`);
   
   if (skipWords.some(word => lowerText.includes(word))) {
     return { type: 'skip' };
@@ -156,9 +162,10 @@ export const parseSpokenInput = (text: string, languageValue: string, fieldType?
     ? ['ndio', 'yes', 'correct', 'right', 'true', 'sawa']
     : ['yes', 'correct', 'right', 'true', 'yeah', 'yep'];
   
+  // ✅ FIXED: Remove 'no' from noWords to prevent "none" from matching
   const noWords = languageValue === "sw"
-    ? ['hapana', 'no', 'wrong', 'incorrect', 'false', 'jaribu tena']
-    : ['no', 'wrong', 'incorrect', 'false', 'nope', 'try again'];
+    ? ['hapana', 'wrong', 'incorrect', 'false', 'jaribu tena']  // Removed 'no'
+    : ['wrong', 'incorrect', 'false', 'nope', 'try again'];      // Removed 'no'
   
   if (yesWords.some(word => lowerText.includes(word))) {
     return { type: 'number', value: 1 };
@@ -167,7 +174,9 @@ export const parseSpokenInput = (text: string, languageValue: string, fieldType?
     return { type: 'number', value: 0 };
   }
 
+  // For select fields, ALWAYS return as text (including "none")
   if (fieldType === 'select') {
+    console.log(`   Select field detected, returning as text: "${lowerText}"`);
     return { type: 'text', textValue: lowerText };
   }
 
@@ -186,242 +195,204 @@ export const parseSpokenInput = (text: string, languageValue: string, fieldType?
   return { type: 'unknown' };
 };
 
-const checkIfClearMatch = (spokenText: string, fieldName: string, currentLanguage: any): boolean => {
-  const lowerText = spokenText.toLowerCase();
-  const keywords = currentLanguage.optionKeywords;
-  
-  if (!keywords || !keywords[fieldName]) return false;
-  
-  for (const option in keywords[fieldName]) {
-    for (const keyword of keywords[fieldName][option]) {
-      const normalizedKeyword = keyword.toLowerCase().trim();
-      if (lowerText === normalizedKeyword || 
-          lowerText.includes(normalizedKeyword + " ") ||
-          lowerText.includes(" " + normalizedKeyword) ||
-          lowerText.startsWith(normalizedKeyword) ||
-          lowerText.endsWith(normalizedKeyword)) {
-        return true;
-      }
-    }
-  }
-  
-  return false;
-};
-
-// COMPLETE REPLACEMENT for the mapSpokenToOption function in voiceUtils.ts
-// Replace the entire function with this version
-
 export const mapSpokenToOption = (spokenText: string, fieldName: string, currentLanguage: any): string | null => {
-  const keywords = currentLanguage.optionKeywords as any;
+  const normalized = spokenText.toLowerCase().trim();
   
-  let options: {dbValue: string, displayValue: string}[] = [];
+  console.log(`\n🔍 mapSpokenToOption - Field: ${fieldName}, Input: "${normalized}"`);
   
-  switch (fieldName) {
-    case 'context':
-      options = [
-        {dbValue: 'Fasting', displayValue: 'Fasting'},
-        {dbValue: 'Post-meal', displayValue: 'Post-meal'}, 
-        {dbValue: 'Random', displayValue: 'Random'}
-      ];
-      break;
-    case 'lastMealTime':
-      options = [
-        {dbValue: '2_hours', displayValue: '2_hours'},
-        {dbValue: '4_hours', displayValue: '4_hours'},
-        {dbValue: '6_hours', displayValue: '6_hours'},
-        {dbValue: 'more_than_6_hours', displayValue: 'more_than_6_hours'}
-      ];
-      break;
-    case 'mealType':
-      options = [
-        {dbValue: 'carbohydrates', displayValue: 'carbohydrates'},
-        {dbValue: 'sugary_drinks', displayValue: 'sugary_drinks'},
-        {dbValue: 'proteins', displayValue: 'proteins'},
-        {dbValue: 'vegetables', displayValue: 'vegetables'},
-        {dbValue: 'mixed_meal', displayValue: 'mixed_meal'}
-      ];
-      break;
-    case 'exerciseRecent':
-      options = [
-        {dbValue: 'none', displayValue: 'none'},
-        {dbValue: 'within_2_hours', displayValue: 'within_2_hours'},
-        {dbValue: '2_to_6_hours', displayValue: '2_to_6_hours'},
-        {dbValue: '6_to_24_hours', displayValue: '6_to_24_hours'}
-      ];
-      break;
-    case 'exerciseIntensity':
-      options = [
-        {dbValue: 'light', displayValue: 'light'},
-        {dbValue: 'moderate', displayValue: 'moderate'},
-        {dbValue: 'vigorous', displayValue: 'vigorous'}
-      ];
-      break;
-    default:
-      return null;
-  }
-  
-  const lowerSpoken = spokenText.toLowerCase().trim();
-  const normalizedSpoken = lowerSpoken.replace(/\s+/g, ' '); // Normalize multiple spaces
-  
-  // Try keyword matching first - this should catch most cases
-  if (keywords && keywords[fieldName]) {
-    for (const option of options) {
-      if (keywords[fieldName][option.dbValue]) {
-        for (const keyword of keywords[fieldName][option.dbValue]) {
-          const normalizedKeyword = keyword.toLowerCase().trim();
-          
-          // Check for exact match or contains
-          if (normalizedSpoken === normalizedKeyword || normalizedSpoken.includes(normalizedKeyword)) {
-            return option.dbValue;
-          }
-        }
-      }
-    }
-  }
-  
-  // Enhanced fallback matching
-  if (fieldName === 'context') {
-    if (normalizedSpoken.includes('fasting') || normalizedSpoken.includes('fast') || normalizedSpoken.includes('empty')) {
-      return 'Fasting';
-    }
-    if (normalizedSpoken.includes('post') || normalizedSpoken.includes('after') || normalizedSpoken.includes('meal')) {
-      return 'Post-meal';
-    }
-    if (normalizedSpoken.includes('random') || normalizedSpoken.includes('anytime')) {
-      return 'Random';
-    }
-  }
-  
+  // ✅ EXERCISERECENT - HARDCODED MATCHING (NO KEYWORD LOOKUP)
   if (fieldName === 'exerciseRecent') {
-    // FIX: Match "none" FIRST and VERY BROADLY
-    // Check for exact matches first
-    if (normalizedSpoken === 'none' || 
-        normalizedSpoken === 'no' ||
-        normalizedSpoken === 'nope' ||
-        normalizedSpoken === 'non' ||
-        normalizedSpoken === 'not' ||
-        normalizedSpoken === 'nah') {
+    // Match "none" variations
+    if (normalized === 'none' || normalized === 'non' || normalized === 'known' || 
+        normalized === 'nun' || normalized === 'no' || normalized === 'man') {
+      console.log('✅ Matched: none');
       return 'none';
     }
     
-    // Then check for phrases containing "no exercise"
-    if (normalizedSpoken.includes('no exercise') || 
-        normalizedSpoken.includes('not exercised') || 
-        normalizedSpoken.includes('no workout') ||
-        normalizedSpoken.includes('i did not') ||
-        normalizedSpoken.includes('did not exercise') ||
-        normalizedSpoken.includes('didn\'t exercise') ||
-        normalizedSpoken.includes('didnt exercise') ||
-        normalizedSpoken.includes('haven\'t exercised') ||
-        normalizedSpoken.includes('havent exercised') ||
-        normalizedSpoken.includes('haven\'t worked out') ||
-        normalizedSpoken.includes('havent worked out') ||
-        normalizedSpoken.includes('no recent') ||
-        normalizedSpoken.includes('not recently') ||
-        normalizedSpoken.includes('i have not')) {
+    // Match phrases with "no"
+    if (normalized.includes('no exercise') || normalized.includes('not exercise') || 
+        normalized.includes('did not') || normalized.includes('didn\'t')) {
+      console.log('✅ Matched: none (phrase)');
       return 'none';
     }
     
-    // Match "within 2 hours"
-    if ((normalizedSpoken.includes('within') && normalizedSpoken.includes('2')) || 
-        (normalizedSpoken.includes('2') && normalizedSpoken.includes('hour') && 
-         !normalizedSpoken.includes('6') && !normalizedSpoken.includes('24'))) {
-      return 'within_2_hours';
-    }
-    
-    // IMPORTANT: Check for "6 to 24 hours" BEFORE "2 to 6 hours"
-    if (normalizedSpoken.includes('24') || 
-        normalizedSpoken.includes('twenty four') || 
-        normalizedSpoken.includes('twenty-four')) {
+    // Match time ranges
+    if (normalized.includes('24')) {
+      console.log('✅ Matched: 6_to_24_hours');
       return '6_to_24_hours';
     }
     
-    // Match "2 to 6 hours"
-    if ((normalizedSpoken.includes('2') && normalizedSpoken.includes('6')) || 
-        (normalizedSpoken.includes('two') && normalizedSpoken.includes('six')) ||
-        (normalizedSpoken.includes('6') && normalizedSpoken.includes('hour') && 
-         !normalizedSpoken.includes('24'))) {
+    if (normalized.includes('within') || (normalized.includes('2') && !normalized.includes('6'))) {
+      console.log('✅ Matched: within_2_hours');
+      return 'within_2_hours';
+    }
+    
+    if (normalized.includes('2') && normalized.includes('6')) {
+      console.log('✅ Matched: 2_to_6_hours');
       return '2_to_6_hours';
     }
   }
   
-  if (fieldName === 'exerciseIntensity') {
-    if (normalizedSpoken.includes('light') || normalizedSpoken.includes('easy') || normalizedSpoken.includes('gentle')) {
-      return 'light';
-    }
-    if (normalizedSpoken.includes('moderate') || normalizedSpoken.includes('medium') || normalizedSpoken.includes('normal')) {
-      return 'moderate';
-    }
-    if (normalizedSpoken.includes('vigorous') || normalizedSpoken.includes('intense') || normalizedSpoken.includes('hard') || normalizedSpoken.includes('heavy')) {
-      return 'vigorous';
-    }
+  // ✅ CONTEXT
+  if (fieldName === 'context') {
+    if (normalized.includes('fast')) return 'Fasting';
+    if (normalized.includes('post') || normalized.includes('after')) return 'Post-meal';
+    if (normalized.includes('random')) return 'Random';
   }
   
+  // ✅ LASTMEALTIME
   if (fieldName === 'lastMealTime') {
-    // Match "6+ hours" or "more than 6 hours" FIRST (most specific)
-    if (normalizedSpoken.includes('more than 6') || 
-        normalizedSpoken.includes('more than six') ||
-        normalizedSpoken.includes('over 6') ||
-        normalizedSpoken.includes('over six') ||
-        normalizedSpoken.includes('6 +') ||  // Handle "6 + hours"
-        normalizedSpoken.includes('6+') ||
-        normalizedSpoken.includes('six +') ||
-        normalizedSpoken.includes('six+') ||
-        normalizedSpoken.includes('+ hours') ||  // Handle "+ hours" 
-        normalizedSpoken.includes('plus hours') ||
-        normalizedSpoken.includes('6 plus') ||
-        normalizedSpoken.includes('six plus') ||
-        normalizedSpoken.includes('longer than 6') ||
-        normalizedSpoken.includes('longer than six')) {
+    if (normalized.includes('more than') || normalized.includes('6+') || normalized.includes('6 +')) {
       return 'more_than_6_hours';
     }
-    
-    // Match "2 hours" (no 4 or 6 mentioned)
-    if ((normalizedSpoken.includes('2') && normalizedSpoken.includes('hour') && 
-         !normalizedSpoken.includes('4') && !normalizedSpoken.includes('6') && 
-         !normalizedSpoken.includes('+') && !normalizedSpoken.includes('plus')) ||
-        normalizedSpoken.includes('two hours')) {
+    if (normalized.includes('2') && !normalized.includes('4') && !normalized.includes('6')) {
       return '2_hours';
     }
-    
-    // Match "4 hours" (no 6 mentioned)
-    if ((normalizedSpoken.includes('4') && normalizedSpoken.includes('hour') && 
-         !normalizedSpoken.includes('6') && !normalizedSpoken.includes('+') && 
-         !normalizedSpoken.includes('plus')) ||
-        normalizedSpoken.includes('four hours')) {
+    if (normalized.includes('4')) {
       return '4_hours';
     }
-    
-    // Match exactly "6 hours" (not more than 6)
-    if ((normalizedSpoken.includes('6') && normalizedSpoken.includes('hour') && 
-         !normalizedSpoken.includes('more') && !normalizedSpoken.includes('+') && 
-         !normalizedSpoken.includes('plus') && !normalizedSpoken.includes('over') && 
-         !normalizedSpoken.includes('longer')) ||
-        (normalizedSpoken.includes('six') && normalizedSpoken.includes('hour') && 
-         !normalizedSpoken.includes('more') && !normalizedSpoken.includes('+') && 
-         !normalizedSpoken.includes('plus') && !normalizedSpoken.includes('over'))) {
+    if (normalized.includes('6') && !normalized.includes('more') && !normalized.includes('+')) {
       return '6_hours';
     }
   }
   
+  // ✅ IMPROVED MEALTYPE - Handle users saying actual food names
   if (fieldName === 'mealType') {
-    if (normalizedSpoken.includes('carb') || normalizedSpoken.includes('rice') || normalizedSpoken.includes('bread') || normalizedSpoken.includes('pasta') || normalizedSpoken.includes('ugali')) {
+    console.log('🔍 Mapping mealType:', normalized);
+    
+    // ✅ CARBOHYDRATES - expanded food list
+    const carbFoods = [
+      'carb', 'carbs', 'carbohydrates', 'carbohydrate',
+      'rice', 'white rice', 'brown rice', 'fried rice',
+      'bread', 'white bread', 'whole wheat', 'toast', 'sandwich',
+      'pasta', 'spaghetti', 'noodles', 'macaroni',
+      'potato', 'potatoes', 'fries', 'french fries', 'mashed potatoes',
+      'corn', 'maize', 'tortilla',
+      'oatmeal', 'oats', 'porridge',
+      'cereal', 'breakfast cereal',
+      'pizza', 'burger', 'burger bun',
+      'chapati', 'roti', 'naan',
+      'ugali', 'sadza', 'nsima', 'pap'
+    ];
+    
+    if (carbFoods.some(food => normalized.includes(food))) {
+      console.log('✅ Matched: carbohydrates');
       return 'carbohydrates';
     }
-    if (normalizedSpoken.includes('sugar') || normalizedSpoken.includes('drink') || normalizedSpoken.includes('soda') || normalizedSpoken.includes('juice')) {
+    
+    // ✅ SUGARY DRINKS - expanded list
+    const sugaryDrinks = [
+      'sugar', 'sugary', 'sweet',
+      'soda', 'coke', 'pepsi', 'soft drink', 'pop',
+      'juice', 'orange juice', 'apple juice', 'fruit juice',
+      'sweet tea', 'iced tea', 'bubble tea',
+      'energy drink', 'red bull', 'monster',
+      'smoothie', 'milkshake', 'shake',
+      'sweetened', 'sweet drink', 'sugary drink'
+    ];
+    
+    if (sugaryDrinks.some(drink => normalized.includes(drink))) {
+      console.log('✅ Matched: sugary_drinks');
       return 'sugary_drinks';
     }
-    if (normalizedSpoken.includes('protein') || normalizedSpoken.includes('meat') || normalizedSpoken.includes('fish') || normalizedSpoken.includes('egg') || normalizedSpoken.includes('chicken')) {
+    
+    // ✅ PROTEINS - expanded list
+    const proteinFoods = [
+      'protein', 'proteins',
+      'meat', 'beef', 'steak', 'pork', 'lamb',
+      'chicken', 'turkey', 'duck',
+      'fish', 'salmon', 'tuna', 'tilapia',
+      'egg', 'eggs', 'omelette', 'scrambled eggs',
+      'beans', 'lentils', 'legumes', 'chickpeas',
+      'tofu', 'tempeh', 'soy', 'soya',
+      'peanuts', 'nuts', 'almonds', 'walnuts',
+      'cheese', 'milk', 'yogurt', 'curd'
+    ];
+    
+    if (proteinFoods.some(food => normalized.includes(food))) {
+      console.log('✅ Matched: proteins');
       return 'proteins';
     }
-    if (normalizedSpoken.includes('vegetable') || normalizedSpoken.includes('salad') || normalizedSpoken.includes('greens')) {
+    
+    // ✅ VEGETABLES - expanded list
+    const vegetableFoods = [
+      'vegetable', 'vegetables', 'veggies',
+      'salad', 'green salad', 'vegetable salad',
+      'broccoli', 'cauliflower', 'cabbage',
+      'spinach', 'kale', 'lettuce',
+      'carrot', 'carrots',
+      'tomato', 'tomatoes',
+      'onion', 'onions', 'garlic',
+      'pepper', 'bell pepper', 'capsicum',
+      'cucumber', 'zucchini', 'eggplant', 'aubergine',
+      'green beans', 'peas'
+    ];
+    
+    if (vegetableFoods.some(food => normalized.includes(food))) {
+      console.log('✅ Matched: vegetables');
       return 'vegetables';
     }
-    if (normalizedSpoken.includes('mixed') || normalizedSpoken.includes('combination') || normalizedSpoken.includes('everything')) {
+    
+    // ✅ MIXED MEAL
+    const mixedTerms = [
+      'mixed', 'mixture', 'combination', 'combo',
+      'everything', 'bit of everything', 'little bit of everything',
+      'balanced', 'balanced meal', 'full meal',
+      'variety', 'various', 'different things',
+      'buffet', 'potluck',
+      'rice and beans', 'rice with chicken', 'rice and fish',
+      'pasta with sauce', 'noodles with vegetables'
+    ];
+    
+    if (mixedTerms.some(term => normalized.includes(term))) {
+      console.log('✅ Matched: mixed_meal');
       return 'mixed_meal';
+    }
+    
+    // ✅ Handle Swahili food names if language is Swahili
+    if (currentLanguage && currentLanguage.optionKeywords && currentLanguage.optionKeywords.mealType) {
+      const mealKeywords = currentLanguage.optionKeywords.mealType;
+      
+      // Check each category for keywords
+        if (mealKeywords.carbs.some((keyword: string) => normalized.includes(keyword))) {
+          console.log('✅ Matched via language keywords: carbohydrates');
+          return 'carbohydrates';
+        }
+        if (mealKeywords.sugaryDrinks.some((keyword: string) => normalized.includes(keyword))) {
+          console.log('✅ Matched via language keywords: sugary_drinks');
+          return 'sugary_drinks';
+        }
+        if (mealKeywords.proteins.some((keyword: string) => normalized.includes(keyword))) {
+          console.log('✅ Matched via language keywords: proteins');
+          return 'proteins';
+        }
+        if (mealKeywords.vegetables.some((keyword: string) => normalized.includes(keyword))) {
+          console.log('✅ Matched via language keywords: vegetables');
+          return 'vegetables';
+        }
+        if (mealKeywords.mixed.some((keyword: string) => normalized.includes(keyword))) {
+          console.log('✅ Matched via language keywords: mixed_meal');
+          return 'mixed_meal';
+        }
+    }
+    
+    console.log('❌ No meal type match found');
+  }
+  
+  // ✅ EXERCISEINTENSITY
+  if (fieldName === 'exerciseIntensity') {
+    if (normalized.includes('light') || normalized.includes('easy')) {
+      return 'light';
+    }
+    if (normalized.includes('moderate') || normalized.includes('medium')) {
+      return 'moderate';
+    }
+    if (normalized.includes('vigorous') || normalized.includes('intense')) {
+      return 'vigorous';
     }
   }
   
+  console.log('❌ No match found');
   return null;
 };
 
@@ -574,10 +545,8 @@ export const listenForField = async (
 
   setVoiceModeState((prev: any) => ({ ...prev, currentField: fieldName }));
 
-  // SHORT PROMPTS WITHOUT NUMBER RANGES
   let prompt = "";
   if (fieldType === 'number') {
-    // Just say the field name for numbers
     prompt = fieldLabel;
   } else if (fieldType === 'select') {
     const options = getOptionsList(fieldName, currentLanguage);
@@ -588,10 +557,8 @@ export const listenForField = async (
     }
   }
   
-  // Wait for speech to complete BEFORE starting recording
+  console.log(`\n🎤 Speaking prompt for ${fieldName}: "${prompt}"`);
   await handleSpeak(prompt);
-  
-  // Add small delay to ensure speech has finished
   await new Promise(resolve => setTimeout(resolve, 300));
 
   while (pausedRef.current && voiceModeActiveRef.current) {
@@ -606,7 +573,6 @@ export const listenForField = async (
     try {
       isProcessingRef.current = true;
       
-      // Start listening AFTER speech is done
       setVoiceModeState((prev: any) => ({ 
         ...prev, 
         listening: true, 
@@ -649,6 +615,7 @@ export const listenForField = async (
           formData.append("audio", wavBlob, "recording.wav");
           formData.append("language", languageValue);
 
+          console.log(`📤 Sending transcription request for ${fieldName}...`);
           const response = await fetch(`${API_URL}/api/python-speech/transcribe`, {
             method: "POST",
             body: formData,
@@ -656,6 +623,7 @@ export const listenForField = async (
           });
 
           if (!response.ok) {
+            console.error(`❌ Transcription request failed for ${fieldName}`);
             setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
             isProcessingRef.current = false;
             resolve(null);
@@ -668,42 +636,74 @@ export const listenForField = async (
           isProcessingRef.current = false;
 
           if (data.success && data.text) {
-            const parsed = parseSpokenInput(data.text, languageValue, fieldType);
+            console.log("\n" + "=".repeat(50));
+            console.log("🎤 TRANSCRIPTION RECEIVED");
+            console.log("Field:", fieldName);
+            console.log("Raw transcription:", data.text);
+            console.log("Field type:", fieldType);
+            console.log("Is required:", isRequired);
+            console.log("=".repeat(50) + "\n");
             
+            const parsed = parseSpokenInput(data.text, languageValue, fieldType);
+            console.log("🧩 PARSED RESULT:", JSON.stringify(parsed, null, 2));
+            
+            // ✅ SIMPLIFIED LOGIC: Handle "none" as text for select fields
             if (parsed.type === 'skip') {
+              console.log("⏭️ SKIP DETECTED");
               if (isRequired) {
+                console.log("❌ Field is required, rejecting skip");
                 resolve(null);
               } else {
+                console.log("✅ Field is optional, accepting skip");
                 resolve('skip');
               }
-            } else if (parsed.type === 'number' && parsed.value !== undefined) {
+            } 
+            else if (parsed.type === 'number' && parsed.value !== undefined) {
+              console.log("🔢 NUMBER DETECTED:", parsed.value);
               if (fieldType === 'number' && min !== undefined && max !== undefined) {
                 if (parsed.value >= min && parsed.value <= max) {
-                  // Accept valid number
+                  console.log("✅ Number in valid range, accepting");
                   resolve(parsed.value);
                 } else {
-                  // Number out of range - try again
+                  console.log("❌ Number out of range:", { value: parsed.value, min, max });
                   resolve(null);
                 }
               } else {
+                console.log("❌ Field type mismatch or no min/max");
                 resolve(null);
               }
-            } else if (parsed.type === 'text' && parsed.textValue && fieldType === 'select') {
+            } 
+            else if (parsed.type === 'text' && parsed.textValue && fieldType === 'select') {
+              console.log("📝 TEXT FOR SELECT FIELD:", parsed.textValue);
+              console.log("🔍 Attempting to map to option...");
+              
               const mappedValue = mapSpokenToOption(parsed.textValue, fieldName, currentLanguage);
+              console.log("🗺️ MAPPED VALUE:", mappedValue);
               
               if (mappedValue) {
-                // Accept valid option
+                console.log(`✅ SUCCESS: "${parsed.textValue}" -> "${mappedValue}"`);
                 resolve(mappedValue);
               } else {
+                console.log("❌ Failed to map to any valid option");
+                console.log("Available options:");
+                const optionsList = getOptionsList(fieldName, currentLanguage);
+                console.log(optionsList);
                 resolve(null);
               }
-            } else {
+            } 
+            else {
+              console.log("❓ UNKNOWN/UNHANDLED PARSING RESULT");
+              console.log("Parsed type:", parsed.type);
+              console.log("Field type:", fieldType);
+              console.log("Text value:", parsed.textValue);
               resolve(null);
             }
           } else {
+            console.log("❌ No text in transcription response or unsuccessful");
             resolve(null);
           }
         } catch (error: any) {
+          console.error("❌ ERROR in transcription process:", error);
           setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
           isProcessingRef.current = false;
           resolve(null);
@@ -714,11 +714,13 @@ export const listenForField = async (
       
       setTimeout(() => {
         if (mediaRecorder.state === "recording" && voiceModeActiveRef.current) {
+          console.log(`⏰ Timeout for ${fieldName}, stopping recording`);
           mediaRecorder.stop();
         }
-      }, 5000); // 5 seconds to respond
+      }, 5000);
 
     } catch (error) {
+      console.error("❌ ERROR starting recording:", error);
       setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
       isProcessingRef.current = false;
       resolve(null);
@@ -741,6 +743,8 @@ export const startVoiceMode = async (params: {
   mediaRecorderRef: React.MutableRefObject<MediaRecorder | null>;
   API_URL: string;
   fieldRefs: React.MutableRefObject<{ [key: string]: HTMLDivElement | null }>;
+  hasHypertension?: boolean;
+  hasDiabetes?: boolean;
 }): Promise<void> => {
   const {
     languageValue,
@@ -756,22 +760,24 @@ export const startVoiceMode = async (params: {
     isProcessingRef,
     mediaRecorderRef,
     API_URL,
-    fieldRefs
+    fieldRefs,
+    hasHypertension = false,
+    hasDiabetes = false
   } = params;
 
   setVoiceModeState((prev: any) => ({ ...prev, active: true }));
   voiceModeActiveRef.current = true;
   pausedRef.current = false;
   
-  // VERY SHORT welcome message
   const welcome = languageValue === "sw"
-    ? "Anza."  // "Start."
-    : "Start.";  // "Start."
+    ? "Anza."
+    : "Start.";
   
   await handleSpeak(welcome);
   await new Promise(resolve => setTimeout(resolve, 300));
   
-  // REORDERED: Glucose first, then context, then cardiovascular
+  const bpFieldsRequired = hasHypertension;
+  
   const allFields = [
     { 
       name: "glucose", 
@@ -809,7 +815,8 @@ export const startVoiceMode = async (params: {
       type: "number" as const,
       min: 70, 
       max: 250,
-      required: false
+      required: bpFieldsRequired,
+      skipIfDiabetesOnly: true
     },
     { 
       name: "diastolic", 
@@ -817,7 +824,8 @@ export const startVoiceMode = async (params: {
       type: "number" as const,
       min: 40, 
       max: 150,
-      required: false
+      required: bpFieldsRequired,
+      skipIfDiabetesOnly: true
     },
     { 
       name: "heartRate", 
@@ -844,6 +852,11 @@ export const startVoiceMode = async (params: {
   for (const field of allFields) {
     if (!voiceModeActiveRef.current) break;
     
+    if (field.skipIfDiabetesOnly && hasDiabetes && !hasHypertension) {
+      console.log(`Skipping ${field.name} because user has diabetes only (no hypertension)`);
+      continue;
+    }
+    
     while (pausedRef.current && voiceModeActiveRef.current) {
       await new Promise(resolve => setTimeout(resolve, 300));
     }
@@ -868,6 +881,7 @@ export const startVoiceMode = async (params: {
       
       if (!voiceModeActiveRef.current) break;
       
+      console.log(`\n🔄 Attempt ${attempts + 1}/${maxAttempts} for ${field.name}`);
       const result = await listenForField(
         field.name, 
         field.label, 
@@ -890,21 +904,25 @@ export const startVoiceMode = async (params: {
       if (!voiceModeActiveRef.current) break;
       
       if (result === null) {
+        console.log(`❌ No valid input for ${field.name}, attempt ${attempts + 1} failed`);
         attempts++;
         continue;
       }
 
       if (result === 'skip') {
         if (!field.required) {
+          console.log(`✅ Skipping optional field: ${field.name}`);
           toast.success(`⏭️ ${field.label}: ${currentLanguage.skip}`, { duration: 2000 });
           validInput = true;
           break;
         } else {
+          console.log(`❌ Cannot skip required field: ${field.name}`);
           attempts++;
           continue;
         }
       }
 
+      console.log(`✅ Captured value for ${field.name}:`, result);
       setValue(field.name, result as any);
       
       const displayValue = typeof result === 'number' 
@@ -914,7 +932,6 @@ export const startVoiceMode = async (params: {
       toast.success(`✅ ${field.label}: ${displayValue}`, { duration: 2000 });
       
       if (!voiceModeState.muted && voiceModeActiveRef.current) {
-        // Speak back what was captured (optional)
         await handleSpeak(`${displayValue}`);
       }
       
@@ -923,6 +940,7 @@ export const startVoiceMode = async (params: {
     
     if (!validInput && voiceModeActiveRef.current) {
       if (field.required) {
+        console.log(`❌ Failed to get valid input for required field: ${field.name}`);
         const manualMsg = languageValue === "sw"
           ? `Ingiza mwenyewe.`
           : `Enter manually.`;

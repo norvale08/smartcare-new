@@ -118,10 +118,10 @@ export const languageContent = {
         mixed: ["mixed", "combination", "everything", "balanced"]
       },
       exerciseRecent: {
-        none: ["none", "no", "nope", "non", "not", "nah", "no exercise", "did not exercise", "didn't exercise", "haven't exercised", "no workout", "not exercised", "i did not", "i have not"],
-        within2Hours: ["within two hours", "within 2 hours", "recent", "2"],
-        twoToSixHours: ["two to six hours", "2 to 6 hours", "2 to 6"],
-        sixTo24Hours: ["six to twenty four", "6 to 24", "yesterday", "6 to 24 hours"]
+        none: ["none", "non", "known", "nun", "no exercise", "did not exercise", "didn't exercise", "haven't exercised", "no workout", "not exercised", "i did not", "i have not"],
+    within2Hours: ["within two hours", "within 2 hours", "recent", "2 hours", "two hours"],
+    twoToSixHours: ["two to six hours", "2 to 6 hours", "2 to 6", "few hours"],
+    sixTo24Hours: ["six to twenty four", "6 to 24", "yesterday", "6 to 24 hours", "24 hours"]
       },
       exerciseIntensity: {
         light: ["light", "walking", "easy", "gentle"],

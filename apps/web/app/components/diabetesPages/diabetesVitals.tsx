@@ -9,7 +9,6 @@ import VoiceControlPanel from "./components/VoiceControlPanel";
 import SectionVoiceControl from "./components/SectionVoiceControl";
 import GlucoseContextSection from "./components/GlucoseSection";
 import CardiovascularSection from "./components/CardiovascularSection";
-import ContextSection from "./components/ContextSection";
 import MealSection from "./components/MealSection";
 import ExerciseSection from "./components/ExerciseSection";
 import AISettingsSection from "./components/AISettingsSection";
@@ -199,7 +198,9 @@ const DiabetesVitalsForm: React.FC<Props> = ({
         isProcessingRef,
         mediaRecorderRef,
         API_URL,
-        fieldRefs
+        fieldRefs,
+        hasHypertension,
+        hasDiabetes
       });
     } catch (error) {
       console.error("Error starting voice mode:", error);
