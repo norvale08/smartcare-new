@@ -12,6 +12,7 @@ export interface Translations {
     medicine: string;
     lifestyleAndDiet: string;
     maps: string;
+    clear: string;
   };
   
   // Vitals
@@ -80,79 +81,108 @@ export interface Translations {
     stable: string;
     alert: string;
   };
+  
+  // Admin
+  admin: {
+    doctor_assignment: string;
+    select_doctor: string;
+    search_patients: string;
+    assign_selected: string;
+    unassigned: string;
+    current_doctor: string;
+  };
+  
+  // Patient
+  patient: {
+    name: string;
+    email: string;
+  };
 }
 
 type LangKey = "en-US" | "sw-TZ";
 
 const translations: Record<LangKey, Translations> = {
-  "en-US": {
-    language: "en-US",
-    common: {
-      dashboard: "SmartCare Dashboard",
-      vitals: "Vitals",
-      doctor: "Doctor",
-      medicine: "Medicine",
-      lifestyleAndDiet: "Lifestyle & Diet",
-      maps: "Maps",
+    "en-US": {
+      language: "en-US",
+      common: {
+        dashboard: "SmartCare Dashboard",
+        vitals: "Vitals",
+        doctor: "Doctor",
+        medicine: "Medicine",
+        lifestyleAndDiet: "Lifestyle & Diet",
+        maps: "Maps",
+        clear: "Clear",
+      },
+      vitals: {
+        title: "Record Your Vitals",
+        systolic: "Systolic",
+        diastolic: "Diastolic",
+        heartRate: "Heart Rate",
+        saveButton: "Save Vitals",
+        allFieldsRequired: "Please enter all vitals.",
+        savedSuccessfully: "Vitals saved successfully",
+        failedToSave: "Failed to save vitals",
+      },
+      doctor: {
+        title: "Doctor Management",
+        searchDoctor: "Search Doctor",
+        assignedDoctors: "Assigned Doctors",
+        noDoctorsAssigned: "No doctors assigned yet",
+      },
+      medicine: {
+        medicationAnalysis: "Medication Analysis",
+        medicationReminders: "Medication Reminders",
+        addReminder: "Add Reminder",
+        noReminders: "No reminders set yet",
+      },
+      lifestyle: {
+        title: "Lifestyle Assessment",
+        smoking: "Do you smoke?",
+        alcohol: "Do you consume alcohol?",
+        caffeine: "Cups of coffee/tea per day",
+        exercise: "Exercise frequency",
+        hoursOfSleep: "Hours of sleep",
+        submitButton: "Submit Assessment",
+        regenerateButton: "Regenerate Recommendations",
+        lowExercise: "Low",
+        moderateExercise: "Moderate",
+        highExercise: "High",
+        noneExercise: "None",
+        neverExercise: "Never",
+        rarelyExercise: "Rarely",
+        fewTimesWeek: "Few times/week",
+        dailyExercise: "Daily",
+        dietRecommendations: "Diet Recommendations",
+        breakfast: "Breakfast",
+        lunch: "Lunch",
+        dinner: "Dinner",
+        snacks: "Snacks",
+        generalAdvice: "General Advice",
+        calorieTarget: "Daily Calorie Target",
+      },
+      alerts: {
+        lowBloodPressure: "Low Blood Pressure",
+        normalBloodPressure: "Normal",
+        elevatedBloodPressure: "Elevated",
+        stage1Hypertension: "Stage 1 Hypertension",
+        stage2Hypertension: "Stage 2 Hypertension",
+        hypertensiveCrisis: "Hypertensive Crisis",
+        stable: "Stable",
+        alert: "Alert",
+      },
+      admin: {
+        doctor_assignment: "Doctor Assignment",
+        select_doctor: "Select Doctor",
+        search_patients: "Search Patients",
+        assign_selected: "Assign Selected",
+        unassigned: "Unassigned",
+        current_doctor: "Current Doctor",
+      },
+      patient: {
+        name: "Name",
+        email: "Email",
+      },
     },
-    vitals: {
-      title: "Record Your Vitals",
-      systolic: "Systolic",
-      diastolic: "Diastolic",
-      heartRate: "Heart Rate",
-      saveButton: "Save Vitals",
-      allFieldsRequired: "Please enter all vitals.",
-      savedSuccessfully: "Vitals saved successfully",
-      failedToSave: "Failed to save vitals",
-    },
-    doctor: {
-      title: "Doctor Management",
-      searchDoctor: "Search Doctor",
-      assignedDoctors: "Assigned Doctors",
-      noDoctorsAssigned: "No doctors assigned yet",
-    },
-    medicine: {
-      medicationAnalysis: "Medication Analysis",
-      medicationReminders: "Medication Reminders",
-      addReminder: "Add Reminder",
-      noReminders: "No reminders set yet",
-    },
-    lifestyle: {
-      title: "Lifestyle Assessment",
-      smoking: "Do you smoke?",
-      alcohol: "Do you consume alcohol?",
-      caffeine: "Cups of coffee/tea per day",
-      exercise: "Exercise frequency",
-      hoursOfSleep: "Hours of sleep",
-      submitButton: "Submit Assessment",
-      regenerateButton: "Regenerate Recommendations",
-      lowExercise: "Low",
-      moderateExercise: "Moderate",
-      highExercise: "High",
-      noneExercise: "None",
-      neverExercise: "Never",
-      rarelyExercise: "Rarely",
-      fewTimesWeek: "Few times/week",
-      dailyExercise: "Daily",
-      dietRecommendations: "Diet Recommendations",
-      breakfast: "Breakfast",
-      lunch: "Lunch",
-      dinner: "Dinner",
-      snacks: "Snacks",
-      generalAdvice: "General Advice",
-      calorieTarget: "Daily Calorie Target",
-    },
-    alerts: {
-      lowBloodPressure: "Low Blood Pressure",
-      normalBloodPressure: "Normal",
-      elevatedBloodPressure: "Elevated",
-      stage1Hypertension: "Stage 1 Hypertension",
-      stage2Hypertension: "Stage 2 Hypertension",
-      hypertensiveCrisis: "Hypertensive Crisis",
-      stable: "Stable",
-      alert: "Alert",
-    },
-  },
   "sw-TZ": {
     language: "sw-TZ",
     common: {
@@ -162,6 +192,7 @@ const translations: Record<LangKey, Translations> = {
       medicine: "Dawa",
       lifestyleAndDiet: "Maisha na Chakula",
       maps: "Ramani",
+      clear: "Safisha",
     },
     vitals: {
       title: "Rekodi Vitali Zako",
@@ -219,7 +250,19 @@ const translations: Record<LangKey, Translations> = {
       hypertensiveCrisis: "Mgongano wa Shinikizo la Juu la Damu",
       stable: "Imekuwa Imara",
       alert: "Tangazo",
-    }
+    },
+    admin: {
+      doctor_assignment: "Uteuzi wa Daktari",
+      select_doctor: "Chagua Daktari",
+      search_patients: "Tafuta Wagonjwa",
+      assign_selected: "Teua Waliochaguliwa",
+      unassigned: "Hajauteuliwa",
+      current_doctor: "Daktari Sasa",
+    },
+    patient: {
+      name: "Jina",
+      email: "Barua Pepe",
+    },
   }
 };
 

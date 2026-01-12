@@ -827,25 +827,7 @@ const DoctorManagement: React.FC<DoctorManagementProps> = ({
         <p className="text-gray-600">Find and manage your healthcare providers</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-            <h3 className="text-lg font-semibold text-white flex items-center">
-              <Search className="w-5 h-5 mr-2" />
-              Find Doctors
-            </h3>
-            <p className="text-blue-100 text-sm mt-1">
-              Search and request doctors from our network
-            </p>
-          </div>
-          <div className="p-6">
-            <DoctorSearch 
-              onDoctorRequest={handleDoctorRequest}
-              requestedDoctors={requestedDoctorIds}
-            />
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 gap-6">
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
           <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
             <h3 className="text-lg font-semibold text-white flex items-center">
