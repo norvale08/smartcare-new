@@ -196,3 +196,4 @@ const HypertensionRiskAssessment: React.FC<HypertensionRiskAssessmentProps> = ({
 export default HypertensionRiskAssessment;
 
 
+

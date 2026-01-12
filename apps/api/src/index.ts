@@ -56,6 +56,9 @@ import relativePatientRouter from './routes/relativePatient'
 
 // import patientDetailsRoute from "./routes/patientDetails";
 import sendEmailRouter from './routes/send-email';
+import adminDoctorsRoutes from './routes/adminDoctors';  // Add this line
+import adminPatientsRoutes from './routes/adminPatients';
+import adminDoctorAssignmentsRouter from './routes/admin/doctorAssignments';
 
 dotenv.config();
 
@@ -154,6 +157,9 @@ app.use('/api/hypertension/diet', hypertensionDiet);
 app.use('/api/doctorDashboard', doctorDashboardRouter);
 app.use("/api/verifyToken", verifyTokenRoute);
 app.use( "/api/diabeticFood", diabetesFoodRoute);
+app.use('/api/admin/doctors', adminDoctorsRoutes); 
+app.use('/api/admin/patients', adminPatientsRoutes); 
+app.use('/api/admin/doctor-assignments', adminDoctorAssignmentsRouter);
 app.use('/api/admin',adminRoutes);
 app.use('/api/doctor/me', doctorMeRoutes);
 app.use("/api/patients/search", patientSearchRoute);
@@ -179,6 +185,7 @@ app.use('/api/python-speech', pythonSpeechRoutes);
 app.use('/api/relative-setup', relativeSetupRoutes);
 app.use('/api/relative', relativePatientRouter);
 app.use('/api', sendEmailRouter);
+
 
 app.use('*', (req, res) => {
   res.status(404).json({
