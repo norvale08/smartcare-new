@@ -29,42 +29,98 @@ export interface LifestyleData {
 interface Props {
   onSubmit?: (data: LifestyleData) => void;
   initialData?: LifestyleData;
+  language?: "en" | "sw"; // ✅ Receive language from parent
+  onLanguageChange?: (lang: "en" | "sw") => void; // ✅ Receive language change handler
 }
 
 interface OptionConfig {
   label: string;
+  labelSw: string;
   icon: React.ReactNode;
 }
 
+// ✅ Language content
+const languageContent = {
+  en: {
+    alcoholTitle: "Alcohol Intake",
+    smokingTitle: "Smoking",
+    exerciseTitle: "Exercise",
+    sleepTitle: "Sleep (hours/night)",
+    saveButton: "Save Lifestyle Info",
+    savingButton: "Saving...",
+    adviceTitle: "Personalized Lifestyle Advice",
+    refreshButton: "Refresh",
+    generatingButton: "Generating...",
+    lastUpdated: "Last updated:",
+    fillAllFields: "Please fill in all lifestyle information",
+    loginRequired: "Please log in to save lifestyle data",
+    saveFailed: "Failed to save lifestyle data",
+    saveSuccess: "Lifestyle data saved successfully!",
+    adviceSuccess: "AI advice generated successfully!",
+    saveDataFirst: "Please save your lifestyle data first",
+    alreadyGenerating: "AI advice is already being generated",
+    aiPlaceholder: "🤖 AI advice will appear here once you save your lifestyle data.",
+    generatingAdvice: "🤖 Generating personalized lifestyle advice",
+    refreshingAdvice: "🤖 Refreshing AI advice...",
+  },
+  sw: {
+    alcoholTitle: "Matumizi ya Pombe",
+    smokingTitle: "Kuvuta Sigara",
+    exerciseTitle: "Mazoezi",
+    sleepTitle: "Usingizi (masaa kwa usiku)",
+    saveButton: "Hifadhi Taarifa za Mtindo wa Maisha",
+    savingButton: "Inahifadhi...",
+    adviceTitle: "Ushauri wa Kibinafsi wa Mtindo wa Maisha",
+    refreshButton: "Onyesha Upya",
+    generatingButton: "Inaunda...",
+    lastUpdated: "Ilisasishwa mwisho:",
+    fillAllFields: "Tafadhali jaza taarifa zote za mtindo wa maisha",
+    loginRequired: "Tafadhali ingia ili kuhifadhi data ya mtindo wa maisha",
+    saveFailed: "Imeshindwa kuhifadhi data ya mtindo wa maisha",
+    saveSuccess: "Data ya mtindo wa maisha imehifadhiwa!",
+    adviceSuccess: "Ushauri wa AI umeundwa!",
+    saveDataFirst: "Tafadhali hifadhi data yako ya mtindo wa maisha kwanza",
+    alreadyGenerating: "Ushauri wa AI tayari unaundwa",
+    aiPlaceholder: "🤖 Ushauri wa AI utaonekana hapa ukisha hifadhi data yako ya mtindo wa maisha.",
+    generatingAdvice: "🤖 Inaunda ushauri wa kibinafsi wa mtindo wa maisha",
+    refreshingAdvice: "🤖 Inasasisha ushauri wa AI...",
+  }
+};
+
 const options = {
   alcohol: [
-    { label: "None" as AlcoholLevel, icon: <FaBan className="text-xl text-gray-700" /> },
-    { label: "Occasionally" as AlcoholLevel, icon: <FaWineGlassAlt className="text-xl text-red-500" /> },
-    { label: "Frequently" as AlcoholLevel, icon: <FaBeer className="text-xl text-yellow-600" /> },
+    { label: "None", labelSw: "Hakuna", icon: <FaBan className="text-xl text-gray-700" /> },
+    { label: "Occasionally", labelSw: "Mara kwa mara", icon: <FaWineGlassAlt className="text-xl text-red-500" /> },
+    { label: "Frequently", labelSw: "Mara nyingi", icon: <FaBeer className="text-xl text-yellow-600" /> },
   ],
   smoking: [
-    { label: "None" as SmokingLevel, icon: <MdSmokeFree className="text-xl text-green-600" /> },
-    { label: "Light" as SmokingLevel, icon: <FaSmoking className="text-xl text-gray-600" /> },
-    { label: "Heavy" as SmokingLevel, icon: <FaSmoking className="text-xl text-red-600" /> },
+    { label: "None", labelSw: "Hakuna", icon: <MdSmokeFree className="text-xl text-green-600" /> },
+    { label: "Light", labelSw: "Kidogo", icon: <FaSmoking className="text-xl text-gray-600" /> },
+    { label: "Heavy", labelSw: "Kwingi", icon: <FaSmoking className="text-xl text-red-600" /> },
   ],
   exercise: [
-    { label: "Daily" as ExerciseLevel, icon: <FaRunning className="text-xl text-blue-600" /> },
-    { label: "Few times/week" as ExerciseLevel, icon: <MdFitnessCenter className="text-xl text-purple-600" /> },
-    { label: "Rarely" as ExerciseLevel, icon: <FaCouch className="text-xl text-gray-600" /> },
-    { label: "None" as ExerciseLevel, icon: <FaBan className="text-xl text-red-600" /> },
+    { label: "Daily", labelSw: "Kila siku", icon: <FaRunning className="text-xl text-blue-600" /> },
+    { label: "Few times/week", labelSw: "Mara chache/wiki", icon: <MdFitnessCenter className="text-xl text-purple-600" /> },
+    { label: "Rarely", labelSw: "Nadra", icon: <FaCouch className="text-xl text-gray-600" /> },
+    { label: "None", labelSw: "Hakuna", icon: <FaBan className="text-xl text-red-600" /> },
   ],
   sleep: [
-    { label: "<5 hrs" as SleepLevel, icon: <FaBed className="text-xl text-red-600" /> },
-    { label: "6-7 hrs" as SleepLevel, icon: <FaBed className="text-xl text-yellow-600" /> },
-    { label: "7-8 hrs" as SleepLevel, icon: <FaBed className="text-xl text-green-600" /> },
-    { label: ">8 hrs" as SleepLevel, icon: <FaBed className="text-xl text-blue-600" /> },
-    { label: "Irregular" as SleepLevel, icon: <MdAccessTime className="text-xl text-gray-600" /> },
+    { label: "<5 hrs", labelSw: "<5 masaa", icon: <FaBed className="text-xl text-red-600" /> },
+    { label: "6-7 hrs", labelSw: "6-7 masaa", icon: <FaBed className="text-xl text-yellow-600" /> },
+    { label: "7-8 hrs", labelSw: "7-8 masaa", icon: <FaBed className="text-xl text-green-600" /> },
+    { label: ">8 hrs", labelSw: ">8 masaa", icon: <FaBed className="text-xl text-blue-600" /> },
+    { label: "Irregular", labelSw: "Isiyo ya kawaida", icon: <MdAccessTime className="text-xl text-gray-600" /> },
   ],
 };
 
-const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
+const DiabetesLifestyle: React.FC<Props> = ({ 
+  onSubmit, 
+  initialData, 
+  language = "en", // ✅ Use language from parent
+  onLanguageChange // ✅ Use language change handler from parent
+}) => {
   const [form, setForm] = useState<LifestyleData>(initialData || {});
-  const [aiAdvice, setAiAdvice] = useState("🤖 AI advice will appear here once you save your lifestyle data.");
+  const [aiAdvice, setAiAdvice] = useState("");
   const [loading, setLoading] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [currentRecordId, setCurrentRecordId] = useState<string | null>(null);
@@ -75,6 +131,14 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
   const maxPollAttempts = 30;
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const currentLang = languageContent[language];
+
+  // Set initial AI placeholder based on language
+  useEffect(() => {
+    if (!aiAdvice || aiAdvice === languageContent.en.aiPlaceholder || aiAdvice === languageContent.sw.aiPlaceholder) {
+      setAiAdvice(currentLang.aiPlaceholder);
+    }
+  }, [language]);
 
   const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
 
@@ -100,17 +164,17 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
 
         if (data.isGenerating) {
           const dots = ".".repeat((pollAttempts % 3) + 1);
-          setAiAdvice(`🤖 Generating personalized lifestyle advice${dots}`);
+          setAiAdvice(`${currentLang.generatingAdvice}${dots}`);
           setIsGeneratingAI(true);
           setPollAttempts((prev) => prev + 1);
 
           if (pollAttempts >= maxPollAttempts) stopPolling();
         } else {
-          setAiAdvice(data.aiAdvice || " AI advice generated but empty.");
+          setAiAdvice(data.aiAdvice || currentLang.aiPlaceholder);
           setIsGeneratingAI(false);
           setPollAttempts(0);
           stopPolling();
-          toast.success("AI advice generated successfully!");
+          toast.success(currentLang.adviceSuccess);
         }
       }
     } catch (error) {
@@ -141,7 +205,7 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
         const token = getAuthToken();
         if (!token) return;
 
-        const response = await fetch(`${API_URL}/api/lifestyle/latest`, {
+        const response = await fetch(`${API_URL}/api/lifestyle/latest?language=${language}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -154,7 +218,7 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
               exercise: data.data.exercise,
               sleep: data.data.sleep,
             });
-            setAiAdvice(data.data.aiAdvice || aiAdvice);
+            setAiAdvice(data.data.aiAdvice || currentLang.aiPlaceholder);
             setLastUpdated(data.data.updatedAt);
             setCurrentRecordId(data.data._id);
 
@@ -167,62 +231,64 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
     };
 
     loadExistingData();
-  }, []);
+  }, [language]);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!validateForm()) return toast.error(currentLang.fillAllFields);
+  setLoading(true);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return toast.error("Please fill in all lifestyle information");
-    setLoading(true);
+  try {
+    const token = getAuthToken();
+    if (!token) return toast.error(currentLang.loginRequired);
 
-    try {
-      const token = getAuthToken();
-      if (!token) return toast.error("Please log in to save lifestyle data");
+    // ✅ ADD language to the request body
+    const response = await fetch(`${API_URL}/api/lifestyle`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        ...form,
+        language: language // ✅ ADD THIS
+      }),
+    });
 
-      const response = await fetch(`${API_URL}/api/lifestyle`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        toast.error(data.message || "Failed to save lifestyle data");
-        return;
-      }
-
-      toast.success("Lifestyle data saved successfully!");
-      onSubmit?.(form);
-
-      if (data.recordId) {
-        if (currentRecordId !== data.recordId || !isGeneratingAI) {
-          setCurrentRecordId(data.recordId);
-          setAiAdvice("Generating personalized lifestyle advice...");
-          setIsGeneratingAI(true);
-          setPollAttempts(0);
-          startPolling(data.recordId);
-        }
-      }
-    } catch (error) {
-      console.error("Submit error:", error);
-      toast.error("Failed to save lifestyle data.");
-    } finally {
-      setLoading(false);
+    const data = await response.json();
+    if (!response.ok) {
+      toast.error(data.message || currentLang.saveFailed);
+      return;
     }
-  };
 
+    toast.success(currentLang.saveSuccess);
+    onSubmit?.(form);
+
+    if (data.recordId) {
+      if (currentRecordId !== data.recordId || !isGeneratingAI) {
+        setCurrentRecordId(data.recordId);
+        setAiAdvice(currentLang.generatingAdvice + "...");
+        setIsGeneratingAI(true);
+        setPollAttempts(0);
+        startPolling(data.recordId);
+      }
+    }
+  } catch (error) {
+    console.error("Submit error:", error);
+    toast.error(currentLang.saveFailed);
+  } finally {
+    setLoading(false);
+  }
+};
   const handleRefreshAdvice = async () => {
     if (currentRecordId && !isGeneratingAI) {
       setIsGeneratingAI(true);
       setPollAttempts(0);
-      setAiAdvice("🤖 Refreshing AI advice...");
+      setAiAdvice(currentLang.refreshingAdvice);
       startPolling(currentRecordId);
     } else if (!currentRecordId) {
-      toast.error("Please save your lifestyle data first");
+      toast.error(currentLang.saveDataFirst);
     } else if (isGeneratingAI) {
-      toast("AI advice is already being generated", );
+      toast(currentLang.alreadyGenerating);
     }
   };
 
@@ -232,8 +298,8 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {opts.map((opt) => (
           <div
-            key={opt.label.toString()}
-            onClick={() => handleSelect(field, opt.label.toString())}
+            key={opt.label}
+            onClick={() => handleSelect(field, opt.label)}
             className={`flex flex-col items-center justify-center p-4 rounded-xl cursor-pointer border-2 transition-all duration-200 ${
               form[field] === opt.label
                 ? "border-blue-600 bg-blue-50 shadow-md transform scale-105"
@@ -241,7 +307,9 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
             }`}
           >
             {opt.icon}
-            <span className="mt-2 text-sm font-medium text-center">{opt.label}</span>
+            <span className="mt-2 text-sm font-medium text-center">
+              {language === "en" ? opt.label : opt.labelSw}
+            </span>
           </div>
         ))}
       </div>
@@ -250,18 +318,20 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
 
   return (
     <div className="bg-white shadow-lg rounded-2xl p-6 space-y-6">
+      {/* ✅ REMOVED: Language toggle button - now controlled by parent */}
+
       <form onSubmit={handleSubmit} className="space-y-6">
-        {renderOptions("alcohol", "Alcohol Intake", options.alcohol)}
-        {renderOptions("smoking", "Smoking", options.smoking)}
-        {renderOptions("exercise", "Exercise", options.exercise)}
-        {renderOptions("sleep", "Sleep (hours/night)", options.sleep)}
+        {renderOptions("alcohol", currentLang.alcoholTitle, options.alcohol)}
+        {renderOptions("smoking", currentLang.smokingTitle, options.smoking)}
+        {renderOptions("exercise", currentLang.exerciseTitle, options.exercise)}
+        {renderOptions("sleep", currentLang.sleepTitle, options.sleep)}
 
         <Button
           type="submit"
           disabled={loading || !validateForm()}
           className="w-full font-semibold py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200"
         >
-          {loading ? "Saving..." : "Save Lifestyle Info"}
+          {loading ? currentLang.savingButton : currentLang.saveButton}
         </Button>
       </form>
 
@@ -274,7 +344,7 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
           <h4 className="text-lg font-bold flex items-center">
             <span className="text-2xl mr-2">🤖</span>
             <span className={isGeneratingAI ? "text-blue-700" : "text-green-700"}>
-              Personalized Lifestyle Advice
+              {currentLang.adviceTitle}
             </span>
           </h4>
 
@@ -287,7 +357,7 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
               className="flex items-center gap-2 text-sm"
             >
               <FaRedo className={`text-xs ${isGeneratingAI ? "animate-spin" : ""}`} />
-              {isGeneratingAI ? "Generating..." : "Refresh"}
+              {isGeneratingAI ? currentLang.generatingButton : currentLang.refreshButton}
             </Button>
           )}
         </div>
@@ -298,7 +368,7 @@ const DiabetesLifestyle: React.FC<Props> = ({ onSubmit, initialData }) => {
 
         {lastUpdated && !isGeneratingAI && (
           <div className="text-xs text-gray-500 mt-2">
-            Last updated: {new Date(lastUpdated).toLocaleString()}
+            {currentLang.lastUpdated} {new Date(lastUpdated).toLocaleString()}
           </div>
         )}
       </div>
