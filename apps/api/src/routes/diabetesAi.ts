@@ -73,7 +73,7 @@ const getPatientName = (patient: any): string => {
   return "Patient";
 };
 
-// ✅ NEW: HELPER FUNCTION TO GET SELECTED DISEASES FROM PATIENT PROFILE
+// ✅ HELPER FUNCTION TO GET SELECTED DISEASES FROM PATIENT PROFILE
 const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   const diseases: ("diabetes" | "hypertension")[] = [];
   
@@ -114,9 +114,13 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     }
 
     const vitalId = req.params.id;
+    // ✅ Extract language from query parameter
+    const requestedLanguage = req.query.language as "en" | "sw" | undefined;
+    
     console.log("=".repeat(60));
     console.log(`🔍 [${new Date().toISOString()}] Summary request for vital: ${vitalId}`);
     console.log(`👤 User: ${userId}`);
+    console.log(`🌐 Requested language: ${requestedLanguage || 'not specified'}`);
 
     // ✅ 1. Fetch vitals
     const vitals = await Diabetes.findById(vitalId);
@@ -129,17 +133,23 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       });
     }
 
+    // ✅ USE QUERY PARAM LANGUAGE, FALLBACK TO DB, THEN DEFAULT TO 'en'
+    const language = (requestedLanguage || vitals.language || "en") as "en" | "sw";
+    
     console.log(`📊 Vitals found - Glucose: ${vitals.glucose} mg/dL (${vitals.context})`);
-    console.log(`🌐 Language preference: ${vitals.language || 'en'}`);
+    console.log(`🌐 Language preference: ${language} (from ${requestedLanguage ? 'query param' : vitals.language ? 'database' : 'default'})`);
     console.log(`💓 Additional data - BP: ${vitals.systolic || 'N/A'}/${vitals.diastolic || 'N/A'}, HR: ${vitals.heartRate || 'N/A'}`);
     console.log(`🏃 Exercise: ${vitals.exerciseRecent || 'N/A'} (${vitals.exerciseIntensity || 'N/A'})`);
 
-    // ✅ 2. Check if we have a VALID cached summary
-    if (isValidSummary(vitals.aiFeedback)) {
+    // ✅ 2. Check if we have a VALID cached summary IN THE RIGHT LANGUAGE
+    const hasCachedSummary = isValidSummary(vitals.aiFeedback);
+    const isSameLanguage = vitals.language === language;
+    
+    if (hasCachedSummary && isSameLanguage) {
       const age = Date.now() - new Date(vitals.updatedAt).getTime();
       const ageMinutes = Math.floor(age / 60000);
       
-      console.log(`✅ Valid cached summary found (${ageMinutes} minutes old)`);
+      console.log(`✅ Valid cached summary found in ${language} (${ageMinutes} minutes old)`);
       console.log(`📝 Summary: ${vitals.aiFeedback?.substring(0, 100)}...`);
       console.log(`⏱️  Response time: ${Date.now() - startTime}ms`);
       console.log("=".repeat(60));
@@ -149,12 +159,16 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
         aiFeedback: vitals.aiFeedback, 
         cached: true,
         cacheAge: ageMinutes,
-        language: vitals.language,
+        language: language,
         selectedDiseases: vitals.selectedDiseases || ["diabetes"]
       });
     }
 
-    console.log("🔄 No valid cached summary - generating new one");
+    if (hasCachedSummary && !isSameLanguage) {
+      console.log(`🔄 Cached summary exists but in different language (${vitals.language} vs ${language}) - regenerating`);
+    } else {
+      console.log("🔄 No valid cached summary - generating new one");
+    }
 
     // ✅ 3. Fetch patient profile
     console.log(`🔍 Fetching patient profile for userId: ${userId}`);
@@ -187,7 +201,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     const glucoseData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
-      language: (vitals.language as "en" | "sw") || "en",
+      language: language, // ✅ Use prioritized language
       age,
       gender: patient.gender,
       weight: patient.weight,
@@ -200,7 +214,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       lastMealTime: vitals.lastMealTime,
       mealType: vitals.mealType,
       patientName: patientName,
-      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: selectedDiseases,
     };
 
     console.log("📋 Complete glucose data prepared:", {
@@ -264,9 +278,10 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       });
     }
 
-    // ✅ 9. Save to database
+    // ✅ 9. Save to database WITH THE NEW LANGUAGE
     console.log("💾 Saving summary to database...");
     vitals.aiFeedback = aiFeedback;
+    vitals.language = language; // ✅ Update language in DB
     await vitals.save();
     console.log("✅ Summary saved successfully");
 
@@ -326,7 +341,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
   }
 });
 
-// ✅ Food Advice Endpoint - Updated to include patient name and diseases
+// ✅ Food Advice Endpoint - Updated to include patient name, diseases, and language from query
 router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
@@ -335,7 +350,11 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
     }
 
     const vitalId = req.params.id;
+    // ✅ Extract language from query parameter
+    const requestedLanguage = req.query.language as "en" | "sw" | undefined;
+    
     console.log(`🍽️ Food advice request for vital: ${vitalId}`);
+    console.log(`🌐 Requested language: ${requestedLanguage || 'not specified'}`);
 
     const vitals = await Diabetes.findById(vitalId);
     if (!vitals) {
@@ -347,6 +366,9 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
       return res.status(404).json({ success: false, message: "Patient profile not found" });
     }
 
+    // ✅ USE QUERY PARAM LANGUAGE, FALLBACK TO DB, THEN DEFAULT TO 'en'
+    const language = (requestedLanguage || vitals.language || "en") as "en" | "sw";
+
     const age = calculateAge(patient.dob);
     const patientName = getPatientName(patient);
     
@@ -356,10 +378,11 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
 
     console.log(`🏥 Disease context for food advice:`, {
       diseases: selectedDiseases,
-      managementType: hasBothConditions ? "DUAL" : "DIABETES ONLY"
+      managementType: hasBothConditions ? "DUAL" : "DIABETES ONLY",
+      language: language
     });
 
-    // ✅ Prepare food advice data with patient name and diseases
+    // ✅ Prepare food advice data with patient name, diseases, and prioritized language
     const foodAdviceData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -370,13 +393,13 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
       height: patient.height,
       age,
       gender: patient.gender,
-      language: (vitals.language as "en" | "sw") || "en",
+      language: language, // ✅ Use prioritized language
       exerciseRecent: vitals.exerciseRecent,
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
       mealType: vitals.mealType,
       patientName: patientName,
-      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: selectedDiseases,
       allergies: patient.allergies ? [patient.allergies] : [],
       medicalHistory: patient.selectedDiseases || [],
     };
@@ -432,7 +455,7 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
   }
 });
 
-// ✅ Quick Tips Endpoint - Updated to include patient name and diseases
+// ✅ Quick Tips Endpoint - Updated to include patient name, diseases, and language from query
 router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
@@ -441,7 +464,11 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
     }
 
     const vitalId = req.params.id;
+    // ✅ Extract language from query parameter
+    const requestedLanguage = req.query.language as "en" | "sw" | undefined;
+    
     console.log(`💡 Quick tips request for vital: ${vitalId}`);
+    console.log(`🌐 Requested language: ${requestedLanguage || 'not specified'}`);
 
     const vitals = await Diabetes.findById(vitalId);
     if (!vitals) {
@@ -452,6 +479,9 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
     if (!patient) {
       return res.status(404).json({ success: false, message: "Patient profile not found" });
     }
+
+    // ✅ USE QUERY PARAM LANGUAGE, FALLBACK TO DB, THEN DEFAULT TO 'en'
+    const language = (requestedLanguage || vitals.language || "en") as "en" | "sw";
 
     const age = calculateAge(patient.dob);
     const patientName = getPatientName(patient);
@@ -470,13 +500,13 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
       height: patient.height,
       age,
       gender: patient.gender,
-      language: (vitals.language as "en" | "sw") || "en",
+      language: language, // ✅ Use prioritized language
       exerciseRecent: vitals.exerciseRecent,
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
       mealType: vitals.mealType,
       patientName: patientName,
-      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: selectedDiseases,
     };
 
     console.log("💡 Quick tips data:", {
@@ -515,7 +545,7 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
   }
 });
 
-// ✅ Comprehensive Feedback Endpoint - Updated with diseases
+// ✅ Comprehensive Feedback Endpoint - Updated with diseases and language from query
 router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
@@ -524,7 +554,11 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
     }
 
     const vitalId = req.params.id;
+    // ✅ Extract language from query parameter
+    const requestedLanguage = req.query.language as "en" | "sw" | undefined;
+    
     console.log(`📋 Comprehensive feedback request for vital: ${vitalId}`);
+    console.log(`🌐 Requested language: ${requestedLanguage || 'not specified'}`);
 
     const vitals = await Diabetes.findById(vitalId);
     if (!vitals) {
@@ -535,6 +569,9 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
     if (!patient) {
       return res.status(404).json({ success: false, message: "Patient profile not found" });
     }
+
+    // ✅ USE QUERY PARAM LANGUAGE, FALLBACK TO DB, THEN DEFAULT TO 'en'
+    const language = (requestedLanguage || vitals.language || "en") as "en" | "sw";
 
     const age = calculateAge(patient.dob);
     const patientName = getPatientName(patient);
@@ -553,16 +590,16 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
       height: patient.height,
       age,
       gender: patient.gender,
-      language: (vitals.language as "en" | "sw") || "en",
+      language: language, // ✅ Use prioritized language
       exerciseRecent: vitals.exerciseRecent,
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
       mealType: vitals.mealType,
       patientName: patientName,
-      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: selectedDiseases,
     };
 
-    console.log("📋 Generating comprehensive feedback for:", patientName, "with diseases:", selectedDiseases);
+    console.log("📋 Generating comprehensive feedback for:", patientName, "with diseases:", selectedDiseases, "in language:", language);
 
     const ai = getAIService();
 
@@ -594,9 +631,9 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
       },
       hasBloodPressure: !!(vitals.systolic && vitals.diastolic),
       hasHeartRate: !!vitals.heartRate,
-      language: (vitals.language as "en" | "sw") || "en",
+      language: language, // ✅ Use prioritized language
       patientName: patientName,
-      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: selectedDiseases,
     };
 
     const comprehensiveFeedback = await ai.generateComprehensiveFeedback(comprehensiveData);
@@ -684,13 +721,12 @@ router.post("/summary/:id/regenerate", verifyToken, async (req: Request, res: Re
     });
 
   } catch (error: any) {
-    console.error("❌ Regenerate error:", error.message);
-    res.status(500).json({ 
-      success: false,
-      message: "Failed to regenerate summary", 
-      error: error.message 
-    });
-  }
+    console.error("❌ Regenerate Error:", error.message);
+res.status(500).json({
+success: false,
+message: "Failed to regenerate summary",
+error: error.message
 });
-
+}
+});
 export default router;

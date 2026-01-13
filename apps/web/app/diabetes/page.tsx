@@ -572,7 +572,9 @@ const Page = () => {
 
                     {vitalsId && requestAI && (
                       <>
-                        <DiabetesAISummary vitalsId={vitalsId} />
+                        <DiabetesAISummary vitalsId={vitalsId}
+                        language={language}
+                        />
                         <AIDisclaimerBox language={language} />
                         
                         <div className="pt-6 border-t border-gray-200">
@@ -591,7 +593,10 @@ const Page = () => {
 
                 {activeTab === "lifestyle" && (
                   <div className="space-y-6">
-                    <LifestyleForm />
+                    <LifestyleForm
+                    language={language}
+                    onLanguageChange={handleLanguageChange}
+                    />
                     <div className="pt-6 border-t border-gray-200">
                       <button
                         onClick={() => {
@@ -633,13 +638,16 @@ const Page = () => {
                         setFoodDone(true);
                         setTimeout(() => setActiveTab("final"), 300);
                       }}
+                      language={language}
                     />
                   </div>
                 )}
 
                 {activeTab === "final" && (
                   <div className="space-y-6">
-                    <FinalFeedback onFeedbackGenerated={handleFeedbackGenerated} />
+                    <FinalFeedback onFeedbackGenerated={handleFeedbackGenerated}
+                    language={language}
+                    />
                     <AIDisclaimerBox language={language} />
 
                     {finalFeedback && (

@@ -56,7 +56,7 @@ const getPatientName = (patient: any): string => {
   return "Patient";
 };
 
-// ✅ NEW: Helper function to get selected diseases
+// ✅ Helper function to get selected diseases
 const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   const diseases: ("diabetes" | "hypertension")[] = [];
   
@@ -164,7 +164,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
     });
 
     // ✅ PRIORITY: Use language from request body first, then vitals, then default to 'en'
-    const userLanguage = language || (latestVitals?.language as "en" | "sw") || "en";
+    const userLanguage = (language || latestVitals?.language || "en") as "en" | "sw";
     console.log(`🌐 Using language: ${userLanguage} (source: ${language ? 'request' : latestVitals?.language ? 'vitals' : 'default'})`);
 
     // Save lifestyle with pending AI advice
@@ -206,7 +206,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       height: patient.height,
       lifestyle: { alcohol, smoking, exercise, sleep },
       patientName: patientName,
-      selectedDiseases: vitalDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: vitalDiseases,
       systolic: latestVitals?.systolic,
       diastolic: latestVitals?.diastolic,
       heartRate: latestVitals?.heartRate,
@@ -297,7 +297,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
   }
 });
 
-// ✅ NEW: PUT update existing lifestyle (regenerates AI advice)
+// ✅ PUT update existing lifestyle (regenerates AI advice)
 router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -342,8 +342,9 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
       readingDate: latestVitals?.createdAt || new Date(),
     };
 
-    const userLanguage = language || lifestyleDoc.language || (latestVitals?.language as "en" | "sw") || "en";
-    console.log(`🌐 Using language for update: ${userLanguage}`);
+    // ✅ PRIORITY: language from request body → existing doc → vitals → default
+    const userLanguage = (language || lifestyleDoc.language || latestVitals?.language || "en") as "en" | "sw";
+    console.log(`🌐 Using language for update: ${userLanguage} (source: ${language ? 'request' : lifestyleDoc.language ? 'existing' : latestVitals?.language ? 'vitals' : 'default'})`);
     
     lifestyleDoc.language = userLanguage;
     lifestyleDoc.aiAdvice = userLanguage === "sw" 
@@ -368,7 +369,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
       weight: patient.weight,
       height: patient.height,
       patientName: patientName,
-      selectedDiseases: vitalDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: vitalDiseases,
       lifestyle: { 
         alcohol: lifestyleDoc.alcohol, 
         smoking: lifestyleDoc.smoking, 
@@ -442,7 +443,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
   }
 });
 
-// ✅ NEW: POST regenerate AI advice for existing record
+// ✅ POST regenerate AI advice for existing record (with language support)
 router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -452,6 +453,7 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
     const { language } = req.body;
 
     console.log("🔄 Regenerating AI advice for record:", id);
+    console.log("🌐 Requested language:", language || 'not specified');
 
     const lifestyleDoc = await Lifestyle.findOne({ _id: id, userId });
     if (!lifestyleDoc) {
@@ -480,7 +482,10 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       readingDate: latestVitals?.createdAt || new Date(),
     };
 
-    const userLanguage = language || lifestyleDoc.language || (latestVitals?.language as "en" | "sw") || "en";
+    // ✅ PRIORITY: language from request → existing doc → vitals → default
+    const userLanguage = (language || lifestyleDoc.language || latestVitals?.language || "en") as "en" | "sw";
+    console.log(`🌐 Using language: ${userLanguage} (source: ${language ? 'request' : lifestyleDoc.language ? 'existing' : latestVitals?.language ? 'vitals' : 'default'})`);
+    
     lifestyleDoc.language = userLanguage;
     lifestyleDoc.aiAdvice = userLanguage === "sw" 
       ? "Inaendeleza ushauri wa kibinafsi upya..."
@@ -504,7 +509,7 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       weight: patient.weight,
       height: patient.height,
       patientName: patientName,
-      selectedDiseases: vitalDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: vitalDiseases,
       lifestyle: { 
         alcohol: lifestyleDoc.alcohol, 
         smoking: lifestyleDoc.smoking, 
@@ -540,6 +545,7 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       
       console.log("✅ AI advice regenerated successfully");
       console.log("- Length:", aiAdvice.length);
+      console.log("- Language:", userLanguage);
       console.log("- First 100 chars:", aiAdvice.substring(0, 100));
 
       res.status(200).json({ 

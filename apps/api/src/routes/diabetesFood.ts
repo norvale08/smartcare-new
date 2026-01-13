@@ -44,7 +44,7 @@ const getPatientName = (patient: any): string => {
   return "Patient";
 };
 
-// ✅ NEW: Helper function to get selected diseases
+// ✅ Helper function to get selected diseases
 const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   const diseases: ("diabetes" | "hypertension")[] = [];
   
@@ -67,11 +67,15 @@ const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   return diseases;
 };
 
-// ✅ GET latest food advice for logged-in user
+// ✅ GET latest food advice for logged-in user (with language query param support)
 router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    // ✅ Extract language from query parameter
+    const requestedLanguage = req.query.language as "en" | "sw" | undefined;
+    console.log(`🌐 Requested language: ${requestedLanguage || 'not specified'}`);
 
     const patient = await Patient.findOne({ userId });
     if (!patient) return res.status(404).json({ message: "Patient not found" });
@@ -108,11 +112,11 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
     // Use stored diseases from vitals or get from patient profile
     const vitalDiseases = latestVitals.selectedDiseases || selectedDiseases;
 
-    // ✅ FIXED: Get language from vitals, not patient
-    const language = (latestVitals.language as "en" | "sw") || "en";
-    console.log(`🌐 Using language from vitals: ${language}`);
+    // ✅ PRIORITY: query param → vitals → default
+    const language = (requestedLanguage || latestVitals.language || "en") as "en" | "sw";
+    console.log(`🌐 Using language: ${language} (source: ${requestedLanguage ? 'query param' : latestVitals.language ? 'vitals' : 'default'})`);
 
-    // ✅ UPDATED: Use the correct interface structure with patient name and diseases
+    // ✅ Use the correct interface structure with patient name and diseases
     const foodInput: FoodAdviceInput = {
       glucose: latestVitals.glucose,
       context: (latestVitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -123,9 +127,9 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
       height: patient.height,
       age,
       gender: patient.gender,
-      language,
+      language: language, // ✅ Use prioritized language
       patientName: patientName,
-      selectedDiseases: vitalDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: vitalDiseases,
       exerciseRecent: latestVitals.exerciseRecent,
       exerciseIntensity: latestVitals.exerciseIntensity,
       lastMealTime: latestVitals.lastMealTime,
@@ -215,7 +219,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
   }
 });
 
-// ✅ POST generate new food advice manually
+// ✅ POST generate new food advice manually (with language support)
 router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -231,13 +235,18 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
     // ✅ GET SELECTED DISEASES
     const selectedDiseases = getPatientDiseases(patient);
 
-    // ✅ UPDATED: Use the correct input structure with patient name and diseases
+    // ✅ Language from request body or default
+    const requestedLanguage = req.body.language as "en" | "sw" | undefined;
+    const language = (requestedLanguage || "en") as "en" | "sw";
+    console.log(`🌐 Manual advice language: ${language}`);
+
+    // ✅ Use the correct input structure with patient name and diseases
     const input: FoodAdviceInput = {
       ...req.body,
       context: (req.body.context as "Fasting" | "Post-meal" | "Random") || "Random",
-      language: (req.body.language as "en" | "sw") || "en",
+      language: language, // ✅ Use processed language
       patientName: patientName,
-      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: selectedDiseases,
       age: req.body.age || age,
       gender: req.body.gender || patient.gender,
       weight: req.body.weight || patient.weight,
@@ -315,13 +324,17 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
   }
 });
 
-// ✅ NEW: GET food advice by specific vital ID
+// ✅ GET food advice by specific vital ID (with language query param support)
 router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const vitalId = req.params.id;
+    
+    // ✅ Extract language from query parameter
+    const requestedLanguage = req.query.language as "en" | "sw" | undefined;
+    console.log(`🌐 Requested language for vital ${vitalId}: ${requestedLanguage || 'not specified'}`);
     
     // Fetch specific vital record
     const vital = await Diabetes.findOne({ _id: vitalId, userId });
@@ -339,9 +352,9 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
     const selectedDiseases = vital.selectedDiseases || getPatientDiseases(patient);
     const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
 
-    // ✅ FIXED: Get language from vitals, not patient
-    const language = (vital.language as "en" | "sw") || "en";
-    console.log(`🌐 Using language from vital ${vitalId}: ${language}`);
+    // ✅ PRIORITY: query param → vitals → default
+    const language = (requestedLanguage || vital.language || "en") as "en" | "sw";
+    console.log(`🌐 Using language: ${language} (source: ${requestedLanguage ? 'query param' : vital.language ? 'vitals' : 'default'})`);
     console.log(`🏥 Disease context:`, {
       diseases: selectedDiseases,
       managementType: hasBothConditions ? "DUAL" : "DIABETES ONLY"
@@ -357,9 +370,9 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
       height: patient.height,
       age,
       gender: patient.gender,
-      language,
+      language: language, // ✅ Use prioritized language
       patientName: patientName,
-      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: selectedDiseases,
       exerciseRecent: vital.exerciseRecent,
       exerciseIntensity: vital.exerciseIntensity,
       lastMealTime: vital.lastMealTime,

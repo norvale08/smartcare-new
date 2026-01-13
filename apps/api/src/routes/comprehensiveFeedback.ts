@@ -46,7 +46,7 @@ const getPatientName = (patient: any): string => {
   return "Patient";
 };
 
-// ✅ NEW: Helper function to get selected diseases
+// ✅ Helper function to get selected diseases
 const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   const diseases: ("diabetes" | "hypertension")[] = [];
   
@@ -69,13 +69,17 @@ const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   return diseases;
 };
 
-// ✅ GET comprehensive AI feedback combining summary, food, lifestyle, and encouragement
+// ✅ GET comprehensive AI feedback (with language query param support)
 router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const vitalId = req.params.vitalId;
+    
+    // ✅ Extract language from query parameter
+    const requestedLanguage = req.query.language as "en" | "sw" | undefined;
+    console.log(`🌐 Requested language for comprehensive feedback: ${requestedLanguage || 'not specified'}`);
     
     // Validate vitalId
     if (!vitalId || vitalId === 'undefined' || vitalId === 'null') {
@@ -121,7 +125,24 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       managementType: hasBothConditions ? "DUAL (Diabetes + Hypertension)" : "DIABETES ONLY"
     });
 
-    // Prepare data for AI with diseases
+    // ✅ PRIORITY: query param → vital → patient → lifestyle → default
+    const language = (
+      requestedLanguage || 
+      vital.language || 
+      patient.language || 
+      latestLifestyle?.language || 
+      "en"
+    ) as "en" | "sw";
+    
+    console.log(`🌐 Using language: ${language} (source: ${
+      requestedLanguage ? 'query param' : 
+      vital.language ? 'vital' : 
+      patient.language ? 'patient' : 
+      latestLifestyle?.language ? 'lifestyle' : 
+      'default'
+    })`);
+
+    // Prepare data for AI with diseases and prioritized language
     const foodInput: FoodAdviceInput = {
       glucose: vital.glucose,
       context: (vital.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -132,13 +153,13 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       height: patient.height,
       age,
       gender: patient.gender,
-      language: (patient.language as "en" | "sw") || "en",
+      language: language, // ✅ Use prioritized language
       exerciseRecent: vital.exerciseRecent,
       exerciseIntensity: vital.exerciseIntensity,
       lastMealTime: vital.lastMealTime,
       mealType: vital.mealType,
       patientName: patientName,
-      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: selectedDiseases,
       lifestyle: patient.lifestyle ? {
         alcohol: patient.lifestyle.alcohol || "Unknown",
         smoking: patient.lifestyle.smoking || "Unknown",
@@ -163,7 +184,8 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       patientName: foodInput.patientName,
       selectedDiseases: foodInput.selectedDiseases,
       language: foodInput.language,
-      hasBP: !!(foodInput.systolic && foodInput.diastolic)
+      hasBP: !!(foodInput.systolic && foodInput.diastolic),
+      diseaseManagement: hasBothConditions ? "DUAL" : "DIABETES ONLY"
     });
 
     // Generate all AI components in parallel for better performance
@@ -188,7 +210,7 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       lifestyleFeedback = await aiService.generateLifestyleFeedback(lifestyleInput);
     }
 
-    // Generate comprehensive final feedback with diseases
+    // Generate comprehensive final feedback with diseases and language
     const comprehensiveInput: ComprehensiveFeedbackInput = {
       summary,
       foodAdvice,
@@ -198,9 +220,9 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       patientData: patient,
       hasBloodPressure: !!(vital.systolic && vital.diastolic),
       hasHeartRate: !!vital.heartRate,
-      language: (patient.language as "en" | "sw") || "en",
+      language: language, // ✅ Use prioritized language
       patientName: patientName,
-      selectedDiseases: selectedDiseases, // ✅ ADDED DISEASES
+      selectedDiseases: selectedDiseases,
     };
 
     const finalFeedback = await aiService.generateComprehensiveFeedback(comprehensiveInput);
@@ -227,6 +249,7 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
         context: {
           glucose: vital.glucose,
           context: vital.context,
+          language: language, // ✅ Include language in response
           bloodPressure: vital.systolic && vital.diastolic ? 
             `${vital.systolic}/${vital.diastolic}` : 'Not recorded',
           heartRate: vital.heartRate || 'Not recorded',
@@ -252,11 +275,15 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
   }
 });
 
-// ✅ NEW: Get comprehensive feedback using latest glucose reading
+// ✅ Get comprehensive feedback using latest glucose reading (with language query param support)
 router.get("/latest-comprehensive-feedback", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    // ✅ Extract language from query parameter to pass along
+    const requestedLanguage = req.query.language as "en" | "sw" | undefined;
+    console.log(`🌐 Language for latest comprehensive feedback: ${requestedLanguage || 'not specified'}`);
 
     // Get latest glucose reading
     const latestVital = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
@@ -268,8 +295,13 @@ router.get("/latest-comprehensive-feedback", verifyToken, async (req: Authentica
       });
     }
 
-    // Redirect to the comprehensive feedback endpoint with the latest vital ID
-    res.redirect(`/api/comprehensive-feedback/${latestVital._id}`);
+    // ✅ Preserve language query parameter in redirect
+    const redirectUrl = requestedLanguage 
+      ? `/api/comprehensive-feedback/${latestVital._id}?language=${requestedLanguage}`
+      : `/api/comprehensive-feedback/${latestVital._id}`;
+    
+    console.log(`🔄 Redirecting to: ${redirectUrl}`);
+    res.redirect(redirectUrl);
   } catch (error: any) {
     console.error("❌ Error getting latest comprehensive feedback:", error);
     res.status(500).json({
