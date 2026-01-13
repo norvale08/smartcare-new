@@ -29,8 +29,7 @@ import {
 interface Props {
   onVitalsSubmitted?: (id: string, requestAI: boolean) => void;
   initialLanguage?: "en" | "sw";
-  // ✅ NEW: Pass user's disease information
-  userDiseases?: string[]; // e.g., ["diabetes", "hypertension"]
+  userDiseases?: string[];
 }
 
 const DiabetesVitalsForm: React.FC<Props> = ({ 
@@ -66,7 +65,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({
     status: ""
   });
 
-  // ✅ Detect if user has hypertension
   const hasHypertension = userDiseases.some(disease => 
     disease.toLowerCase().includes('hypertension') || 
     disease.toLowerCase().includes('high blood pressure')
@@ -78,7 +76,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({
   
   const hasBothConditions = hasHypertension && hasDiabetes;
 
-  // ✅ Log disease status for debugging
   useEffect(() => {
     console.log("🔍 DiabetesVitalsForm - Disease Status:", {
       userDiseases,
@@ -99,7 +96,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({
   const voiceModeActiveRef = useRef(false);
   const pausedRef = useRef(false);
 
-  // Debug useEffect
   useEffect(() => {
     console.log("=== VOICE MODE STATE UPDATE ===");
     console.log("Active:", voiceModeState.active);
@@ -108,8 +104,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({
     console.log("Paused:", voiceModeState.paused);
     console.log("Current Field:", voiceModeState.currentField);
     console.log("Status:", voiceModeState.status);
-    console.log("pausedRef.current:", pausedRef.current);
-    console.log("voiceModeActiveRef.current:", voiceModeActiveRef.current);
     console.log("=== END STATE UPDATE ===");
   }, [voiceModeState]);
 
@@ -136,6 +130,11 @@ const DiabetesVitalsForm: React.FC<Props> = ({
     };
   }, []);
 
+  // ✅ Track requestAI changes
+  useEffect(() => {
+    console.log("🔍 RequestAI state changed to:", requestAI);
+  }, [requestAI]);
+
   const handleSpeak = useCallback(async (text: string): Promise<void> => {
     console.log("Speaking:", text);
     return speak(text, languageValue, voiceModeState.muted, voiceModeActiveRef, pausedRef, (speaking: boolean, status: string) => {
@@ -144,7 +143,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({
     });
   }, [languageValue, voiceModeState.muted]);
 
-  // ✅ UPDATED: Include BP fields in required check when user has hypertension
   const getFieldRequiredStatus = useCallback((fieldName: string): boolean => {
     const fieldRules = diabetesValidationRules[fieldName as keyof typeof diabetesValidationRules];
     
@@ -170,7 +168,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({
       case 'lastMealTime':
       case 'mealType':
         return contextValue === "Post-meal";
-      // ✅ BP fields required if user has hypertension
       case 'systolic':
       case 'diastolic':
         return hasHypertension || hasBothConditions;
@@ -181,36 +178,161 @@ const DiabetesVitalsForm: React.FC<Props> = ({
     }
   }, [contextValue, hasHypertension, hasBothConditions]);
 
-  const handleStartVoiceMode = async () => {
-    console.log("=== START VOICE MODE ===");
-    try {
-      await startVoiceMode({
-        languageValue,
-        currentLanguage,
-        voiceModeActiveRef,
-        pausedRef,
-        voiceModeState,
-        setVoiceModeState,
-        setValue,
-        getValues,
-        toast,
-        handleSpeak,
-        isProcessingRef,
-        mediaRecorderRef,
-        API_URL,
-        fieldRefs,
-        hasHypertension,
-        hasDiabetes
-      });
-    } catch (error) {
-      console.error("Error starting voice mode:", error);
-      toast.error("Failed to start voice mode");
-      setVoiceModeState(prev => ({ ...prev, active: false }));
-      voiceModeActiveRef.current = false;
-    }
-  };
+ 
+// 1️⃣ FIRST: handleFormSubmitWithAI (core submission logic with AI parameter)
+const handleFormSubmitWithAI = useCallback(async (data: diabetesType, aiRequested: boolean) => {
+  setIsLoading(true);
+  setSubmitSuccess(false);
 
-  const handleStopVoiceMode = () => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    toast.error(languageValue === "sw" ? "Lazima uwe umeingia kwenze mfumo" : "You must be logged in");
+    setIsLoading(false);
+    return;
+  }
+
+  try {
+    const submitData = {
+      ...data,
+      glucose: data.glucose ? Number(data.glucose) : undefined,
+      systolic: data.systolic ? Number(data.systolic) : undefined,
+      diastolic: data.diastolic ? Number(data.diastolic) : undefined,
+      heartRate: data.heartRate ? Number(data.heartRate) : undefined,
+      requestAI: aiRequested, // ✅ Use parameter directly, not state
+      selectedDiseases: userDiseases.length > 0 ? userDiseases as ("diabetes" | "hypertension")[] : undefined,
+    };
+
+    console.log("📤 Submitting vitals with AI request:", {
+      requestAI: submitData.requestAI,
+      diseases: submitData.selectedDiseases,
+      glucose: submitData.glucose,
+      context: submitData.context
+    });
+
+    const response = await fetch(`${API_URL}/api/diabetesVitals`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(submitData),
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || "Failed to add vitals");
+
+    console.log("✅ Submission successful:", result);
+    console.log("🤖 AI was requested:", aiRequested);
+    toast.success(languageValue === "sw" ? "Data imehifadhiwa kikamilifu" : "Data saved successfully");
+    setSubmitSuccess(true);
+    
+    reset({
+      language: languageValue,
+      glucose: undefined as any,
+      systolic: undefined as any,
+      diastolic: undefined as any,
+      heartRate: undefined as any,
+      context: '',
+      lastMealTime: '',
+      mealType: '',
+      exerciseRecent: '',
+      exerciseIntensity: ''
+    });
+    
+    if (onVitalsSubmitted && result.id) {
+      console.log(`🎯 Calling onVitalsSubmitted with ID: ${result.id}, requestAI: ${aiRequested}`);
+      onVitalsSubmitted(result.id, aiRequested); // ✅ Use parameter, not state
+    }
+    
+    setRequestAI(false);
+    setTimeout(() => setSubmitSuccess(false), 3000);
+  } catch (error: any) {
+    console.error("❌ Submission error:", error);
+    toast.error(error.message || (languageValue === "sw" ? "Hitilafu imetokea" : "An error occurred"));
+    throw error;
+  } finally {
+    setIsLoading(false);
+  }
+}, [languageValue, userDiseases, API_URL, onVitalsSubmitted, reset]);
+
+// 2️⃣ SECOND: handleFormSubmit (for manual form submission - uses current state)
+const handleFormSubmit = useCallback(async (data: diabetesType) => {
+  // For manual submission via form button, use the current requestAI state
+  await handleFormSubmitWithAI(data, requestAI);
+}, [requestAI, handleFormSubmitWithAI]);
+
+// 3️⃣ THIRD: handleAutoSubmit (for voice mode - receives AI parameter)
+const handleAutoSubmit = useCallback(async (aiRequested?: boolean) => {
+  const data = getValues();
+  
+  // ✅ Use the passed parameter
+  const shouldRequestAI = aiRequested !== undefined ? aiRequested : requestAI;
+  
+  console.log("🚀 Auto-submit started");
+  console.log("🤖 AI Requested (parameter):", aiRequested);
+  console.log("🤖 AI Requested (final):", shouldRequestAI);
+  
+  // Validation
+  const requiredFields = ['glucose', 'context', 'exerciseRecent', 'exerciseIntensity'];
+  const missingFields = requiredFields.filter(field => !data[field as keyof diabetesType]);
+  
+  if (missingFields.length > 0) {
+    throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+  }
+  
+  if (data.context === 'Post-meal' && (!data.lastMealTime || !data.mealType)) {
+    throw new Error('Missing meal details for Post-meal context');
+  }
+  
+  if (hasHypertension && (!data.systolic || !data.diastolic)) {
+    throw new Error('Missing blood pressure readings for hypertension patient');
+  }
+  
+  console.log("✅ All validations passed, submitting form...");
+  
+  // ✅ Set the state for UI consistency
+  setRequestAI(shouldRequestAI);
+  
+  console.log("📤 Calling handleFormSubmitWithAI with AI:", shouldRequestAI);
+  
+  // ✅ Call with the parameter directly - don't rely on state
+  await handleFormSubmitWithAI(data, shouldRequestAI);
+}, [getValues, hasHypertension, requestAI, handleFormSubmitWithAI, setRequestAI]);
+
+// 4️⃣ FOURTH: handleStartVoiceMode (uses handleAutoSubmit)
+const handleStartVoiceMode = useCallback(async () => {
+  console.log("=== START VOICE MODE ===");
+  try {
+    await startVoiceMode({
+      languageValue,
+      currentLanguage,
+      voiceModeActiveRef,
+      pausedRef,
+      voiceModeState,
+      setVoiceModeState,
+      setValue,
+      getValues,
+      toast,
+      handleSpeak,
+      isProcessingRef,
+      mediaRecorderRef,
+      API_URL,
+      fieldRefs,
+      hasHypertension,
+      hasDiabetes,
+      setRequestAI,
+      onAutoSubmit: handleAutoSubmit
+    });
+  } catch (error) {
+    console.error("Error starting voice mode:", error);
+    toast.error("Failed to start voice mode");
+    setVoiceModeState(prev => ({ ...prev, active: false }));
+    voiceModeActiveRef.current = false;
+  }
+}, [languageValue, currentLanguage, voiceModeState, handleSpeak, API_URL, hasHypertension, hasDiabetes, handleAutoSubmit, setValue, getValues]);
+
+
+  const handleStopVoiceMode = useCallback(() => {
     console.log("=== STOP VOICE MODE ===");
     stopVoiceMode({
       voiceModeActiveRef,
@@ -221,13 +343,10 @@ const DiabetesVitalsForm: React.FC<Props> = ({
       handleSpeak,
       isMuted: voiceModeState.muted
     });
-  };
+  }, [currentLanguage, handleSpeak, voiceModeState.muted]);
 
   const handlePauseVoiceMode = useCallback(() => {
     console.log("=== PAUSE VOICE MODE ===");
-    console.log("Before pause - pausedRef.current:", pausedRef.current);
-    console.log("Before pause - voiceModeState.paused:", voiceModeState.paused);
-    
     pauseVoiceMode({
       voiceModeActiveRef,
       pausedRef,
@@ -237,13 +356,10 @@ const DiabetesVitalsForm: React.FC<Props> = ({
       languageValue,
       isMuted: voiceModeState.muted
     });
-  }, [voiceModeActiveRef, pausedRef, mediaRecorderRef, setVoiceModeState, handleSpeak, languageValue, voiceModeState.muted]);
+  }, [handleSpeak, languageValue, voiceModeState.muted]);
 
   const handleResumeVoiceMode = useCallback(async () => {
     console.log("=== RESUME VOICE MODE ===");
-    console.log("Before resume - pausedRef.current:", pausedRef.current);
-    console.log("Before resume - voiceModeState.paused:", voiceModeState.paused);
-    
     await resumeVoiceMode({
       voiceModeActiveRef,
       pausedRef,
@@ -253,13 +369,10 @@ const DiabetesVitalsForm: React.FC<Props> = ({
       isMuted: voiceModeState.muted,
       currentField: voiceModeState.currentField
     });
-  }, [voiceModeActiveRef, pausedRef, setVoiceModeState, handleSpeak, languageValue, voiceModeState.muted, voiceModeState.currentField]);
+  }, [handleSpeak, languageValue, voiceModeState.muted, voiceModeState.currentField]);
 
   const handlePauseResume = useCallback(() => {
     console.log('=== Unified Pause/Resume Handler ===');
-    console.log('Current voice mode state:', voiceModeState);
-    console.log('pausedRef.current:', pausedRef.current);
-    console.log('voiceModeActiveRef.current:', voiceModeActiveRef.current);
     
     if (!voiceModeState.active) {
       console.log('Voice mode not active, ignoring pause/resume');
@@ -276,7 +389,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({
     }
   }, [voiceModeState, handlePauseVoiceMode, handleResumeVoiceMode]);
 
-  const handleToggleMute = () => {
+  const handleToggleMute = useCallback(() => {
     const newMutedState = !voiceModeState.muted;
     console.log("Toggling mute to:", newMutedState);
     setVoiceModeState(prev => ({ ...prev, muted: newMutedState }));
@@ -288,92 +401,20 @@ const DiabetesVitalsForm: React.FC<Props> = ({
           : "Sound turned on"
       ).catch(error => console.error("Error speaking mute status:", error));
     }
-  };
-
-  const handleFormSubmit = async (data: diabetesType) => {
-    setIsLoading(true);
-    setSubmitSuccess(false);
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.error(languageValue === "sw" ? "Lazima uwe umeingia kwenye mfumo" : "You must be logged in");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      // ✅ FIXED: Include selectedDiseases in submission
-      const submitData = {
-        ...data,
-        glucose: data.glucose ? Number(data.glucose) : undefined,
-        systolic: data.systolic ? Number(data.systolic) : undefined,
-        diastolic: data.diastolic ? Number(data.diastolic) : undefined,
-        heartRate: data.heartRate ? Number(data.heartRate) : undefined,
-        requestAI,
-        selectedDiseases: userDiseases.length > 0 ? userDiseases as ("diabetes" | "hypertension")[] : undefined,
-      };
-
-      // ✅ LOG for debugging
-      console.log("📤 Submitting vitals with diseases:", {
-        diseases: submitData.selectedDiseases,
-        userDiseases: userDiseases,
-        hasBoth: hasHypertension && hasDiabetes,
-        hasHypertension: hasHypertension,
-        hasDiabetes: hasDiabetes,
-        systolic: submitData.systolic,
-        diastolic: submitData.diastolic
-      });
-
-      const response = await fetch(`${API_URL}/api/diabetesVitals`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(submitData),
-      });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Failed to add vitals");
-
-      toast.success(languageValue === "sw" ? "Data imehifadhiwa kikamilifu" : "Data saved successfully");
-      setSubmitSuccess(true);
-      
-      reset({
-        language: languageValue,
-        glucose: undefined as any,
-        systolic: undefined as any,
-        diastolic: undefined as any,
-        heartRate: undefined as any,
-        context: '',
-        lastMealTime: '',
-        mealType: '',
-        exerciseRecent: '',
-        exerciseIntensity: ''
-      });
-      
-      setRequestAI(false);
-      setTimeout(() => setSubmitSuccess(false), 3000);
-      if (onVitalsSubmitted && result.id) onVitalsSubmitted(result.id, requestAI);
-    } catch (error: any) {
-      toast.error(error.message || (languageValue === "sw" ? "Hitilafu imetokea" : "An error occurred"));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [voiceModeState.muted, voiceModeState.active, handleSpeak, languageValue]);
 
   const setFieldRef = useCallback((fieldName: string) => (el: HTMLDivElement | null) => {
     fieldRefs.current[fieldName] = el;
   }, []);
 
-  const getFieldStyle = (fieldName: string) => {
+  const getFieldStyle = useCallback((fieldName: string) => {
     const isActive = voiceModeState.currentField === fieldName;
     return {
       border: isActive ? '2px solid #3b82f6' : '2px solid #e5e7eb',
       boxShadow: isActive ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
       transition: 'all 0.3s ease-in-out'
     };
-  };
+  }, [voiceModeState.currentField]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-3 sm:p-4 md:p-6 lg:p-8">
@@ -441,7 +482,6 @@ const DiabetesVitalsForm: React.FC<Props> = ({
             </div>
           )}
 
-          {/* ✅ UPDATED: Pass hypertension status to CardiovascularSection */}
           <div>
             <SectionVoiceControl
               sectionName="cardiovascular"

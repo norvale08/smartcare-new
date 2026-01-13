@@ -86,6 +86,12 @@ export const languageContent = {
     yes: "Yes",
     no: "No",
     skip: "Skip",
+    // ✅ NEW: AI Feedback and submission messages
+    aiFeedbackQuestion: "Would you like AI feedback?",
+    aiFeedbackDefault: "Say yes or no. Default is yes.",
+    submittingData: "Submitting...",
+    dataSubmitted: "Complete. Data saved.",
+    submissionError: "Error. Try again.",
     // ✅ MUCH SHORTER field instructions - just the field name
     fieldInstructions: {
       glucose: "Glucose",
@@ -119,9 +125,9 @@ export const languageContent = {
       },
       exerciseRecent: {
         none: ["none", "non", "known", "nun", "no exercise", "did not exercise", "didn't exercise", "haven't exercised", "no workout", "not exercised", "i did not", "i have not"],
-    within2Hours: ["within two hours", "within 2 hours", "recent", "2 hours", "two hours"],
-    twoToSixHours: ["two to six hours", "2 to 6 hours", "2 to 6", "few hours"],
-    sixTo24Hours: ["six to twenty four", "6 to 24", "yesterday", "6 to 24 hours", "24 hours"]
+        within2Hours: ["within two hours", "within 2 hours", "recent", "2 hours", "two hours"],
+        twoToSixHours: ["two to six hours", "2 to 6 hours", "2 to 6", "few hours"],
+        sixTo24Hours: ["six to twenty four", "6 to 24", "yesterday", "6 to 24 hours", "24 hours"]
       },
       exerciseIntensity: {
         light: ["light", "walking", "easy", "gentle"],
@@ -210,6 +216,12 @@ export const languageContent = {
     yes: "Ndio",
     no: "Hapana",
     skip: "Ruka",
+    // ✅ NEW: AI Feedback and submission messages in Swahili
+    aiFeedbackQuestion: "Ungependa kupata msaada wa AI?",
+    aiFeedbackDefault: "Sema ndio au hapana. Chaguo msingi ni ndio.",
+    submittingData: "Inatuma data...",
+    dataSubmitted: "Imekamilika. Data imehifadhiwa.",
+    submissionError: "Hitilafu. Jaribu tena.",
     // ✅ SHORTER Swahili instructions
     fieldInstructions: {
       glucose: "Sukari",

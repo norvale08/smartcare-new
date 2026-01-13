@@ -728,6 +728,168 @@ export const listenForField = async (
   });
 };
 
+export const askForAIFeedback = async (
+  languageValue: string,
+  currentLanguage: any,
+  voiceModeActiveRef: React.MutableRefObject<boolean>,
+  pausedRef: React.MutableRefObject<boolean>,
+  setVoiceModeState: (state: any) => void,
+  handleSpeak: (text: string) => Promise<void>,
+  isMuted: boolean,
+  API_URL: string,
+  isProcessingRef: React.MutableRefObject<boolean>,
+  mediaRecorderRef: React.MutableRefObject<MediaRecorder | null>,
+  fieldRefs: React.MutableRefObject<{ [key: string]: HTMLDivElement | null }>
+): Promise<boolean> => {
+  
+  while (pausedRef.current && voiceModeActiveRef.current) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+  }
+  
+  if (isProcessingRef.current || !voiceModeActiveRef.current) {
+    return true; // Default to yes
+  }
+
+  if (fieldRefs.current['aiFeedback']) {
+    fieldRefs.current['aiFeedback']?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  setVoiceModeState((prev: any) => ({ ...prev, currentField: 'aiFeedback' }));
+
+  const question = languageValue === "sw" 
+    ? "Ungependa kupata msaada wa AI? Sema ndio au hapana. Chaguo msingi ni ndio." 
+    : "Would you like AI feedback? Say yes or no. Default is yes.";
+  
+  console.log(`\n🎤 Asking AI feedback question: "${question}"`);
+  await handleSpeak(question);
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  while (pausedRef.current && voiceModeActiveRef.current) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+  }
+
+  if (!voiceModeActiveRef.current) {
+    return true; // Default to yes
+  }
+
+  return new Promise(async (resolve) => {
+    try {
+      isProcessingRef.current = true;
+      
+      setVoiceModeState((prev: any) => ({ 
+        ...prev, 
+        listening: true, 
+        status: languageValue === "sw" ? "Sema" : "Speak"
+      }));
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { 
+          echoCancellation: true, 
+          noiseSuppression: true, 
+          sampleRate: 16000, 
+          channelCount: 1 
+        }
+      });
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      const audioChunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        
+        if (audioChunks.length === 0 || !voiceModeActiveRef.current) {
+          setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
+          isProcessingRef.current = false;
+          resolve(true); // Default to yes if no input
+          return;
+        }
+
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+
+        try {
+          const wavBlob = await convertWebmToWav(audioBlob);
+          
+          const formData = new FormData();
+          formData.append("audio", wavBlob, "recording.wav");
+          formData.append("language", languageValue);
+
+          console.log(`📤 Sending transcription request for AI feedback...`);
+          const response = await fetch(`${API_URL}/api/python-speech/transcribe`, {
+            method: "POST",
+            body: formData,
+            signal: AbortSignal.timeout(8000)
+          });
+
+          if (!response.ok) {
+            console.error(`❌ Transcription request failed for AI feedback`);
+            setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
+            isProcessingRef.current = false;
+            resolve(true); // Default to yes on error
+            return;
+          }
+
+          const data = await response.json();
+          
+          setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
+          isProcessingRef.current = false;
+
+          if (data.success && data.text) {
+            const transcription = data.text.toLowerCase().trim();
+            console.log(`🎤 AI Feedback response: "${transcription}"`);
+            
+            const yesWords = languageValue === "sw" 
+              ? ['ndio', 'yes', 'yep', 'yeah', 'ok', 'sawa', 'hapana', 'no', 'nope', 'not', 'dont', "don't", 'cancel', 'stop']
+              : ['yes', 'yep', 'yeah', 'ok', 'sure', 'no', 'nope', 'not', 'dont', "don't", 'cancel', 'stop'];
+            
+            const noWords = languageValue === "sw" 
+              ? ['hapana', 'no', 'nope', 'not', 'dont', "don't", 'cancel', 'stop', 'la']
+              : ['no', 'nope', 'not', 'dont', "don't", 'cancel', 'stop'];
+            
+            // Check for "no" words first
+            const isNo = noWords.some(word => transcription.includes(word));
+            
+            if (isNo) {
+              console.log("❌ User said NO to AI feedback");
+              resolve(false);
+            } else {
+              // Default to yes for any other response or no clear "no"
+              console.log("✅ User said YES or defaulting to YES for AI feedback");
+              resolve(true);
+            }
+          } else {
+            console.log("❌ No text in transcription response, defaulting to YES");
+            resolve(true); // Default to yes
+          }
+        } catch (error: any) {
+          console.error("❌ ERROR in AI feedback transcription:", error);
+          setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
+          isProcessingRef.current = false;
+          resolve(true); // Default to yes on error
+        }
+      };
+
+      mediaRecorder.start();
+      
+      setTimeout(() => {
+        if (mediaRecorder.state === "recording" && voiceModeActiveRef.current) {
+          console.log(`⏰ Timeout for AI feedback, stopping recording`);
+          mediaRecorder.stop();
+        }
+      }, 5000);
+
+    } catch (error) {
+      console.error("❌ ERROR starting recording for AI feedback:", error);
+      setVoiceModeState((prev: any) => ({ ...prev, listening: false, currentField: null, status: "" }));
+      isProcessingRef.current = false;
+      resolve(true); // Default to yes on error
+    }
+  });
+};
 export const startVoiceMode = async (params: {
   languageValue: string;
   currentLanguage: any;
@@ -745,6 +907,9 @@ export const startVoiceMode = async (params: {
   fieldRefs: React.MutableRefObject<{ [key: string]: HTMLDivElement | null }>;
   hasHypertension?: boolean;
   hasDiabetes?: boolean;
+  // ✅ NEW: Add these parameters
+  setRequestAI: (value: boolean) => void;
+  onAutoSubmit: (aiRequested?: boolean) => Promise<void>;
 }): Promise<void> => {
   const {
     languageValue,
@@ -762,7 +927,9 @@ export const startVoiceMode = async (params: {
     API_URL,
     fieldRefs,
     hasHypertension = false,
-    hasDiabetes = false
+    hasDiabetes = false,
+    setRequestAI,
+    onAutoSubmit
   } = params;
 
   setVoiceModeState((prev: any) => ({ ...prev, active: true }));
@@ -849,6 +1016,7 @@ export const startVoiceMode = async (params: {
     }
   ];
 
+  // Field collection loop
   for (const field of allFields) {
     if (!voiceModeActiveRef.current) break;
     
@@ -966,15 +1134,60 @@ export const startVoiceMode = async (params: {
     }
   }
 
-  if (voiceModeActiveRef.current) {
-    const complete = languageValue === "sw"
-      ? "Imekamilika."
-      : "Complete.";
-    
-    await handleSpeak(complete);
-    toast.success(currentLanguage.voiceComplete, { duration: 3000 });
-  }
+  // ✅ NEW: Ask for AI feedback after all fields are collected
+if (voiceModeActiveRef.current) {
+  console.log("\n🤖 Asking for AI feedback preference...");
   
+  const wantsAI = await askForAIFeedback(
+    languageValue,
+    currentLanguage,
+    voiceModeActiveRef,
+    pausedRef,
+    setVoiceModeState,
+    handleSpeak,
+    voiceModeState.muted,
+    API_URL,
+    isProcessingRef,
+    mediaRecorderRef,
+    fieldRefs
+  );
+
+  console.log(`🤖 AI Feedback decision: ${wantsAI ? 'YES' : 'NO'}`);
+
+  // ✅ SINGLE submission with AI feedback value
+  // ✅ SINGLE submission with AI feedback value
+if (voiceModeActiveRef.current) {
+  console.log("\n📤 Auto-submitting form with AI feedback:", wantsAI);
+  
+  const submittingMsg = languageValue === "sw"
+    ? "Inatuma data..."
+    : "Submitting...";
+  
+  await handleSpeak(submittingMsg);
+  
+  try {
+    // ✅ Pass wantsAI directly as a parameter
+    await onAutoSubmit(wantsAI);
+    
+    const successMsg = languageValue === "sw"
+      ? "Imekamilika. Data imehifadhiwa."
+      : "Complete. Data saved.";
+    
+    await handleSpeak(successMsg);
+    toast.success(currentLanguage.voiceComplete, { duration: 3000 });
+  } catch (error) {
+    console.error("❌ Auto-submit failed:", error);
+    const errorMsg = languageValue === "sw"
+      ? "Hitilafu. Jaribu tena."
+      : "Error. Try again.";
+    
+    await handleSpeak(errorMsg);
+    toast.error(errorMsg, { duration: 3000 });
+  }
+}
+}
+ 
+  // Clean up voice mode
   setVoiceModeState((prev: any) => ({ 
     ...prev, 
     active: false, 
@@ -986,7 +1199,8 @@ export const startVoiceMode = async (params: {
   }));
   voiceModeActiveRef.current = false;
   pausedRef.current = false;
-};
+}
+
 
 export const stopVoiceMode = (params: {
   voiceModeActiveRef: React.MutableRefObject<boolean>;
