@@ -1,51 +1,70 @@
-// models/lifestyleModel.ts
-import { Schema, model, models } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
-const LifestyleSchema = new Schema(
+export interface ILifestyle extends Document {
+  userId: mongoose.Types.ObjectId;
+  alcohol: string;
+  smoking: string;
+  exercise: string;
+  sleep: string;
+  glucoseContext?: {
+    glucose: number;
+    context: "Fasting" | "Post-meal" | "Random";
+    readingDate: Date;
+  };
+  aiAdvice?: string;
+  language?: "en" | "sw"; // ✅ ADD THIS FIELD
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const lifestyleSchema = new Schema<ILifestyle>(
   {
-    userId: {
-      type: String,
+    userId: { 
+      type: Schema.Types.ObjectId, 
+      ref: "User", 
       required: true,
+      index: true // ✅ Add index for faster queries
     },
-    alcohol: {
-      type: String,
-      enum: ["None", "Occasionally", "Frequently"],
-      required: true,
+    alcohol: { 
+      type: String, 
+      required: true 
     },
-    smoking: {
-      type: String,
-      enum: ["None", "Light", "Heavy"],
-      required: true,
+    smoking: { 
+      type: String, 
+      required: true 
     },
-    exercise: {
-      type: String,
-      enum: ["Daily", "Few times/week", "Rarely", "None"],
-      required: true,
+    exercise: { 
+      type: String, 
+      required: true 
     },
-    sleep: {
-      type: String,
-      enum: ["<5 hrs", "6-7 hrs", "7-8 hrs", ">8 hrs", "Irregular"],
-      required: true,
-    },
-    aiAdvice: {
-      type: String,
-    },
-    warnings: {
-      type: [String],
+    sleep: { 
+      type: String, 
+      required: true 
     },
     glucoseContext: {
-      glucose: Number,
-      context: String,
-      readingDate: Date,
+      glucose: { type: Number },
+      context: { 
+        type: String, 
+        enum: ["Fasting", "Post-meal", "Random"] 
+      },
+      readingDate: { type: Date }
     },
+    aiAdvice: { 
+      type: String, 
+      default: "" 
+    },
+    language: { 
+      type: String, 
+      enum: ["en", "sw"], 
+      default: "en" 
+    } // ✅ LANGUAGE FIELD
   },
   { 
     timestamps: true 
   }
 );
 
-// Index for efficient queries
-LifestyleSchema.index({ userId: 1, createdAt: -1 });
+// ✅ Add compound index for efficient queries
+lifestyleSchema.index({ userId: 1, createdAt: -1 });
 
-const Lifestyle = models.Lifestyle || model("Lifestyle", LifestyleSchema);
-export default Lifestyle;
+export default mongoose.model<ILifestyle>("Lifestyle", lifestyleSchema);

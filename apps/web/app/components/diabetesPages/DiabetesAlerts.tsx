@@ -1,21 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TriangleAlert, CheckCircle } from "lucide-react";
+import { TriangleAlert, CheckCircle, MapPin, Loader2, Heart, Activity } from "lucide-react";
 
 type DiabetesStatus = {
   glucose: number;
   context: "Fasting" | "Post-meal" | "Random";
+  systolic?: number;
+  diastolic?: number;
+  heartRate?: number;
   status: "alert" | "stable";
+  hasBothConditions?: boolean;
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface Props {
   refreshToken?: number;
+  language?: "en" | "sw";
 }
 
-export default function DiabetesAlerts({ refreshToken }: Props) {
+// Helper function to decode JWT and extract user info
+const getUserFromToken = () => {
+  try {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) return null;
+
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error("Error decoding token:", error);
+    return null;
+  }
+};
+
+export default function DiabetesAlerts({ refreshToken, language = "en" }: Props) {
   const [statusData, setStatusData] = useState<DiabetesStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,17 +56,36 @@ export default function DiabetesAlerts({ refreshToken }: Props) {
 
         const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
         if (!token) {
-          setError("You must be logged in to view diabetes alerts.");
+          setError(language === "sw" 
+            ? "Lazima uwe umeingia ili kuona arifa" 
+            : "You must be logged in to view diabetes alerts.");
           setLoading(false);
           return;
         }
+
+        // Check if user has both conditions
+        const user = getUserFromToken();
+        const userDiseases = user?.disease || [];
+        const hasDiabetes = userDiseases.some((d: string) => d.toLowerCase().includes('diabetes'));
+        const hasHypertension = userDiseases.some((d: string) => 
+          d.toLowerCase().includes('hypertension') || d.toLowerCase().includes('high blood pressure')
+        );
+        const hasBothConditions = hasDiabetes && hasHypertension;
+
+        console.log("🔍 DiabetesAlerts - User Disease Status:", {
+          userDiseases,
+          hasDiabetes,
+          hasHypertension,
+          hasBothConditions
+        });
 
         const res = await fetch(`${API_URL}/api/diabetesVitals/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!res.ok) {
-          const msg = (await res.json().catch(() => null))?.message || `Failed to load vitals`;
+          const msg = (await res.json().catch(() => null))?.message || 
+            (language === "sw" ? "Imeshindwa kupakia data" : "Failed to load vitals");
           throw new Error(msg);
         }
 
@@ -69,48 +116,298 @@ export default function DiabetesAlerts({ refreshToken }: Props) {
         const latest = todayVitals[0];
         const glucose = Number(latest.glucose);
         const context = latest.context || "Random";
+        const systolic = latest.systolic ? Number(latest.systolic) : undefined;
+        const diastolic = latest.diastolic ? Number(latest.diastolic) : undefined;
+        const heartRate = latest.heartRate ? Number(latest.heartRate) : undefined;
 
         let isAlert = false;
+        
+        // Check glucose levels
         if (context === "Fasting") isAlert = glucose < 70 || glucose > 125;
         else if (context === "Post-meal") isAlert = glucose < 70 || glucose > 180;
         else isAlert = glucose < 70 || glucose > 200;
 
-        setStatusData({ glucose, context, status: isAlert ? "alert" : "stable" });
+        // Check BP levels if user has both conditions
+        if (hasBothConditions && systolic && diastolic) {
+          const bpAlert = systolic >= 140 || diastolic >= 90 || systolic < 90 || diastolic < 60;
+          isAlert = isAlert || bpAlert;
+        }
+
+        setStatusData({ 
+          glucose, 
+          context, 
+          systolic, 
+          diastolic, 
+          heartRate, 
+          status: isAlert ? "alert" : "stable",
+          hasBothConditions 
+        });
       } catch (e: any) {
-        setError(e?.message || "Failed to load diabetes alerts");
+        setError(e?.message || (language === "sw" ? "Imeshindwa kupakia arifa" : "Failed to load diabetes alerts"));
       } finally {
         setLoading(false);
       }
     };
 
     fetchTodayVitals();
-  }, [refreshToken]);
-
-  if (loading) return <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">Loading diabetes alert...</div>;
-  if (error) return <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">{error}</div>;
-  if (!statusData) return <div className="bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 flex items-center justify-center min-h-[120px]">No glucose data for today. Please enter your vitals.</div>;
+  }, [refreshToken, language]);
 
   function getGlucoseCategory(glucose: number, context: string) {
-    if (glucose < 70) return { title: "Low Blood Sugar", color: "bg-blue-50 border-blue-600", text: "text-blue-700", icon: <TriangleAlert color="#2563eb" size={20} />, message: "Glucose too low!", button: true };
+    const isSwahili = language === "sw";
+    
+    if (glucose < 70) return { 
+      title: isSwahili ? "Sukari ya Chini" : "Low Blood Sugar", 
+      color: "bg-blue-50 border-blue-600", 
+      text: "text-blue-950", 
+      icon: <TriangleAlert className="text-blue-600" size={16} />
+    };
+    
     if (context === "Fasting") return glucose <= 125
-      ? { title: "Normal Fasting Glucose", color: "bg-green-50 border-green-600", text: "text-green-700", icon: <CheckCircle color="#16a34a" size={20} />, message: "Fasting glucose normal", button: false }
-      : { title: "High Fasting Glucose", color: "bg-red-50 border-red-600", text: "text-red-700", icon: <TriangleAlert color="#dc2626" size={20} />, message: "Fasting glucose high", button: true };
+      ? { 
+        title: isSwahili ? "Kawaida (Njaa)" : "Normal Fasting", 
+        color: "bg-emerald-50 border-emerald-600", 
+        text: "text-emerald-950", 
+        icon: <CheckCircle className="text-emerald-600" size={16} />
+      }
+      : { 
+        title: isSwahili ? "Juu (Njaa)" : "High Fasting", 
+        color: "bg-red-50 border-red-600", 
+        text: "text-red-950", 
+        icon: <TriangleAlert className="text-red-600" size={16} />
+      };
+    
     if (context === "Post-meal") return glucose <= 180
-      ? { title: "Normal Post-meal Glucose", color: "bg-green-50 border-green-600", text: "text-green-700", icon: <CheckCircle color="#16a34a" size={20} />, message: "Post-meal glucose normal", button: false }
-      : { title: "High Post-meal Glucose", color: "bg-red-50 border-red-600", text: "text-red-700", icon: <TriangleAlert color="#dc2626" size={20} />, message: "Post-meal glucose high", button: true };
+      ? { 
+        title: isSwahili ? "Kawaida (Baada ya Kula)" : "Normal Post-meal", 
+        color: "bg-emerald-50 border-emerald-600", 
+        text: "text-emerald-950", 
+        icon: <CheckCircle className="text-emerald-600" size={16} />
+      }
+      : { 
+        title: isSwahili ? "Juu (Baada ya Kula)" : "High Post-meal", 
+        color: "bg-red-50 border-red-600", 
+        text: "text-red-950", 
+        icon: <TriangleAlert className="text-red-600" size={16} />
+      };
+    
     return glucose <= 200
-      ? { title: "Normal Random Glucose", color: "bg-green-50 border-green-600", text: "text-green-700", icon: <CheckCircle color="#16a34a" size={20} />, message: "Random glucose normal", button: false }
-      : { title: "High Random Glucose", color: "bg-red-50 border-red-600", text: "text-red-700", icon: <TriangleAlert color="#dc2626" size={20} />, message: "Random glucose high", button: true };
+      ? { 
+        title: isSwahili ? "Kawaida (Bila Mpango)" : "Normal Random", 
+        color: "bg-emerald-50 border-emerald-600", 
+        text: "text-emerald-950", 
+        icon: <CheckCircle className="text-emerald-600" size={16} />
+      }
+      : { 
+        title: isSwahili ? "Juu (Bila Mpango)" : "High Random", 
+        color: "bg-red-50 border-red-600", 
+        text: "text-red-950", 
+        icon: <TriangleAlert className="text-red-600" size={16} />
+      };
   }
 
-  const glucoseCategory = getGlucoseCategory(statusData.glucose, statusData.context);
+  function getBloodPressureStatus(systolic: number, diastolic: number) {
+    const isSwahili = language === "sw";
+    
+    if (systolic < 90 || diastolic < 60) {
+      return {
+        category: isSwahili ? "Shinikizo la Chini" : "Low BP",
+        color: "bg-blue-50 border-blue-600",
+        textColor: "text-blue-950",
+        icon: <TriangleAlert className="text-blue-600" size={16} />,
+        severity: "low"
+      };
+    } else if (systolic < 120 && diastolic < 80) {
+      return {
+        category: isSwahili ? "Kawaida" : "Normal",
+        color: "bg-emerald-50 border-emerald-600",
+        textColor: "text-emerald-950",
+        icon: <CheckCircle className="text-emerald-600" size={16} />,
+        severity: "normal"
+      };
+    } else if (systolic >= 120 && systolic < 130 && diastolic < 80) {
+      return {
+        category: isSwahili ? "Kiwango Cha Juu" : "Elevated",
+        color: "bg-yellow-50 border-yellow-600",
+        textColor: "text-yellow-950",
+        icon: <TriangleAlert className="text-yellow-600" size={16} />,
+        severity: "elevated"
+      };
+    } else if ((systolic >= 130 && systolic < 140) || (diastolic >= 80 && diastolic < 90)) {
+      return {
+        category: isSwahili ? "Hatua 1" : "Stage 1 HTN",
+        color: "bg-orange-50 border-orange-600",
+        textColor: "text-orange-950",
+        icon: <TriangleAlert className="text-orange-600" size={16} />,
+        severity: "stage1"
+      };
+    } else if ((systolic >= 140 && systolic < 180) || (diastolic >= 90 && diastolic < 120)) {
+      return {
+        category: isSwahili ? "Hatua 2" : "Stage 2 HTN",
+        color: "bg-red-50 border-red-600",
+        textColor: "text-red-950",
+        icon: <TriangleAlert className="text-red-600" size={16} />,
+        severity: "stage2"
+      };
+    } else {
+      return {
+        category: isSwahili ? "Mgongano wa Hatari" : "Hypertensive Crisis",
+        color: "bg-red-50 border-red-900",
+        textColor: "text-red-950",
+        icon: <TriangleAlert className="text-red-900" size={16} />,
+        severity: "crisis"
+      };
+    }
+  }
 
+  // Loading State
+  if (loading) return (
+    <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-2 flex items-center justify-center">
+      <Loader2 className="w-4 h-4 text-cyan-600 animate-spin mr-1.5" />
+      <span className="text-sm text-gray-600">
+        {language === "sw" ? "Inapakia arifa..." : "Loading alert..."}
+      </span>
+    </div>
+  );
+  
+  // Error State
+  if (error) return (
+    <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-2">
+      <div className="flex flex-col gap-2">
+        <p className="text-sm text-red-600">{error}</p>
+        <a href="/map" className="w-full">
+          <button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-2 py-1.5 rounded-md transition-all text-sm font-medium flex items-center justify-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5" />
+            {language === "sw" ? "Tafuta Vituo" : "Find Facilities"}
+          </button>
+        </a>
+      </div>
+    </div>
+  );
+  
+  // No Data State
+  if (!statusData) return (
+    <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-2">
+      <div className="flex flex-col gap-2">
+        <p className="text-sm text-gray-600">
+          {language === "sw" 
+            ? "Hakuna data ya sukari kwa leo. Ingiza viwango vyako." 
+            : "No glucose data for today. Enter vitals."}
+        </p>
+        <a href="/map" className="w-full">
+          <button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-2 py-1.5 rounded-md transition-all text-sm font-medium flex items-center justify-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5" />
+            {language === "sw" ? "Tafuta Vituo" : "Find Facilities"}
+          </button>
+        </a>
+      </div>
+    </div>
+  );
+
+  const glucoseCategory = getGlucoseCategory(statusData.glucose, statusData.context);
+  const bpStatus = statusData.systolic && statusData.diastolic 
+    ? getBloodPressureStatus(statusData.systolic, statusData.diastolic)
+    : null;
+
+  // For dual conditions, use white background with individual colored cards
+  // For single condition, use the condition's background color
+  const containerClass = statusData.hasBothConditions 
+    ? "bg-white shadow-sm rounded-lg border border-gray-200 p-2"
+    : `${glucoseCategory.color} shadow-sm rounded-lg border-l-4 p-2`;
+
+  // Alert Display - Independent Color Coding
   return (
-    <div className={`bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 border-l-4 ${glucoseCategory.color}`}>
-      <div className="flex items-center gap-2 mb-2">{glucoseCategory.icon}<h3 className={`text-lg font-bold ${glucoseCategory.text}`}>{glucoseCategory.title}</h3></div>
-      <p className={`text-sm ${glucoseCategory.text} mb-4`}>{glucoseCategory.message}</p>
-      <div className="text-sm mb-2"><p><strong>Glucose:</strong> {statusData.glucose} mg/dL</p><p><strong>Context:</strong> {statusData.context}</p></div>
-      {glucoseCategory.button && <button className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition">Find Doctor Nearby</button>}
+    <div className={containerClass}>
+      {/* Dual Condition Header */}
+      {statusData.hasBothConditions && (
+        <div className="mb-2 pb-2 border-b border-gray-200">
+          <div className="flex items-center gap-1.5">
+            <Activity className="w-3.5 h-3.5 text-blue-600" />
+            <Heart className="w-3.5 h-3.5 text-red-600" />
+            <span className="text-xs font-bold text-gray-700">
+              {language === "sw" 
+                ? "Tathmini ya Kisukari na Shinikizo la Juu" 
+                : "Diabetes & Hypertension Assessment"}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        {/* Glucose Status Card - Independent Colors - Fixed Height */}
+        <div className={statusData.hasBothConditions ? `${glucoseCategory.color} border-l-4 rounded-lg p-2 h-[72px] flex flex-col justify-center` : "h-[72px] flex flex-col justify-center"}>
+          <div className="flex flex-col gap-1">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Activity className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                {glucoseCategory.icon}
+                <h3 className={`text-sm font-bold ${glucoseCategory.text} truncate`}>
+                  {glucoseCategory.title}
+                </h3>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+                <span className="font-semibold">
+                  <span className={glucoseCategory.text}>
+                    {language === "sw" ? "Sukari:" : "Glucose:"}
+                  </span> {statusData.glucose} mg/dL
+                </span>
+                <span className={`px-1.5 py-0.5 rounded-full ${glucoseCategory.color} ${glucoseCategory.text} font-medium text-xs`}>
+                  {language === "sw" 
+                    ? (statusData.context === "Fasting" ? "Njaa" : statusData.context === "Post-meal" ? "Baada ya Kula" : "Bila Mpango")
+                    : statusData.context}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Blood Pressure Status Card - Independent Colors - Fixed Height */}
+        {statusData.hasBothConditions && bpStatus && statusData.systolic && statusData.diastolic && (
+          <div className={`${bpStatus.color} border-l-4 rounded-lg p-2 h-[72px] flex flex-col justify-center`}>
+            <div className="flex flex-col gap-1">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Heart className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
+                  {bpStatus.icon}
+                  <h4 className={`text-sm font-bold ${bpStatus.textColor}`}>
+                    {bpStatus.category}
+                  </h4>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+                  <span className="font-semibold">
+                    <span className={bpStatus.textColor}>
+                      {language === "sw" ? "Sys:" : "Sys:"}
+                    </span> {statusData.systolic}
+                  </span>
+                  <span className="font-semibold">
+                    <span className={bpStatus.textColor}>
+                      {language === "sw" ? "Dia:" : "Dia:"}
+                    </span> {statusData.diastolic}
+                  </span>
+                  {statusData.heartRate && (
+                    <span className="font-semibold">
+                      <span className="text-gray-700">
+                        {language === "sw" ? "HR:" : "HR:"}
+                      </span> {statusData.heartRate}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Single Action Button */}
+        <div className="pt-1">
+          <a href="/map" className="w-full block">
+            <button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-2 py-1.5 rounded-md transition-all text-sm font-semibold flex items-center justify-center gap-1.5 shadow-sm">
+              <MapPin className="w-3.5 h-3.5" />
+              {language === "sw" ? "Tafuta Vituo" : "Find Facilities"}
+            </button>
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

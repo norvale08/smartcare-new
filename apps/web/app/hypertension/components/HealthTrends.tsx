@@ -5,6 +5,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
 import { Activity } from "lucide-react";
+import { useTranslation } from "../../../lib/hypertension/useTranslation";
 
 interface VitalsData {
   systolic: number;
@@ -19,17 +20,21 @@ interface HealthTrendsProps {
 }
 
 const HealthTrends: React.FC<HealthTrendsProps> = ({ vitals }) => {
+  const { t, language } = useTranslation();
+
   return (
     <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
       <div className="flex items-center gap-2 mb-6">
         <Activity className="text-emerald-600" size={20} />
-        <h3 className="text-lg font-semibold text-gray-800">Health Trends</h3>
+        <h3 className="text-lg font-semibold text-gray-800">
+          {language === "en-US" ? "Health Trends" : "Mienendo ya Afya"}
+        </h3>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
           <h4 className="font-semibold text-red-800 mb-4 flex items-center gap-2">
             <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-            Blood Pressure Trends
+            {language === "en-US" ? "Blood Pressure Trends" : "Mienendo ya Shinikizo la Damu"}
           </h4>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={vitals.length > 0 ? vitals : []}>
@@ -55,7 +60,7 @@ const HealthTrends: React.FC<HealthTrendsProps> = ({ vitals }) => {
               />
               <YAxis domain={[60, 180]} fontSize={12} stroke="#6b7280" />
               <Tooltip 
-                labelFormatter={(value) => `Date: ${value}`}
+                labelFormatter={(value) => language === "en-US" ? `Date: ${value}` : `Tarehe: ${value}`}
                 formatter={(value, name) => [value, name]}
                 contentStyle={{
                   backgroundColor: 'white',
@@ -70,7 +75,7 @@ const HealthTrends: React.FC<HealthTrendsProps> = ({ vitals }) => {
                 dataKey="systolic" 
                 stroke="#dc2626" 
                 strokeWidth={3}
-                name="Systolic" 
+                name={t.vitals.systolic}
                 dot={{ fill: '#dc2626', strokeWidth: 2, r: 5 }}
                 activeDot={{ r: 7, fill: '#dc2626' }}
               />
@@ -79,7 +84,7 @@ const HealthTrends: React.FC<HealthTrendsProps> = ({ vitals }) => {
                 dataKey="diastolic" 
                 stroke="#2563eb" 
                 strokeWidth={3}
-                name="Diastolic" 
+                name={t.vitals.diastolic}
                 dot={{ fill: '#2563eb', strokeWidth: 2, r: 5 }}
                 activeDot={{ r: 7, fill: '#2563eb' }}
               />
@@ -87,8 +92,12 @@ const HealthTrends: React.FC<HealthTrendsProps> = ({ vitals }) => {
           </ResponsiveContainer>
           {vitals.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-red-600 text-sm font-medium">No data available</p>
-              <p className="text-red-500 text-xs mt-1">Save some vitals to see trends</p>
+              <p className="text-red-600 text-sm font-medium">
+                {language === "en-US" ? "No data available" : "Hakuna data inayopatikana"}
+              </p>
+              <p className="text-red-500 text-xs mt-1">
+                {language === "en-US" ? "Save some vitals to see trends" : "Hifadhi vitali ili kuona mienendo"}
+              </p>
             </div>
           )}
         </div>
@@ -96,7 +105,7 @@ const HealthTrends: React.FC<HealthTrendsProps> = ({ vitals }) => {
         <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
           <h4 className="font-semibold text-orange-800 mb-4 flex items-center gap-2">
             <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
-            Heart Rate Trends
+            {language === "en-US" ? "Heart Rate Trends" : "Mienendo ya Moyo"}
           </h4>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={vitals.length > 0 ? vitals : []}>
@@ -118,8 +127,8 @@ const HealthTrends: React.FC<HealthTrendsProps> = ({ vitals }) => {
               />
               <YAxis domain={[50, 120]} fontSize={12} stroke="#6b7280" />
               <Tooltip 
-                labelFormatter={(value) => `Date: ${value}`}
-                formatter={(value, name) => [`${value} BPM`, name]}
+                labelFormatter={(value) => language === "en-US" ? `Date: ${value}` : `Tarehe: ${value}`}
+                formatter={(value, name) => [language === "en-US" ? `${value} BPM` : `${value} MPM`, name]}
                 contentStyle={{
                   backgroundColor: 'white',
                   border: '1px solid #e5e7eb',
@@ -133,7 +142,7 @@ const HealthTrends: React.FC<HealthTrendsProps> = ({ vitals }) => {
                 dataKey="heartRate" 
                 stroke="#ea580c" 
                 strokeWidth={3}
-                name="Heart Rate" 
+                name={t.vitals.heartRate}
                 dot={{ fill: '#ea580c', strokeWidth: 2, r: 5 }}
                 activeDot={{ r: 7, fill: '#ea580c' }}
               />
@@ -141,8 +150,12 @@ const HealthTrends: React.FC<HealthTrendsProps> = ({ vitals }) => {
           </ResponsiveContainer>
           {vitals.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-orange-600 text-sm font-medium">No data available</p>
-              <p className="text-orange-500 text-xs mt-1">Save some vitals to see trends</p>
+              <p className="text-orange-600 text-sm font-medium">
+                {language === "en-US" ? "No data available" : "Hakuna data inayopatikana"}
+              </p>
+              <p className="text-orange-500 text-xs mt-1">
+                {language === "en-US" ? "Save some vitals to see trends" : "Hifadhi vitali ili kuona mienendo"}
+              </p>
             </div>
           )}
         </div>

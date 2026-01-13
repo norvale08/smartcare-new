@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import React from "react";
+import { useTranslation } from "../../../lib/hypertension/useTranslation";
 
 interface PatientProfileProps {
   patient: any;
@@ -9,6 +10,8 @@ interface PatientProfileProps {
 }
 
 const PatientProfile: React.FC<PatientProfileProps> = ({ patient, vitals, onEditClick }) => {
+  const { t } = useTranslation();
+
   const computeAge = (dob?: string) => {
     if (!dob) return "—";
     const birth = new Date(dob);
@@ -31,7 +34,9 @@ const PatientProfile: React.FC<PatientProfileProps> = ({ patient, vitals, onEdit
     }
   };
 
-  const fullName = patient?.fullName || `${patient?.firstname ?? ""} ${patient?.lastname ?? ""}`.trim() || "Unknown Patient";
+  const fullName = patient?.fullName || `${patient?.firstname ?? ""} ${patient?.lastname ?? ""}`.trim() || 
+    (t.language === "en-US" ? "Unknown Patient" : "Mgonjwa Asiyejulikana");
+  
   const initial = (patient?.fullName?.[0] || patient?.firstname?.[0] || "P").toUpperCase();
   const lastCheckIn = vitals.length > 0 ? vitals[vitals.length - 1]?.createdAt : null;
 
@@ -48,21 +53,22 @@ const PatientProfile: React.FC<PatientProfileProps> = ({ patient, vitals, onEdit
             {fullName}
           </h2>
           <p className="text-sm text-gray-600">
-            Age: {computeAge(patient?.dob)} | Weight: {patient?.weight ?? "—"} kg
+            {t.language === "en-US" ? "Age" : "Umri"}: {computeAge(patient?.dob)} |{" "}
+            {t.language === "en-US" ? "Weight" : "Uzito"}: {patient?.weight ?? "—"} kg
             <br />
-            Last check-in: {formatDateTime(lastCheckIn)}
+            {t.language === "en-US" ? "Last check-in" : "Ukaguzi wa mwisho"}: {formatDateTime(lastCheckIn)}
           </p>
         </div>
       </div>
       <div className="flex items-center gap-3">
         <Link
-  href="/profile?step=5"
-  className="inline-block px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm border border-blue-200 font-medium text-sm"
->
-  Edit Profile
-</Link>
+          href="/profile?step=5"
+          className="inline-block px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm border border-blue-200 font-medium text-sm"
+        >
+          {t.language === "en-US" ? "Edit Profile" : "Hariri Wasifu"}
+        </Link>
         <div className="bg-emerald-400 text-white rounded-full px-4 py-2 text-sm font-medium">
-          ● {patient?.status || "Active"}
+          ● {patient?.status || (t.language === "en-US" ? "Active" : "Imekua")}
         </div>
       </div>
     </div>

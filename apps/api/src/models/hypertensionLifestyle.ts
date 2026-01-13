@@ -8,6 +8,15 @@ export interface ILifestyle extends Document {
   sleep: string;
   aiAdvice?: string;
   warnings: string[];
+  dietData?: {
+    breakfast: string;
+    lunch: string;
+    dinner: string;
+    snacks: string;
+    generalAdvice: string;
+    calorieTarget?: number;
+  };
+  dietUpdatedAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -44,7 +53,16 @@ const LifestyleSchema: Schema = new Schema({
   },
   warnings: [{ 
     type: String 
-  }]
+  }],
+  dietData: {
+    breakfast: { type: String, default: '' },
+    lunch: { type: String, default: '' },
+    dinner: { type: String, default: '' },
+    snacks: { type: String, default: '' },
+    generalAdvice: { type: String, default: '' },
+    calorieTarget: { type: Number, default: null }
+  },
+  dietUpdatedAt: { type: Date }
 }, { timestamps: true });
 
 const HypertensionLifestyle: Model<ILifestyle> = mongoose.model<ILifestyle>(

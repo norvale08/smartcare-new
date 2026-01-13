@@ -20,6 +20,12 @@ const HypertensionVitalSchema: Schema = new Schema({
   systolic: { type: Number, required: true },
   diastolic: { type: Number, required: true },
   heartRate: { type: Number, required: true },
+  // Activity context fields
+  activityType: { type: String, required: false },
+  duration: { type: Number, required: false },
+  intensity: { type: String, required: false },
+  timeSinceActivity: { type: Number, required: false },
+  notes: { type: String, required: false },
 },
   { timestamps: true });
 

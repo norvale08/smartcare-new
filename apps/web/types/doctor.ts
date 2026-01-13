@@ -18,6 +18,10 @@ export interface Patient {
   };
   riskLevel: "low" | "high" | "critical";
   location?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
   lastUpdate?: string;
 }
 

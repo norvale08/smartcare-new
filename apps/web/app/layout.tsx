@@ -4,7 +4,7 @@ import './globals.css'
 import {AuthProvider} from "./Providers"
 
 export const metadata: Metadata = {
-  title: 'Your App Title',
+  title: 'SmartCare',
   description: 'Your app description',
 }
 

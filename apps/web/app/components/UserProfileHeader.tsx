@@ -1,5 +1,19 @@
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
+"use client";
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import DoctorManagement from "./DoctorManagement";
+import { 
+  User, 
+  Stethoscope, 
+  X, 
+  Calendar,
+  Activity,
+  AlertCircle,
+  RefreshCw,
+  Plus,
+  Clock,
+  Languages
+} from "lucide-react";
 
 interface UserProfile {
   _id: string;
@@ -21,375 +35,471 @@ interface UserProfile {
   age?: number;
 }
 
+interface UserProfileHeaderProps {
+  onDoctorsToggle?: (show: boolean) => void;
+  currentLanguage?: "en" | "sw";
+  onLanguageChange?: (language: "en" | "sw") => void;
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-const UserProfileHeader: React.FC = () => {
+const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({ 
+  onDoctorsToggle, 
+  currentLanguage = "en",
+  onLanguageChange 
+}) => {
+  const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showDoctors, setShowDoctors] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [language, setLanguage] = useState<"en" | "sw">(currentLanguage);
 
-  const getAuthToken = (): string | null => {
+  const getAuthToken = useCallback((): string | null => {
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-
-      if (token && typeof token === "string") {
-        console.log("✅ Token found");
-
-        try {
-          const tokenParts = token.split(".");
-          if (tokenParts.length === 3 && tokenParts[1]) {
-            const payload = JSON.parse(atob(tokenParts[1]));
-            const currentTime = Math.floor(Date.now() / 1000);
-
-            if (payload.exp && payload.exp < currentTime) {
-              console.log("❌ Token expired");
-              localStorage.removeItem("token");
-              sessionStorage.removeItem("token");
-              return null;
-            }
-          }
-        } catch (e) {
-          console.log("⚠️ Non-JWT token or parsing error");
-        }
-
-        return token;
+      if (typeof window !== "undefined") {
+        return localStorage.getItem("token") || sessionStorage.getItem("token");
       }
       return null;
     } catch (error) {
-      console.error("❌ Storage access error:", error);
+      console.error("Error accessing storage:", error);
       return null;
     }
-  };
+  }, []);
 
-  const calculateAge = (dob: string): number => {
-    const today = new Date();
-    const birthDate = new Date(dob);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+  const calculateAge = useCallback((dob: string): number => {
+    try {
+      const today = new Date();
+      const birthDate = new Date(dob);
+      
+      if (isNaN(birthDate.getTime())) {
+        console.warn("Invalid date of birth:", dob);
+        return 0;
+      }
+      
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      return age;
+    } catch (error) {
+      console.error("Error calculating age:", error);
+      return 0;
     }
+  }, []);
 
-    return age;
-  };
-
-  const calculateBMI = (weight: number, height: number): string => {
-    if (!weight || !height) return "N/A";
-    const bmi = weight / Math.pow(height / 100, 2);
-    return bmi.toFixed(1);
-  };
-
-  const getBMIStatus = (bmi: string): { status: string; color: string } => {
-    const bmiValue = parseFloat(bmi);
-    if (isNaN(bmiValue)) return { status: "Unknown", color: "text-gray-500" };
-
-    if (bmiValue < 18.5) return { status: "Underweight", color: "text-blue-600" };
-    if (bmiValue < 25) return { status: "Normal", color: "text-green-600" };
-    if (bmiValue < 30) return { status: "Overweight", color: "text-yellow-600" };
-    return { status: "Obese", color: "text-red-600" };
-  };
-
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     setLoading(true);
     setError(null);
-
+    
     try {
       const token = getAuthToken();
       if (!token) {
-        setError("No authentication token found. Please log in.");
+        setError("Authentication required");
         setLoading(false);
         return;
       }
 
-      console.log("🔍 Fetching profile from:", `${API_URL}/api/profile/me`);
-
       const response = await fetch(`${API_URL}/api/profile/me`, {
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
+        credentials: 'include',
       });
 
-      console.log("📡 Response status:", response.status);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch profile: ${response.status}`);
+      }
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log("📋 Profile data received:", result);
-
-        if (result.success && result.data) {
-          const profileData = result.data;
-          const age = profileData.dob ? calculateAge(profileData.dob) : undefined;
-
-          setUserProfile({
-            ...profileData,
-            age,
-          });
-          console.log("✅ Profile loaded successfully");
-        } else {
-          setError("Invalid response format from server");
-        }
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        const profileData = result.data;
+        const age = profileData.dob ? calculateAge(profileData.dob) : undefined;
+        setUserProfile({ ...profileData, age });
       } else {
-        const errorData = await response.json().catch(() => ({ message: "Server error" }));
-        console.error("❌ Error response:", errorData);
-
-        if (errorData.code === "PROFILE_NOT_FOUND") {
-          setError("Profile not found. Please complete your profile setup.");
-        } else {
-          setError(errorData.message || `Server error: ${response.status}`);
-        }
+        throw new Error("Invalid response format");
       }
     } catch (err) {
-      console.error("❌ Network error:", err);
-
-      if (err instanceof TypeError && err.message.includes("fetch")) {
-        setError("Unable to connect to server. Please check your connection.");
-      } else {
-        setError("Network error while fetching profile");
-      }
+      console.error("Error fetching profile:", err);
+      setError(err instanceof Error ? err.message : "Failed to load profile");
     } finally {
       setLoading(false);
     }
+  }, [getAuthToken, calculateAge]);
+
+  const handleEscapeKey = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Escape' && showDoctors) {
+      handleShowDoctors();
+    }
+  }, [showDoctors]);
+
+  const handleBackdropClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      handleShowDoctors();
+    }
+  }, []);
+
+  // Handle language change
+  const handleLanguageChange = (newLanguage: "en" | "sw") => {
+    setLanguage(newLanguage);
+    if (onLanguageChange) {
+      onLanguageChange(newLanguage);
+    }
+    
+    // Optional: Save language preference to localStorage
+    if (typeof window !== "undefined") {
+      localStorage.setItem("preferredLanguage", newLanguage);
+    }
   };
+
+  // Load language preference from localStorage on component mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedLanguage = localStorage.getItem("preferredLanguage") as "en" | "sw";
+      if (savedLanguage && savedLanguage !== language) {
+        setLanguage(savedLanguage);
+        if (onLanguageChange) {
+          onLanguageChange(savedLanguage);
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     fetchUserProfile();
-  }, []);
+  }, [fetchUserProfile]);
 
+  useEffect(() => {
+    if (showDoctors) {
+      document.addEventListener('keydown', handleEscapeKey);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.removeEventListener('keydown', handleEscapeKey);
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+      document.body.style.overflow = 'unset';
+    };
+  }, [showDoctors, handleEscapeKey]);
+
+  const handleViewProfile = () => {
+    router.push("/profile?step=5");
+  };
+
+  const handleShowDoctors = () => {
+    const newShowDoctors = !showDoctors;
+    setShowDoctors(newShowDoctors);
+    if (onDoctorsToggle) {
+      onDoctorsToggle(newShowDoctors);
+    }
+  };
+
+  const handleRetry = () => {
+    fetchUserProfile();
+  };
+
+  // Language content for the header
+  const languageContent = {
+    en: {
+      profile: "Profile",
+      doctors: "Doctors",
+      dr: "Dr",
+      view: "View",
+      noProfile: "No Profile Found",
+      completeProfile: "Complete your profile to get started",
+      profileError: "Profile Error",
+      createProfile: "Create Profile",
+      doctorManagement: "Doctor Management",
+      doctorDescription: "Connect and communicate with your healthcare team",
+      close: "Close",
+      addDoctor: "Add Doctor",
+      healthcareTeam: "Your healthcare team is essential for comprehensive care"
+    },
+    sw: {
+      profile: "Wasifu",
+      doctors: "Madaktari",
+      dr: "Dk",
+      view: "Tazama",
+      noProfile: "Hakuna Wasifu Ulipatikana",
+      completeProfile: "Kamilisha wasifu wako kuanza",
+      profileError: "Hitilafu ya Wasifu",
+      createProfile: "Unda Wasifu",
+      doctorManagement: "Usimamizi wa Daktari",
+      doctorDescription: "Wasiliana na ushirikiana na timu yako ya afya",
+      close: "Funga",
+      addDoctor: "Ongeza Daktari",
+      healthcareTeam: "Timu yako ya afya ni muhimu kwa huduma kamili"
+    }
+  };
+
+  const currentLangContent = languageContent[language];
+
+  // Loading state - COMPACT
   if (loading) {
     return (
-      <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
-        <div className="animate-pulse">
-          <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 bg-gray-300 rounded-full"></div>
-            <div className="space-y-2 flex-1">
-              <div className="h-6 bg-gray-300 rounded w-48"></div>
-              <div className="h-4 bg-gray-300 rounded w-32"></div>
+      <div className="w-full bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-300 rounded-full animate-pulse" />
+              <div className="space-y-1.5 hidden sm:block">
+                <div className="h-3 bg-gray-300 rounded w-24 animate-pulse" />
+                <div className="h-2.5 bg-gray-300 rounded w-20 animate-pulse" />
+              </div>
             </div>
-          </div>
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="h-20 bg-gray-300 rounded"></div>
-            <div className="h-20 bg-gray-300 rounded"></div>
-            <div className="h-20 bg-gray-300 rounded"></div>
-            <div className="h-20 bg-gray-300 rounded"></div>
+            <div className="flex space-x-2">
+              <div className="h-7 bg-gray-300 rounded-lg w-16 animate-pulse" />
+              <div className="h-7 bg-gray-300 rounded-lg w-16 animate-pulse" />
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  // Error state - COMPACT
+  if (error && !userProfile) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-        <div className="flex items-center">
-          <div className="text-red-600 mr-3 text-2xl">⚠️</div>
-          <div className="flex-1">
-            <h3 className="text-red-800 font-semibold">Profile Error</h3>
-            <p className="text-red-700 text-sm">{error}</p>
+      <div className="w-full bg-white border-b border-red-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-full flex items-center justify-center border border-red-200">
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+              </div>
+              <div className="hidden sm:block">
+                <h3 className="text-sm font-semibold text-gray-900">{currentLangContent.profileError}</h3>
+                <p className="text-xs text-gray-600">{error}</p>
+              </div>
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={handleRetry}
+                className="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center space-x-1.5 text-xs"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Retry</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // No profile state - COMPACT
+  if (!userProfile) {
+    return (
+      <div className="w-full bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              </div>
+              <div className="hidden sm:block">
+                <h3 className="text-sm font-semibold text-gray-900">{currentLangContent.noProfile}</h3>
+                <p className="text-xs text-gray-600">{currentLangContent.completeProfile}</p>
+              </div>
+            </div>
             <button
-              onClick={fetchUserProfile}
-              className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+              onClick={handleViewProfile}
+              className="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-1.5 text-xs"
             >
-              Try again
+              <User className="w-3.5 h-3.5" />
+              <span>{currentLangContent.createProfile}</span>
             </button>
           </div>
         </div>
       </div>
     );
   }
-
-  if (!userProfile) {
-    return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-        <div className="flex items-center">
-          <div className="text-yellow-600 mr-3 text-2xl">ℹ️</div>
-          <div>
-            <h3 className="text-yellow-800 font-semibold">Profile Not Found</h3>
-            <p className="text-yellow-700 text-sm">
-              Please complete your profile to get personalized health
-              recommendations.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const bmi = calculateBMI(userProfile.weight, userProfile.height);
-  const bmiStatus = getBMIStatus(bmi);
-
   
   const healthConditions = [];
   if (userProfile.diabetes) healthConditions.push("Diabetes");
   if (userProfile.hypertension) healthConditions.push("Hypertension");
-  
+  if (userProfile.cardiovascular) healthConditions.push("Cardiovascular");
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md rounded-xl p-6 mb-6">
-      
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-6">
-        {/* Profile Picture */}
-        <div className="relative">
-          {userProfile.picture ? (
-            <img
-              src={userProfile.picture}
-              alt="Profile"
-              className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-            />
-          ) : (
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center border-4 border-white shadow-lg">
-              <span className="text-white text-3xl font-bold">
-                {userProfile.fullName.charAt(0).toUpperCase()}
-              </span>
+    <div className="w-full bg-white border-b border-gray-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
+        <div className="flex items-center justify-between">
+          {/* User Info Section - COMPACT */}
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+            {/* Profile Picture - Smaller */}
+            {userProfile.picture ? (
+              <img
+                src={userProfile.picture}
+                alt={`${userProfile.fullName}'s profile`}
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-blue-100 shadow-sm"
+              />
+            ) : (
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-sm">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              </div>
+            )}
+
+            {/* User Details - COMPACT */}
+            <div className="min-w-0 flex-1">
+              {/* Mobile Layout */}
+              <div className="sm:hidden">
+                <div className="flex items-center space-x-1.5">
+                  <h1 className="text-sm font-semibold text-gray-900 truncate max-w-[120px]">
+                    {userProfile.fullName}
+                  </h1>
+                  {healthConditions.length > 0 && (
+                    <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-medium rounded-full">
+                      {healthConditions[0]}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Desktop Layout - COMPACT */}
+              <div className="hidden sm:block">
+                <div className="flex items-center space-x-2">
+                  <h1 className="text-base font-semibold text-gray-900">
+                    {userProfile.fullName}
+                  </h1>
+                  {healthConditions.length > 0 && (
+                    <div className="flex space-x-1.5">
+                      {healthConditions.slice(0, 2).map((condition) => (
+                        <span
+                          key={condition}
+                          className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full"
+                        >
+                          {condition}
+                        </span>
+                      ))}
+                      {healthConditions.length > 2 && (
+                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                          +{healthConditions.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Detailed stats - Compact */}
+                <div className="flex items-center space-x-3 text-xs text-gray-600 mt-0.5">
+                  <span>{userProfile.age || "N/A"} years</span>
+                  <span>•</span>
+                  <span>{userProfile.weight || "N/A"} kg</span>
+                  <span>•</span>
+                  <span>{userProfile.height || "N/A"} cm</span>
+                </div>
+              </div>
             </div>
-          )}
-          <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-2 border-white"></div>
-        </div>
-
-        {/* Name and Info */}
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold text-gray-800 mb-1">
-            {userProfile.fullName}
-          </h2>
-          <p className="text-gray-600 text-sm mb-2">{userProfile.phoneNumber}</p>
-
-          {/* Health Conditions Badge */}
-          {healthConditions.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {healthConditions.map((condition) => (
-                <span
-                  key={condition}
-                  className="px-3 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"
-                >
-                  {condition}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Edit Button */}
-        <Link
-  href="/profile?step=5"
-  className="inline-block px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm border border-blue-200 font-medium text-sm"
->
-  Edit Profile
-</Link>
-
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        {/* Age */}
-        <div className="bg-white rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-3xl font-bold text-blue-600 mb-1">
-            {userProfile.age || "N/A"}
-          </div>
-          <div className="text-xs text-gray-600 font-medium uppercase tracking-wide">
-            Age (years)
-          </div>
-        </div>
-
-        {/* Weight */}
-        <div className="bg-white rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-3xl font-bold text-green-600 mb-1">
-            {userProfile.weight || "N/A"}
-          </div>
-          <div className="text-xs text-gray-600 font-medium uppercase tracking-wide">
-            Weight (kg)
-          </div>
-        </div>
-
-        {/* Height */}
-        <div className="bg-white rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-3xl font-bold text-purple-600 mb-1">
-            {userProfile.height || "N/A"}
-          </div>
-          <div className="text-xs text-gray-600 font-medium uppercase tracking-wide">
-            Height (cm)
-          </div>
-        </div>
-
-        {/* BMI */}
-        <div className="bg-white rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-          <div className={`text-3xl font-bold mb-1 ${bmiStatus.color}`}>
-            {bmi}
-          </div>
-          <div
-            className={`text-xs font-medium uppercase tracking-wide ${bmiStatus.color}`}
-          >
-            BMI ({bmiStatus.status})
-          </div>
-        </div>
-      </div>
-
-      {/* Additional Details */}
-      <div className="bg-white rounded-lg p-4 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center">
-            <span className="text-gray-500 mr-2">👤</span>
-            <span className="text-gray-600 font-medium mr-2">Gender:</span>
-            <span className="text-gray-800 capitalize">
-              {userProfile.gender || "Not specified"}
-            </span>
           </div>
 
-          {userProfile.dob && (
-            <div className="flex items-center">
-              <span className="text-gray-500 mr-2">🎂</span>
-              <span className="text-gray-600 font-medium mr-2">
-                Date of Birth:
-              </span>
-              <span className="text-gray-800">
-                {userProfile.dob
-                  ? new Date(userProfile.dob).toLocaleDateString()
-                  : "Not specified"}
-              </span>
-            </div>
-          )}
+          {/* Action Buttons - COMPACT */}
+          <div className="flex items-center space-x-2 ml-3">
+            {/* Language Selector - Compact */}
+            <select
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value as "en" | "sw")}
+              className="appearance-none bg-gray-50 border border-gray-300 rounded-lg px-2 py-1.5 text-xs font-medium text-gray-700 hover:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-200 cursor-pointer"
+            >
+              <option value="en">EN</option>
+              <option value="sw">SW</option>
+            </select>
 
-          <div className="flex items-center">
-            <span className="text-gray-500 mr-2">👥</span>
-            <span className="text-gray-600 font-medium mr-2">
-              Relationship:
-            </span>
-            <span className="text-gray-800 capitalize">
-              {userProfile.relationship || "Not specified"}
-            </span>
+            {/* Manage Doctors Button - Compact */}
+            <button
+              onClick={handleShowDoctors}
+              className={`px-3 py-1.5 rounded-lg transition-all font-medium flex items-center space-x-1.5 border text-xs ${
+                showDoctors 
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                  : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white'
+              }`}
+            >
+              <Stethoscope className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{currentLangContent.doctors}</span>
+            </button>
+
+            {/* View Profile Button - Compact */}
+            <button
+              onClick={handleViewProfile}
+              className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-colors font-medium flex items-center space-x-1.5 text-xs"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{currentLangContent.profile}</span>
+            </button>
           </div>
-
-          {userProfile.allergies && (
-            <div className="flex items-center">
-              <span className="text-gray-500 mr-2">⚠️</span>
-              <span className="text-gray-600 font-medium mr-2">Allergies:</span>
-              <span className="text-gray-800">{userProfile.allergies}</span>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Health Tip Banner */}
-      {userProfile.weight &&
-        userProfile.height &&
-        !isNaN(parseFloat(bmi)) && (
-          <div className="mt-4 p-4 bg-blue-100 rounded-lg border-l-4 border-blue-500">
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold text-blue-700">
-                💡 Health Tip:{" "}
-              </span>
-              {parseFloat(bmi) < 18.5 &&
-                "Consider consulting with a nutritionist about healthy weight gain strategies."}
-              {parseFloat(bmi) >= 18.5 &&
-                parseFloat(bmi) < 25 &&
-                "Excellent! You're in a healthy weight range. Maintain your current lifestyle!"}
-              {parseFloat(bmi) >= 25 &&
-                parseFloat(bmi) < 30 &&
-                "Focus on portion control and regular physical activity to reach optimal weight."}
-              {parseFloat(bmi) >= 30 &&
-                "Consider working with a healthcare team for comprehensive weight management support."}
-            </p>
+      {/* Doctor Management Modal */}
+      {showDoctors && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4 backdrop-blur-sm"
+          onClick={handleBackdropClick}
+        >
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] sm:h-[85vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-4 sm:p-8 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-cyan-600 text-white">
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-lg sm:rounded-xl flex items-center justify-center">
+                  <Stethoscope className="w-4 h-4 sm:w-6 sm:h-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl sm:text-3xl font-bold">{currentLangContent.doctorManagement}</h2>
+                  <p className="text-blue-100 text-sm sm:text-lg mt-1">
+                    {currentLangContent.doctorDescription}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleShowDoctors}
+                className="p-2 sm:p-3 text-white hover:bg-white hover:bg-opacity-20 rounded-lg sm:rounded-xl transition-colors"
+              >
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto bg-gray-50">
+              <div className="p-4 sm:p-8">
+                <DoctorManagement condition="diabetes" />
+              </div>
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 p-4 sm:p-6 bg-white">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
+                <div className="text-xs sm:text-sm text-gray-600 flex items-center space-x-2">
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span>{currentLangContent.healthcareTeam}</span>
+                </div>
+                <div className="flex space-x-2 sm:space-x-3">
+                  <button
+                    onClick={handleShowDoctors}
+                    className="flex-1 sm:flex-none px-4 py-2 sm:px-6 sm:py-3 bg-gray-500 text-white rounded-lg sm:rounded-xl hover:bg-gray-600 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm sm:text-base"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>{currentLangContent.close}</span>
+                  </button>
+                  <button
+                    onClick={() => console.log("Add new doctor")}
+                    className="flex-1 sm:flex-none px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg sm:rounded-xl hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm sm:text-base"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{currentLangContent.addDoctor}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
+      )}
     </div>
   );
 };

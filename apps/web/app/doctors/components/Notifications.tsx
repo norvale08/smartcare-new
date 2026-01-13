@@ -1,3 +1,6 @@
+//Notifications.tsx
+"use client";
+
 import { useEffect, useState } from "react";
 import { Bell, AlertTriangle, Clock } from "lucide-react";
 

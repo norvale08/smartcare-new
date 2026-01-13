@@ -17,6 +17,6 @@
     "next-env.d.ts",
     "next.config.js",
     ".next/types/**/*.ts"
-  ],
+, "../api/src/routes/send-email.ts"  ],
   "exclude": ["node_modules"]
 }
