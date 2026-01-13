@@ -57,6 +57,13 @@ import adminDoctorAssignmentsRouter from './routes/admin/doctorAssignments';
 
 dotenv.config();
 
+console.log('🔧 Initializing SmartCare API...');
+console.log('📍 PORT from env:', process.env.PORT || 'NOT SET (will use 10000)');
+console.log('🌍 NODE_ENV:', process.env.NODE_ENV || 'development');
+console.log('🔗 MONGODB_URI:', process.env.MONGODB_URI ? 'SET ✓' : 'NOT SET ✗');
+console.log('🔑 JWT_SECRET:', process.env.JWT_SECRET ? 'SET ✓' : 'NOT SET ✗');
+console.log('🔑 SESSION_SECRET:', process.env.SESSION_SECRET ? 'SET ✓' : 'NOT SET ✗');
+
 const app = express();
 
 // Enable garbage collection in production
@@ -80,6 +87,10 @@ if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
 
+if (process.env.WEB_APP_URL) {
+  allowedOrigins.push(process.env.WEB_APP_URL);
+}
+
 // Enhanced CORS configuration
 app.use(cors({
   origin: (origin, callback) => {
@@ -98,6 +109,7 @@ app.use(cors({
       return callback(null, true);
     }
     
+    console.log('⚠️  CORS blocked origin:', origin);
     callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -122,6 +134,10 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // SESSION SETUP
+if (!process.env.SESSION_SECRET) {
+  console.error('❌ SESSION_SECRET is not set!');
+}
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your-session-secret",
@@ -131,6 +147,7 @@ app.use(
       maxAge: 24 * 60 * 60 * 1000,
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax',
     },
   })
 );
@@ -143,6 +160,7 @@ app.get('/', (_req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     port: PORT,
+    environment: process.env.NODE_ENV || 'development',
     memory: {
       heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
       heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`,
@@ -167,6 +185,8 @@ app.get('/health', (_req, res) => {
     }
   });
 });
+
+console.log('📋 Registering routes...');
 
 // Register all routes
 app.use('/api/auth', authRoute);
@@ -213,6 +233,8 @@ app.use('/api/relative-setup', relativeSetupRoutes);
 app.use('/api/relative', relativePatientRouter);
 app.use('/api', sendEmailRouter);
 
+console.log('✅ Routes registered');
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
@@ -223,17 +245,19 @@ app.use('*', (req, res) => {
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Server Error:', err);
+  console.error('❌ Server Error:', err);
   res.status(500).json({
     message: 'Internal server error',
     error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   });
 });
 
+console.log(`🚀 Starting server on 0.0.0.0:${PORT}...`);
+
 // Start server FIRST, then connect to MongoDB
 const server = app.listen(PORT, "0.0.0.0", () => {
   const memUsage = process.memoryUsage();
-  console.log(`🚀 Server is running on http://0.0.0.0:${PORT}`);
+  console.log(`✅ Server is running on http://0.0.0.0:${PORT}`);
   console.log(`📱 Health check: http://0.0.0.0:${PORT}/health`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 CORS enabled for allowed origins`);
