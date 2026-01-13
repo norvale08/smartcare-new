@@ -1,14 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+
+  // Required for Turborepo packages
   transpilePackages: ['@repo/ui'],
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+
   typescript: {
     ignoreBuildErrors: true,
   },
+
   webpack: (config, { isServer }) => {
-    // Add polyfills for client-side only
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -19,11 +20,8 @@ const nextConfig = {
         child_process: false,
       };
     }
-    
     return config;
   },
-  // Optimize for client-side rendering
-  reactStrictMode: true,
-}
+};
 
 export default nextConfig;
