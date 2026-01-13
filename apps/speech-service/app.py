@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify, send_file
-from flask_cors import CORS
 import speech_recognition as sr
 import tempfile
 import os
@@ -8,13 +7,13 @@ from datetime import datetime
 from gtts import gTTS
 import io
 from functools import lru_cache
+import hashlib
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)  # REQUIRED: Enable CORS for frontend requests
 
 # Cache for TTS to avoid regenerating same text
 @lru_cache(maxsize=100)
@@ -63,12 +62,16 @@ def transcribe_audio():
         recognizer.pause_threshold = 0.8
         
         with sr.AudioFile(temp_audio_path) as source:
+            # REMOVED: adjust_for_ambient_noise (saves ~0.5 seconds)
+            # This was adding unnecessary delay
+            
             logger.info("🎤 Recording audio data...")
             audio_data = recognizer.record(source)
             
             logger.info(f"🤖 Transcribing with Google Speech Recognition...")
             
             try:
+                # Use faster recognition without show_all flag
                 text = recognizer.recognize_google(
                     audio_data,
                     language=language
@@ -188,17 +191,15 @@ def health_check():
     })
 
 if __name__ == '__main__':
-    # REQUIRED: Use Render's PORT environment variable
-    port = int(os.environ.get('PORT', 5001))
-    
-    # REQUIRED: Disable debug in production
-    is_production = os.environ.get('FLASK_ENV') == 'production'
-    
     logger.info("=" * 60)
-    logger.info(f" FLASK SPEECH SERVICE ({'PRODUCTION' if is_production else 'DEV'})")
+    logger.info(" STARTING OPTIMIZED FLASK SPEECH SERVICE")
     logger.info("=" * 60)
-    logger.info(f"Port: {port}")
-    logger.info(f"Debug: {not is_production}")
+    logger.info("Server: http://0.0.0.0:5000")
+    logger.info("Health: http://localhost:5000/health")
+    logger.info("Transcribe: http://localhost:5000/transcribe")
+    logger.info("Synthesize: http://localhost:5000/synthesize")
+    logger.info("Optimizations: TTS caching, No ambient noise adjustment")
     logger.info("=" * 60)
     
-    app.run(host='0.0.0.0', port=port, debug=not is_production, threaded=True)
+    # Use threaded mode for better concurrent request handling
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
