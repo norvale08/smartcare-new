@@ -1,15 +1,17 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Coffee, Sun, Moon, Loader2, RefreshCw, LucideIcon } from "lucide-react";
+import { Coffee, Sun, Moon, Loader2, RefreshCw } from "lucide-react";
+import TTSReader from "./components/TTSReader";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface MealCardProps {
   meal: { title: string; content: string };
-  icon: LucideIcon;
+  icon: any;
   color: string;
   gradient: string;
   image: string;
+  language: "en" | "sw";
 }
 
 interface Advice {
@@ -67,13 +69,20 @@ const languageContent = {
   }
 };
 
-const MealCard: React.FC<MealCardProps> = ({ meal, icon: Icon, color, gradient, image }) => (
+const MealCard: React.FC<MealCardProps> = ({ meal, icon: Icon, color, gradient, image, language }) => (
   <div className={`${gradient} p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}>
-    <div className="flex items-center gap-3 mb-4">
-      <div className={`${color} p-3 rounded-full bg-white bg-opacity-90`}>
-        <Icon size={28} />
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-3">
+        <div className={`${color} p-3 rounded-full bg-white bg-opacity-90`}>
+          <Icon size={28} />
+        </div>
+        <h3 className="text-xl font-bold text-gray-800">{meal.title}</h3>
       </div>
-      <h3 className="text-xl font-bold text-gray-800">{meal.title}</h3>
+      <TTSReader 
+        text={meal.content} 
+        language={language}
+        showControls={true}
+      />
     </div>
     <div className="bg-white rounded-xl overflow-hidden shadow-md mb-4">
       <img src={image} alt={meal.title} className="w-full h-48 object-cover" />
@@ -100,11 +109,10 @@ const DiabeticFoodAdvice: React.FC<DiabeticFoodAdviceProps> = ({
     try {
       setLoading(true);
       setError(null);
-      setAdvice(null); // ✅ Clear old advice when fetching new data
+      setAdvice(null);
 
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       
-      // ✅ Always include language parameter in the API call
       const response = await fetch(
         `${API_URL}/api/diabeticFood/latest?language=${language}`, 
         { headers: { Authorization: `Bearer ${token}` } }
@@ -125,10 +133,9 @@ const DiabeticFoodAdvice: React.FC<DiabeticFoodAdviceProps> = ({
     }
   };
 
-  // ✅ Fetch advice when component mounts or language changes
   useEffect(() => {
     fetchAdvice();
-  }, [language]); // Refetch when language changes
+  }, [language]);
 
   const meals = [
     { 
@@ -157,22 +164,46 @@ const DiabeticFoodAdvice: React.FC<DiabeticFoodAdviceProps> = ({
     }
   ];
 
+  const getFullMealPlanText = () => {
+    if (!advice) return "";
+    
+    let fullText = "";
+    meals.forEach(meal => {
+      if (advice[meal.key]) {
+        fullText += `${meal.title}. ${advice[meal.key]} `;
+      }
+    });
+    if (advice.foods_to_avoid) {
+      fullText += `${currentLang.foodsToAvoid}. ${advice.foods_to_avoid}`;
+    }
+    return fullText.trim();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
           <div>
             <h1 className="text-4xl font-bold text-gray-800 mb-3">{currentLang.title}</h1>
             <p className="text-gray-600 text-lg">{currentLang.subtitle}</p>
           </div>
-          <button 
-            onClick={fetchAdvice} 
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full shadow hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-            {currentLang.refresh}
-          </button>
+          <div className="flex gap-3">
+            {advice && !loading && (
+              <TTSReader 
+                text={getFullMealPlanText()} 
+                language={language}
+                showControls={true}
+              />
+            )}
+            <button 
+              onClick={fetchAdvice} 
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full shadow hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+              {currentLang.refresh}
+            </button>
+          </div>
         </div>
 
         <div className="shadow-2xl rounded-3xl bg-white bg-opacity-80 backdrop-blur-sm border border-gray-200">
@@ -200,14 +231,22 @@ const DiabeticFoodAdvice: React.FC<DiabeticFoodAdviceProps> = ({
                       icon={meal.icon} 
                       color={meal.color} 
                       gradient={meal.gradient} 
-                      image={meal.image} 
+                      image={meal.image}
+                      language={language}
                     />
                   ))}
                 </div>
 
                 {advice.foods_to_avoid && (
-                  <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-                    <h3 className="text-red-700 font-bold text-lg mb-2">{currentLang.foodsToAvoid}</h3>
+                  <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                      <h3 className="text-red-700 font-bold text-lg">{currentLang.foodsToAvoid}</h3>
+                      <TTSReader 
+                        text={advice.foods_to_avoid} 
+                        language={language}
+                        showControls={true}
+                      />
+                    </div>
                     <p className="text-red-600">{advice.foods_to_avoid}</p>
                   </div>
                 )}

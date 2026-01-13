@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { Button } from "@repo/ui";
 import { toast } from "react-hot-toast";
 import {
   FaWineGlassAlt,
@@ -13,6 +12,9 @@ import {
   FaRedo,
 } from "react-icons/fa";
 import { MdSmokeFree, MdFitnessCenter, MdAccessTime } from "react-icons/md";
+import TTSReader from "./components/TTSReader";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export type AlcoholLevel = "None" | "Occasionally" | "Frequently";
 export type SmokingLevel = "None" | "Light" | "Heavy";
@@ -29,8 +31,8 @@ export interface LifestyleData {
 interface Props {
   onSubmit?: (data: LifestyleData) => void;
   initialData?: LifestyleData;
-  language?: "en" | "sw"; // ✅ Receive language from parent
-  onLanguageChange?: (lang: "en" | "sw") => void; // ✅ Receive language change handler
+  language?: "en" | "sw";
+  onLanguageChange?: (lang: "en" | "sw") => void;
 }
 
 interface OptionConfig {
@@ -39,7 +41,6 @@ interface OptionConfig {
   icon: React.ReactNode;
 }
 
-// ✅ Language content
 const languageContent = {
   en: {
     alcoholTitle: "Alcohol Intake",
@@ -116,8 +117,8 @@ const options = {
 const DiabetesLifestyle: React.FC<Props> = ({ 
   onSubmit, 
   initialData, 
-  language = "en", // ✅ Use language from parent
-  onLanguageChange // ✅ Use language change handler from parent
+  language = "en",
+  onLanguageChange
 }) => {
   const [form, setForm] = useState<LifestyleData>(initialData || {});
   const [aiAdvice, setAiAdvice] = useState("");
@@ -129,11 +130,8 @@ const DiabetesLifestyle: React.FC<Props> = ({
 
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const maxPollAttempts = 30;
-
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   const currentLang = languageContent[language];
 
-  // Set initial AI placeholder based on language
   useEffect(() => {
     if (!aiAdvice || aiAdvice === languageContent.en.aiPlaceholder || aiAdvice === languageContent.sw.aiPlaceholder) {
       setAiAdvice(currentLang.aiPlaceholder);
@@ -148,7 +146,6 @@ const DiabetesLifestyle: React.FC<Props> = ({
   const validateForm = () =>
     ["alcohol", "smoking", "exercise", "sleep"].every((f) => form[f as keyof LifestyleData]);
 
-  // Poll AI advice from backend
   const pollAIAdvice = async (recordId: string) => {
     try {
       const token = getAuthToken();
@@ -232,53 +229,54 @@ const DiabetesLifestyle: React.FC<Props> = ({
 
     loadExistingData();
   }, [language]);
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!validateForm()) return toast.error(currentLang.fillAllFields);
-  setLoading(true);
 
-  try {
-    const token = getAuthToken();
-    if (!token) return toast.error(currentLang.loginRequired);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return toast.error(currentLang.fillAllFields);
+    setLoading(true);
 
-    // ✅ ADD language to the request body
-    const response = await fetch(`${API_URL}/api/lifestyle`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        ...form,
-        language: language // ✅ ADD THIS
-      }),
-    });
+    try {
+      const token = getAuthToken();
+      if (!token) return toast.error(currentLang.loginRequired);
 
-    const data = await response.json();
-    if (!response.ok) {
-      toast.error(data.message || currentLang.saveFailed);
-      return;
-    }
+      const response = await fetch(`${API_URL}/api/lifestyle`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...form,
+          language: language
+        }),
+      });
 
-    toast.success(currentLang.saveSuccess);
-    onSubmit?.(form);
-
-    if (data.recordId) {
-      if (currentRecordId !== data.recordId || !isGeneratingAI) {
-        setCurrentRecordId(data.recordId);
-        setAiAdvice(currentLang.generatingAdvice + "...");
-        setIsGeneratingAI(true);
-        setPollAttempts(0);
-        startPolling(data.recordId);
+      const data = await response.json();
+      if (!response.ok) {
+        toast.error(data.message || currentLang.saveFailed);
+        return;
       }
+
+      toast.success(currentLang.saveSuccess);
+      onSubmit?.(form);
+
+      if (data.recordId) {
+        if (currentRecordId !== data.recordId || !isGeneratingAI) {
+          setCurrentRecordId(data.recordId);
+          setAiAdvice(currentLang.generatingAdvice + "...");
+          setIsGeneratingAI(true);
+          setPollAttempts(0);
+          startPolling(data.recordId);
+        }
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+      toast.error(currentLang.saveFailed);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Submit error:", error);
-    toast.error(currentLang.saveFailed);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
   const handleRefreshAdvice = async () => {
     if (currentRecordId && !isGeneratingAI) {
       setIsGeneratingAI(true);
@@ -316,31 +314,34 @@ const handleSubmit = async (e: React.FormEvent) => {
     </div>
   );
 
+  const hasValidAdvice = aiAdvice && 
+    aiAdvice !== currentLang.aiPlaceholder && 
+    !aiAdvice.includes(currentLang.generatingAdvice) &&
+    !aiAdvice.includes(currentLang.refreshingAdvice);
+
   return (
     <div className="bg-white shadow-lg rounded-2xl p-6 space-y-6">
-      {/* ✅ REMOVED: Language toggle button - now controlled by parent */}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-6">
         {renderOptions("alcohol", currentLang.alcoholTitle, options.alcohol)}
         {renderOptions("smoking", currentLang.smokingTitle, options.smoking)}
         {renderOptions("exercise", currentLang.exerciseTitle, options.exercise)}
         {renderOptions("sleep", currentLang.sleepTitle, options.sleep)}
 
-        <Button
-          type="submit"
+        <button
+          onClick={handleSubmit}
           disabled={loading || !validateForm()}
-          className="w-full font-semibold py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200"
+          className="w-full font-semibold py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? currentLang.savingButton : currentLang.saveButton}
-        </Button>
-      </form>
+        </button>
+      </div>
 
       <div
         className={`mt-4 p-5 rounded-xl border-l-4 transition-all duration-300 ${
           isGeneratingAI ? "bg-blue-50 border-blue-600" : "bg-green-50 border-green-600"
         }`}
       >
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
           <h4 className="text-lg font-bold flex items-center">
             <span className="text-2xl mr-2">🤖</span>
             <span className={isGeneratingAI ? "text-blue-700" : "text-green-700"}>
@@ -348,18 +349,28 @@ const handleSubmit = async (e: React.FormEvent) => {
             </span>
           </h4>
 
-          {currentRecordId && (
-            <Button
-              onClick={handleRefreshAdvice}
-              disabled={isGeneratingAI}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 text-sm"
-            >
-              <FaRedo className={`text-xs ${isGeneratingAI ? "animate-spin" : ""}`} />
-              {isGeneratingAI ? currentLang.generatingButton : currentLang.refreshButton}
-            </Button>
-          )}
+          <div className="flex gap-2 items-center">
+            {hasValidAdvice && (
+              <TTSReader 
+                text={aiAdvice} 
+                language={language}
+                showControls={true}
+              />
+            )}
+
+            {currentRecordId && (
+              <button
+                onClick={handleRefreshAdvice}
+                disabled={isGeneratingAI}
+                className="flex items-center gap-2 text-sm bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              >
+                <FaRedo className={`text-xs ${isGeneratingAI ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">
+                  {isGeneratingAI ? currentLang.generatingButton : currentLang.refreshButton}
+                </span>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className={`text-gray-800 ${isGeneratingAI ? "animate-pulse" : ""}`}>

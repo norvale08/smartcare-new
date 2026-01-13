@@ -1,10 +1,11 @@
-// components/FinalFeedback.tsx
 "use client";
 import React, { useState, useEffect } from "react";
-import { Button } from "@repo/ui";
 import { toast } from "react-hot-toast";
 import { FaHeart, FaRedo } from "react-icons/fa";
 import { MdCheckCircle } from "react-icons/md";
+import TTSReader from "./components/TTSReader";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface FoodAdvice {
   breakfast: string;
@@ -41,7 +42,6 @@ interface FinalFeedbackProps {
   language?: "en" | "sw"; 
 }
 
-
 const languageContent = {
   en: {
     title: "AI Health Analysis",
@@ -55,7 +55,7 @@ const languageContent = {
     generateButton: "Generate Health Report",
     generatingButton: "Generating Feedback...",
     placeholder: "Your comprehensive health feedback will appear here once generated.",
-    generatingText: " Generating your comprehensive health feedback...",
+    generatingText: "🤖 Generating your comprehensive health feedback...",
     failed: "Failed to generate feedback. Please try again.",
     loginRequired: "Please log in to generate feedback",
     successMessage: "Comprehensive feedback generated!",
@@ -75,7 +75,7 @@ const languageContent = {
     generateButton: "Tengeneza Ripoti ya Afya",
     generatingButton: "Inaunda Maoni...",
     placeholder: "Maoni yako kamili ya afya yataonekana hapa yanapoundwa.",
-    generatingText: " Inaunda maoni yako kamili ya afya...",
+    generatingText: "🤖 Inaunda maoni yako kamili ya afya...",
     failed: "Imeshindwa kuunda maoni. Tafadhali jaribu tena.",
     loginRequired: "Tafadhali ingia ili kuunda maoni",
     successMessage: "Maoni kamili yameundwa!",
@@ -95,10 +95,8 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [hasData, setHasData] = useState(false);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   const currentLang = languageContent[language];
 
-  //  Update placeholder when language changes
   useEffect(() => {
     if (!feedback || feedback === languageContent.en.placeholder || feedback === languageContent.sw.placeholder) {
       setFeedback(currentLang.placeholder);
@@ -152,13 +150,11 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({
       }
 
       if (data.success && data.data) {
-        // Extract just the comprehensive feedback string from the full object
         const feedbackText = data.data.comprehensiveFeedback;
         setFeedback(feedbackText);
         setLastUpdated(new Date().toISOString());
         toast.success(currentLang.successMessage);
         
-        // Pass only the string to the parent component
         onFeedbackGenerated?.(feedbackText);
       } else {
         throw new Error(currentLang.noData);
@@ -181,6 +177,13 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({
     }
   };
 
+  const hasValidFeedback = feedback && 
+    feedback !== currentLang.placeholder && 
+    !feedback.includes(currentLang.generatingText) &&
+    !feedback.includes("Failed") && 
+    !feedback.includes("Imeshindwa") && 
+    !feedback.includes("Network error");
+
   return (
     <div className="bg-white shadow-lg rounded-2xl p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -202,9 +205,8 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({
             : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-600"
         }`}
       >
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h4 className="text-lg font-bold flex items-center">
-            
             <span
               className={
                 isGenerating
@@ -218,16 +220,26 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({
             </span>
           </h4>
 
-          <Button
-            onClick={handleRefresh}
-            disabled={isGenerating || loading}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2 text-sm"
-          >
-            <FaRedo className={`text-xs ${isGenerating ? "animate-spin" : ""}`} />
-            {isGenerating ? currentLang.generating : currentLang.refresh}
-          </Button>
+          <div className="flex gap-2 items-center">
+            {hasValidFeedback && (
+              <TTSReader 
+                text={feedback} 
+                language={language}
+                showControls={true}
+              />
+            )}
+
+            <button
+              onClick={handleRefresh}
+              disabled={isGenerating || loading}
+              className="flex items-center gap-2 text-sm bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            >
+              <FaRedo className={`text-xs ${isGenerating ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">
+                {isGenerating ? currentLang.generating : currentLang.refresh}
+              </span>
+            </button>
+          </div>
         </div>
 
         <div className={`text-gray-800 text-base leading-relaxed ${isGenerating ? "animate-pulse" : ""}`}>
@@ -250,10 +262,10 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({
         </div>
       )}
 
-      <Button
+      <button
         onClick={generateComprehensiveFeedback}
         disabled={loading || isGenerating || !hasData}
-        className="w-full font-semibold py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transition-colors duration-200 flex items-center justify-center gap-2"
+        className="w-full font-semibold py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? (
           <>
@@ -266,7 +278,7 @@ const FinalFeedback: React.FC<FinalFeedbackProps> = ({
             {currentLang.generateButton}
           </>
         )}
-      </Button>
+      </button>
     </div>
   );
 };
