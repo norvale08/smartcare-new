@@ -6,31 +6,17 @@ import { Heart, Activity as ActivityIcon, Clock, Zap, Mic } from "lucide-react"
 import { useTranslation } from "../../../lib/hypertension/useTranslation"
 import InteractiveVoiceForm from "./InteractiveVoiceForm"
 import VoiceControlPanel from "./VoiceControlPanel"
-  import { 
+import { 
   startVoiceMode, 
   stopVoiceMode, 
   speak, 
   listenForField,
+  pauseVoiceMode,
+  resumeVoiceMode,
   VoiceModeState 
 } from "../utils/voiceUtils"
-import toast, { ToastOptions } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { languageContent } from "../utils/formUtils"
-
-// Number normalization function
-const normalizeNumber = (text: string): number | null => {
-  text = text.toLowerCase().trim()
-
-  if (!text) return null
-
-  // Try to extract numbers from text
-  const digitMatch = text.match(/\d{1,3}(?:\.\d+)?/)
-  if (digitMatch) {
-    const parsed = parseFloat(digitMatch[0])
-    if (!Number.isNaN(parsed)) return Math.round(parsed)
-  }
-
-  return null
-}
 
 const activityOptions = [
   { value: "none", label: "No recent activity" },
@@ -76,64 +62,152 @@ export default function VitalsWithActivityInput({
     speaking: false,
     currentField: null,
     muted: false,
+    paused: false,
     status: ""
   })
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  const languageValue = t.language === "sw-TZ" ? "sw" : "en";
-  const currentLanguage = languageContent[languageValue];
-  const isProcessingRef = useRef(false);
-  const fieldRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const voiceModeActiveRef = useRef(false);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  const languageValue = t.language === "sw-TZ" ? "sw" : "en"
+  const currentLanguage = languageContent[languageValue]
+  const isProcessingRef = useRef(false)
+  const fieldRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const voiceModeActiveRef = useRef(false)
+  const pausedRef = useRef(false)
 
   // Update voice mode ref when state changes
   useEffect(() => {
-    voiceModeActiveRef.current = voiceModeState.active;
-  }, [voiceModeState.active]);
+    voiceModeActiveRef.current = voiceModeState.active
+  }, [voiceModeState.active])
 
   // Cleanup
   useEffect(() => {
     return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
       if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stop()
       }
-      voiceModeActiveRef.current = false;
-    };
-  }, []);
+      voiceModeActiveRef.current = false
+    }
+  }, [])
 
-  // Text-to-Speech wrapper
+  // Text-to-Speech wrapper with pausedRef
   const handleSpeak = useCallback(async (text: string): Promise<void> => {
-    return speak(text, languageValue, voiceModeState.muted, voiceModeActiveRef, setVoiceModeState);
-  }, [languageValue, voiceModeState.muted]);
+    return speak(
+      text, 
+      languageValue, 
+      voiceModeState.muted, 
+      voiceModeActiveRef,
+      pausedRef,
+      (state) => setVoiceModeState(prev => ({ ...prev, ...state }))
+    )
+  }, [languageValue, voiceModeState.muted])
+
+  // Handle pause/resume functionality
+  const handlePauseResume = useCallback(() => {
+    if (voiceModeState.paused) {
+      resumeVoiceMode({
+        voiceModeActiveRef,
+        pausedRef,
+        setVoiceModeState: (state) => setVoiceModeState(prev => ({ ...prev, ...state })),
+        handleSpeak,
+        languageValue,
+        isMuted: voiceModeState.muted,
+        currentField: voiceModeState.currentField
+      });
+    } else {
+      pauseVoiceMode({
+        voiceModeActiveRef,
+        pausedRef,
+        mediaRecorderRef,
+        setVoiceModeState: (state) => setVoiceModeState(prev => ({ ...prev, ...state })),
+        handleSpeak,
+        languageValue,
+        isMuted: voiceModeState.muted
+      });
+    }
+  }, [voiceModeState.paused, voiceModeState.muted, voiceModeState.currentField, languageValue, handleSpeak])
+
+  // Handle content reading for different sections
+  const handleReadContent = useCallback((content: string, type: 'trends' | 'lifestyle' | 'diet' | 'doctor' | 'map') => {
+    if (!voiceModeState.active || voiceModeState.paused) return
+
+    // Get the actual content from the page
+    let contentToRead = '';
+    
+    switch (type) {
+      case 'trends':
+        contentToRead = document.querySelector('[data-content="trends"]')?.textContent || 
+                       (languageValue === "sw" 
+                        ? "Mabadiliko ya kiafya yanaonyesha shinikizo lako la damu limeongezeka kiasi cha asilimia ishirini katika mwezi uliopita. Inashauriwa upimwe tena baada ya wiki mbili." 
+                        : "Health trends show your blood pressure has increased by about twenty percent over the past month. It's recommended to measure again after two weeks.");
+        break;
+      case 'lifestyle':
+        contentToRead = document.querySelector('[data-content="lifestyle"]')?.textContent || 
+                       (languageValue === "sw" 
+                        ? "Mapendekezo ya maisha: Zungumza kwa kina, tumia mbinu za kupunguza msongo, fanya mazoezi ya kupumzika kila siku, pumzika vizuri usiku." 
+                        : "Lifestyle recommendations: Practice deep breathing, use stress reduction techniques, do relaxation exercises daily, get good night sleep.");
+        break;
+      case 'diet':
+        contentToRead = document.querySelector('[data-content="diet"]')?.textContent || 
+                       (languageValue === "sw" 
+                        ? "Mapendekezo ya chakula: Punguza chumvi, ongeza matunda na mboga, epuka vyakula vyenye mafuta mengi, nywa maji ya kutosha." 
+                        : "Diet recommendations: Reduce salt intake, increase fruits and vegetables, avoid fatty foods, drink plenty of water.");
+        break;
+      case 'doctor':
+        contentToRead = document.querySelector('[data-content="doctor"]')?.textContent || 
+                       (languageValue === "sw" 
+                        ? "Taarifa ya daktari: Daktari wako ana pendekeza ufanyie vipimo vya damu kila wiki na uende kliniki baada ya miezi miwili. Nambari ya daktari: 0712345678." 
+                        : "Doctor information: Your doctor recommends weekly blood tests and a clinic visit after two months. Doctor's number: 0712345678.");
+        break;
+      case 'map':
+        contentToRead = document.querySelector('[data-content="map"]')?.textContent || 
+                       (languageValue === "sw" 
+                        ? "Ramani inaonyesha hospitali ya wilaya iko kilometa tano kutoka hapa, na klinik tatu ziko katika eneo lako. Kituo cha karibu ni klinik ya Aga Khan." 
+                        : "The map shows the district hospital is five kilometers away, with three clinics in your area. The nearest facility is Aga Khan Clinic.");
+        break;
+    }
+    
+    handleSpeak(contentToRead);
+  }, [voiceModeState.active, voiceModeState.paused, languageValue, handleSpeak])
 
   // Mock form functions for voice mode integration
   const mockSetValue = (name: string, value: any, options?: any) => {
     switch (name) {
       case 'systolic':
-        setSystolic(value.toString());
-        break;
+        setSystolic(value.toString())
+        break
       case 'diastolic':
-        setDiastolic(value.toString());
-        break;
+        setDiastolic(value.toString())
+        break
       case 'heartRate':
-        setHeartRate(value.toString());
-        break;
+        setHeartRate(value.toString())
+        break
+      case 'activityType':
+        setActivityType(value)
+        break
+      case 'duration':
+        setDuration(value.toString())
+        break
+      case 'intensity':
+        setIntensity(value)
+        break
+      case 'timeSinceActivity':
+        setTimeSinceActivity(value.toString())
+        break
       default:
-        break;
+        break
     }
-  };
+  }
 
   const mockGetValues = () => ({
     systolic,
     diastolic,
     heartRate,
-  });
-
-  // Mock toast
-  const mockToast = toast;
+    activityType,
+    duration,
+    intensity,
+    timeSinceActivity,
+    notes
+  })
 
   // Start voice mode
   const handleStartVoiceMode = async () => {
@@ -141,45 +215,37 @@ export default function VitalsWithActivityInput({
       languageValue,
       currentLanguage,
       voiceModeActiveRef,
+      pausedRef,
       voiceModeState,
-      setVoiceModeState,
+      setVoiceModeState: (state) => setVoiceModeState(prev => ({ ...prev, ...state })),
       setValue: mockSetValue,
       getValues: mockGetValues,
-      toast: mockToast,
+      toast,
       handleSpeak,
-      listenForField: (params: any) => {
-        return listenForField({
-          fieldName: params.fieldName,
-          fieldLabel: params.fieldLabel,
-          fieldType: params.fieldType,
-          min: params.min,
-          max: params.max,
-          languageValue,
-          currentLanguage,
-          voiceModeActiveRef,
-          isProcessingRef,
-          setVoiceModeState,
-          mediaRecorderRef,
-          API_URL,
-          fieldRefs,
-          handleSpeak,
-          isRequired: true
-        });
-      }
+      isProcessingRef,
+      mediaRecorderRef,
+      API_URL,
+      fieldRefs
     });
-  };
+  }
 
   // Stop voice mode
   const handleStopVoiceMode = () => {
     stopVoiceMode({
       voiceModeActiveRef,
+      pausedRef,
       mediaRecorderRef,
       currentLanguage,
-      setVoiceModeState,
+      setVoiceModeState: (state) => setVoiceModeState(prev => ({ ...prev, ...state })),
       handleSpeak,
       isMuted: voiceModeState.muted
     });
-  };
+  }
+
+  // Toggle mute
+  const handleToggleMute = () => {
+    setVoiceModeState(prev => ({ ...prev, muted: !prev.muted }))
+  }
 
   const reset = () => {
     setSystolic("")
@@ -246,7 +312,7 @@ export default function VitalsWithActivityInput({
       if (!saveResp.ok) throw new Error("Failed to save vitals")
 
       // Call AI analysis with language parameter
-      const languageParam = t.language === "sw-TZ" ? "sw-TZ" : "en-US";
+      const languageParam = t.language === "sw-TZ" ? "sw-TZ" : "en-US"
       const aiResp = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/hypertensionVitals/analyze?language=${languageParam}`,
         {
@@ -282,14 +348,14 @@ export default function VitalsWithActivityInput({
         heartRate: Number(heartRate),
       })
       setMessage(t.language === "en-US" 
-        ? " Vitals saved & analyzed successfully!"
-        : " Vitali zimehifadhiwa na kuchambuliwa kwa mafanikio!")
+        ? "✅ Vitals saved & analyzed successfully!"
+        : "✅ Vitali zimehifadhiwa na kuchambuliwa kwa mafanikio!")
       if (onAfterSave) onAfterSave()
       reset()
     } catch (e: any) {
       setMessage(e.message || (t.language === "en-US" 
-        ? "There was an error. Please try again."
-        : "Kulikuwa na hitilafu. Tafadhali jaribu tena."))
+        ? "❌ There was an error. Please try again."
+        : "❌ Kulikuwa na hitilafu. Tafadhali jaribu tena."))
       setAnalysis(null)
     } finally {
       setSaving(false)
@@ -297,13 +363,13 @@ export default function VitalsWithActivityInput({
   }
 
   const handleVoiceFormComplete = (data: {
-    systolic: number;
-    diastolic: number;
-    heartRate: number;
-    activityType?: string;
-    duration?: number;
-    intensity?: string;
-    timeSinceActivity?: number;
+    systolic: number
+    diastolic: number
+    heartRate: number
+    activityType?: string
+    duration?: number
+    intensity?: string
+    timeSinceActivity?: number
   }) => {
     setSystolic(data.systolic.toString())
     setDiastolic(data.diastolic.toString())
@@ -324,8 +390,8 @@ export default function VitalsWithActivityInput({
     
     // Continue with the form, user still needs to fill activity details
     setMessage(t.language === "en-US" 
-      ? "Vital values captured! Please complete the activity details below."
-      : "Maadili ya vitali yamepokelekwa! Tafadhali kamili maelezo ya shughuli chini.")
+      ? "✅ Vital values captured! Please complete the activity details below."
+      : "✅ Maadili ya vitali yamepokelekwa! Tafadhali kamili maelezo ya shughuli chini.")
   }
 
   return (
@@ -354,8 +420,8 @@ export default function VitalsWithActivityInput({
           <div className="flex-1">
             <p className="text-sm text-gray-600">
               {t.language === "en-US" 
-                ? "Enter your blood pressure, heart rate, and recent activity — see AI-guided feedback instantly after saving."
-                : "Weka shinikizo la damu, kiwango cha moyo, na shughuli za hivi karibuni — ona maoni ya AI mara tu baada ya kuhifadhi."
+                ? "Enter your blood pressure, heart rate, and recent activity — see AI-guided feedback instantly after saving. Use voice mode for hands-free entry."
+                : "Weka shinikizo la damu, kiwango cha moyo, na shughuli za hivi karibuni — ona maoni ya AI mara tu baada ya kuhifadhi. Tumia hali ya sauti kwa kuingiza bila mikono."
               }
             </p>
           </div>
@@ -366,8 +432,10 @@ export default function VitalsWithActivityInput({
           voiceModeState={voiceModeState}
           currentLanguage={currentLanguage}
           languageValue={languageValue}
-          onToggleMute={() => setVoiceModeState((prev: VoiceModeState) => ({ ...prev, muted: !prev.muted }))}
+          onToggleMute={handleToggleMute}
           onToggleVoiceMode={voiceModeState.active ? handleStopVoiceMode : handleStartVoiceMode}
+          onPauseResume={handlePauseResume}
+          onReadContent={handleReadContent}
         />
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -386,6 +454,19 @@ export default function VitalsWithActivityInput({
                   disabled={saving}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
+                {voiceModeState.active && !voiceModeState.paused && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSpeak(languageValue === "sw" 
+                        ? `Thamani ya systolic ni ${systolic || 'haijawekwa'} mmHg.` 
+                        : `Systolic value is ${systolic || 'not set'} mmHg.`)
+                    }}
+                    className="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors"
+                  >
+                    <Mic size={16} />
+                  </button>
+                )}
               </div>
               <p className="text-xs text-gray-500">
                 {t.language === "en-US" ? "Upper number" : "Nambari ya juu"}
@@ -406,6 +487,19 @@ export default function VitalsWithActivityInput({
                   disabled={saving}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
+                {voiceModeState.active && !voiceModeState.paused && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSpeak(languageValue === "sw" 
+                        ? `Thamani ya diastolic ni ${diastolic || 'haijawekwa'} mmHg.` 
+                        : `Diastolic value is ${diastolic || 'not set'} mmHg.`)
+                    }}
+                    className="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors"
+                  >
+                    <Mic size={16} />
+                  </button>
+                )}
               </div>
               <p className="text-xs text-gray-500">
                 {t.language === "en-US" ? "Lower number" : "Nambari ya chini"}
@@ -426,6 +520,19 @@ export default function VitalsWithActivityInput({
                   disabled={saving}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
+                {voiceModeState.active && !voiceModeState.paused && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSpeak(languageValue === "sw" 
+                        ? `Kiwango cha mapigo ya moyo ni ${heartRate || 'hakijajazwa'} kwa dakika.` 
+                        : `Heart rate is ${heartRate || 'not set'} beats per minute.`)
+                    }}
+                    className="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors"
+                  >
+                    <Mic size={16} />
+                  </button>
+                )}
               </div>
               <p className="text-xs text-gray-500">
                 {t.language === "en-US" ? "Beats/min" : "Mipigo/dakika"}

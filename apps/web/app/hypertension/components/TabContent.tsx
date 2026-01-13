@@ -69,17 +69,20 @@ const TabContent: React.FC<TabContentProps> = ({
         <>
           <HypertensionAlert refreshToken={alertRefreshToken} />
           <VitalsWithActivityInput onAfterSave={() => setAlertRefreshToken(Date.now())} />
-          <HealthTrends vitals={vitals} />
-          <HypertensionRiskAssessment vitals={vitals} />
+          
         </>
       );
     
     case 'health-trends':
       return (
+      <>
+        <HealthTrends vitals={vitals} />
+          <HypertensionRiskAssessment vitals={vitals} />
         <HealthTrendsAndRiskTab
           patient={patient}
           patientVitals={vitals}
         />
+      </>
       );
     
     case 'doctor':
