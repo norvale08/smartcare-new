@@ -1,16 +1,16 @@
 {
   "name": "api",
   "version": "1.0.0",
-  "description": "",
+  "description": "SmartCare API",
   "main": "dist/index.js",
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS='--max-old-space-size=4096' nodemon --watch src --ext ts --exec ts-node src/index.ts",
+    "dev": "cross-env NODE_OPTIONS='--max-old-space-size=2048' nodemon --watch src --ext ts --exec ts-node src/index.ts",
     "build": "tsc",
-    "start": "cross-env NODE_OPTIONS='--max-old-space-size=4096' node dist/index.js"
+    "start": "cross-env NODE_OPTIONS='--max-old-space-size=460' node dist/index.js"
   },
   "keywords": [],
   "author": "",
