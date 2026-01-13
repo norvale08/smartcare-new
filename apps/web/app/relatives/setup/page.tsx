@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-export default function RelativeSetupPage() {
+// Separate the component that uses useSearchParams
+function RelativeSetupContent() {
   const [loading, setLoading] = useState(true);
   const [setupLoading, setSetupLoading] = useState(false);
   const [error, setError] = useState('');
@@ -258,5 +259,26 @@ export default function RelativeSetupPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Loading fallback component
+function SetupLoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main component wrapped with Suspense
+export default function RelativeSetupPage() {
+  return (
+    <Suspense fallback={<SetupLoadingFallback />}>
+      <RelativeSetupContent />
+    </Suspense>
   );
 }
