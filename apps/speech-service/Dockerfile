@@ -1,8 +1,10 @@
 FROM python:3.11-slim
 
+# Environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Set working directory
 WORKDIR /app
 
 # Install system dependencies
@@ -18,20 +20,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Expose port (Render sets this dynamically)
+# Expose port (Render sets this dynamically via PORT env var)
 EXPOSE ${PORT:-10000}
 
-# Option 1: Using config file (cleaner)
-CMD gunicorn -c gunicorn.conf.py app:app
+# Health check (optional but recommended for Render)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD python -c "import requests; requests.get('http://localhost:${PORT:-10000}/health', timeout=5)"
 
-# Option 2: Using command-line flags (if no gunicorn.conf.py)
-# CMD gunicorn \
-#     --workers=2 \
-#     --threads=2 \
-#     --timeout=120 \
-#     --bind=0.0.0.0:${PORT:-10000} \
-#     --worker-tmp-dir=/dev/shm \
-#     --access-logfile=- \
-#     --error-logfile=- \
-#     --log-level=info \
-#     app:app
+# Start the application using gunicorn with config file
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:app"]
