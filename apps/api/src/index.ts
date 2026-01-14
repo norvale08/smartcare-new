@@ -81,6 +81,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:8000',
   'https://smartcare-new-web.vercel.app',
+  'https://smartcare-speech-service.onrender.com'
 ];
 
 if (process.env.FRONTEND_URL) {
@@ -89,6 +90,9 @@ if (process.env.FRONTEND_URL) {
 
 if (process.env.WEB_APP_URL) {
   allowedOrigins.push(process.env.WEB_APP_URL);
+}
+if (process.env.PYTHON_SERVICE_URL){
+  allowedOrigins.push(process.env.PYTHON_SERVICE_URL);
 }
 
 // Enhanced CORS configuration
