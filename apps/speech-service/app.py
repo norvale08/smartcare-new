@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS 
 import speech_recognition as sr
 import tempfile
 import os
@@ -14,6 +15,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# NEW: Enable CORS
+CORS(app, resources={
+    r"/*": {
+        "origins": ["*"],  # Allow all origins for now, restrict later
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # Cache for TTS to avoid regenerating same text
 @lru_cache(maxsize=100)
@@ -177,6 +187,7 @@ def health_check():
         'service': 'speech-service',
         'status': 'healthy', 
         'version': '2.0.0',
+        'environment': os.environ.get('FLASK_ENV', 'development'),  # NEW: Show environment
         'features': ['speech-to-text', 'text-to-speech', 'tts-caching'],
         'optimizations': [
             'Removed ambient noise adjustment (-0.5s)',
@@ -190,16 +201,33 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
+# NEW: Root endpoint
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({
+        'service': 'SmartCare Speech Service',
+        'status': 'running',
+        'version': '2.0.0',
+        'endpoints': {
+            'health': '/health',
+            'transcribe': '/transcribe (POST)',
+            'synthesize': '/synthesize (POST)'
+        }
+    })
+
+# UPDATED: Production-ready startup
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    environment = os.environ.get('FLASK_ENV', 'development')
+    
     logger.info("=" * 60)
-    logger.info(" STARTING OPTIMIZED FLASK SPEECH SERVICE")
+    logger.info(" SMARTCARE SPEECH SERVICE")
     logger.info("=" * 60)
-    logger.info("Server: http://0.0.0.0:5000")
-    logger.info("Health: http://localhost:5000/health")
-    logger.info("Transcribe: http://localhost:5000/transcribe")
-    logger.info("Synthesize: http://localhost:5000/synthesize")
-    logger.info("Optimizations: TTS caching, No ambient noise adjustment")
+    logger.info(f"Environment: {environment}")
+    logger.info(f"Port: {port}")
+    logger.info(f"Health: http://localhost:{port}/health")
     logger.info("=" * 60)
     
-    # Use threaded mode for better concurrent request handling
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    # Use debug mode only in development
+    debug_mode = environment == 'development'
+    app.run(host='0.0.0.0', port=port, debug=debug_mode, threaded=True)
