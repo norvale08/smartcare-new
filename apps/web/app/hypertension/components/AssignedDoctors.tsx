@@ -213,7 +213,7 @@ const AssignedDoctors: React.FC<AssignedDoctorsProps> = ({ className, refreshTri
 
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div data-content="doctor" className="space-y-4">
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
           <h3 className="font-semibold text-gray-700 mb-1">Loading Your Healthcare Team</h3>
@@ -380,7 +380,7 @@ const AssignedDoctors: React.FC<AssignedDoctorsProps> = ({ className, refreshTri
           {/* Contact Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
-              <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
+              <div data-content="hospital-info" className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg ">
                 <Building className="w-5 h-5 text-blue-600" />
                 <div>
                   <p className="text-xs text-blue-600 font-medium">Hospital</p>
