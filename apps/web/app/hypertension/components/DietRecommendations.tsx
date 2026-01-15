@@ -41,6 +41,7 @@ const DietRecommendations: React.FC<DietRecommendationsProps> = ({ dietData, loa
 
   return (
     <div className="space-y-4">
+      <div data-content="diet" className="space-y-4">
       {/* Header with regenerate button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -161,6 +162,7 @@ const DietRecommendations: React.FC<DietRecommendationsProps> = ({ dietData, loa
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 };

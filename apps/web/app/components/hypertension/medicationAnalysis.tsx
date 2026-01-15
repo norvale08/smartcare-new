@@ -63,7 +63,7 @@ export default function MedicationAnalysisPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-6">
+    <div data-content="medication-analysis" className="max-w-4xl mx-auto px-6 py-6">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">
         {language === "sw-TZ" ? "Uchambuzi wa Mwingiliano wa Dawa" : "Medication Interaction Analysis"}
       </h1>

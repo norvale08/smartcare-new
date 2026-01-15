@@ -65,7 +65,7 @@ export default function ContextAwareAlert({ analysis, vitals }: ContextAwareAler
   const styles = getSeverityStyles(analysis.severity)
 
   return (
-    <Card className={`w-full max-w-2xl border-2 ${styles.border} ${styles.bg}`}>
+    <Card data-content="context-alert" className={`w-full max-w-2xl border-2 ${styles.border} ${styles.bg}`}>
       <CardHeader>
         <div className="flex items-start gap-3">
           {styles.icon}

@@ -287,6 +287,7 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
 
   return (
     <div className={`bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 border-l-4 ${bpCategory.color}`}>
+      <div data-content="health-alert" className="space-y-4">
       <div className="flex items-center gap-2 mb-2">
         {bpCategory.icon}
         <h3 className={`text-lg font-bold ${bpCategory.text}`}>{bpCategory.title}</h3>
@@ -364,6 +365,7 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
           {language === "sw-TZ" ? "Tafuta Daktari Karibu" : "Find Doctor Nearby"}
         </button>
       )}
+      </div>
     </div>
   );
 }

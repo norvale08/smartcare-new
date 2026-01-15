@@ -167,7 +167,7 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
     const title = isAlert ? t.alerts.alert : t.alerts.stable;
 
     return (
-      <div className={`border-l-4 ${bgColor} p-4 rounded-lg mb-4`}>
+      <div data-content="lifestyle"  className={`border-l-4 ${bgColor} p-4 rounded-lg mb-4`}>
         <div className="flex items-center gap-2 mb-2">
           <Icon className={color} size={20} />
           <h4 className={`font-semibold ${color}`}>{title}</h4>

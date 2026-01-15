@@ -334,7 +334,7 @@ const MedicationReminders: React.FC = () => {
     .filter((allergy, index, array) => array.indexOf(allergy) === index);
 
   return (
-    <div className="space-y-6">
+    <div data-content="medication"  className="space-y-6">
       {/* Error Display */}
       <ErrorDisplay error={error} />
 
