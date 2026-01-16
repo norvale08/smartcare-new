@@ -24,7 +24,8 @@ const upload = multer({
 });
 
 // Python service URL
-const PYTHON_SERVICE_URL = 'http://localhost:5000';
+const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:5000';
+
 
 // Interfaces
 interface TranscriptionResponse {
