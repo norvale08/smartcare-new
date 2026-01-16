@@ -1,7 +1,7 @@
 // relative/dashboard/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from './components/Header';
 import { PatientHeader } from './components/PatientHeader';
@@ -40,17 +40,16 @@ export default function RelativeDashboard() {
     error,
     bmiResult,
     setError,
-    handleRefresh,
-    fetchRelativeData
+    handleRefresh
   } = useDashboardData();
 
   // Generate health alerts when vitals change
-  useState(() => {
+  useEffect(() => {
     if (vitals.length > 0) {
       const alerts = DashboardUtils.generateHealthAlerts(vitals);
       setHealthAlerts(alerts);
     }
-  });
+  }, [vitals]);
 
   const chartData = DashboardUtils.prepareChartData(vitals, chartPeriod);
 
@@ -129,16 +128,14 @@ export default function RelativeDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <p className="ml-4 text-gray-600">Loading patient data...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center px-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-gray-600 text-center text-sm sm:text-base">Loading patient data...</p>
       </div>
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -149,65 +146,69 @@ export default function RelativeDashboard() {
         onLogout={handleLogout}
       />
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <PatientHeader
-          patientData={patientData}
-          user={user}
-          summary={summary}
-          bmiResult={bmiResult}
-        />
-
-        <HealthAlerts alerts={healthAlerts} />
-
-        <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-
-        <StatusMessages error={error} success={success} />
-
-        {activeTab === 'overview' && (
-          <OverviewTab
-            summary={summary}
-            chartData={chartData}
-            selectedMetric={selectedMetric}
-            chartPeriod={chartPeriod}
-            stats={stats}
-            patientData={patientData}
-            onMetricChange={setSelectedMetric}
-            onPeriodChange={setChartPeriod}
-            onTabChange={setActiveTab}
-          />
-        )}
-
-        {activeTab === 'vitals' && (
-          <VitalsTab
-            vitals={vitals}
-            patientData={patientData}
-          />
-        )}
-
-        {activeTab === 'medications' && (
-          <MedicationsTab
-            medications={medications}
-            patientData={patientData}
-            onMarkAsTaken={markMedicationAsTaken}
-          />
-        )}
-
-        {activeTab === 'messages' && (
-          <MessagesTab
+      <main className="max-w-7xl mx-auto py-6 sm:px-4 lg:px-8">
+        <div className="flex flex-col space-y-6">
+          <PatientHeader
             patientData={patientData}
             user={user}
-            message={message}
-            sendingMessage={sendingMessage}
-            onMessageChange={setMessage}
-            onSendMessage={handleSendMessage}
+            summary={summary}
+            bmiResult={bmiResult}
           />
-        )}
 
-        {activeTab === 'profile' && patientData && (
-          <ProfileTab patientData={patientData} />
-        )}
+          <HealthAlerts alerts={healthAlerts} />
 
-        <AccessNotice user={user} />
+          <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+
+          <StatusMessages error={error} success={success} />
+
+          <div className="w-full flex flex-col space-y-6">
+            {activeTab === 'overview' && (
+              <OverviewTab
+                summary={summary}
+                chartData={chartData}
+                selectedMetric={selectedMetric}
+                chartPeriod={chartPeriod}
+                stats={stats}
+                patientData={patientData}
+                onMetricChange={setSelectedMetric}
+                onPeriodChange={setChartPeriod}
+                onTabChange={setActiveTab}
+              />
+            )}
+
+            {activeTab === 'vitals' && (
+              <VitalsTab
+                vitals={vitals}
+                patientData={patientData}
+              />
+            )}
+
+            {activeTab === 'medications' && (
+              <MedicationsTab
+                medications={medications}
+                patientData={patientData}
+                onMarkAsTaken={markMedicationAsTaken}
+              />
+            )}
+
+            {activeTab === 'messages' && (
+              <MessagesTab
+                patientData={patientData}
+                user={user}
+                message={message}
+                sendingMessage={sendingMessage}
+                onMessageChange={setMessage}
+                onSendMessage={handleSendMessage}
+              />
+            )}
+
+            {activeTab === 'profile' && patientData && (
+              <ProfileTab patientData={patientData} />
+            )}
+
+            <AccessNotice user={user} />
+          </div>
+        </div>
       </main>
     </div>
   );
