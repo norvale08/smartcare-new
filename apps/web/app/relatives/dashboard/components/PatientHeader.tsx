@@ -97,30 +97,7 @@ export function PatientHeader({
               )}
             </div>
           </div>
-        </div>
-
-        {/* BMI Indicator */}
-        {bmiResult && (
-          <div className="max-w-xs sm:max-w-sm bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 p-4 rounded-xl">
-            <div className="flex items-center mb-1">
-              <Calculator className="w-4 h-4 text-purple-600 mr-2" />
-              <span className="text-sm font-medium text-purple-700">
-                BMI
-              </span>
-            </div>
-
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-gray-900">
-                {bmiResult}
-              </span>
-              <span
-                className={`text-sm font-medium ${DashboardUtils.getBMICategory(bmiResult).color}`}
-              >
-                {DashboardUtils.getBMICategory(bmiResult).category}
-              </span>
-            </div>
-          </div>
-        )}
+        </div>        
 
       </div>
     </div>
