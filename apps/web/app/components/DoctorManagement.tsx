@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { User, Phone, Mail, MapPin, Calendar, Stethoscope, MessageSquare, PhoneCall, ArrowLeft, AlertCircle,
-  RefreshCw, Send, Shield, Building, Award, Clock, Search, UserPlus, CheckCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, Input, Button } from '@repo/ui';
-import { useTranslation } from '../../lib/hypertension/useTranslation';
+// FILE: app/caretaker/components/DoctorManagement.tsx
+"use client";
+import React, { useState, useEffect } from "react";
+import { User, Phone, Mail, Building, Award, Clock, AlertCircle, 
+  RefreshCw, MessageSquare, PhoneCall, Shield, Send, ArrowLeft, ExternalLink } from "lucide-react";
+import { Button } from "@repo/ui";
+import { useTranslation } from "../../lib/hypertension/useTranslation";
 
 interface Doctor {
   id: string;
@@ -14,6 +16,7 @@ interface Doctor {
   licenseNumber?: string;
   experience?: number;
   createdAt?: string;
+  assignmentSource?: string;
 }
 
 interface Message {
@@ -42,342 +45,14 @@ interface Message {
   createdAt: string;
 }
 
-interface DoctorSearchProps {
-  onDoctorRequest: (doctorId: string, doctorData?: any) => void;
-  requestedDoctors: string[];
-}
-
 interface DoctorManagementProps {
   className?: string;
   refreshTrigger?: number;
   condition?: 'hypertension' | 'diabetes' | 'both';
 }
 
-const DoctorSearch: React.FC<DoctorSearchProps> = ({ onDoctorRequest, requestedDoctors }) => {
-  const { t, language } = useTranslation();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const getApiBaseUrl = () => {
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  };
-
-  const searchDoctors = async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      setError(null);
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const params = new URLSearchParams();
-      if (query.trim()) params.append('q', query);
-
-      const apiUrl = `${getApiBaseUrl()}/api/doctors/search?${params.toString()}`;
-
-      const response = await fetch(apiUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please log in again.');
-        }
-        throw new Error(`Search failed with status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.success && data.doctors) {
-        setSearchResults(data.doctors);
-        if (data.doctors.length === 0) {
-          setError('No doctors found matching your search');
-        }
-      } else {
-        throw new Error(data.message || 'Search request failed');
-      }
-      
-    } catch (error: any) {
-      console.error('Doctor search error:', error);
-      setError(error.message);
-      setSearchResults([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchQuery.trim()) {
-        searchDoctors(searchQuery);
-      } else {
-        setSearchResults([]);
-        setError(null);
-      }
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
-
-  const handleRequestDoctor = async (doctorId: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch(`${getApiBaseUrl()}/api/patient/request-doctor`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ doctorId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Request failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      const doctorData = searchResults.find(d => d.id === doctorId);
-      onDoctorRequest(doctorId, doctorData);
-      setError(`Successfully requested ${doctorData?.fullName || 'the doctor'}!`);
-      
-    } catch (error: any) {
-      console.error('Doctor request error:', error);
-      setError(error.message);
-    }
-  };
-
-  const getSpecializationColor = (specialization: string) => {
-    const colors: { [key: string]: string } = {
-      'Cardiology': 'bg-red-100 text-red-800 border border-red-200',
-      'Endocrinology': 'bg-blue-100 text-blue-800 border border-blue-200',
-      'General Medicine': 'bg-green-100 text-green-800 border border-green-200',
-      'Neurology': 'bg-purple-100 text-purple-800 border border-purple-200',
-    };
-    return colors[specialization] || 'bg-gray-100 text-gray-800 border border-gray-200';
-  };
-
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex items-center space-x-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <svg
-            key={star}
-            className={`w-4 h-4 ${
-              star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-            }`}
-            viewBox="0 0 20 20"
-          >
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-        ))}
-        <span className="text-sm text-gray-600 ml-1">({rating.toFixed(1)})</span>
-      </div>
-    );
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h4 className="font-semibold text-gray-900">
-            {language === "en-US" ? "Search Our Medical Network" : "Tafuta Katika Mtandao Wetu wa Matibabu"}
-          </h4>
-          <p className="text-sm text-gray-600">
-            {language === "en-US" ? "Find specialists based on your needs" : "Pata wataalamu kulingana na mahitaji yako"}
-          </p>
-        </div>
-        <div className="flex items-center space-x-2 text-sm text-gray-500">
-          <User className="w-4 h-4" />
-          <span>
-            {searchResults.length} {language === "en-US" ? "doctors available" : "madaktari wanapatikana"}
-          </span>
-        </div>
-      </div>
-
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-        <Input
-          type="text"
-          placeholder={language === "en-US" 
-            ? "Search by name, specialization, hospital, or condition..."
-            : "Tafuta kwa jina, utaalam, hospitali, au hali ya afya..."}
-          className="w-full pl-12 pr-24 py-3 text-base border-2 border-gray-200 focus:border-blue-500 transition-colors"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-
-      {error && (
-        <div className={`p-3 rounded-lg flex items-start space-x-3 ${
-          error.includes('Successfully') 
-            ? 'bg-green-50 border border-green-200 text-green-700'
-            : 'bg-red-50 border border-red-200 text-red-700'
-        }`}>
-          <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <span className="font-medium">{error}</span>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-4 max-h-96 overflow-y-auto">
-        {isLoading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-            <p className="text-gray-600 font-medium">
-              {language === "en-US" ? "Searching our database..." : "Inatafuta kwenye hifadhidata yetu..."}
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
-              {language === "en-US" ? "Finding the best doctors for you" : "Kupata madaktari bora kwako"}
-            </p>
-          </div>
-        ) : searchResults.length > 0 ? (
-          searchResults.map((doctor) => {
-            const isRequested = requestedDoctors.includes(doctor.id);
-            
-            return (
-              <div
-                key={doctor.id}
-                className="p-4 rounded-xl border-2 border-gray-100 bg-white hover:border-blue-200 hover:shadow-md transition-all duration-200"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h4 className="font-bold text-lg text-gray-900">{doctor.fullName}</h4>
-                          {isRequested && (
-                            <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              {language === "en-US" ? "Requested" : "Imeombwa"}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-3 text-sm text-gray-600">
-                          <span className={`inline-block px-3 py-1 rounded-full font-semibold ${getSpecializationColor(doctor.specialization)}`}>
-                            {doctor.specialization}
-                          </span>
-                          <span className="flex items-center">
-                            <svg className="w-4 h-4 text-yellow-400 mr-1" viewBox="0 0 20 20">
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                            {doctor.rating.toFixed(1)}
-                          </span>
-                          <span>• {doctor.experience} {language === "en-US" ? "years" : "miaka"}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2 text-gray-700">
-                        <Building className="w-4 h-4 text-gray-400" />
-                        <span className="font-medium">{doctor.hospital}</span>
-                      </div>
-                      
-                      {doctor.phoneNumber && (
-                        <div className="flex items-center space-x-2 text-gray-600">
-                          <div className="w-4 h-4 flex items-center justify-center">📞</div>
-                          <span>{doctor.phoneNumber}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {doctor.treatsHypertension && (
-                        <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded border border-blue-200">
-                          {language === "en-US" ? "Hypertension" : "Shinikizo la Damu"}
-                        </span>
-                      )}
-                      {doctor.treatsDiabetes && (
-                        <span className="bg-green-50 text-green-700 text-xs px-2 py-1 rounded border border-green-200">
-                          {language === "en-US" ? "Diabetes" : "Kisukari"}
-                        </span>
-                      )}
-                      {doctor.treatsCardiovascular && (
-                        <span className="bg-red-50 text-red-700 text-xs px-2 py-1 rounded border border-red-200">
-                          {language === "en-US" ? "Cardiovascular" : "Moyo na Mishipa"}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="ml-4 flex-shrink-0">
-                    <Button
-                      size="sm"
-                      disabled={isRequested}
-                      onClick={() => handleRequestDoctor(doctor.id)}
-                      className={isRequested ? 
-                        'bg-green-100 text-green-800 hover:bg-green-100 border-2 border-green-200 px-4 py-2' : 
-                        'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 shadow-sm'
-                      }
-                    >
-                      {isRequested ? (
-                        <>
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          {language === "en-US" ? "Requested" : "Imeombwa"}
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-4 h-4 mr-2" />
-                          {language === "en-US" ? "Request" : "Omba"}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        ) : searchQuery && !isLoading ? (
-          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-            <User className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <h4 className="font-semibold text-gray-700 mb-1">
-              {language === "en-US" ? "No doctors found" : "Hakuna madaktari walio patikana"}
-            </h4>
-            <p className="text-gray-500 text-sm">
-              {language === "en-US" ? "Try adjusting your search terms or filters" : "Jaribu kurekebisha maneno yako ya utafutaji au vichujio"}
-            </p>
-          </div>
-        ) : (
-          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-            <Search className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <h4 className="font-semibold text-gray-700 mb-1">Ready to find your doctor?</h4>
-            <p className="text-gray-500 text-sm">Search by name, specialization, or hospital to get started</p>
-          </div>
-        )}
-      </div>
-
-      {requestedDoctors.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-          <CheckCircle className="w-5 h-5 inline mr-2 text-blue-600" />
-          <span className="text-blue-800 font-medium">
-            You've requested {requestedDoctors.length} doctor{requestedDoctors.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }> = ({ className, refreshTrigger }) => {
+  const { language } = useTranslation();
   const [assignedDoctor, setAssignedDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -385,6 +60,8 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastChecked, setLastChecked] = useState<string>("");
 
   const getApiBaseUrl = () => {
     return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -400,48 +77,72 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch(`${getApiBaseUrl()}/api/patient/assigned-doctors`, {
+      console.log('📡 Fetching assigned doctor...');
+      
+      // Use the new endpoint that checks both Patient and User models
+      const response = await fetch(`${getApiBaseUrl()}/api/patient/my-doctor`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          // No doctor assigned - this is not an error, just no assignment yet
+      console.log(`Response status:`, response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ API Response:', data);
+        
+        if (data.success && data.assignedDoctor) {
+          // Format doctor data
+          const doctorData = data.assignedDoctor;
+          const formattedDoctor: Doctor = {
+            id: doctorData.id || doctorData._id || '',
+            fullName: doctorData.fullName || 'Dr. Unknown',
+            specialization: doctorData.specialization || 'General Medicine',
+            hospital: doctorData.hospital || 'Medical Center',
+            email: doctorData.email,
+            phoneNumber: doctorData.phoneNumber,
+            licenseNumber: doctorData.licenseNumber,
+            experience: doctorData.experience || 0,
+            createdAt: doctorData.createdAt,
+            assignmentSource: data.assignmentSource || 'unknown'
+          };
+          setAssignedDoctor(formattedDoctor);
+          setRetryCount(0);
+          setLastChecked(new Date().toLocaleTimeString());
+        } else if (data.success && data.assignedDoctor === null) {
+          // No doctor assigned yet
+          console.log('ℹ️ No doctor assigned yet');
           setAssignedDoctor(null);
-          setError(null); // Clear any previous errors
-          return;
+          setError(null);
+          setLastChecked(new Date().toLocaleTimeString());
+        } else {
+          throw new Error(data.message || 'Invalid response format');
         }
+      } else if (response.status === 404) {
+        // No doctor assigned - this is not an error
+        console.log('ℹ️ No doctor assigned (404 response)');
+        setAssignedDoctor(null);
+        setError(null);
+        setLastChecked(new Date().toLocaleTimeString());
+      } else {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `Failed to fetch assigned doctor: ${response.status}`);
       }
-
-      const data = await response.json();
-      
-      console.log('Assigned doctor API response:', data);
-      
-      // Handle different response formats
-      if (data.success) {
-        // API returns { success: true, assignedDoctor: {...} } or { success: true, assignedDoctor: null }
-        if (data.assignedDoctor) {
-          setAssignedDoctor(data.assignedDoctor);
-        } else {
-          setAssignedDoctor(null);
-        }
-      } else if (data.assignedDoctor) {
-        // Fallback: if assignedDoctor exists directly in response
-        setAssignedDoctor(data.assignedDoctor);
-      } else if (Array.isArray(data) && data.length > 0) {
-        // Fallback: if response is an array with doctor data
-        setAssignedDoctor(data[0]);
-      } else {
-        setAssignedDoctor(null);
-      }
     } catch (error: any) {
-      console.error('Error fetching assigned doctor:', error);
-      setError(error.message);
+      console.error('❌ Error fetching assigned doctor:', error);
+      
+      // Only show error if we've tried multiple times
+      if (retryCount < 2) {
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => {
+          fetchAssignedDoctor();
+        }, 3000); // Retry after 3 seconds
+      } else {
+        setError(error.message || 'Failed to load doctor information. Please try again.');
+      }
+      
       setAssignedDoctor(null);
     } finally {
       setLoading(false);
@@ -453,12 +154,15 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
   }, [refreshTrigger]);
 
   useEffect(() => {
+    // Auto-refresh every 60 seconds
     const interval = setInterval(() => {
-      fetchAssignedDoctor();
-    }, 30000);
+      if (!isMessaging) {
+        fetchAssignedDoctor();
+      }
+    }, 60000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isMessaging]);
 
   const fetchMessages = async (doctorId: string) => {
     try {
@@ -515,6 +219,9 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      alert(language === "en-US" 
+        ? 'Failed to send message. Please try again.' 
+        : 'Imeshindwa kutuma ujumbe. Tafadhali jaribu tena.');
     }
   };
 
@@ -543,16 +250,30 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
     if (assignedDoctor?.phoneNumber) {
       window.open(`tel:${assignedDoctor.phoneNumber}`, '_blank');
     } else {
-      alert('Phone number not available for this doctor');
+      alert(language === "en-US" 
+        ? 'Phone number not available for this doctor' 
+        : 'Nambari ya simu haipatikani kwa daktari huyu');
     }
   };
 
   const formatDateTime = (dateString?: string) => {
-    if (!dateString) return 'Not specified';
+    if (!dateString) return language === "en-US" ? 'Not specified' : 'Haijaainishwa';
     try {
-      return new Date(dateString).toLocaleDateString();
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
     } catch {
-      return 'Not specified';
+      return language === "en-US" ? 'Not specified' : 'Haijaainishwa';
+    }
+  };
+
+  const openDoctorProfile = () => {
+    if (assignedDoctor) {
+      // You can implement doctor profile view or redirect
+      console.log('Opening doctor profile:', assignedDoctor.id);
+      // Example: window.open(`/doctor/${assignedDoctor.id}`, '_blank');
     }
   };
 
@@ -561,8 +282,17 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
       <div className="space-y-4">
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <h3 className="font-semibold text-gray-700 mb-1">Loading Your Healthcare Team</h3>
-          <p className="text-gray-500 text-sm">Fetching your doctor information...</p>
+          <h3 className="font-semibold text-gray-700 mb-1">
+            {language === "en-US" 
+              ? "Loading Your Doctor Information" 
+              : "Inapakia Taarifa ya Daktari Wako"}
+          </h3>
+          <p className="text-gray-500 text-sm">
+            {language === "en-US" 
+              ? "Fetching your assigned doctor details..." 
+              : "Inapata maelezo ya daktari wako aliyeteuliwa..."}
+            {retryCount > 0 && ` (Retry ${retryCount}/2)`}
+          </p>
         </div>
       </div>
     );
@@ -573,14 +303,21 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
       <div className="space-y-4">
         <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6 text-center">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-          <h3 className="font-semibold text-red-800 mb-2">Unable to Load Doctor</h3>
+          <h3 className="font-semibold text-red-800 mb-2">
+            {language === "en-US" 
+              ? "Unable to Load Doctor Information" 
+              : "Haiwezekani Kupakia Taarifa ya Daktari"}
+          </h3>
           <p className="text-red-600 text-sm mb-4">{error}</p>
-          <button 
-            onClick={fetchAssignedDoctor}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            Try Again
-          </button>
+          <div className="flex justify-center space-x-3">
+            <button 
+              onClick={fetchAssignedDoctor}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              {language === "en-US" ? "Try Again" : "Jaribu Tena"}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -591,19 +328,37 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
       <div className="space-y-4">
         <div className="text-center py-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-dashed border-gray-300">
           <User className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h3 className="font-bold text-gray-700 text-lg mb-2">No Doctor Assigned Yet</h3>
+          <h3 className="font-bold text-gray-700 text-lg mb-2">
+            {language === "en-US" 
+              ? "No Doctor Assigned Yet" 
+              : "Hakuna Daktari Aliyeteuliwa Bado"}
+          </h3>
           <p className="text-gray-500 mb-4 max-w-sm mx-auto">
-            You haven't been assigned a doctor yet. Search for doctors and send them requests to build your healthcare team.
+            {language === "en-US" 
+              ? "You haven't been assigned a doctor yet. Please wait for administrator assignment or contact support if this persists."
+              : "Hujateuliwa daktari bado. Tafadhali subiri uteuzi wa msimamizi au wasiliana na usaidizi ikiwa hii inaendelea."}
           </p>
-          <div className="flex justify-center space-x-3">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button 
               onClick={fetchAssignedDoctor}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center"
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
+              {language === "en-US" ? "Check Again" : "Angalia Tena"}
+            </button>
+            <button 
+              onClick={() => window.open('/support', '_blank')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              {language === "en-US" ? "Contact Support" : "Wasiliana na Usaidizi"}
             </button>
           </div>
+          {lastChecked && (
+            <p className="text-xs text-gray-400 mt-4">
+              {language === "en-US" ? "Last checked" : "Ilikaguliwa mwisho"}: {lastChecked}
+            </p>
+          )}
         </div>
       </div>
     );
@@ -612,7 +367,7 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
   if (isMessaging) {
     return (
       <div className="space-y-4">
-        <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden shadow-sm">
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
             <div className="flex items-center space-x-3">
               <button
@@ -639,12 +394,19 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
             ) : messages.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p className="font-medium text-gray-600">No messages yet</p>
-                <p className="text-sm">Start a conversation with your doctor</p>
+                <p className="font-medium text-gray-600">
+                  {language === "en-US" ? "No messages yet" : "Hakuna ujumbe bado"}
+                </p>
+                <p className="text-sm">
+                  {language === "en-US" 
+                    ? "Start a conversation with your doctor" 
+                    : "Anza mazungumzo na daktari wako"}
+                </p>
               </div>
             ) : (
               messages.map((message) => {
-                const isOwnMessage = message.senderId._id === JSON.parse(localStorage.getItem('user') || '{}')?.userId;
+                const userData = JSON.parse(localStorage.getItem('user') || '{}');
+                const isOwnMessage = message.senderId._id === userData?.userId;
                 return (
                   <div
                     key={message._id}
@@ -676,7 +438,9 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Type your message to the doctor..."
+                placeholder={language === "en-US" 
+                  ? "Type your message to the doctor..." 
+                  : "Andika ujumbe wako kwa daktari..."}
                 className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows={2}
               />
@@ -708,10 +472,17 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
                 <p className="text-green-100">{assignedDoctor.specialization}</p>
               </div>
             </div>
-            <span className="bg-green-500 text-white text-sm px-3 py-1 rounded-full font-medium flex items-center">
-              <Shield className="w-4 h-4 mr-1" />
-              Assigned
-            </span>
+            <div className="flex flex-col items-end">
+              <span className="bg-green-500 text-white text-sm px-3 py-1 rounded-full font-medium flex items-center mb-1">
+                <Shield className="w-4 h-4 mr-1" />
+                {language === "en-US" ? "Assigned" : "Imeteuliwa"}
+              </span>
+              {assignedDoctor.assignmentSource && (
+                <span className="text-xs text-green-200">
+                  {language === "en-US" ? "By Admin" : "Na Msimamizi"}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -721,7 +492,9 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
               <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
                 <Building className="w-5 h-5 text-blue-600" />
                 <div>
-                  <p className="text-xs text-blue-600 font-medium">Hospital</p>
+                  <p className="text-xs text-blue-600 font-medium">
+                    {language === "en-US" ? "Hospital/Clinic" : "Hospitali/Kliniki"}
+                  </p>
                   <p className="text-sm font-semibold text-gray-900">{assignedDoctor.hospital}</p>
                 </div>
               </div>
@@ -730,8 +503,12 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
                 <div className="flex items-center space-x-3 p-3 bg-orange-50 rounded-lg">
                   <Award className="w-5 h-5 text-orange-600" />
                   <div>
-                    <p className="text-xs text-orange-600 font-medium">Experience</p>
-                    <p className="text-sm font-semibold text-gray-900">{assignedDoctor.experience} years</p>
+                    <p className="text-xs text-orange-600 font-medium">
+                      {language === "en-US" ? "Experience" : "Uzoefu"}
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {assignedDoctor.experience} {language === "en-US" ? "years" : "miaka"}
+                    </p>
                   </div>
                 </div>
               )}
@@ -742,7 +519,9 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
                 <div className="flex items-center space-x-3 p-3 bg-purple-50 rounded-lg">
                   <Mail className="w-5 h-5 text-purple-600" />
                   <div>
-                    <p className="text-xs text-purple-600 font-medium">Email</p>
+                    <p className="text-xs text-purple-600 font-medium">
+                      {language === "en-US" ? "Email" : "Barua Pepe"}
+                    </p>
                     <p className="text-sm font-semibold text-gray-900 truncate">{assignedDoctor.email}</p>
                   </div>
                 </div>
@@ -752,7 +531,9 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
                 <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
                   <Phone className="w-5 h-5 text-green-600" />
                   <div>
-                    <p className="text-xs text-green-600 font-medium">Phone</p>
+                    <p className="text-xs text-green-600 font-medium">
+                      {language === "en-US" ? "Phone" : "Simu"}
+                    </p>
                     <p className="text-sm font-semibold text-gray-900">{assignedDoctor.phoneNumber}</p>
                   </div>
                 </div>
@@ -763,8 +544,10 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
           {assignedDoctor.licenseNumber && (
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-2">
-                <Stethoscope className="w-4 h-4 text-gray-600" />
-                <span className="text-sm font-medium text-gray-700">Medical License</span>
+                <Shield className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">
+                  {language === "en-US" ? "Medical License" : "Leseni ya Matibabu"}
+                </span>
               </div>
               <p className="text-sm text-gray-600 font-mono">{assignedDoctor.licenseNumber}</p>
             </div>
@@ -776,22 +559,32 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl text-sm font-medium flex items-center justify-center space-x-2 transition-colors shadow-sm"
             >
               <MessageSquare className="w-5 h-5" />
-              <span>Send Message</span>
+              <span>{language === "en-US" ? "Send Message" : "Tuma Ujumbe"}</span>
             </button>
-            {/* <button 
-              onClick={handleCallClick}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl text-sm font-medium flex items-center justify-center space-x-2 transition-colors shadow-sm"
-            >
-              <PhoneCall className="w-5 h-5" />
-              <span>Call Now</span>
-            </button> */}
+            {/* {assignedDoctor.phoneNumber && (
+              <button 
+                onClick={handleCallClick}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl text-sm font-medium flex items-center justify-center space-x-2 transition-colors shadow-sm"
+              >
+                <PhoneCall className="w-5 h-5" />
+                <span>{language === "en-US" ? "Call Now" : "Piga Simu Sasa"}</span>
+              </button>
+            )} */}
           </div>
 
           <div className="text-center pt-4 border-t border-gray-100">
             <div className="flex items-center justify-center space-x-4 text-xs text-gray-500">
               <div className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
-                <span>Assigned: {formatDateTime(assignedDoctor.createdAt)}</span>
+                <span>
+                  {language === "en-US" ? "Assigned" : "Imeteuliwa"}: {formatDateTime(assignedDoctor.createdAt)}
+                </span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span>•</span>
+                <span>
+                  {language === "en-US" ? "Last checked" : "Ilikaguliwa mwisho"}: {lastChecked}
+                </span>
               </div>
             </div>
           </div>
@@ -806,42 +599,76 @@ const DoctorManagement: React.FC<DoctorManagementProps> = ({
   refreshTrigger, 
   condition = 'hypertension' 
 }) => {
-  const [requestedDoctorIds, setRequestedDoctorIds] = useState<string[]>([]);
+  const { language } = useTranslation();
   const [doctorRefreshTrigger, setDoctorRefreshTrigger] = useState(0);
 
-  const handleDoctorRequest = (doctorId: string, doctorData?: any) => {
-    setRequestedDoctorIds(prev => [...prev, doctorId]);
-    
-    setTimeout(() => {
-      setDoctorRefreshTrigger(prev => prev + 1);
-    }, 1000);
+  const handleRefresh = () => {
+    setDoctorRefreshTrigger(prev => prev + 1);
   };
 
   return (
-    <section className={`w-full max-w-6xl ${className}`}>
+    <section className={`w-full max-w-4xl mx-auto ${className}`}>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center">
-          <User className="w-6 h-6 mr-2 text-blue-600" />
-          Doctor Management
-        </h2>
-        <p className="text-gray-600">Find and manage your healthcare providers</p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
-            <h3 className="text-lg font-semibold text-white flex items-center">
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              Your Healthcare Team
-            </h3>
-            <p className="text-green-100 text-sm mt-1">
-              Manage your assigned doctors and communications
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center">
+              <User className="w-6 h-6 mr-2 text-blue-600" />
+              {language === "en-US" ? "My Assigned Doctor" : "Daktari Wangu Aliyeteuliwa"}
+            </h2>
+            <p className="text-gray-600">
+              {language === "en-US" 
+                ? "View and communicate with your assigned doctor" 
+                : "Angalia na wasiliana na daktari wako aliyeteuliwa"}
             </p>
           </div>
-          <div className="p-6">
-            <AssignedDoctors refreshTrigger={doctorRefreshTrigger} />
+          <button
+            onClick={handleRefresh}
+            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors self-start sm:self-auto"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span className="text-sm font-medium">
+              {language === "en-US" ? "Refresh" : "Osha Upya"}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+          <h3 className="text-lg font-semibold text-white flex items-center">
+            <svg className="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            {language === "en-US" ? "Your Healthcare Provider" : "Mtoa Huduma Wako wa Afya"}
+          </h3>
+          <p className="text-green-100 text-sm mt-1">
+            {language === "en-US" 
+              ? "View your assigned doctor's details and contact information" 
+              : "Angalia maelezo ya daktari wako aliyeteuliwa na mawasiliano"}
+          </p>
+        </div>
+        <div className="p-6">
+          <AssignedDoctors refreshTrigger={doctorRefreshTrigger} />
+        </div>
+      </div>
+
+      {/* Information Panel */}
+      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
+        <div className="flex items-start space-x-3">
+          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div>
+            <h4 className="font-semibold text-blue-900 mb-1">
+              {language === "en-US" ? "About Doctor Assignments" : "Kuhusu Uteuzi wa Daktari"}
+            </h4>
+            <p className="text-blue-800 text-sm">
+              {language === "en-US" 
+                ? "Doctors are assigned by administrators based on your medical condition and needs. If you have any questions about your assignment, please contact the admin team."
+                : "Madaktari wanateuliwa na wasimamizi kulingana na hali yako ya kiafya na mahitaji. Ikiwa una maswali yoyote kuhusu uteuzi wako, tafadhali wasiliana na timu ya wasimamizi."}
+            </p>
           </div>
         </div>
       </div>

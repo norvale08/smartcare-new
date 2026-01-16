@@ -54,6 +54,7 @@ import sendEmailRouter from './routes/send-email';
 import adminDoctorsRoutes from './routes/adminDoctors';
 import adminPatientsRoutes from './routes/adminPatients';
 import adminDoctorAssignmentsRouter from './routes/admin/doctorAssignments';
+import patientDoctorAssignmentRoutes from './routes/patientDoctorAssignment';
 
 dotenv.config();
 
@@ -194,6 +195,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/doctor/me', doctorMeRoutes);
 app.use("/api/patients/search", patientSearchRoute);
 app.use("/api/doctor/assign-patient", assignPatientRoute);
+app.use('/api/patient', patientDoctorAssignmentRoutes);
 app.use('/api/patient', patientRequestsRoute);
 app.use('/api/doctor', doctorRequestsRoute);
 app.use('/api/doctor/manage', doctorManagementRoutes);
@@ -212,6 +214,7 @@ app.use('/api/python-speech', pythonSpeechRoutes);
 app.use('/api/relative-setup', relativeSetupRoutes);
 app.use('/api/relative', relativePatientRouter);
 app.use('/api', sendEmailRouter);
+
 
 // 404 handler
 app.use('*', (req, res) => {

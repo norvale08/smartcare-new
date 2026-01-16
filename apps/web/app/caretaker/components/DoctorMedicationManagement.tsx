@@ -1,12 +1,13 @@
 // FILE: app/caretaker/components/DoctorMedicationManagement.tsx
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, RefreshCw, FileText as FileTextIcon } from 'lucide-react';
+import { Stethoscope, RefreshCw, FileText as FileTextIcon, Pill } from 'lucide-react';
 
 // Import components
 import SideEffectUpdateModal from'./SideEffectUpdateModal';
 import StatsCards from './StatsCards';
 import FiltersSection from './FiltersSection';
 import MedicationCard from'./MedicationCard';
+import MedicationPrescriptionModal from './MedicationPrescriptionModal'; // Add this import
 
 interface PatientInfo {
   _id: string;
@@ -120,6 +121,9 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
     sideEffect: null,
     patientName: ''
   });
+  
+  // Add state for prescription modal
+  const [prescriptionModalOpen, setPrescriptionModalOpen] = useState(false);
   
   const [stats, setStats] = useState({
     totalMedications: 0,
@@ -452,120 +456,118 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
   };
 
   // FIXED DELETE ROUTE - Changed to correct endpoint
-  // FIXED DELETE FUNCTION - Use the correct endpoint from medicine.ts
-// In DoctorMedicationManagement.tsx, update the deleteMedication function:
-const deleteMedication = async (medicationId: string) => {
-  if (!confirm('Are you sure you want to delete this medication prescription? This action cannot be undone.')) {
-    return;
-  }
-
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert('Authentication required');
+  const deleteMedication = async (medicationId: string) => {
+    if (!confirm('Are you sure you want to delete this medication prescription? This action cannot be undone.')) {
       return;
     }
 
-    console.log("🗑️ Deleting medication:", medicationId);
-    console.log("📊 User Role:", "doctor");
-
-    // IMPORTANT: Use the patient's medication reminders endpoint instead
-    // This will delete from both doctor and patient views
-    const endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medications/reminders/${medicationId}`;
-    console.log("🌐 Using DELETE endpoint:", endpoint);
-
-    const response = await fetch(endpoint, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    console.log("📡 Response Status:", response.status);
-    
-    if (response.ok) {
-      console.log("✅ Medication deleted successfully");
-      // Remove from local state
-      setMedications(prev => prev.filter(med => med.id !== medicationId));
-      alert('Medication prescription deleted successfully');
-      fetchDoctorPrescriptions(); // Refresh data
-    } else {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('❌ Failed to delete medication:', errorData);
-      
-      // Check if it's a permission error
-      if (response.status === 403) {
-        alert('You can only delete medications you prescribed');
-      } else if (response.status === 404) {
-        alert('Medication not found');
-      } else {
-        alert(`Failed to delete medication: ${errorData?.message || 'Unknown error'}`);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert('Authentication required');
+        return;
       }
-    }
 
-  } catch (error) {
-    console.error('❌ Error deleting medication:', error);
-    alert('Network error deleting medication. Please check your connection.');
-  }
-};
+      console.log("🗑️ Deleting medication:", medicationId);
+      console.log("📊 User Role:", "doctor");
+
+      // IMPORTANT: Use the patient's medication reminders endpoint instead
+      // This will delete from both doctor and patient views
+      const endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medications/reminders/${medicationId}`;
+      console.log("🌐 Using DELETE endpoint:", endpoint);
+
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log("📡 Response Status:", response.status);
+      
+      if (response.ok) {
+        console.log("✅ Medication deleted successfully");
+        // Remove from local state
+        setMedications(prev => prev.filter(med => med.id !== medicationId));
+        alert('Medication prescription deleted successfully');
+        fetchDoctorPrescriptions(); // Refresh data
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Failed to delete medication:', errorData);
+        
+        // Check if it's a permission error
+        if (response.status === 403) {
+          alert('You can only delete medications you prescribed');
+        } else if (response.status === 404) {
+          alert('Medication not found');
+        } else {
+          alert(`Failed to delete medication: ${errorData?.message || 'Unknown error'}`);
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Error deleting medication:', error);
+      alert('Network error deleting medication. Please check your connection.');
+    }
+  };
 
   const updateMedicationStatus = async (medicationId: string, newStatus: 'active' | 'completed' | 'stopped' | 'cancelled') => {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert('Authentication required');
-      return;
-    }
-
-    console.log("📝 Updating medication status:", medicationId, newStatus);
-
-    // CORRECT ENDPOINT: Use /api/medications/:id (from medicine.ts)
-    const endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medications/${medicationId}`;
-
-    const response = await fetch(endpoint, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ 
-        status: newStatus,
-        // Include other fields that might be required
-        lastUpdated: new Date().toISOString()
-      }),
-    });
-
-    console.log("📡 Response Status:", response.status);
-    
-    if (response.ok) {
-      console.log("✅ Medication status updated successfully");
-      // Update local state
-      setMedications(prev =>
-        prev.map(med =>
-          med.id === medicationId ? { ...med, status: newStatus } : med
-        )
-      );
-      alert('Medication status updated successfully');
-      fetchDoctorPrescriptions(); // Refresh data
-    } else {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('❌ Failed to update medication status:', errorData);
-      
-      if (response.status === 403) {
-        alert('You can only update medications you prescribed');
-      } else if (response.status === 404) {
-        alert('Medication not found');
-      } else {
-        alert(`Failed to update medication status: ${errorData?.message || 'Unknown error'}`);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert('Authentication required');
+        return;
       }
-    }
 
-  } catch (error) {
-    console.error('Error updating medication status:', error);
-    alert('Network error updating medication status. Please check your connection.');
-  }
-};
+      console.log("📝 Updating medication status:", medicationId, newStatus);
+
+      // CORRECT ENDPOINT: Use /api/medications/:id (from medicine.ts)
+      const endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medications/${medicationId}`;
+
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          status: newStatus,
+          // Include other fields that might be required
+          lastUpdated: new Date().toISOString()
+        }),
+      });
+
+      console.log("📡 Response Status:", response.status);
+      
+      if (response.ok) {
+        console.log("✅ Medication status updated successfully");
+        // Update local state
+        setMedications(prev =>
+          prev.map(med =>
+            med.id === medicationId ? { ...med, status: newStatus } : med
+          )
+        );
+        alert('Medication status updated successfully');
+        fetchDoctorPrescriptions(); // Refresh data
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Failed to update medication status:', errorData);
+        
+        if (response.status === 403) {
+          alert('You can only update medications you prescribed');
+        } else if (response.status === 404) {
+          alert('Medication not found');
+        } else {
+          alert(`Failed to update medication status: ${errorData?.message || 'Unknown error'}`);
+        }
+      }
+
+    } catch (error) {
+      console.error('Error updating medication status:', error);
+      alert('Network error updating medication status. Please check your connection.');
+    }
+  };
 
   const updateSideEffectStatus = async (medicationId: string, effectIndex: number, updates: { resolved: boolean; doctorNotes: string }) => {
     try {
@@ -662,6 +664,11 @@ const deleteMedication = async (medicationId: string) => {
       sideEffect: null,
       patientName: ''
     });
+  };
+
+  // Add handler for when prescription is successful
+  const handlePrescriptionSuccess = () => {
+    fetchDoctorPrescriptions(); // Refresh the medication list
   };
 
   const exportSideEffectsReport = () => {
@@ -790,6 +797,17 @@ const deleteMedication = async (medicationId: string) => {
         }}
       />
 
+      {/* Medication Prescription Modal */}
+      <MedicationPrescriptionModal
+        isOpen={prescriptionModalOpen}
+        onClose={() => setPrescriptionModalOpen(false)}
+        patient={patient ? {
+          id: patient.id,
+          name: patient.fullName
+        } : undefined}
+        onPrescribe={handlePrescriptionSuccess}
+      />
+
       {/* Main Content */}
       <div className="bg-white rounded-lg border shadow-sm">
         {/* Header */}
@@ -805,6 +823,17 @@ const deleteMedication = async (medicationId: string) => {
               </p>
             </div>
             <div className="flex items-center space-x-3">
+              {/* ADDED: Prescribe Medication Button - Only show when viewing a specific patient */}
+              {patient && (
+                <button
+                  onClick={() => setPrescriptionModalOpen(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                  title="Prescribe new medication"
+                >
+                  <Pill className="w-4 h-4" />
+                  <span className="hidden sm:inline">Prescribe Medication</span>
+                </button>
+              )}
               <button
                 onClick={exportSideEffectsReport}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
@@ -886,12 +915,22 @@ const deleteMedication = async (medicationId: string) => {
                   : 'No patient medications found in the system.'
                 }
               </p>
-              <button
-                onClick={handleRefresh}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
-                Refresh Data
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  onClick={handleRefresh}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Refresh Data
+                </button>
+                {patient && (
+                  <button
+                    onClick={() => setPrescriptionModalOpen(true)}
+                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  >
+                    Prescribe First Medication
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
