@@ -1,8 +1,8 @@
-// apps/web/app/components/diabetesPages/components/GlucoseContextSection.tsx
+// apps/web/app/components/diabetesPages/components/GlucoseSection.tsx
 
 import React from "react";
 import { Input, Label } from "@repo/ui";
-import { Droplet, Clock } from "lucide-react";
+import { Droplet } from "lucide-react";
 import { FieldErrors, UseFormRegister } from "react-hook-form";
 import { diabetesType } from "@/types/diabetes";
 
@@ -12,7 +12,7 @@ interface GlucoseContextSectionProps {
   currentLanguage: any;
   validationRules: any;
   setFieldRef: (fieldName: string) => (el: HTMLDivElement | null) => void;
-  fieldStyle: React.CSSProperties;
+  getFieldStyle: (fieldName: string) => React.CSSProperties; // ✅ Changed to function
 }
 
 const GlucoseContextSection: React.FC<GlucoseContextSectionProps> = ({
@@ -21,7 +21,7 @@ const GlucoseContextSection: React.FC<GlucoseContextSectionProps> = ({
   currentLanguage,
   validationRules,
   setFieldRef,
-  fieldStyle
+  getFieldStyle // ✅ Now it's a function
 }) => {
   return (
     <div className="bg-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-5 md:p-6 lg:p-8 hover:shadow-xl transition-shadow animate-in fade-in slide-in-from-top-2 duration-300">
@@ -46,7 +46,7 @@ const GlucoseContextSection: React.FC<GlucoseContextSectionProps> = ({
         {/* Glucose Input */}
         <div
           ref={setFieldRef("glucose")}
-          style={fieldStyle}
+          style={getFieldStyle("glucose")} // ✅ Call function for glucose
           className="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-100 hover:bg-gray-50/80 transition-colors"
         >
           <Label htmlFor="glucose" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
@@ -67,7 +67,7 @@ const GlucoseContextSection: React.FC<GlucoseContextSectionProps> = ({
         {/* Measurement Context */}
         <div
           ref={setFieldRef("context")}
-          style={fieldStyle}
+          style={getFieldStyle("context")} // ✅ Call function for context
           className="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-100 hover:bg-gray-50/80 transition-colors"
         >
           <Label htmlFor="context" className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">

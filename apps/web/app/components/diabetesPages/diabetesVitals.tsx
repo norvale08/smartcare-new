@@ -202,7 +202,7 @@ const handleFormSubmitWithAI = useCallback(async (data: diabetesType, aiRequeste
       selectedDiseases: userDiseases.length > 0 ? userDiseases as ("diabetes" | "hypertension")[] : undefined,
     };
 
-    console.log("📤 Submitting vitals with AI request:", {
+    console.log(" Submitting vitals with AI request:", {
       requestAI: submitData.requestAI,
       diseases: submitData.selectedDiseases,
       glucose: submitData.glucose,
@@ -221,8 +221,6 @@ const handleFormSubmitWithAI = useCallback(async (data: diabetesType, aiRequeste
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || "Failed to add vitals");
 
-    console.log("✅ Submission successful:", result);
-    console.log("🤖 AI was requested:", aiRequested);
     toast.success(languageValue === "sw" ? "Data imehifadhiwa kikamilifu" : "Data saved successfully");
     setSubmitSuccess(true);
     
@@ -240,14 +238,14 @@ const handleFormSubmitWithAI = useCallback(async (data: diabetesType, aiRequeste
     });
     
     if (onVitalsSubmitted && result.id) {
-      console.log(`🎯 Calling onVitalsSubmitted with ID: ${result.id}, requestAI: ${aiRequested}`);
-      onVitalsSubmitted(result.id, aiRequested); // ✅ Use parameter, not state
+      
+      onVitalsSubmitted(result.id, aiRequested);
     }
     
     setRequestAI(false);
     setTimeout(() => setSubmitSuccess(false), 3000);
   } catch (error: any) {
-    console.error("❌ Submission error:", error);
+    
     toast.error(error.message || (languageValue === "sw" ? "Hitilafu imetokea" : "An error occurred"));
     throw error;
   } finally {
@@ -255,22 +253,20 @@ const handleFormSubmitWithAI = useCallback(async (data: diabetesType, aiRequeste
   }
 }, [languageValue, userDiseases, API_URL, onVitalsSubmitted, reset]);
 
-// 2️⃣ SECOND: handleFormSubmit (for manual form submission - uses current state)
+//  handleFormSubmit (for manual form submission - uses current state)
 const handleFormSubmit = useCallback(async (data: diabetesType) => {
   // For manual submission via form button, use the current requestAI state
   await handleFormSubmitWithAI(data, requestAI);
 }, [requestAI, handleFormSubmitWithAI]);
 
-// 3️⃣ THIRD: handleAutoSubmit (for voice mode - receives AI parameter)
+//  handleAutoSubmit (for voice mode - receives AI parameter)
 const handleAutoSubmit = useCallback(async (aiRequested?: boolean) => {
   const data = getValues();
   
-  // ✅ Use the passed parameter
+  //  Use the passed parameter
   const shouldRequestAI = aiRequested !== undefined ? aiRequested : requestAI;
   
-  console.log("🚀 Auto-submit started");
-  console.log("🤖 AI Requested (parameter):", aiRequested);
-  console.log("🤖 AI Requested (final):", shouldRequestAI);
+  
   
   // Validation
   const requiredFields = ['glucose', 'context', 'exerciseRecent', 'exerciseIntensity'];
@@ -288,18 +284,15 @@ const handleAutoSubmit = useCallback(async (aiRequested?: boolean) => {
     throw new Error('Missing blood pressure readings for hypertension patient');
   }
   
-  console.log("✅ All validations passed, submitting form...");
   
-  // ✅ Set the state for UI consistency
   setRequestAI(shouldRequestAI);
   
-  console.log("📤 Calling handleFormSubmitWithAI with AI:", shouldRequestAI);
   
-  // ✅ Call with the parameter directly - don't rely on state
+  //  Call with the parameter directly - don't rely on state
   await handleFormSubmitWithAI(data, shouldRequestAI);
 }, [getValues, hasHypertension, requestAI, handleFormSubmitWithAI, setRequestAI]);
 
-// 4️⃣ FOURTH: handleStartVoiceMode (uses handleAutoSubmit)
+//  handleStartVoiceMode (uses handleAutoSubmit)
 const handleStartVoiceMode = useCallback(async () => {
   console.log("=== START VOICE MODE ===");
   try {
@@ -407,17 +400,41 @@ const handleStartVoiceMode = useCallback(async () => {
     fieldRefs.current[fieldName] = el;
   }, []);
 
-  const getFieldStyle = useCallback((fieldName: string) => {
-    const isActive = voiceModeState.currentField === fieldName;
+ const getFieldStyle = useCallback((fieldName: string): React.CSSProperties => {
+  const isActive = voiceModeState.currentField === fieldName;
+  const isListening = voiceModeState.listening && isActive;
+  const isSpeaking = voiceModeState.speaking && isActive;
+  
+  if (!isActive) {
     return {
-      border: isActive ? '2px solid #3b82f6' : '2px solid #e5e7eb',
-      boxShadow: isActive ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-      transition: 'all 0.3s ease-in-out'
+      border: '2px solid transparent',
+      boxShadow: 'none',
+      transition: 'all 0.3s ease-in-out',
+      transform: 'scale(1)'
     };
-  }, [voiceModeState.currentField]);
+  }
+  return {
+    border: '3px solid #3b82f6',
+    boxShadow: isListening 
+      ? '0 0 0 4px rgba(59, 130, 246, 0.2), 0 0 20px rgba(59, 130, 246, 0.3), 0 4px 12px rgba(0, 0, 0, 0.1)'
+      : isSpeaking
+      ? '0 0 0 4px rgba(16, 185, 129, 0.2), 0 0 20px rgba(16, 185, 129, 0.3), 0 4px 12px rgba(0, 0, 0, 0.1)'
+      : '0 0 0 4px rgba(59, 130, 246, 0.15), 0 4px 12px rgba(59, 130, 246, 0.2)',
+    backgroundColor: isListening 
+      ? 'rgba(59, 130, 246, 0.03)' 
+      : isSpeaking 
+      ? 'rgba(16, 185, 129, 0.03)'
+      : 'transparent',
+    transition: 'all 0.3s ease-in-out',
+    transform: 'scale(1.02)',
+    position: 'relative' as const,
+    zIndex: isActive ? 10 : 1
+  };
+}, [voiceModeState.currentField, voiceModeState.listening, voiceModeState.speaking]);
+
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-3 sm:p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-white p-2 sm:p-4 md:p-6 lg:p-2">
       <CustomToaster />
       <div className="max-w-4xl mx-auto">
         
@@ -444,7 +461,7 @@ const handleStartVoiceMode = useCallback(async () => {
           onPauseResume={handlePauseResume}
         />
 
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-5 md:space-y-6">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-5 md:space-y-6 mt-2">
           
           <div>
             <SectionVoiceControl
@@ -459,7 +476,7 @@ const handleStartVoiceMode = useCallback(async () => {
               currentLanguage={currentLanguage}
               validationRules={diabetesValidationRules}
               setFieldRef={setFieldRef}
-              fieldStyle={getFieldStyle('glucose')}
+              getFieldStyle={getFieldStyle}
             />
           </div>
 
