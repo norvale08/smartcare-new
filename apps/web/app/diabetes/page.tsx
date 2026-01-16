@@ -1,6 +1,7 @@
 // apps/web/app/diabetes/page.tsx - Fixed Layout
 "use client";
 import React, { useState, useEffect } from "react";
+
 import DiabetesAlerts from "../components/diabetesPages/DiabetesAlerts";
 import DiabetesVitalsForm from "../components/diabetesPages/diabetesVitals";
 import DiabetesAISummary from "../components/diabetesPages/DiabetesAISummary";
@@ -120,21 +121,12 @@ const AIDisclaimerBox = ({ language }: { language: LanguageType }) => {
   const content = languageContent[language].aiDisclaimer;
   
   return (
-    <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border-2 border-blue-900 rounded-xl p-4 shadow-sm">
-      <div className="flex items-start gap-3">
-        <div className="flex-shrink-0">
-          <div className="bg-blue-900 rounded-full p-2">
-            <Info className="w-5 h-5 text-cyan-100" />
-          </div>
-        </div>
-        <div className="flex-1">
-          <h3 className="font-bold text-blue-900 text-base mb-2">
-            {content.title}
-          </h3>
-          <p className="text-emerald-900 text-sm leading-relaxed">
-            {content.content}
-          </p>
-        </div>
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+      <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <p className="text-blue-900 text-xs leading-relaxed">
+          <span className="font-semibold">{content.title}:</span> {content.content}
+        </p>
       </div>
     </div>
   );
@@ -160,7 +152,7 @@ const Page = () => {
   useEffect(() => {
     const user = getUserFromToken();
     if (user?.disease) {
-      console.log("🔍 User diseases from token:", user.disease);
+    
       setUserDiseases(user.disease);
     }
   }, []);
@@ -188,7 +180,7 @@ const Page = () => {
     setLanguage(newLanguage);
   };
 
-  // REMOVED: Medications tab is now always accessible
+  
   const isTabDisabled = (tab: TabType): boolean => {
     switch (tab) {
       case "lifestyle":
@@ -214,9 +206,9 @@ const Page = () => {
   const progressPercentage = (completedSteps / assessmentSteps.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200">
+    <div className="min-h-screen bg-white">
       {/* User Profile Header - Fixed */}
-      <div className="sticky top-0 z-50 w-full bg-white shadow-sm border-b border-gray-200">
+      <div className="sticky top-0 z-50 w-full bg-blue-200 shadow-sm border-b border-gray-200">
         <UserProfileHeader 
           currentLanguage={language}
           onLanguageChange={handleLanguageChange}
@@ -227,7 +219,7 @@ const Page = () => {
       <div className="lg:hidden fixed top-20 right-4 z-40">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="bg-emerald-900 text-white p-3 rounded-full shadow-lg hover:bg-emerald-800 transition-colors"
+          className="bg-emerald-800 text-white p-3 rounded-full shadow-lg hover:bg-blue-800 transition-colors"
         >
           {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -536,7 +528,7 @@ const Page = () => {
             {/* Content Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               {/* Header */}
-              <div className="bg-gradient-to-r from-blue-900 to-emerald-900 text-white p-4 md:p-6">
+              <div className="bg-gradient-to-r from-blue-500 to-emerald-500 text-white p-4 md:p-6">
                 <div className="flex items-center gap-3 mb-2">
                   {activeTab === "vitals" && <Activity className="w-6 h-6" />}
                   {activeTab === "lifestyle" && <Heart className="w-6 h-6" />}

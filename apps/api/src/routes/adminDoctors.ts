@@ -34,7 +34,6 @@ const authenticateAdmin = (req: any, res: any, next: any) => {
 // GET /api/admin/doctors - Get all doctors for admin
 router.get("/", authenticateAdmin, async (req: Request, res: Response) => {
   try {
-    console.log("=== ADMIN FETCHING DOCTORS ===");
     
     await connectMongoDB();
 
@@ -53,8 +52,7 @@ router.get("/", authenticateAdmin, async (req: Request, res: Response) => {
       phoneNumber: doctor.phoneNumber
     }));
 
-    console.log(`✅ Found ${formattedDoctors.length} doctors`);
-
+  
     res.json({
       success: true,
       doctors: formattedDoctors,
@@ -62,7 +60,7 @@ router.get("/", authenticateAdmin, async (req: Request, res: Response) => {
     });
 
   } catch (error: any) {
-    console.error("❌ Error fetching doctors:", error);
+    
     res.status(500).json({
       success: false,
       message: "Failed to fetch doctors",

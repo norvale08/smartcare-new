@@ -35,13 +35,12 @@ const authenticateAdmin = (req: any, res: any, next: any) => {
 // GET /api/admin/patients - Get all patients for admin
 router.get("/", authenticateAdmin, async (req: Request, res: Response) => {
   try {
-    console.log("=== ADMIN FETCHING PATIENTS ===");
     
     await connectMongoDB();
 
     // First, count patients to debug
     const patientCount = await User.countDocuments({ role: "patient" });
-    console.log(`Total patients in database: ${patientCount}`);
+    
 
     // Get all patients with their assigned doctor
     const patients = await User.find({ role: "patient" })
@@ -53,8 +52,7 @@ router.get("/", authenticateAdmin, async (req: Request, res: Response) => {
       .select("firstName lastName fullName email phoneNumber assignedDoctor condition createdAt updatedAt")
       .sort({ fullName: 1 });
 
-    console.log(`Found ${patients.length} patients in query`);
-
+  
     // Get assignment source from Patient model for each user
     const formattedPatients = await Promise.all(
       patients.map(async (user: any) => {
@@ -83,7 +81,6 @@ router.get("/", authenticateAdmin, async (req: Request, res: Response) => {
       })
     );
 
-    console.log(`✅ Formatted ${formattedPatients.length} patients`);
 
     res.json({
       success: true,

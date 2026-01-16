@@ -290,8 +290,7 @@ export interface VoiceModeState {
   status: string;
 }
 
-export const getDisplayValue = (fieldName: string, value: string, currentLanguage: any): string => {
-  const lang = currentLanguage;
+export const getDisplayValue = (fieldName: string, value: string, currentLanguage: any): string => {  const lang = currentLanguage;
   
   switch (fieldName) {
     case 'context':

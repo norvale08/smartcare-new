@@ -63,8 +63,7 @@ router.post("/", async (req: express.Request, res: express.Response) => {
       status: status || 'scheduled'
     });
 
-    console.log("Appointment created successfully:", appointment._id);
-    
+   
     // Populate the appointment with patient and doctor details
     const populatedAppointment = await Appointment.findById(appointment._id)
       .populate('patientId', 'firstName lastName fullName email phoneNumber')
@@ -90,9 +89,7 @@ router.get("/patient/:patientId", async (req: express.Request, res: express.Resp
   try {
     const { patientId } = req.params;
     
-    console.log("=== FETCHING PATIENT APPOINTMENTS ===");
-    console.log("Patient ID:", patientId);
-
+   
     await connectMongoDB();
 
     const appointments = await Appointment.find({ patientId })
@@ -100,7 +97,7 @@ router.get("/patient/:patientId", async (req: express.Request, res: express.Resp
       .populate('doctorId', 'firstName lastName fullName specialization')
       .sort({ scheduledDate: -1 });
 
-    console.log(`Found ${appointments.length} appointments for patient`);
+    
 
     res.status(200).json({ 
       success: true,
@@ -122,8 +119,6 @@ router.get("/doctor/:doctorId", async (req: express.Request, res: express.Respon
   try {
     const { doctorId } = req.params;
     
-    console.log("=== FETCHING DOCTOR APPOINTMENTS ===");
-    console.log("Doctor ID:", doctorId);
 
     await connectMongoDB();
 
@@ -132,7 +127,7 @@ router.get("/doctor/:doctorId", async (req: express.Request, res: express.Respon
       .populate('doctorId', 'firstName lastName fullName specialization')
       .sort({ scheduledDate: -1 });
 
-    console.log(`Found ${appointments.length} appointments for doctor`);
+   
 
     res.status(200).json({ 
       success: true,
@@ -152,7 +147,7 @@ router.get("/doctor/:doctorId", async (req: express.Request, res: express.Respon
 // Get all appointments (for admin)
 router.get("/", async (req: express.Request, res: express.Response) => {
   try {
-    console.log("=== FETCHING ALL APPOINTMENTS ===");
+   
     
     await connectMongoDB();
 
@@ -183,8 +178,7 @@ router.get("/:id", async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
     
-    console.log("=== FETCHING SINGLE APPOINTMENT ===");
-    console.log("Appointment ID:", id);
+    
 
     await connectMongoDB();
 
@@ -199,8 +193,7 @@ router.get("/:id", async (req: express.Request, res: express.Response) => {
       });
     }
 
-    console.log("Appointment found:", appointment._id);
-
+   
     res.status(200).json({ 
       success: true,
       appointment
@@ -227,9 +220,7 @@ router.put("/:id", async (req: express.Request, res: express.Response) => {
       status
     }: UpdateAppointmentRequest = req.body;
 
-    console.log("=== UPDATING APPOINTMENT ===");
-    console.log("Appointment ID:", id);
-    console.log("Update data:", req.body);
+    
 
     await connectMongoDB();
 
@@ -255,7 +246,7 @@ router.put("/:id", async (req: express.Request, res: express.Response) => {
       });
     }
 
-    console.log("Appointment updated successfully:", appointment._id);
+    
 
     res.status(200).json({ 
       success: true,
@@ -276,10 +267,7 @@ router.put("/:id", async (req: express.Request, res: express.Response) => {
 router.delete("/:id", async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
-    
-    console.log("=== DELETING APPOINTMENT ===");
-    console.log("Appointment ID:", id);
-
+   
     await connectMongoDB();
 
     const appointment = await Appointment.findByIdAndDelete(id);
@@ -312,8 +300,7 @@ router.get("/patient/:patientId/upcoming", async (req: express.Request, res: exp
   try {
     const { patientId } = req.params;
     
-    console.log("=== FETCHING UPCOMING PATIENT APPOINTMENTS ===");
-    console.log("Patient ID:", patientId);
+    
 
     await connectMongoDB();
 
@@ -349,9 +336,7 @@ router.get("/doctor/:doctorId/upcoming", async (req: express.Request, res: expre
   try {
     const { doctorId } = req.params;
     
-    console.log("=== FETCHING UPCOMING DOCTOR APPOINTMENTS ===");
-    console.log("Doctor ID:", doctorId);
-
+    
     await connectMongoDB();
 
     const now = new Date();
