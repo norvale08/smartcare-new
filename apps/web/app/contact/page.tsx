@@ -124,36 +124,36 @@ const ContactPage = () => {
     return (
         <div className='min-h-screen bg-gradient-to-b from-slate-50 to-slate-100'>
             <Header />
-            <div className='min-h-[70vh] bg-gray-50 py-16 px-4 sm:px-6 lg:px-8'>
-                <div className="max-w-4xl mx-auto bg-white p-8 sm:p-10 rounded-xl shadow-2xl border border-gray-100">
-                    <div className="text-center mb-12">
-                        <h1 className="text-4xl font-extrabold text-blue-900 mb-4">Get In Touch</h1>
-                        <p className="text-lg text-gray-600">
+            <div className='min-h-[70vh] bg-gray-50 py-8 sm:py-12 md:py-16 px-3 sm:px-4 md:px-6 lg:px-8'>
+                <div className="max-w-4xl mx-auto bg-white p-4 sm:p-6 md:p-8 lg:p-10 rounded-xl shadow-2xl border border-gray-100">
+                    <div className="text-center mb-8 sm:mb-10 md:mb-12 px-2">
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-blue-900 mb-3 sm:mb-4">Get In Touch</h1>
+                        <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
                             Have questions? We'd love to hear from you! Send us a message or find our contact information below.
                         </p>
                     </div>
 
                     {/* Status Messages */}
                     {submitStatus === 'success' && (
-                        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start space-x-3">
-                            <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
-                            <p className="text-green-800">{statusMessage}</p>
+                        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg flex items-start space-x-2 sm:space-x-3">
+                            <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm sm:text-base text-green-800">{statusMessage}</p>
                         </div>
                     )}
 
                     {submitStatus === 'error' && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
-                            <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
-                            <p className="text-red-800">{statusMessage}</p>
+                        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-2 sm:space-x-3">
+                            <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm sm:text-base text-red-800">{statusMessage}</p>
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 md:gap-10 lg:gap-12">
                         {/* Contact Form */}
-                        <div className="p-6 bg-blue-50 rounded-lg">
-                            <h2 className="text-2xl font-bold text-blue-800 mb-6">Send Us a Message</h2>
+                        <div className="p-4 sm:p-5 md:p-6 lg:p-8 bg-blue-50 rounded-lg">
+                            <h2 className="text-xl sm:text-2xl font-bold text-blue-800 mb-4 sm:mb-5 md:mb-6">Send Us a Message</h2>
 
-                            <form onSubmit={handleSubmit} className="space-y-4">
+                            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                                 <div>
                                     <label htmlFor="name" className="block text-sm font-medium text-gray-700">Full Name</label>
                                     <input
@@ -164,8 +164,8 @@ const ContactPage = () => {
                                         onChange={handleInputChange}
                                         disabled={isSubmitting}
                                         required
-                                        className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
-                                        placeholder="John Doe"
+                                        className="mt-1 block w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                                        placeholder="Angel Aluma"
                                     />
                                 </div>
                                 <div>
@@ -178,8 +178,8 @@ const ContactPage = () => {
                                         onChange={handleInputChange}
                                         disabled={isSubmitting}
                                         required
-                                        className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
-                                        placeholder="john@example.com"
+                                        className="mt-1 block w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                                        placeholder="angel@example.com"
                                     />
                                 </div>
                                 <div>
@@ -187,12 +187,12 @@ const ContactPage = () => {
                                     <textarea
                                         id="message"
                                         name="message"
-                                        rows={5}
+                                        rows={4}
                                         value={formData.message}
                                         onChange={handleInputChange}
                                         disabled={isSubmitting}
                                         required
-                                        className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                                        className="mt-1 block w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
                                         placeholder="How can we help you?"
                                     ></textarea>
                                 </div>
@@ -200,11 +200,11 @@ const ContactPage = () => {
                                     type="submit"
                                     onClick={handleSubmit}
                                     disabled={isSubmitting}
-                                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-gradient-to-r from-blue-950 to-emerald-600 hover:shadow-xl transition-all transform hover:-translate-y-1"
+                                    className="w-full flex justify-center items-center py-2.5 sm:py-3 px-4 border border-transparent rounded-full shadow-md text-sm sm:text-base font-medium text-white bg-gradient-to-r from-blue-950 to-emerald-600 hover:shadow-xl transition-all transform hover:-translate-y-0.5 sm:hover:-translate-y-1"
                                 >
                                     {isSubmitting ? (
                                         <>
-                                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
                                             Sending...
                                         </>
                                     ) : (
@@ -215,33 +215,35 @@ const ContactPage = () => {
                         </div>
 
                         {/* Contact Details */}
-                        <div className="space-y-8 p-6 lg:p-0">
-                            <div className="flex items-start space-x-4">
-                                <Phone className="flex-shrink-0 w-6 h-6 text-emerald-600 mt-1" />
+                        <div className="space-y-6 sm:space-y-7 md:space-y-8 p-4 sm:p-5 md:p-6 lg:p-0">
+                            <div className="flex items-start space-x-3 sm:space-x-4">
+                                <Phone className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 text-emerald-600 mt-0.5 sm:mt-1" />
                                 <div>
-                                    <h3 className="text-lg font-semibold text-gray-900">Phone</h3>
-                                    <p className="text-gray-600">Call us for immediate assistance.</p>
-                                    {/* <p className="font-medium text-blue-700">1-800-SMART-CARE</p> */}
+                                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Phone</h3>
+                                    <p className="text-sm sm:text-base text-gray-600">Call us for immediate assistance.</p>
+                                    {/* <p className="text-sm sm:text-base font-medium text-blue-700">1-800-SMART-CARE</p> */}
                                 </div>
                             </div>
 
-                            <div className="flex items-start space-x-4">
-                                <Mail className="flex-shrink-0 w-6 h-6 text-emerald-600 mt-1" />
+                            <div className="flex items-start space-x-3 sm:space-x-4">
+                                <Mail className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 text-emerald-600 mt-0.5 sm:mt-1" />
                                 <div>
-                                    <h3 className="text-lg font-semibold text-gray-900">Email</h3>
-                                    <p className="text-gray-600">Send us a detailed email query.</p>
-                                    <p className="font-medium text-blue-700">smartcarehealthsystem@gmail.com</p>
+                                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Email</h3>
+                                    <p className="text-sm sm:text-base text-gray-600">Send us a detailed email query.</p>
+                                    <p className="text-sm sm:text-base font-medium text-blue-700 break-words">
+                                        smartcarehealthsystem@gmail.com
+                                    </p>
                                 </div>
                             </div>
 
-                            <div className="flex items-start space-x-4">
-                                <MapPin className="flex-shrink-0 w-6 h-6 text-emerald-600 mt-1" />
+                            <div className="flex items-start space-x-3 sm:space-x-4">
+                                <MapPin className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 text-emerald-600 mt-0.5 sm:mt-1" />
                                 <div>
-                                    <h3 className="text-lg font-semibold text-gray-900">Address</h3>
-                                    <p className="text-gray-600">SmartCare Technologies HQ</p>
-                                    {/* <p className="font-medium text-blue-700">123 Health Ave, Wellness City, CA 90210</p> */}
+                                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Address</h3>
+                                    <p className="text-sm sm:text-base text-gray-600">SmartCare Technologies HQ</p>
+                                    {/* <p className="text-sm sm:text-base font-medium text-blue-700">123 Health Ave, Wellness City, CA 90210</p> */}
                                 </div>
-                            </div>
+                            </div>                                                       
                         </div>
                     </div>
                 </div>
