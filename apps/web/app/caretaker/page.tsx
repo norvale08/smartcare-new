@@ -9,7 +9,7 @@ import {
 import { useSession } from "next-auth/react";
 import { Button, Input, Card, CardHeader, CardContent, CardTitle } from "@repo/ui";
 import DashboardHeader from "./components/DashboardHeader";
-import PatientRequests from "./components/PatientRequests";
+
 import PatientTabs from './components/PatientTabs';
 import RealTimeNotifications from './components/RealTimeNotifications';
 import PatientHeader from './components/PatientHeader';
@@ -541,7 +541,7 @@ const CaretakerDashboard = () => {
             {/* Quick Stats Section */}
             <QuickStats patients={patients} />
 
-            <PatientRequests onRequestUpdate={refreshAssignedPatients} />
+            
 
             {/* Assignment Info – admin controlled */}
             <Card className="shadow border-cyan-100">
