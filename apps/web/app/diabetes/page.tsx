@@ -1,6 +1,7 @@
 // apps/web/app/diabetes/page.tsx - Fixed Layout
 "use client";
 import React, { useState, useEffect } from "react";
+
 import DiabetesAlerts from "../components/diabetesPages/DiabetesAlerts";
 import DiabetesVitalsForm from "../components/diabetesPages/diabetesVitals";
 import DiabetesAISummary from "../components/diabetesPages/DiabetesAISummary";

@@ -184,8 +184,6 @@ app.get('/health', (_req, res) => {
   });
 });
 
-console.log('📋 Registering routes...');
-
 // Register all routes
 app.use('/api/auth', authRoute);
 app.use('/api/login', loginRoute);
@@ -265,7 +263,7 @@ const server = app.listen(PORT, "0.0.0.0", () => {
     })
     .catch((err) => {
       console.error(' MongoDB connection failed:', err);
-      console.log(' Server running without database connection');
+     
     });
     
 });
@@ -284,19 +282,18 @@ server.on('error', (err: any) => {
 // Graceful shutdown
 
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  stopKeepAliveService();
+stopKeepAliveService();
   server.close(() => {
-    console.log(' Server closed');
+   
     process.exit(0);
   });
 });
 
 process.on('SIGINT', () => {
-  console.log(' SIGINT received, shutting down gracefully');
+  
   stopKeepAliveService();
   server.close(() => {
-    console.log(' Server closed');
+    
     process.exit(0);
   });
 });

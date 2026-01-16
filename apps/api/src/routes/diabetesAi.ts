@@ -467,8 +467,7 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
     // ✅ Extract language from query parameter
     const requestedLanguage = req.query.language as "en" | "sw" | undefined;
     
-    console.log(`💡 Quick tips request for vital: ${vitalId}`);
-    console.log(`🌐 Requested language: ${requestedLanguage || 'not specified'}`);
+
 
     const vitals = await Diabetes.findById(vitalId);
     if (!vitals) {
@@ -500,7 +499,7 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
       height: patient.height,
       age,
       gender: patient.gender,
-      language: language, // ✅ Use prioritized language
+      language: language, //  Use prioritized language
       exerciseRecent: vitals.exerciseRecent,
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
@@ -557,9 +556,7 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
     // ✅ Extract language from query parameter
     const requestedLanguage = req.query.language as "en" | "sw" | undefined;
     
-    console.log(`📋 Comprehensive feedback request for vital: ${vitalId}`);
-    console.log(`🌐 Requested language: ${requestedLanguage || 'not specified'}`);
-
+   
     const vitals = await Diabetes.findById(vitalId);
     if (!vitals) {
       return res.status(404).json({ success: false, message: "Vitals not found" });

@@ -141,57 +141,197 @@ export const convertWebmToWav = async (webmBlob: Blob): Promise<Blob> => {
   }
 };
 
-export const parseSpokenInput = (text: string, languageValue: string, fieldType?: 'number' | 'select'): { type: 'number' | 'text' | 'skip' | 'unknown'; value?: number; textValue?: string } => {
+// COMPLETE REPLACEMENT FOR parseSwahiliNumber AND parseSpokenInput
+// Copy and paste this ENTIRE section into your voiceUtils.ts file
+
+// Swahili number word mappings
+const swahiliNumberWords: { [key: string]: number } = {
+  // Units (0-10)
+  'sifuri': 0, 'moja': 1, 'mbili': 2, 'tatu': 3, 'nne': 4, 'tano': 5,
+  'sita': 6, 'saba': 7, 'nane': 8, 'tisa': 9, 'kumi': 10,
+  
+  // Tens (20-90)
+  'ishirini': 20, 'thelathini': 30, 'arobaini': 40, 'hamsini': 50,
+  'sitini': 60, 'sabini': 70, 'themanini': 80, 'tisini': 90,
+  
+  // Hundreds
+  'mia': 100,
+  
+  // Alternative spellings
+  'arubaini': 40, 'thamanini': 80
+};
+
+/**
+ * Parse Swahili number words into numeric values
+ * Handles: 0-999 (units, tens, hundreds, and compounds)
+ * Examples:
+ * - "sabini na sita" → 76
+ * - "mia mbili na hamsini na tano" → 255
+ * - "mia moja ishirini" → 120 (NOT 121 - "moja" after "mia" is part of "one hundred")
+ * - "mia tatu" → 300
+ * - "ishirini na nne" → 24
+ * - "mia tano na sitini na nne" → 564
+ */
+const parseSwahiliNumber = (text: string): number | null => {
+  const normalized = text.toLowerCase().trim();
+  
+  console.log(`🔍 parseSwahiliNumber input: "${normalized}"`);
+  
+  // Check for exact phrase matches first
+  if (swahiliNumberWords[normalized] !== undefined) {
+    console.log(`   ✅ Exact match: ${swahiliNumberWords[normalized]}`);
+    return swahiliNumberWords[normalized];
+  }
+  
+  const words = normalized.split(/\s+/);
+  console.log(`   📝 Split into words:`, words);
+  
+  let total = 0;
+  let currentNumber = 0;
+  
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    if (!word) continue; // Skip if word is undefined
+    
+    console.log(`   🔤 Processing word [${i}]: "${word}"`);
+    
+    // Skip "na" (and)
+    if (word === 'na') {
+      console.log(`      ⏭️  Skipping 'na'`);
+      continue;
+    }
+    
+    if (swahiliNumberWords[word] !== undefined) {
+      const value = swahiliNumberWords[word];
+      console.log(`      ✅ Found value: ${value}`);
+      
+      if (value === 100) {
+        // Handle "mia" (hundred)
+        if (currentNumber === 0) {
+          // "mia" alone means 100
+          currentNumber = 100;
+          console.log(`      💯 'mia' alone = 100`);
+        } else {
+          // Previous number is a multiplier (e.g., "mbili mia" = 2 * 100 = 200)
+          total += currentNumber * 100;
+          currentNumber = 0;
+          console.log(`      💯 Hundred multiplier, total now: ${total}`);
+        }
+      } else if (value >= 10 && value < 100) {
+        // Tens (20, 30, 40, etc.)
+        if (total > 0 && currentNumber === 0) {
+          // We've already processed hundreds, add tens
+          // e.g., "mia mbili sabini" = 200 + 70
+          currentNumber = value;
+          console.log(`      🔟 Tens after hundreds, currentNumber: ${currentNumber}`);
+        } else {
+          currentNumber += value;
+          console.log(`      🔟 Adding tens, currentNumber: ${currentNumber}`);
+        }
+      } else if (value >= 1 && value <= 9) {
+        // Units (1-9)
+        
+        // Special case: Skip unit that comes immediately after "mia"
+        // In "mia moja ishirini", "moja" is part of "mia moja" (100), not a separate +1
+        if (i > 0 && words[i - 1] === 'mia') {
+          console.log(`      🚫 Skipping unit after 'mia' (part of hundred expression)`);
+          continue;
+        }
+        
+        // Check if next word is "mia" (this unit is a hundred multiplier)
+        if (i + 1 < words.length && words[i + 1] === 'mia') {
+          currentNumber = value;
+          console.log(`      🔢 Units as hundred multiplier: ${currentNumber}`);
+        } else {
+          // Just add the unit to current number
+          currentNumber += value;
+          console.log(`      ➕ Adding units, currentNumber: ${currentNumber}`);
+        }
+      } else if (value === 0) {
+        if (total === 0 && currentNumber === 0) {
+          console.log(`      0️⃣ Zero value`);
+          return 0;
+        }
+      }
+    } else {
+      console.log(`      ❌ Word "${word}" not in dictionary`);
+    }
+  }
+  
+  total += currentNumber;
+  console.log(`   🎯 Final total: ${total}`);
+  return total > 0 ? total : null;
+};
+
+/**
+ * Parse spoken input and categorize it
+ * Handles: numbers (digits + Swahili words), text, skip commands
+ */
+export const parseSpokenInput = (
+  text: string, 
+  languageValue: string, 
+  fieldType?: 'number' | 'select'
+): { 
+  type: 'number' | 'text' | 'skip' | 'unknown'; 
+  value?: number; 
+  textValue?: string 
+} => {
   const lowerText = text.toLowerCase().trim();
   
   console.log(`🔊 Parsing spoken input: "${text}" -> "${lowerText}"`);
-  console.log(`   Field type: ${fieldType}`);
+  console.log(`   Language: ${languageValue}, Field type: ${fieldType}`);
   
-  // ✅ FIXED: "none" should NEVER be a skip word - it's a valid option
+  // Define skip words (NO 'none' here - it's a valid select option!)
   const skipWords = languageValue === "sw" 
     ? ['ruka', 'pass', 'next', 'sina', 'hapana']
     : ['skip', 'pass', 'next', "don't know", 'not sure'];
   
-  console.log(`   Skip words check: ${skipWords.some(word => lowerText.includes(word))}`);
-  
+  // Check for skip command
   if (skipWords.some(word => lowerText.includes(word))) {
+    console.log('   ⏭️ SKIP detected');
     return { type: 'skip' };
   }
   
-  const yesWords = languageValue === "sw" 
-    ? ['ndio', 'yes', 'correct', 'right', 'true', 'sawa']
-    : ['yes', 'correct', 'right', 'true', 'yeah', 'yep'];
-  
-  // ✅ FIXED: Remove 'no' from noWords to prevent "none" from matching
-  const noWords = languageValue === "sw"
-    ? ['hapana', 'wrong', 'incorrect', 'false', 'jaribu tena']  // Removed 'no'
-    : ['wrong', 'incorrect', 'false', 'nope', 'try again'];      // Removed 'no'
-  
-  if (yesWords.some(word => lowerText.includes(word))) {
-    return { type: 'number', value: 1 };
-  }
-  if (noWords.some(word => lowerText.includes(word))) {
-    return { type: 'number', value: 0 };
-  }
-
-  // For select fields, ALWAYS return as text (including "none")
+  // For select fields, ALWAYS return as text (let mapSpokenToOption handle it)
   if (fieldType === 'select') {
-    console.log(`   Select field detected, returning as text: "${lowerText}"`);
+    console.log(`   📝 Select field - returning as text: "${lowerText}"`);
     return { type: 'text', textValue: lowerText };
   }
-
-  const numbers = lowerText.match(/\d+/g);
-  if (numbers && numbers.length > 0) {
-    const number = parseInt(numbers[0], 10);
-    if (!isNaN(number) && number > 0) {
-      return { type: 'number', value: number };
+  
+  // For number fields, try parsing
+  if (fieldType === 'number') {
+    console.log(`   🔢 Number field - attempting to parse...`);
+    
+    // Priority 1: Try Swahili number words (if Swahili language)
+    if (languageValue === 'sw') {
+      const swahiliNum = parseSwahiliNumber(lowerText);
+      if (swahiliNum !== null) {
+        console.log(`   ✅ Parsed Swahili number: ${swahiliNum}`);
+        return { type: 'number', value: swahiliNum };
+      }
+      console.log(`   ❌ No Swahili number pattern found`);
     }
+    
+    // Priority 2: Try extracting digits (works for both languages)
+    const numbers = lowerText.match(/\d+/g);
+    if (numbers && numbers.length > 0) {
+      const number = parseInt(numbers[0], 10);
+      if (!isNaN(number) && number >= 0) {
+        console.log(`   ✅ Parsed digit number: ${number}`);
+        return { type: 'number', value: number };
+      }
+    }
+    
+    console.log('   ❌ No valid number found');
   }
-
+  
+  // Fallback to text if not empty
   if (lowerText.length > 0) {
+    console.log(`   Fallback to text: "${lowerText}"`);
     return { type: 'text', textValue: lowerText };
   }
 
+  console.log('   ❓ Unknown input');
   return { type: 'unknown' };
 };
 
@@ -200,48 +340,57 @@ export const mapSpokenToOption = (spokenText: string, fieldName: string, current
   
   console.log(`\n🔍 mapSpokenToOption - Field: ${fieldName}, Input: "${normalized}"`);
   
-  // ✅ EXERCISERECENT - HARDCODED MATCHING (NO KEYWORD LOOKUP)
-  if (fieldName === 'exerciseRecent') {
-    // Match "none" variations
-    if (normalized === 'none' || normalized === 'non' || normalized === 'known' || 
-        normalized === 'nun' || normalized === 'no' || normalized === 'man') {
-      console.log('✅ Matched: none');
-      return 'none';
-    }
-    
-    // Match phrases with "no"
-    if (normalized.includes('no exercise') || normalized.includes('not exercise') || 
-        normalized.includes('did not') || normalized.includes('didn\'t')) {
-      console.log('✅ Matched: none (phrase)');
-      return 'none';
-    }
-    
-    // Match time ranges
-    if (normalized.includes('24')) {
-      console.log('✅ Matched: 6_to_24_hours');
-      return '6_to_24_hours';
-    }
-    
-    if (normalized.includes('within') || (normalized.includes('2') && !normalized.includes('6'))) {
-      console.log('✅ Matched: within_2_hours');
-      return 'within_2_hours';
-    }
-    
-    if (normalized.includes('2') && normalized.includes('6')) {
-      console.log('✅ Matched: 2_to_6_hours');
-      return '2_to_6_hours';
-    }
-  }
-  
-  // ✅ CONTEXT
+  // ✅ CONTEXT - Support both English and Swahili
   if (fieldName === 'context') {
+    // Try language-specific keywords first
+    if (currentLanguage && currentLanguage.optionKeywords && currentLanguage.optionKeywords.context) {
+      const contextKeywords = currentLanguage.optionKeywords.context;
+      
+      if (contextKeywords.fasting.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: Fasting');
+        return 'Fasting';
+      }
+      if (contextKeywords.postMeal.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: Post-meal');
+        return 'Post-meal';
+      }
+      if (contextKeywords.random.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: Random');
+        return 'Random';
+      }
+    }
+    
+    // Fallback to English keywords
     if (normalized.includes('fast')) return 'Fasting';
     if (normalized.includes('post') || normalized.includes('after')) return 'Post-meal';
     if (normalized.includes('random')) return 'Random';
   }
   
-  // ✅ LASTMEALTIME
+  // ✅ LASTMEALTIME - Support both English and Swahili
   if (fieldName === 'lastMealTime') {
+    // Try language-specific keywords first
+    if (currentLanguage && currentLanguage.optionKeywords && currentLanguage.optionKeywords.lastMealTime) {
+      const mealTimeKeywords = currentLanguage.optionKeywords.lastMealTime;
+      
+      if (mealTimeKeywords.moreThanSix.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: more_than_6_hours');
+        return 'more_than_6_hours';
+      }
+      if (mealTimeKeywords.sixHours.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: 6_hours');
+        return '6_hours';
+      }
+      if (mealTimeKeywords.fourHours.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: 4_hours');
+        return '4_hours';
+      }
+      if (mealTimeKeywords.twoHours.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: 2_hours');
+        return '2_hours';
+      }
+    }
+    
+    // Fallback to English patterns
     if (normalized.includes('more than') || normalized.includes('6+') || normalized.includes('6 +')) {
       return 'more_than_6_hours';
     }
@@ -379,8 +528,80 @@ export const mapSpokenToOption = (spokenText: string, fieldName: string, current
     console.log('❌ No meal type match found');
   }
   
-  // ✅ EXERCISEINTENSITY
+  // ✅ EXERCISERECENT - Support both English and Swahili
+  if (fieldName === 'exerciseRecent') {
+    // Try language-specific keywords first
+    if (currentLanguage && currentLanguage.optionKeywords && currentLanguage.optionKeywords.exerciseRecent) {
+      const exerciseKeywords = currentLanguage.optionKeywords.exerciseRecent;
+      
+      if (exerciseKeywords.none.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: none');
+        return 'none';
+      }
+      if (exerciseKeywords.sixTo24Hours.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: 6_to_24_hours');
+        return '6_to_24_hours';
+      }
+      if (exerciseKeywords.twoToSixHours.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: 2_to_6_hours');
+        return '2_to_6_hours';
+      }
+      if (exerciseKeywords.within2Hours.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: within_2_hours');
+        return 'within_2_hours';
+      }
+    }
+    
+    // Fallback to English hardcoded matching
+    if (normalized === 'none' || normalized === 'non' || normalized === 'known' || 
+        normalized === 'nun' || normalized === 'no' || normalized === 'man') {
+      console.log('✅ Matched: none');
+      return 'none';
+    }
+    
+    if (normalized.includes('no exercise') || normalized.includes('not exercise') || 
+        normalized.includes('did not') || normalized.includes('didn\'t')) {
+      console.log('✅ Matched: none (phrase)');
+      return 'none';
+    }
+    
+    if (normalized.includes('24')) {
+      console.log('✅ Matched: 6_to_24_hours');
+      return '6_to_24_hours';
+    }
+    
+    if (normalized.includes('within') || (normalized.includes('2') && !normalized.includes('6'))) {
+      console.log('✅ Matched: within_2_hours');
+      return 'within_2_hours';
+    }
+    
+    if (normalized.includes('2') && normalized.includes('6')) {
+      console.log('✅ Matched: 2_to_6_hours');
+      return '2_to_6_hours';
+    }
+  }
+  
+  // ✅ EXERCISEINTENSITY - Support both English and Swahili
   if (fieldName === 'exerciseIntensity') {
+    // Try language-specific keywords first
+    if (currentLanguage && currentLanguage.optionKeywords && currentLanguage.optionKeywords.exerciseIntensity) {
+      const intensityKeywords = currentLanguage.optionKeywords.exerciseIntensity;
+      
+      if (intensityKeywords.light.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: light');
+        return 'light';
+      }
+      if (intensityKeywords.moderate.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: moderate');
+        return 'moderate';
+      }
+      if (intensityKeywords.vigorous.some((keyword: string) => normalized.includes(keyword))) {
+        console.log('✅ Matched via language keywords: vigorous');
+        return 'vigorous';
+      }
+    }
+    
+    // Fallback to English keywords
     if (normalized.includes('light') || normalized.includes('easy')) {
       return 'light';
     }
@@ -890,6 +1111,7 @@ export const askForAIFeedback = async (
     }
   });
 };
+
 export const startVoiceMode = async (params: {
   languageValue: string;
   currentLanguage: any;
@@ -907,7 +1129,6 @@ export const startVoiceMode = async (params: {
   fieldRefs: React.MutableRefObject<{ [key: string]: HTMLDivElement | null }>;
   hasHypertension?: boolean;
   hasDiabetes?: boolean;
-  // ✅ NEW: Add these parameters
   setRequestAI: (value: boolean) => void;
   onAutoSubmit: (aiRequested?: boolean) => Promise<void>;
 }): Promise<void> => {
@@ -1134,58 +1355,56 @@ export const startVoiceMode = async (params: {
     }
   }
 
-  // ✅ NEW: Ask for AI feedback after all fields are collected
-if (voiceModeActiveRef.current) {
-  console.log("\n🤖 Asking for AI feedback preference...");
-  
-  const wantsAI = await askForAIFeedback(
-    languageValue,
-    currentLanguage,
-    voiceModeActiveRef,
-    pausedRef,
-    setVoiceModeState,
-    handleSpeak,
-    voiceModeState.muted,
-    API_URL,
-    isProcessingRef,
-    mediaRecorderRef,
-    fieldRefs
-  );
+  // Ask for AI feedback after all fields are collected
+  if (voiceModeActiveRef.current) {
+    console.log("\n🤖 Asking for AI feedback preference...");
+    
+    const wantsAI = await askForAIFeedback(
+      languageValue,
+      currentLanguage,
+      voiceModeActiveRef,
+      pausedRef,
+      setVoiceModeState,
+      handleSpeak,
+      voiceModeState.muted,
+      API_URL,
+      isProcessingRef,
+      mediaRecorderRef,
+      fieldRefs
+    );
 
-  console.log(`🤖 AI Feedback decision: ${wantsAI ? 'YES' : 'NO'}`);
+    console.log(`🤖 AI Feedback decision: ${wantsAI ? 'YES' : 'NO'}`);
 
-  // ✅ SINGLE submission with AI feedback value
-  // ✅ SINGLE submission with AI feedback value
-if (voiceModeActiveRef.current) {
-  console.log("\n📤 Auto-submitting form with AI feedback:", wantsAI);
-  
-  const submittingMsg = languageValue === "sw"
-    ? "Inatuma data..."
-    : "Submitting...";
-  
-  await handleSpeak(submittingMsg);
-  
-  try {
-    // ✅ Pass wantsAI directly as a parameter
-    await onAutoSubmit(wantsAI);
-    
-    const successMsg = languageValue === "sw"
-      ? "Imekamilika. Data imehifadhiwa."
-      : "Complete. Data saved.";
-    
-    await handleSpeak(successMsg);
-    toast.success(currentLanguage.voiceComplete, { duration: 3000 });
-  } catch (error) {
-    console.error("❌ Auto-submit failed:", error);
-    const errorMsg = languageValue === "sw"
-      ? "Hitilafu. Jaribu tena."
-      : "Error. Try again.";
-    
-    await handleSpeak(errorMsg);
-    toast.error(errorMsg, { duration: 3000 });
+    // Submit form with AI feedback value
+    if (voiceModeActiveRef.current) {
+      console.log("\n📤 Auto-submitting form with AI feedback:", wantsAI);
+      
+      const submittingMsg = languageValue === "sw"
+        ? "Inatuma data..."
+        : "Submitting...";
+      
+      await handleSpeak(submittingMsg);
+      
+      try {
+        await onAutoSubmit(wantsAI);
+        
+        const successMsg = languageValue === "sw"
+          ? "Imekamilika. Data imehifadhiwa."
+          : "Complete. Data saved.";
+        
+        await handleSpeak(successMsg);
+        toast.success(currentLanguage.voiceComplete, { duration: 3000 });
+      } catch (error) {
+        console.error("❌ Auto-submit failed:", error);
+        const errorMsg = languageValue === "sw"
+          ? "Hitilafu. Jaribu tena."
+          : "Error. Try again.";
+        
+        await handleSpeak(errorMsg);
+        toast.error(errorMsg, { duration: 3000 });
+      }
+    }
   }
-}
-}
  
   // Clean up voice mode
   setVoiceModeState((prev: any) => ({ 
@@ -1200,7 +1419,6 @@ if (voiceModeActiveRef.current) {
   voiceModeActiveRef.current = false;
   pausedRef.current = false;
 }
-
 
 export const stopVoiceMode = (params: {
   voiceModeActiveRef: React.MutableRefObject<boolean>;
