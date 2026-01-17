@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { HeartPulse, Globe } from "lucide-react";
+import { HeartPulse, Globe, LogOut } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { Translations } from "../../../lib/hypertension/useTranslation";
 
 interface HeaderProps {
@@ -18,6 +19,10 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
   ];
   const userName = patient?.fullName || "Sarah ";
   const userInitials = userName.slice(0, 2).toUpperCase();
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/login" });
+  };
 
   return (
     <header className="flex justify-between items-center px-8 py-4 bg-white shadow-sm">
@@ -45,6 +50,7 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
             <Globe color="#27b049" size={16} />
           </div>
         </div>
+        
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
             <span className="text-white font-semibold">{userInitials}</span>
@@ -54,6 +60,14 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
           </span>
         </div>
 
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Logout"
+        >
+          <LogOut size={18} />
+          <span className="text-sm font-medium">Logout</span>
+        </button>
       </div>
     </header>
   );

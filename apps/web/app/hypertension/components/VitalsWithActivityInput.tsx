@@ -174,9 +174,9 @@ export default function VitalsWithActivityInput({
         inline: 'nearest'
       });
       // Add highlight animation
-      fieldElement.classList.add('ring-2', 'ring-red-500', 'ring-opacity-50');
+      fieldElement.classList.add('ring-2', 'ring-emerald-500', 'ring-opacity-50');
       setTimeout(() => {
-        fieldElement.classList.remove('ring-2', 'ring-red-500', 'ring-opacity-50');
+        fieldElement.classList.remove('ring-2', 'ring-emerald-500', 'ring-opacity-50');
       }, 2000);
     }
   };
@@ -1181,17 +1181,17 @@ export default function VitalsWithActivityInput({
 
   // Stop voice mode
   const handleStopVoiceMode = () => {
-  stopVoiceMode({
-    voiceModeActiveRef,
-    pausedRef,
-    mediaRecorderRef,
-    currentLanguage,
-    setVoiceModeState: (state) => setVoiceModeState(prev => ({...prev,...state })),
-    handleSpeak,
-    isMuted: voiceModeState.muted,
-    languageValue: languageValue // ADD THIS LINE
-  });
-};
+    stopVoiceMode({
+      voiceModeActiveRef,
+      pausedRef,
+      mediaRecorderRef,
+      currentLanguage,
+      setVoiceModeState: (state) => setVoiceModeState(prev => ({...prev,...state })),
+      handleSpeak,
+      isMuted: voiceModeState.muted,
+      languageValue: languageValue
+    });
+  };
 
   // Toggle mute
   const handleToggleMute = () => {
@@ -1363,7 +1363,7 @@ export default function VitalsWithActivityInput({
 
       <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
         <div className="flex items-center gap-2 mb-6">
-          <div className="bg-gradient-to-r from-red-600 to-pink-600 p-2 rounded-lg shadow-sm">
+          <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 p-2 rounded-lg shadow-sm">
             <Heart className="w-5 h-5 text-white" />
           </div>
           <h3 className="text-lg font-semibold text-gray-800">
@@ -1407,7 +1407,7 @@ export default function VitalsWithActivityInput({
                   max={250}
                   placeholder="e.g. 120"
                   disabled={saving}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
                 {voiceModeState.active &&!voiceModeState.paused && (
                   <button
@@ -1417,7 +1417,7 @@ export default function VitalsWithActivityInput({
                        ? `Systolic ni ${systolic || 'haijawekwa'} mmHg.` 
                         : `Systolic is ${systolic || 'not set'} mmHg.`)
                     }}
-                    className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    className="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors"
                   >
                     <Mic size={16} />
                   </button>
@@ -1440,7 +1440,7 @@ export default function VitalsWithActivityInput({
                   max={150}
                   placeholder="e.g. 80"
                   disabled={saving}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
                 {voiceModeState.active &&!voiceModeState.paused && (
                   <button
@@ -1450,7 +1450,7 @@ export default function VitalsWithActivityInput({
                        ? `Diastolic ni ${diastolic || 'haijawekwa'} mmHg.` 
                         : `Diastolic is ${diastolic || 'not set'} mmHg.`)
                     }}
-                    className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    className="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors"
                   >
                     <Mic size={16} />
                   </button>
@@ -1473,7 +1473,7 @@ export default function VitalsWithActivityInput({
                   max={200}
                   placeholder="e.g. 72"
                   disabled={saving}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
                 {voiceModeState.active &&!voiceModeState.paused && (
                   <button
@@ -1483,7 +1483,7 @@ export default function VitalsWithActivityInput({
                        ? `Mapigo ya moyo ni ${heartRate || 'hakijajazwa'} kwa dakika.` 
                         : `Heart rate is ${heartRate || 'not set'} per minute.`)
                     }}
-                    className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    className="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors"
                   >
                     <Mic size={16} />
                   </button>
@@ -1508,7 +1508,7 @@ export default function VitalsWithActivityInput({
                 value={activityType}
                 onChange={(e) => setActivityType(e.target.value)}
                 disabled={saving}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               >
                 {activityOptions.map((opt) => (
                   <option value={opt.value} key={opt.value}>
@@ -1542,7 +1542,7 @@ export default function VitalsWithActivityInput({
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
                 disabled={saving}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
             </div>
 
@@ -1561,7 +1561,7 @@ export default function VitalsWithActivityInput({
                     disabled={saving}
                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       intensity === level
-                       ? "bg-red-600 text-white"
+                       ? "bg-emerald-600 text-white"
                         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
                   >
@@ -1588,7 +1588,7 @@ export default function VitalsWithActivityInput({
                 value={timeSinceActivity}
                 onChange={(e) => setTimeSinceActivity(e.target.value)}
                 disabled={saving}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
             </div>
 
@@ -1605,7 +1605,7 @@ export default function VitalsWithActivityInput({
                 placeholder={t.language === "en-US" 
                  ? "E.g., Just finished a walk, or feeling stressed out this morning..."
                   : "Mf., Nimeimaliza matembezi, au nahisi mkazo asubuhi hii..."}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
               />
             </div>
           </div>
@@ -1614,7 +1614,7 @@ export default function VitalsWithActivityInput({
             <div
               className={`p-3 rounded-lg ${
                 message.includes("")
-                 ? "bg-green-50 text-green-700"
+                 ? "bg-emerald-50 text-emerald-700"
                   : "bg-red-50 text-red-700"
               }`}
             >
@@ -1625,7 +1625,7 @@ export default function VitalsWithActivityInput({
           <button
             type="submit"
             disabled={saving}
-            className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving? (
               <div className="flex items-center justify-center">
