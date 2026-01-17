@@ -498,12 +498,12 @@ export default function VitalsWithActivityInput({
     }
   };
 
-  // Enhanced voice mode start function with better field announcements and reduced delays
+  // Enhanced voice mode start function with simplified announcements
   const handleStartVoiceMode = async () => {
     // First, test if the speech API is available
     try {
       const healthResponse = await fetch(`${API_URL}/api/python-speech/health`, {
-        signal: AbortSignal.timeout(3000) // Reduced timeout
+        signal: AbortSignal.timeout(3000)
       });
       if (!healthResponse.ok) {
         toast.error(languageValue === "sw" 
@@ -525,64 +525,62 @@ export default function VitalsWithActivityInput({
     voiceModeActiveRef.current = true;
     pausedRef.current = false;
     
-    // Welcome message with shorter delay
+    // Short welcome message
     const welcome = languageValue === "sw"
-     ? "Karibu. Tutaanza na vipimo vya damu: systolic, diastolic, na kiwango cha moyo. Unaweza kusema 'ruka' kwa Kiswahili au 'skip' kwa Kiingereza."
-      : "Welcome. We'll start with blood pressure: systolic, diastolic, and heart rate. You can say 'skip' in English or 'ruka' in Swahili.";
+     ? "Systolic."
+      : "Systolic.";
     
-    await handleSpeak(welcome, true); // High priority
-    await new Promise(resolve => setTimeout(resolve, 500)); // Reduced from 800
+    await handleSpeak(welcome, true);
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     try {
-      // Collect systolic with skip option and retry logic
+      // Collect systolic with retry logic
       setVoiceModeState(prev => ({...prev, currentField: 'systolic', status: languageValue === "sw"? "Soma systolic" : "Reading systolic" }));
       scrollToField('systolic');
-      const systolicValue = await collectNumberField('systolic', 70, 250, currentLanguage.systolicLabel, true, 2);
+      const systolicValue = await collectNumberFieldWithConfirm('systolic', 70, 250, currentLanguage.systolicLabel, true, 3);
       if (systolicValue!== undefined) {
         collectedVitalsRef.current.systolic = systolicValue;
         setSystolic(systolicValue.toString());
-        toast.success(` ${currentLanguage.systolicLabel}: ${systolicValue}`);
+        // Skip toast for cleaner UI
       } else {
         await handleSpeak(languageValue === "sw" 
-         ? "Systolic haijajazwa. Tutarudia baadae." 
-          : "Systolic not recorded. We'll come back to it later.");
+         ? "Rudi." 
+          : "Repeat.");
       }
 
-      // Collect diastolic with skip option and retry logic
+      // Collect diastolic
       setVoiceModeState(prev => ({...prev, currentField: 'diastolic', status: languageValue === "sw"? "Soma diastolic" : "Reading diastolic" }));
       scrollToField('diastolic');
-      const diastolicValue = await collectNumberField('diastolic', 40, 150, currentLanguage.diastolicLabel, true, 2);
+      const diastolicValue = await collectNumberFieldWithConfirm('diastolic', 40, 150, currentLanguage.diastolicLabel, true, 3);
       if (diastolicValue!== undefined) {
         collectedVitalsRef.current.diastolic = diastolicValue;
         setDiastolic(diastolicValue.toString());
-        toast.success(` ${currentLanguage.diastolicLabel}: ${diastolicValue}`);
       } else {
         await handleSpeak(languageValue === "sw" 
-         ? "Diastolic haijajazwa. Tutarudia baadae." 
-          : "Diastolic not recorded. We'll come back to it later.");
+         ? "Rudi." 
+          : "Repeat.");
       }
 
-      // Collect heart rate with skip option and retry logic
+      // Collect heart rate
       setVoiceModeState(prev => ({...prev, currentField: 'heartRate', status: languageValue === "sw"? "Soma kiwango cha moyo" : "Reading heart rate" }));
       scrollToField('heartRate');
-      const heartRateValue = await collectNumberField('heartRate', 40, 200, currentLanguage.heartRateLabel, true, 2);
+      const heartRateValue = await collectNumberFieldWithConfirm('heartRate', 40, 200, currentLanguage.heartRateLabel, true, 3);
       if (heartRateValue!== undefined) {
         collectedVitalsRef.current.heartRate = heartRateValue;
         setHeartRate(heartRateValue.toString());
-        toast.success(` ${currentLanguage.heartRateLabel}: ${heartRateValue}`);
       } else {
         await handleSpeak(languageValue === "sw" 
-         ? "Kiwango cha moyo hakijajazwa. Tutarudia baadae." 
-          : "Heart rate not recorded. We'll come back to it later.");
+         ? "Rudi." 
+          : "Repeat.");
       }
 
-      // Announce activity section briefly
+      // Activity section
       await handleSpeak(languageValue === "sw" 
-       ? "Sasa, shughuli za hivi karibuni." 
-        : "Now, recent activity.", true);
+       ? "Shughuli." 
+        : "Activity.", true);
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Collect activity type with clear options - FIXED: Use correct activity options
+      // Collect activity type
       setVoiceModeState(prev => ({ 
        ...prev, 
         currentField: 'activityType', 
@@ -590,21 +588,10 @@ export default function VitalsWithActivityInput({
       }));
       scrollToField('activityType');
       
-      // Announce activity options - FIXED: Use correct value names
-      const activityOptionsAnnouncement = languageValue === "sw" 
-       ? "Sema shughuli yako ya hivi karibuni. Sema 'hakuna' kama hujafanya shughuli yoyote. Unaweza kusema 'ruka'."
-        : "Say your recent activity. Say 'none' if you haven't done any activity. You can say 'skip'.";
-      
-      await handleSpeak(activityOptionsAnnouncement, true);
-      await new Promise(resolve => setTimeout(resolve, 400));
-      
       const activityTypeValue = await collectSelectField('activityType', currentLanguage.activityTypeLabel, false);
       if (activityTypeValue && activityTypeValue!== 'skip') {
         collectedVitalsRef.current.activityType = activityTypeValue;
         setActivityType(activityTypeValue);
-        // Use the safe version of getDisplayValue
-        const displayActivity = safeGetDisplayValue('activityType', activityTypeValue, currentLanguage);
-        toast.success(` ${currentLanguage.activityTypeLabel}: ${displayActivity}`);
         
         // If activity is not "none", collect additional activity details
         if (activityTypeValue!== "none") {
@@ -617,14 +604,13 @@ export default function VitalsWithActivityInput({
           scrollToField('duration');
           
           await handleSpeak(languageValue === "sw" 
-           ? "Muda katika dakika." 
-            : "Duration in minutes.", true);
+           ? "Dakika." 
+            : "Minutes.", true);
           
           const durationValue = await collectNumberField('duration', 0, 480, currentLanguage.durationLabel, false, 2);
           if (durationValue!== undefined) {
             collectedVitalsRef.current.duration = durationValue;
             setDuration(durationValue.toString());
-            toast.success(` ${currentLanguage.durationLabel}: ${durationValue}`);
           }
 
           // Collect intensity
@@ -636,16 +622,13 @@ export default function VitalsWithActivityInput({
           scrollToField('intensity');
           
           await handleSpeak(languageValue === "sw" 
-           ? "Ukali wa shughuli: nyepesi, wastani, au kali." 
-            : "Activity intensity: light, moderate, or vigorous.", true);
+           ? "Ukali." 
+            : "Intensity.", true);
           
           const intensityValue = await collectSimpleSelectField('intensity', currentLanguage.intensityLabel, false);
           if (intensityValue && intensityValue!== 'skip') {
             collectedVitalsRef.current.intensity = intensityValue;
             setIntensity(intensityValue);
-            // Use the safe version of getDisplayValue
-            const displayIntensity = safeGetDisplayValue('intensity', intensityValue, currentLanguage);
-            toast.success(` ${currentLanguage.intensityLabel}: ${displayIntensity}`);
           }
 
           // Collect time since activity
@@ -657,27 +640,22 @@ export default function VitalsWithActivityInput({
           scrollToField('timeSinceActivity');
           
           await handleSpeak(languageValue === "sw" 
-           ? "Muda uliopita katika dakika." 
-            : "Time since activity in minutes.", true);
+           ? "Dakika." 
+            : "Minutes.", true);
           
           const timeSinceValue = await collectNumberField('timeSinceActivity', 0, 1440, currentLanguage.timeSinceActivityLabel, false, 2);
           if (timeSinceValue!== undefined) {
             collectedVitalsRef.current.timeSinceActivity = timeSinceValue;
             setTimeSinceActivity(timeSinceValue.toString());
-            toast.success(` ${currentLanguage.timeSinceActivityLabel}: ${timeSinceValue}`);
           }
         } else {
           await handleSpeak(languageValue === "sw" 
-           ? "Hakuna shughuli za hivi karibuni." 
-            : "No recent activity.");
+           ? "Hakuna." 
+            : "None.");
         }
-      } else {
-        await handleSpeak(languageValue === "sw" 
-         ? "Shughuli haijajazwa." 
-          : "Activity not recorded.");
       }
 
-      // Ask about notes briefly
+      // Notes section
       setVoiceModeState(prev => ({ 
        ...prev, 
         currentField: 'notes', 
@@ -686,13 +664,12 @@ export default function VitalsWithActivityInput({
       scrollToField('notes');
       
       await handleSpeak(languageValue === "sw" 
-       ? "Maelezo ya ziada, kama kuna. Sema 'hakuna' kama huna maelezo." 
-        : "Additional notes, if any. Say 'none' if you have no notes.", true);
+       ? "Maelezo." 
+        : "Notes.", true);
       
       const notesValue = await collectSimpleTextField('notes', currentLanguage.notesLabel || "Notes");
       if (notesValue && notesValue!== 'skip' && notesValue!== 'none') {
         setNotes(notesValue);
-        toast.success(` Notes: ${notesValue.substring(0, 20)}...`);
       }
 
       // Check if we have all required vitals
@@ -709,43 +686,43 @@ export default function VitalsWithActivityInput({
         }));
         
         await handleSpeak(languageValue === "sw" 
-         ? "Tayari kuhifadhi vipimo vyako? Sema 'ndio' au 'hapana'." 
-          : "Ready to save your measurements? Say 'yes' or 'no'.", true);
+         ? "Hifadhi? Ndio au hapana." 
+          : "Save? Yes or no.", true);
         
         const confirmResult = await collectSimpleConfirmation();
         
         if (confirmResult) {
           await handleSpeak(languageValue === "sw" 
-           ? "Natumia data yako..." 
-            : "Submitting your data...", true);
+           ? "Inatumwa." 
+            : "Submitting.", true);
           
           const success = await autoSubmitVitals();
           
           if (success) {
             await handleSpeak(languageValue === "sw" 
-             ? "Data imehifadhiwa." 
-              : "Data saved.", true);
+             ? "Imesajiliwa." 
+              : "Saved.", true);
           } else {
             await handleSpeak(languageValue === "sw" 
-             ? "Kulikuwa na tatizo katika kuhifadhi data. Tafadhali jaribu tena." 
-              : "There was a problem saving data. Please try again.", true);
+             ? "Hitilafu." 
+              : "Error.", true);
           }
         } else {
           await handleSpeak(languageValue === "sw" 
-           ? "Hujathibitisha. Kipimo hakijahifadhiwa." 
-            : "Not confirmed. Measurement not saved.", true);
+           ? "Imekataliwa." 
+            : "Cancelled.", true);
         }
       } else {
         await handleSpeak(languageValue === "sw" 
-         ? "Hakuna vipimo vya kutosha vya damu. Tafadhali weka maadili ya systolic, diastolic na kiwango cha moyo." 
-          : "Not enough blood pressure measurements. Please enter systolic, diastolic and heart rate values.", true);
+         ? "Vipimo vya kutosha." 
+          : "Insufficient measurements.", true);
       }
 
     } catch (error) {
       console.error("Voice mode error:", error);
       await handleSpeak(languageValue === "sw" 
-       ? "Kumekuwa na hitilafu. Tafadhali jaribu tena." 
-        : "An error occurred. Please try again.", true);
+       ? "Hitilafu." 
+        : "Error.", true);
     } finally {
       setVoiceModeState(prev => ({ 
        ...prev, 
@@ -761,14 +738,104 @@ export default function VitalsWithActivityInput({
     }
   };
 
-  // Enhanced helper function to collect number fields with retry logic
+  // Enhanced helper function to collect number fields with confirmation
+  const collectNumberFieldWithConfirm = async (
+    fieldName: string, 
+    min: number, 
+    max: number, 
+    label: string, 
+    isRequired: boolean,
+    maxAttempts: number = 3
+  ): Promise<number | undefined> => {
+    if (!voiceModeActiveRef.current) return undefined;
+    
+    let attempts = 0;
+    
+    while (attempts < maxAttempts) {
+      if (!voiceModeActiveRef.current) break;
+      
+      try {
+        // Listen for number
+        setVoiceModeState(prev => ({ 
+         ...prev,
+          status: languageValue === "sw" 
+           ? `Inasoma ${label.toLowerCase()}` 
+            : `Reading ${label.toLowerCase()}`
+        }));
+        
+        const result = await listenForField(
+          fieldName,
+          label,
+          'number' as const,
+          min,
+          max,
+          languageValue,
+          currentLanguage,
+          voiceModeActiveRef,
+          pausedRef,
+          isProcessingRef,
+          (state: Partial<VoiceModeState>) => setVoiceModeState(prev => ({...prev,...state })),
+          mediaRecorderRef,
+          API_URL,
+          fieldRefs,
+          handleSpeak,
+          isRequired
+        );
+        
+        if (typeof result === 'number') {
+          // Confirm the value
+          await handleSpeak(languageValue === "sw" 
+           ? `${result}. Ndio au hapana?` 
+            : `${result}. Yes or no?`, true);
+          
+          const confirmResult = await collectSimpleConfirmation();
+          
+          if (confirmResult) {
+            return result;
+          } else {
+            // User said no, ask to repeat
+            await handleSpeak(languageValue === "sw" 
+             ? "Rudi." 
+              : "Repeat.", true);
+            attempts++;
+            continue;
+          }
+        } else if (result === 'skip') {
+          return undefined;
+        } else if (result === null) {
+          attempts++;
+          if (attempts < maxAttempts) {
+            await handleSpeak(languageValue === "sw" 
+             ? "Rudi." 
+              : "Repeat.", true);
+            continue;
+          }
+        }
+        
+        return undefined;
+      } catch (error) {
+        console.error(`Error collecting number field ${fieldName}:`, error);
+        attempts++;
+        
+        if (attempts < maxAttempts) {
+          await handleSpeak(languageValue === "sw" 
+           ? "Rudi." 
+            : "Repeat.", true);
+        }
+      }
+    }
+    
+    return undefined;
+  };
+
+  // Enhanced helper function to collect number fields without confirmation
   const collectNumberField = async (
     fieldName: string, 
     min: number, 
     max: number, 
     label: string, 
     isRequired: boolean,
-    maxAttempts: number = 2 // Reduced from 3 for better UX
+    maxAttempts: number = 2
   ): Promise<number | undefined> => {
     if (!voiceModeActiveRef.current) return undefined;
     
@@ -807,28 +874,10 @@ export default function VitalsWithActivityInput({
         if (typeof result === 'number') {
           return result;
         } else if (result === 'skip') {
-          // For required fields, allow one retry then skip
-          if (isRequired) {
-            attempts++;
-            if (attempts < maxAttempts) {
-              await handleSpeak(languageValue === "sw" 
-               ? "Sehemu hii ni muhimu. Jaribu tena." 
-                : "This field is required. Please try again.", true);
-              continue;
-            } else {
-              await handleSpeak(languageValue === "sw" 
-               ? "Tumeruka sehemu hii. Tutarejea baadaye." 
-                : "Skipping this field. We'll come back to it later.", true);
-              return undefined;
-            }
-          }
           return undefined;
         } else if (result === null) {
           attempts++;
           if (attempts < maxAttempts) {
-            await handleSpeak(languageValue === "sw" 
-             ? "Samahani, sikusikia. Jaribu tena." 
-              : "Sorry, I didn't catch that. Try again.", true);
             continue;
           }
         }
@@ -837,12 +886,6 @@ export default function VitalsWithActivityInput({
       } catch (error) {
         console.error(`Error collecting number field ${fieldName}:`, error);
         attempts++;
-        
-        if (attempts < maxAttempts) {
-          await handleSpeak(languageValue === "sw" 
-           ? "Samahani, kulikuwa na tatizo. Jaribu tena." 
-            : "Sorry, there was a problem. Try again.", true);
-        }
       }
     }
     
@@ -877,43 +920,17 @@ export default function VitalsWithActivityInput({
         isRequired
       );
       
-      // Handle the result properly
       if (result === 'skip') {
-        if (isRequired) {
-          await handleSpeak(languageValue === "sw" 
-           ? "Sehemu hii ni muhimu. Tafadhali jaribu tena." 
-            : "This field is required. Please try again.", true);
-          return fieldName === 'activityType'? 'none' : undefined;
-        }
         return 'skip';
       }
       
-      // Check if it's a string (could be 'skip' or actual value)
       if (typeof result === 'string') {
-        // If it's 'skip', we already handled it above
-        if (result === 'skip') {
-          return 'skip';
-        }
         return result;
       }
       
       return undefined;
     } catch (error) {
       console.error(`Error collecting select field ${fieldName}:`, error);
-      
-      // Provide helpful error message
-      if (voiceModeActiveRef.current &&!voiceModeState.muted) {
-        if (fieldName === 'activityType') {
-          await handleSpeak(languageValue === "sw" 
-           ? "Samahani, sikusikia vizuri. Jaribu tena. Sema aina ya shughuli, au 'hakuna' kama hujafanya shughuli yoyote." 
-            : "Sorry, I didn't hear you clearly. Please try again. Say the activity type, or 'none' if you haven't done any activity.", true);
-        } else {
-          await handleSpeak(languageValue === "sw" 
-           ? "Samahani, sikusikia vizuri. Jaribu tena." 
-            : "Sorry, I didn't hear you clearly. Please try again.", true);
-        }
-      }
-      
       return undefined;
     }
   };
@@ -962,7 +979,6 @@ export default function VitalsWithActivityInput({
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
 
           try {
-            // Use optimized transcription with caching
             const transcribedText = await transcribeAudio(audioBlob);
             
             setVoiceModeState(prev => ({...prev, listening: false, status: "" }));
@@ -979,7 +995,6 @@ export default function VitalsWithActivityInput({
               } else if (text.includes('vigorous') || text.includes('kali')) {
                 resolve('vigorous');
               } else {
-                // If we can't determine, assume moderate
                 resolve('moderate');
               }
             } else {
@@ -994,7 +1009,6 @@ export default function VitalsWithActivityInput({
 
         mediaRecorder.start();
         
-        // Stop recording after 4 seconds
         setTimeout(() => {
           if (mediaRecorder.state === "recording" && voiceModeActiveRef.current) {
             mediaRecorder.stop();
@@ -1049,7 +1063,6 @@ export default function VitalsWithActivityInput({
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
 
           try {
-            // Use optimized transcription
             const transcribedText = await transcribeAudio(audioBlob);
             
             setVoiceModeState(prev => ({...prev, listening: false, status: "" }));
@@ -1076,7 +1089,6 @@ export default function VitalsWithActivityInput({
 
         mediaRecorder.start();
         
-        // Stop recording after 4 seconds
         setTimeout(() => {
           if (mediaRecorder.state === "recording" && voiceModeActiveRef.current) {
             mediaRecorder.stop();
@@ -1141,7 +1153,6 @@ export default function VitalsWithActivityInput({
               } else if (text.includes('no') || text.includes('hapana') || text.includes('cancel')) {
                 resolve(false);
               } else {
-                // If unclear, assume no
                 resolve(false);
               }
             } else {
@@ -1170,16 +1181,17 @@ export default function VitalsWithActivityInput({
 
   // Stop voice mode
   const handleStopVoiceMode = () => {
-    stopVoiceMode({
-      voiceModeActiveRef,
-      pausedRef,
-      mediaRecorderRef,
-      currentLanguage,
-      setVoiceModeState: (state) => setVoiceModeState(prev => ({...prev,...state })),
-      handleSpeak,
-      isMuted: voiceModeState.muted
-    });
-  };
+  stopVoiceMode({
+    voiceModeActiveRef,
+    pausedRef,
+    mediaRecorderRef,
+    currentLanguage,
+    setVoiceModeState: (state) => setVoiceModeState(prev => ({...prev,...state })),
+    handleSpeak,
+    isMuted: voiceModeState.muted,
+    languageValue: languageValue // ADD THIS LINE
+  });
+};
 
   // Toggle mute
   const handleToggleMute = () => {
@@ -1402,8 +1414,8 @@ export default function VitalsWithActivityInput({
                     type="button"
                     onClick={() => {
                       handleSpeak(languageValue === "sw" 
-                       ? `Thamani ya systolic ni ${systolic || 'haijawekwa'} mmHg.` 
-                        : `Systolic value is ${systolic || 'not set'} mmHg.`)
+                       ? `Systolic ni ${systolic || 'haijawekwa'} mmHg.` 
+                        : `Systolic is ${systolic || 'not set'} mmHg.`)
                     }}
                     className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
                   >
@@ -1435,8 +1447,8 @@ export default function VitalsWithActivityInput({
                     type="button"
                     onClick={() => {
                       handleSpeak(languageValue === "sw" 
-                       ? `Thamani ya diastolic ni ${diastolic || 'haijawekwa'} mmHg.` 
-                        : `Diastolic value is ${diastolic || 'not set'} mmHg.`)
+                       ? `Diastolic ni ${diastolic || 'haijawekwa'} mmHg.` 
+                        : `Diastolic is ${diastolic || 'not set'} mmHg.`)
                     }}
                     className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
                   >
@@ -1468,8 +1480,8 @@ export default function VitalsWithActivityInput({
                     type="button"
                     onClick={() => {
                       handleSpeak(languageValue === "sw" 
-                       ? `Kiwango cha mapigo ya moyo ni ${heartRate || 'hakijajazwa'} kwa dakika.` 
-                        : `Heart rate is ${heartRate || 'not set'} beats per minute.`)
+                       ? `Mapigo ya moyo ni ${heartRate || 'hakijajazwa'} kwa dakika.` 
+                        : `Heart rate is ${heartRate || 'not set'} per minute.`)
                     }}
                     className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
                   >
