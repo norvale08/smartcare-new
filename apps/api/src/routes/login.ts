@@ -73,17 +73,16 @@ const getPatientRedirect = (user: UserDocument, diseases: string[]): RedirectRes
     };
   }
 
-  // ✅ CRITICAL FIX: If user has both diabetes and hypertension, always redirect to /diabetes
+  // If user has both diabetes and hypertension, always redirect to /diabetes
   // The diabetes page will handle both conditions together
   if (diseases.includes("diabetes") && diseases.includes("hypertension")) {
-    console.log("🏥 User has BOTH diabetes and hypertension - redirecting to /diabetes for dual management");
     return {
       redirectTo: "/diabetes",
       message: "Welcome to your diabetes and hypertension management dashboard."
     };
   }
 
-  // ✅ If user has diabetes (alone), redirect to diabetes
+  // If user has diabetes (alone), redirect to diabetes
   if (diseases.includes("diabetes")) {
     return {
       redirectTo: "/diabetes",
@@ -111,7 +110,7 @@ const getPatientRedirect = (user: UserDocument, diseases: string[]): RedirectRes
     };
   }
 
-  // ✅ Multiple conditions (but not diabetes+hypertension combo)
+  // Multiple conditions (but not diabetes+hypertension combo)
   // This handles cases like cardiovascular + hypertension, or all three conditions
   if (diseases.includes("diabetes")) {
     // If diabetes is one of multiple conditions, prioritize diabetes
@@ -217,18 +216,6 @@ router.post("/", async (req, res) => {
     // Process diseases for patients
     const diseases = user.role === "patient" ? extractDiseases(user) : [];
 
-    // ✅ LOG DISEASE STATUS FOR DEBUGGING
-    if (user.role === "patient") {
-      console.log("🔍 Patient Login - Disease Status:", {
-        email: user.email,
-        diabetes: user.diabetes,
-        hypertension: user.hypertension,
-        cardiovascular: user.cardiovascular,
-        extractedDiseases: diseases,
-        hasBothDiabetesAndHypertension: diseases.includes("diabetes") && diseases.includes("hypertension")
-      });
-    }
-
     // Update first login flag if needed (non-blocking)
     if (user.isFirstLogin) {
       User.findByIdAndUpdate(user._id, { isFirstLogin: false }).exec();
@@ -236,16 +223,6 @@ router.post("/", async (req, res) => {
 
     // Determine redirect
     const { redirectTo, message } = determineRedirect(user, diseases);
-
-    // ✅ LOG REDIRECT DECISION
-    if (user.role === "patient") {
-      console.log("📍 Redirect Decision:", {
-        email: user.email,
-        diseases: diseases,
-        redirectTo: redirectTo,
-        message: message
-      });
-    }
 
     // Get user name
     const userName = getUserName(user);
@@ -281,7 +258,7 @@ router.post("/", async (req, res) => {
 
     if (user.role === "patient") {
       safeUser.selectedDiseases = diseases;
-      // ✅ Add flag for dual condition management
+      // Add flag for dual condition management
       safeUser.hasDualConditions = diseases.includes("diabetes") && diseases.includes("hypertension");
     }
 
@@ -300,7 +277,7 @@ router.post("/", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Login error:", error);
+    console.error("Login error:", error);
     res.status(500).json({
       success: false,
       message: "Server error"
@@ -374,7 +351,7 @@ router.post("/relative-setup-help", async (req, res) => {
     );
 
     if (!emailSent) {
-      console.error('❌ Failed to resend setup email');
+      console.error('Failed to resend setup email');
       return res.status(500).json({
         success: false,
         message: "Failed to send email. Please contact support."
@@ -388,7 +365,7 @@ router.post("/relative-setup-help", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Relative setup help error:", error);
+    console.error("Relative setup help error:", error);
     res.status(500).json({
       success: false,
       message: "Server error"

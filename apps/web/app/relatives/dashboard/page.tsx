@@ -15,8 +15,9 @@ import { HealthAlerts } from './components/HealthAlerts';
 import { StatusMessages } from './components/StatusMessages';
 import { AccessNotice } from './components/AccessNotice';
 import { useDashboardData } from './hooks/useDashboardData';
+import { useDismissedAlerts } from './hooks/useDismissedAlerts';
 import { DashboardUtils } from './utils';
-import { TabType, ChartMetric, ChartPeriod } from './types';
+import { TabType, ChartMetric, ChartPeriod, HealthAlert } from './types';
 
 export default function RelativeDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -25,7 +26,7 @@ export default function RelativeDashboard() {
   const [message, setMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [success, setSuccess] = useState('');
-  const [healthAlerts, setHealthAlerts] = useState<any[]>([]);
+  const [healthAlerts, setHealthAlerts] = useState<HealthAlert[]>([]);
 
   const router = useRouter();
   const {
@@ -43,6 +44,14 @@ export default function RelativeDashboard() {
     handleRefresh
   } = useDashboardData();
 
+  const {
+    dismissedAlerts,
+    dismissAlert,
+    dismissAllAlerts,
+    clearDismissedAlerts,
+    isAlertDismissed
+  } = useDismissedAlerts();
+
   // Generate health alerts when vitals change
   useEffect(() => {
     if (vitals.length > 0) {
@@ -50,6 +59,56 @@ export default function RelativeDashboard() {
       setHealthAlerts(alerts);
     }
   }, [vitals]);
+
+  // Filter out dismissed alerts
+  const filteredAlerts = healthAlerts.filter(alert => !isAlertDismissed(alert.id));
+
+  // Handle dismissing a single alert
+  const handleDismissAlert = (alertId: string) => {
+    dismissAlert(alertId);
+    
+    // Show a success message
+    const dismissedAlert = healthAlerts.find(a => a.id === alertId);
+    if (dismissedAlert) {
+      setSuccess(`Alert dismissed: ${dismissedAlert.vital} alert`);
+      setTimeout(() => setSuccess(''), 3000);
+    }
+  };
+
+  // Handle dismissing all alerts
+  const handleDismissAllAlerts = () => {
+    const alertIds = filteredAlerts.map(alert => alert.id);
+    if (alertIds.length > 0) {
+      dismissAllAlerts(alertIds);
+      setSuccess('All alerts have been dismissed');
+      setTimeout(() => setSuccess(''), 3000);
+    }
+  };
+
+  // Auto-dismiss old alerts after 7 days
+  useEffect(() => {
+    const autoDismissOldAlerts = () => {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const oldAlerts = healthAlerts.filter(alert => {
+        const alertDate = new Date(alert.timestamp);
+        return alertDate < sevenDaysAgo && !isAlertDismissed(alert.id);
+      });
+
+      if (oldAlerts.length > 0) {
+        oldAlerts.forEach(alert => dismissAlert(alert.id));
+        console.log(`Auto-dismissed ${oldAlerts.length} old alerts`);
+      }
+    };
+
+    // Run once when alerts change
+    autoDismissOldAlerts();
+
+    // Set up interval to check every hour
+    const interval = setInterval(autoDismissOldAlerts, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [healthAlerts, dismissAlert, isAlertDismissed]);
 
   const chartData = DashboardUtils.prepareChartData(vitals, chartPeriod);
 
@@ -99,6 +158,7 @@ export default function RelativeDashboard() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    clearDismissedAlerts(); // Clear dismissed alerts on logout
     router.push('/login');
   };
 
@@ -155,7 +215,41 @@ export default function RelativeDashboard() {
             bmiResult={bmiResult}
           />
 
-          <HealthAlerts alerts={healthAlerts} />
+          {/* Alert Summary */}
+          {filteredAlerts.length > 0 && (
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Health Alerts ({filteredAlerts.length})
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {filteredAlerts.filter(a => a.severity === 'critical').length} critical, 
+                    {' '}{filteredAlerts.filter(a => a.severity === 'warning').length} warnings
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleDismissAllAlerts()}
+                    className="px-3 py-1.5 text-sm bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Dismiss All
+                  </button>
+                  <button
+                    onClick={() => clearDismissedAlerts()}
+                    className="px-3 py-1.5 text-sm bg-blue-100 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                  >
+                    Show All Alerts
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <HealthAlerts 
+            alerts={filteredAlerts} 
+            onDismissAlert={handleDismissAlert}
+          />
 
           <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 

@@ -25,7 +25,7 @@ export default function VoiceInput({
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-  // Ensure component runs only on client
+  
   useEffect(() => {
     setIsClient(true);
   }, []);
