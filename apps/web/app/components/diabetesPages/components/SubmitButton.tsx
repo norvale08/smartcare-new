@@ -13,7 +13,7 @@ const SubmitButton: React.FC<SubmitButtonProps> = ({ isLoading, currentLanguage 
       type="submit"
       disabled={isLoading}
       className={`
-        w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 
+        w-full bg-blue-500
         text-white font-bold py-3 sm:py-4 px-6 rounded-xl sm:rounded-2xl 
         shadow-lg hover:shadow-xl transition-all duration-300 
         flex items-center justify-center gap-2 sm:gap-3
