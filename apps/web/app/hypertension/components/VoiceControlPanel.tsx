@@ -67,12 +67,12 @@ const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
   };
 
   return (
-    <div className="bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-white/20">
+    <div className="bg-gradient-to-r from-red-600 via-pink-500 to-red-500 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-white/20">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-full flex items-center justify-center flex-shrink-0 relative">
             {(listening || active) && !paused && (
-              <div className="absolute inset-0 rounded-full bg-cyan-400 animate-ping opacity-75"></div>
+              <div className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-75"></div>
             )}
             <Mic className="text-white relative z-10" size={24} />
           </div>
@@ -80,11 +80,11 @@ const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
             <h3 className="text-white font-bold text-base sm:text-lg">{currentLanguage.voiceMode || (languageValue === "sw" ? "Hali ya Msaidizi wa Sauti" : "Voice Assistant Mode")}</h3>
             {currentField && (
               <p className="text-white/90 text-xs sm:text-sm">
-                {currentLanguage.currentlyReading || (languageValue === "sw" ? "Inasoma": "Currently Reading")}: <span className="font-bold text-cyan-200">{currentField}</span>
+                {currentLanguage.currentlyReading || (languageValue === "sw" ? "Inasoma": "Currently Reading")}: <span className="font-bold text-red-200">{currentField}</span>
               </p>
             )}
             {paused && (
-              <p className="text-cyan-300 text-xs sm:text-sm font-semibold animate-pulse">
+              <p className="text-red-300 text-xs sm:text-sm font-semibold animate-pulse">
                 ⏸️ {languageValue === "sw" ? "Imesimamishwa" : "Paused"}
               </p>
             )}
@@ -100,22 +100,22 @@ const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
         </button>
       </div>
       
-      {/* Enhanced Voice Status Display */}
+      {/* Enhanced Voice Status Display - similar to diabetes */}
       {(listening || speaking || status) && !paused && (
-        <div className="bg-white/10 backdrop-blur rounded-lg p-4 mb-3 animate-in fade-in slide-in-from-top-2 duration-300 border border-blue-500/30">
+        <div className="bg-white/10 backdrop-blur rounded-lg p-4 mb-3 animate-in fade-in slide-in-from-top-2 duration-300 border border-red-500/30">
           <div className="flex items-center justify-center gap-3">
             {speaking ? (
               <>
                 <div className="flex gap-1">
-                  <div className="w-3 h-3 bg-blue-300 rounded-full animate-bounce" />
-                  <div className="w-3 h-3 bg-cyan-300 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                  <div className="w-3 h-3 bg-emerald-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                  <div className="w-3 h-3 bg-red-300 rounded-full animate-bounce" />
+                  <div className="w-3 h-3 bg-pink-300 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                  <div className="w-3 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                 </div>
                 <div className="text-center">
                   <span className="text-white font-bold text-sm block">
                     {languageValue === "sw" ? "NASEMA SASA" : "SPEAKING NOW"}
                   </span>
-                  <span className="text-blue-100 text-xs">
+                  <span className="text-red-100 text-xs">
                     {status || (languageValue === "sw" ? "Ninazungumza..." : "Speaking...")}
                   </span>
                 </div>
@@ -123,8 +123,8 @@ const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
             ) : listening ? (
               <>
                 <div className="relative">
-                  <div className="w-4 h-4 bg-blue-400 rounded-full animate-pulse" />
-                  <div className="absolute inset-0 w-4 h-4 bg-cyan-400 rounded-full animate-ping" />
+                  <div className="w-4 h-4 bg-red-400 rounded-full animate-pulse" />
+                  <div className="absolute inset-0 w-4 h-4 bg-pink-400 rounded-full animate-ping" />
                 </div>
                 <div className="text-center">
                   <span className="text-white font-bold text-sm block">
@@ -135,31 +135,31 @@ const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
                   </span>
                 </div>
                 <div className="flex gap-1">
-                  <div className="w-1 h-3 bg-blue-300 rounded-full animate-pulse" style={{ animationDelay: '0s' }} />
-                  <div className="w-1 h-4 bg-cyan-300 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
-                  <div className="w-1 h-5 bg-emerald-300 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
-                  <div className="w-1 h-4 bg-cyan-300 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }} />
-                  <div className="w-1 h-3 bg-blue-300 rounded-full animate-pulse" style={{ animationDelay: '0.8s' }} />
+                  <div className="w-1 h-3 bg-red-300 rounded-full animate-pulse" style={{ animationDelay: '0s' }} />
+                  <div className="w-1 h-4 bg-pink-300 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
+                  <div className="w-1 h-5 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+                  <div className="w-1 h-4 bg-pink-300 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }} />
+                  <div className="w-1 h-3 bg-red-300 rounded-full animate-pulse" style={{ animationDelay: '0.8s' }} />
                 </div>
               </>
             ) : (
               <>
-                <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse" />
+                <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse" />
                 <span className="text-white font-semibold text-sm">{status}</span>
               </>
             )}
           </div>
           
-          {/* Progress indicator for current field */}
+          {/* Progress indicator for current field - similar to diabetes */}
           {currentField && (
             <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="flex justify-between text-white/80 text-xs mb-1">
                 <span>{languageValue === "sw" ? "Sehemu ya sasa" : "Current Field"}</span>
-                <span className="font-bold text-cyan-200">{currentField}</span>
+                <span className="font-bold text-red-200">{currentField}</span>
               </div>
               <div className="w-full bg-white/20 rounded-full h-2">
                 <div 
-                  className="bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400 h-2 rounded-full transition-all duration-1000 ease-out"
+                  className="bg-gradient-to-r from-red-400 to-pink-400 h-2 rounded-full transition-all duration-1000 ease-out"
                   style={{
                     width: listening ? '100%' : '0%',
                     animation: listening ? 'pulse 2s infinite' : 'none'
@@ -171,12 +171,12 @@ const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
         </div>
       )}
 
-      {/* Control Buttons */}
+      {/* Control Buttons - updated layout similar to diabetes */}
       {!active ? (
         <button 
           type="button"
           onClick={onToggleVoiceMode}
-          className="w-full bg-white text-blue-700 font-bold py-3 rounded-lg hover:bg-blue-50 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 text-sm sm:text-base animate-in fade-in slide-in-from-top-2 duration-300 shadow-md hover:shadow-lg border border-blue-200"
+          className="w-full bg-white text-red-700 font-bold py-3 rounded-lg hover:bg-red-50 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 text-sm sm:text-base animate-in fade-in slide-in-from-top-2 duration-300 shadow-md hover:shadow-lg border border-red-200"
         >
           <Play size={20} />
           {currentLanguage.startVoice || (languageValue === "sw" ? "Anza Sauti" : "Start Voice")}
@@ -191,8 +191,8 @@ const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
               className={`w-full mb-2 font-bold py-3 rounded-lg transition-all transform hover:scale-[1.02] 
                 flex items-center justify-center gap-2 text-sm sm:text-base shadow-md hover:shadow-lg
                 ${paused 
-                  ? 'bg-blue-500 hover:bg-blue-600 text-white border border-blue-400' 
-                  : 'bg-cyan-500 hover:bg-cyan-600 text-white border border-cyan-300'
+                  ? 'bg-red-500 hover:bg-red-600 text-white border border-red-400' 
+                  : 'bg-red-400 hover:bg-red-500 text-white border border-red-300'
                 }`}
             >
               {paused ? (
@@ -213,7 +213,7 @@ const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
           <button 
             type="button"
             onClick={onToggleVoiceMode}
-            className="w-full bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 text-white font-bold py-3 rounded-lg hover:from-blue-700 hover:via-cyan-700 hover:to-emerald-700 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 text-sm sm:text-base shadow-md hover:shadow-lg border border-blue-500/50"
+            className="w-full bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold py-3 rounded-lg hover:from-red-700 hover:to-pink-700 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 text-sm sm:text-base shadow-md hover:shadow-lg border border-red-500/50"
           >
             <Square size={20} />
             {currentLanguage.stopVoice || (languageValue === "sw" ? "Sima Sauti" : "Stop Voice")}
@@ -221,7 +221,7 @@ const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
         </>
       )}
 
-      {/* Content Reading Options */}
+      {/* Content Reading Options - similar to diabetes */}
       {active && !paused && onReadContent && (
         <div className="mt-4 space-y-3">
           <div className="text-xs text-white/80 font-semibold text-center">
@@ -264,21 +264,21 @@ const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
         </div>
       )}
 
-      {/* Quick Tips */}
+      {/* Quick Tips - updated to match diabetes style */}
       {active && !paused && (
         <div className="mt-3 grid grid-cols-2 gap-2 text-white/80 text-xs">
-          <div className="bg-white/10 p-2 rounded-lg border border-blue-500/20 hover:border-blue-500/40 transition-colors">
-            <span className="font-semibold text-blue-200">🎯 {languageValue === "sw" ? "Nambari:" : "Numbers:"}</span>
+          <div className="bg-white/10 p-2 rounded-lg border border-red-500/20 hover:border-red-500/40 transition-colors">
+            <span className="font-semibold text-red-200">🎯 {languageValue === "sw" ? "Nambari:" : "Numbers:"}</span>
             <p className="mt-1 text-white">{languageValue === "sw" ? "Sema 'mia moja ishirini' kwa 120" : "Say 'one twenty' for 120"}</p>
           </div>
-          <div className="bg-white/10 p-2 rounded-lg border border-cyan-500/20 hover:border-cyan-500/40 transition-colors">
-            <span className="font-semibold text-cyan-200">✅ {languageValue === "sw" ? "Thibitisha:" : "Confirm:"}</span>
+          <div className="bg-white/10 p-2 rounded-lg border border-pink-500/20 hover:border-pink-500/40 transition-colors">
+            <span className="font-semibold text-pink-200">✅ {languageValue === "sw" ? "Thibitisha:" : "Confirm:"}</span>
             <p className="mt-1 text-white">{languageValue === "sw" ? "Sema 'ndio' au 'hapana'" : "Say 'yes' or 'no'"}</p>
           </div>
         </div>
       )}
 
-      {/* Hypertension Specific Tips */}
+      {/* Hypertension Specific Tips - similar to diabetes */}
       {active && !paused && (
         <div className="mt-3 bg-white/10 p-3 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
           <span className="font-semibold text-white text-xs block mb-1">
@@ -292,7 +292,7 @@ const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
         </div>
       )}
 
-      {/* Skip Instructions */}
+      {/* Skip Instructions - similar to diabetes */}
       {active && !paused && (
         <div className="mt-3 p-3 bg-white/10 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-2 text-white/80 text-xs">

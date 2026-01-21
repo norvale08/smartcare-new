@@ -3,6 +3,11 @@
 import React from "react";
 import { HeartPulse, Globe, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
+import { HeartPulse, Globe, LogOut } from "lucide-react";
 import { Translations } from "../../../lib/hypertension/useTranslation";
 
 interface HeaderProps {
@@ -13,15 +18,48 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient }) => {
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const availableLanguages = [
     { code: "en-US", name: "English", nativeName: "English" },
     { code: "sw-TZ", name: "Swahili", nativeName: "Kiswahili" },
   ];
+  
   const userName = patient?.fullName || "Sarah ";
   const userInitials = userName.slice(0, 2).toUpperCase();
 
+
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/login" });
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true);
+      
+      // Clear local storage
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
+        localStorage.removeItem("preferredLanguage");
+      }
+
+      // Sign out from NextAuth
+      await signOut({ 
+        redirect: false,
+        callbackUrl: "/login" 
+      });
+
+      // Redirect to login page
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Still redirect even if there's an error
+      router.push("/login");
+    } finally {
+      setLoggingOut(false);
+    }
+
   };
 
   return (
@@ -34,6 +72,7 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
       </div>
 
       <div className="flex flex-row items-center gap-6">
+        {/* Language Selector */}
         <div className="relative">
           <select
             value={language}
@@ -50,7 +89,12 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
             <Globe color="#27b049" size={16} />
           </div>
         </div>
+
         
+
+
+        {/* User Info */}
+
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
             <span className="text-white font-semibold">{userInitials}</span>
@@ -60,6 +104,7 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
           </span>
         </div>
 
+
         <button
           onClick={handleLogout}
           className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -67,6 +112,18 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
         >
           <LogOut size={18} />
           <span className="text-sm font-medium">Logout</span>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors font-medium flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <LogOut size={16} />
+          <span className="hidden sm:inline">
+            {loggingOut ? (language === "sw-TZ" ? "Inatoka..." : "Logging out...") : (language === "sw-TZ" ? "Toka" : "Logout")}
+          </span>
+
         </button>
       </div>
     </header>
