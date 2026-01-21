@@ -9,15 +9,11 @@ import { toast } from "react-hot-toast"
 import { useRouter } from 'next/navigation'
 import CustomToaster from '../ui/CustomToaster'
 import { FaHeartbeat } from "react-icons/fa"
-import { Mail, Lock, User, Phone, Eye, EyeOff, Shield } from "lucide-react"
-
-interface ExtendedUserRegisterType extends UserRegisterType {
-    dataConsent: boolean;
-}
+import { Mail, Lock, User, Phone, Eye, EyeOff } from "lucide-react"
 
 const Registration = () => {
     const router = useRouter();
-    const { register, handleSubmit, formState, reset, watch } = useForm<ExtendedUserRegisterType>();
+    const { register, handleSubmit, formState, reset, watch } = useForm<UserRegisterType>();
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -25,14 +21,14 @@ const Registration = () => {
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-    const handleFormSubmit = async (data: ExtendedUserRegisterType) => {
+    const handleFormSubmit = async (data: UserRegisterType) => {
         setIsLoading(true);
         try {
-            const { confirmPassword, dataConsent, ...submitData } = data;
+            const { confirmPassword, ...submitData } = data;
             const response = await fetch(`${API_URL}/api/auth`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...submitData, dataConsent }),
+                body: JSON.stringify(submitData),
             });
 
             const result = await response.json();
@@ -55,7 +51,7 @@ const Registration = () => {
     }
 
     return (
-        <div className='min-h-screen w-screen grid grid-cols-1 md:grid-cols-2'>
+        <div className='h-screen w-screen grid grid-cols-1 md:grid-cols-2'>
             <CustomToaster />
 
             {/* Left Panel: Branding */}
@@ -92,10 +88,10 @@ const Registration = () => {
             </div>
 
             {/* Right Panel: Form */}
-            <div className='flex flex-col items-center justify-center min-h-screen p-6 md:p-12 overflow-y-auto'>
-                <div className='w-full max-w-md my-8'>
+            <div className='flex flex-col items-center justify-center h-full p-12'>
+                <div className='w-full max-w-md'>
                     <div className='mb-4'>
-                        <div className='flex flex-row items-center justify-center text-center md:hidden mb-4'>
+                        <div className='flex flex-row items-center justify-center text-center md:hidden'>
                             <FaHeartbeat className='text-blue-500 mr-3'/>     
                             <h1 className='text-2xl text-emerald-400 font-bold'>
                                 SmartCare
@@ -106,7 +102,7 @@ const Registration = () => {
                     </div>
 
                     <form onSubmit={handleSubmit(handleFormSubmit)} className='space-y-4 border border-gray-200 shadow-md rounded-md p-6 bg-white'>
-                        <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                        <div className='grid grid-cols-2 gap-4'>
                             <div>
                                 <Label htmlFor="firstName">First Name</Label>
                                 <div className='relative'>
@@ -190,7 +186,7 @@ const Registration = () => {
                                 <button 
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
                                 >
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
@@ -214,7 +210,7 @@ const Registration = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
                                 >
                                     {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
@@ -224,53 +220,17 @@ const Registration = () => {
                             }
                         </div>
 
-                        {/* Data Consent Checkbox */}
-                        <div className='space-y-2 pt-2'>
-                            <div className='flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg'>
-                                <div className='flex-shrink-0 mt-0.5'>
-                                    <Shield className='h-5 w-5 text-blue-600' />
-                                </div>
-                                <div className='flex-1'>
-                                    <div className='flex items-start'>
-                                        <input
-                                            id="dataConsent"
-                                            type="checkbox"
-                                            className='mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer flex-shrink-0'
-                                            {...register("dataConsent", {
-                                                required: "You must consent to data collection to register"
-                                            })}
-                                        />
-                                        <label htmlFor="dataConsent" className='ml-3 text-sm text-gray-700 cursor-pointer'>
-                                            <span className='font-medium text-gray-900'>I consent to the collection and processing of my health data</span>
-                                            <p className='text-xs text-gray-600 mt-1.5 leading-relaxed'>
-                                                By checking this box, you agree to allow SmartCare to collect, store, and process your health information for the purpose of monitoring your health, providing personalized care recommendations, and enabling emergency response services. Your data will be securely stored and used in accordance with our{' '}
-                                                <Link href="/privacy-policy" className='text-blue-600 hover:underline'>
-                                                    Privacy Policy
-                                                </Link>.
-                                            </p>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            {formState.errors.dataConsent &&
-                                <p className='text-red-500 text-sm pl-1'>{formState.errors.dataConsent.message}</p>
-                            }
-                        </div>
-
                         <Button
                             type='submit'
-                            className='w-full bg-emerald-400 hover:bg-blue-950 disabled:bg-blue-300 transition-colors'
+                            className='w-full bg-emerald-400 hover:bg-blue-950 disabled:bg-blue-300'
                             disabled={isLoading}
                         >
                             {isLoading ? 'Registering...' : 'Register'}
                         </Button>
 
-                        <div className='text-center text-sm pt-2'>
-                            <span className='text-gray-600'>Already have an account? </span>
-                            <Link href="/login" className='text-blue-600 hover:text-blue-700 font-medium underline'>
-                                Login
-                            </Link>
-                        </div>
+                        <Link href="/login" className='block text-center text-sm mt-2'>
+                            Already have an account? <span className='text-blue-500 underline'>Login</span>
+                        </Link>
                     </form>
                 </div>
             </div>

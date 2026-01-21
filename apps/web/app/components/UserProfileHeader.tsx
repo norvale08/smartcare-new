@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
 import DoctorManagement from "./DoctorManagement";
 import { 
   User, 
@@ -13,9 +12,7 @@ import {
   RefreshCw,
   Plus,
   Clock,
-  Languages,
-  LogOut,
-  ChevronDown
+  Languages
 } from "lucide-react";
 
 interface UserProfile {
@@ -55,10 +52,8 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDoctors, setShowDoctors] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [language, setLanguage] = useState<"en" | "sw">(currentLanguage);
-  const [loggingOut, setLoggingOut] = useState(false);
 
   const getAuthToken = useCallback((): string | null => {
     try {
@@ -138,45 +133,11 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
     }
   }, [getAuthToken, calculateAge]);
 
-  // Handle logout
-  const handleLogout = async () => {
-    try {
-      setLoggingOut(true);
-      
-      // Clear local storage
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("token");
-        sessionStorage.removeItem("token");
-        localStorage.removeItem("preferredLanguage");
-      }
-
-      // Sign out from NextAuth
-      await signOut({ 
-        redirect: false,
-        callbackUrl: "/login" 
-      });
-
-      // Redirect to login page
-      router.push("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-      // Still redirect even if there's an error
-      router.push("/login");
-    } finally {
-      setLoggingOut(false);
-    }
-  };
-
   const handleEscapeKey = useCallback((event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      if (showDoctors) {
-        handleShowDoctors();
-      }
-      if (showProfileMenu) {
-        setShowProfileMenu(false);
-      }
+    if (event.key === 'Escape' && showDoctors) {
+      handleShowDoctors();
     }
-  }, [showDoctors, showProfileMenu]);
+  }, [showDoctors]);
 
   const handleBackdropClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget) {
@@ -191,23 +152,11 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
       onLanguageChange(newLanguage);
     }
     
+    // Optional: Save language preference to localStorage
     if (typeof window !== "undefined") {
       localStorage.setItem("preferredLanguage", newLanguage);
     }
   };
-
-  // Close profile menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (showProfileMenu && !target.closest('.profile-menu-container')) {
-        setShowProfileMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showProfileMenu]);
 
   // Load language preference from localStorage on component mount
   useEffect(() => {
@@ -242,7 +191,6 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
   }, [showDoctors, handleEscapeKey]);
 
   const handleViewProfile = () => {
-    setShowProfileMenu(false);
     router.push("/profile?step=5");
   };
 
@@ -263,9 +211,6 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
     en: {
       profile: "Profile",
       doctors: "Doctors",
-      logout: "Logout",
-      loggingOut: "Logging out...",
-      viewProfile: "View Profile",
       dr: "Dr",
       view: "View",
       noProfile: "No Profile Found",
@@ -281,9 +226,6 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
     sw: {
       profile: "Wasifu",
       doctors: "Madaktari",
-      logout: "Toka",
-      loggingOut: "Inatoka...",
-      viewProfile: "Tazama Wasifu",
       dr: "Dk",
       view: "Tazama",
       noProfile: "Hakuna Wasifu Ulipatikana",
@@ -291,7 +233,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
       profileError: "Hitilafu ya Wasifu",
       createProfile: "Unda Wasifu",
       doctorManagement: "Usimamizi wa Daktari",
-      doctorDescription: "Wasiliana na ushirikiano na timu yako ya afya",
+      doctorDescription: "Wasiliana na ushirikiana na timu yako ya afya",
       close: "Funga",
       addDoctor: "Ongeza Daktari",
       healthcareTeam: "Timu yako ya afya ni muhimu kwa huduma kamili"
@@ -392,47 +334,18 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
         <div className="flex items-center justify-between">
           {/* User Info Section - COMPACT */}
           <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
-            {/* Profile Picture - Clickable for dropdown */}
-            <div className="relative profile-menu-container">
-              <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
-              >
-                {userProfile.picture ? (
-                  <img
-                    src={userProfile.picture}
-                    alt={`${userProfile.fullName}'s profile`}
-                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-blue-100 shadow-sm hover:border-blue-300 transition-colors"
-                  />
-                ) : (
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-sm hover:from-blue-600 hover:to-cyan-600 transition-all">
-                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  </div>
-                )}
-              </button>
-
-              {/* Profile Dropdown Menu */}
-              {showProfileMenu && (
-                <div className="absolute left-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                  <button
-                    onClick={handleViewProfile}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                  >
-                    <User className="w-4 h-4" />
-                    <span>{currentLangContent.viewProfile}</span>
-                  </button>
-                  <div className="border-t border-gray-200 my-1"></div>
-                  <button
-                    onClick={handleLogout}
-                    disabled={loggingOut}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>{loggingOut ? currentLangContent.loggingOut : currentLangContent.logout}</span>
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* Profile Picture - Smaller */}
+            {userProfile.picture ? (
+              <img
+                src={userProfile.picture}
+                alt={`${userProfile.fullName}'s profile`}
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-blue-100 shadow-sm"
+              />
+            ) : (
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-sm">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              </div>
+            )}
 
             {/* User Details - COMPACT */}
             <div className="min-w-0 flex-1">
@@ -461,7 +374,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                       {healthConditions.slice(0, 2).map((condition) => (
                         <span
                           key={condition}
-                          className="px-2 py-0.5 bg-emerald-100 text-blue-500 text-xs font-medium rounded-full"
+                          className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full"
                         >
                           {condition}
                         </span>
@@ -519,16 +432,6 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
             >
               <User className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{currentLangContent.profile}</span>
-            </button>
-
-            {/* Logout Button - Always Visible */}
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors font-medium flex items-center space-x-1.5 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{loggingOut ? currentLangContent.loggingOut : currentLangContent.logout}</span>
             </button>
           </div>
         </div>

@@ -14,21 +14,21 @@ interface Props {
 // Language content
 const languageContent = {
   en: {
-    title: " AI Health Feedback",
+    title: "🤖 AI Health Feedback",
     refresh: "Refresh",
     refreshing: "Refreshing...",
     fetching: "Fetching feedback...",
-    error: " Failed to fetch feedback. Check your connection or try again.",
-    noSummary: "No AI feedback available yet.",
+    error: "❌ Failed to fetch feedback. Check your connection or try again.",
+    noSummary: "⚠️ No AI feedback available yet.",
     submitPrompt: "Submit vitals with AI enabled to see feedback.",
   },
   sw: {
-    title: "Maoni ya AI ya Afya",
+    title: "🤖 Maoni ya AI ya Afya",
     refresh: "Onyesha Upya",
     refreshing: "Inasasisha...",
     fetching: "Inapakia maoni...",
-    error: "Imeshindwa kupata maoni. Angalia muunganisho wako au jaribu tena.",
-    noSummary: "Maoni ya AI hayapatikani bado.",
+    error: "❌ Imeshindwa kupata maoni. Angalia muunganisho wako au jaribu tena.",
+    noSummary: "⚠️ Maoni ya AI hayapatikani bado.",
     submitPrompt: "Wasilisha viwango na AI ili kuona maoni.",
   }
 };
