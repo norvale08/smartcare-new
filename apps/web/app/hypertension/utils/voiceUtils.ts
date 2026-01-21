@@ -968,7 +968,7 @@ export const startVoiceMode = async (params: {
   pausedRef.current = false;
   
   const welcome = languageValue === "sw"
-    ? "Karibu. Tutaanza na muktadha wa kipimo cha sukari."
+  ? "Karibu. Tutaanza na muktadha wa kipimo cha sukari."
     : "Welcome. Let's start with the glucose measurement context.";
   
   // Ensure welcome message completes before starting
