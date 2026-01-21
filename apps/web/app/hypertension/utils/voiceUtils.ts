@@ -967,15 +967,13 @@ export const startVoiceMode = async (params: {
   voiceModeActiveRef.current = true;
   pausedRef.current = false;
   
-
-  // Simplified welcome - FIXED: Removed duplicate ternary operator
+  // Simplified welcome
   const welcome = languageValue === "sw"
+
     ? "Systolic."
     : "Systolic.";
 
-  const welcome = languageValue === "sw"
-    ? "Karibu. Tutaanza na muktadha wa kipimo cha sukari."
-    : "Welcome. Let's start with the glucose measurement context.";
+    
   
   // Ensure welcome message completes before starting
   await handleSpeak(welcome);

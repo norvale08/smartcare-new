@@ -1170,18 +1170,17 @@ export default function VitalsWithActivityInput({
 
   // Stop voice mode
   const handleStopVoiceMode = () => {
-    stopVoiceMode({
-      voiceModeActiveRef,
-      pausedRef,
-      mediaRecorderRef,
-      currentLanguage,
-      setVoiceModeState: (state) => setVoiceModeState(prev => ({...prev,...state })),
-      handleSpeak,
-      isMuted: voiceModeState.muted,
-      languageValue: languageValu
-      isMuted: voiceModeState.mute
-    });
-  };
+  stopVoiceMode({
+    voiceModeActiveRef,
+    pausedRef,
+    mediaRecorderRef,
+    currentLanguage,
+    setVoiceModeState: (state) => setVoiceModeState(prev => ({...prev,...state })),
+    handleSpeak,
+    isMuted: voiceModeState.muted,
+    
+  });
+};
 
   // Toggle mute
   const handleToggleMute = () => {
