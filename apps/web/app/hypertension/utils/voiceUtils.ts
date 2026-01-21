@@ -948,6 +948,15 @@ export const startVoiceMode = async (params: {
   const welcome = languageValue === "sw"
     ?"Systolic."
     :"Systolic.";
+
+  // Simplified welcome
+  const welcome = languageValue === "sw"
+
+    ? "Systolic."
+    : "Systolic.";
+
+    
+
   
   await handleSpeak(welcome);
   await new Promise(resolve => setTimeout(resolve, 300));

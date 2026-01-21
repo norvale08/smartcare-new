@@ -20,6 +20,10 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
   const userName = patient?.fullName || "Sarah ";
   const userInitials = userName.slice(0, 2).toUpperCase();
 
+
+
+  // CORRECTED: Single handleLogout function
+
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/login" });
   };
@@ -65,8 +69,17 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
           className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           title="Logout"
         >
+
           <LogOut size={18} />
           <span className="text-sm font-medium">Logout</span>
+
+          <LogOut size={16} />
+          <span className="hidden sm:inline">
+            {loggingOut 
+              ? (language === "sw-TZ" ? "Inatoka..." : "Logging out...") 
+              : (language === "sw-TZ" ? "Toka" : "Logout")}
+          </span>
+
         </button>
       </div>
     </header>
