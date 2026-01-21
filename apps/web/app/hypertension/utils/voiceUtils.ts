@@ -551,7 +551,6 @@ export const resumeVoiceMode = async (params: {
   }
 };
 
-// Simplified confirmation function
 export const askConfirmation = async (
   value: string | number, 
   fieldName: string, 
@@ -568,12 +567,14 @@ export const askConfirmation = async (
     ? value 
     : getDisplayValue(fieldName, value as string, currentLanguage);
   
-  // Simplified question
   const question = languageValue === "sw" 
-    ? `${displayValue}. Ndio au hapana?`
-    : `${displayValue}. Yes or no?`;
+    ? `${displayValue}? Sema ndio au hapana.`
+    : `${displayValue}? Say yes or no.`;
   
+  // Wait for confirmation question to finish speaking
   await handleSpeak(question);
+  
+  // Small delay to ensure speech completes
   await new Promise(resolve => setTimeout(resolve, 300));
   
   return new Promise(async (resolve) => {
@@ -646,7 +647,7 @@ export const askConfirmation = async (
             } else if (parsed.type === 'no') {
               resolve(false);
             } else if (parsed.type === 'cancel') {
-              resolve(false);
+              resolve(false); // Treat cancel as no
             } else if (parsed.type === 'number') {
               resolve(parsed.value === 1);
             } else if (parsed.type === 'text') {
@@ -663,17 +664,18 @@ export const askConfirmation = async (
               } else if (noWords.some(word => lowerText.includes(word))) {
                 resolve(false);
               } else {
+                // If unclear, assume no and ask again
                 resolve(false);
               }
             } else {
               resolve(false);
             }
           } else {
-            resolve(true);
+            resolve(true); // Assume yes if no text returned
           }
         } catch (error: any) {
           setVoiceModeState({ listening: false, status: "" });
-          resolve(true);
+          resolve(true); // Assume yes on error
         }
       };
 
@@ -683,7 +685,7 @@ export const askConfirmation = async (
         if (mediaRecorder.state === "recording") {
           mediaRecorder.stop();
         }
-      }, 2500); // Reduced from 3000
+      }, 3000);
 
     } catch (error) {
       setVoiceModeState({ listening: false, status: "" });
@@ -692,7 +694,6 @@ export const askConfirmation = async (
   });
 };
 
-// Simplified listenForField function
 export const listenForField = async (
   fieldName: string,
   fieldLabel: string,
@@ -726,11 +727,24 @@ export const listenForField = async (
 
   setVoiceModeState({ currentField: fieldName });
 
-  // SIMPLIFIED: Just say the field name
-  const announcement = fieldLabel;
+  const fieldInstructionKey = fieldName as keyof typeof currentLanguage.fieldInstructions;
+  const instruction = currentLanguage.fieldInstructions?.[fieldInstructionKey] || 
+    (languageValue === "sw" ? "Tafadhali sema thamani" : "Please say the value");
   
+  let finalInstruction = instruction;
+  if (isRequired) {
+    finalInstruction = languageValue === "sw" 
+      ? `${instruction.replace("Sema 'ruka'", "")}`
+      : `${instruction.replace("Say 'skip'", "")}`;
+  }
+  
+  const announcement = `${fieldLabel}. ${finalInstruction}`;
+  
+  // IMPORTANT: Wait for speech to complete BEFORE starting recording
   await handleSpeak(announcement);
-  await new Promise(resolve => setTimeout(resolve, 300));
+  
+  // Add small delay to ensure speech has finished
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   while (pausedRef.current && voiceModeActiveRef.current) {
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -744,9 +758,10 @@ export const listenForField = async (
     try {
       isProcessingRef.current = true;
       
+      // Start listening AFTER speech is done
       setVoiceModeState({ 
         listening: true, 
-        status: languageValue === "sw" ? "Sema sasa" : "Speak now" 
+        status: languageValue === "sw" ? "Zungumza sasa" : "Speak now" 
       });
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -788,13 +803,13 @@ export const listenForField = async (
           const response = await fetch(`${API_URL}/api/python-speech/transcribe`, {
             method: "POST",
             body: formData,
-            signal: AbortSignal.timeout(8000) // Reduced from 10000
+            signal: AbortSignal.timeout(10000)
           });
 
           if (!response.ok) {
             setVoiceModeState({ listening: false, currentField: null, status: "" });
             isProcessingRef.current = false;
-            await handleSpeak(languageValue === "sw" ? "Rudi." : "Repeat.");
+            await handleSpeak(languageValue === "sw" ? "Jaribu tena." : "Try again.");
             resolve(null);
             return;
           }
@@ -807,9 +822,17 @@ export const listenForField = async (
           if (data.success && data.text) {
             const parsed = parseSpokenInput(data.text, languageValue, fieldType);
             
+            // Check for commands first
+            if (parsed.type === 'yes' || parsed.type === 'no' || parsed.type === 'cancel') {
+              // These are handled in the confirmation function
+              await handleSpeak(languageValue === "sw" ? "Sema thamani." : "Say the value.");
+              resolve(null);
+              return;
+            }
+            
             if (parsed.type === 'skip') {
               if (isRequired) {
-                await handleSpeak(languageValue === "sw" ? "Rudi." : "Repeat.");
+                await handleSpeak(languageValue === "sw" ? "Muhimu. Jaribu tena." : "Required. Try again.");
                 resolve(null);
               } else {
                 resolve('skip');
@@ -836,8 +859,8 @@ export const listenForField = async (
                   }
                 } else {
                   await handleSpeak(languageValue === "sw" 
-                    ? `Rudi. ${min} hadi ${max}.`
-                    : `Repeat. ${min} to ${max}.`);
+                    ? `${min} hadi ${max}. Jaribu tena.`
+                    : `${min} to ${max}. Try again.`);
                   resolve(null);
                 }
               } else {
@@ -872,21 +895,21 @@ export const listenForField = async (
                   }
                 }
               } else {
-                await handleSpeak(languageValue === "sw" ? "Rudi." : "Repeat.");
+                await handleSpeak(languageValue === "sw" ? "Jaribu tena." : "Try again.");
                 resolve(null);
               }
             } else {
-              await handleSpeak(languageValue === "sw" ? "Rudi." : "Repeat.");
+              await handleSpeak(languageValue === "sw" ? "Jaribu tena." : "Try again.");
               resolve(null);
             }
           } else {
-            await handleSpeak(languageValue === "sw" ? "Rudi." : "Repeat.");
+            await handleSpeak(languageValue === "sw" ? "Jaribu tena." : "Try again.");
             resolve(null);
           }
         } catch (error: any) {
           setVoiceModeState({ listening: false, currentField: null, status: "" });
           isProcessingRef.current = false;
-          await handleSpeak(languageValue === "sw" ? "Rudi." : "Repeat.");
+          await handleSpeak(languageValue === "sw" ? "Hitilafu. Jaribu tena." : "Error. Try again.");
           resolve(null);
         }
       };
@@ -897,7 +920,7 @@ export const listenForField = async (
         if (mediaRecorder.state === "recording" && voiceModeActiveRef.current) {
           mediaRecorder.stop();
         }
-      }, 3500); // Reduced from 4000
+      }, 4000);
 
     } catch (error) {
       setVoiceModeState({ listening: false, currentField: null, status: "" });
@@ -944,13 +967,13 @@ export const startVoiceMode = async (params: {
   voiceModeActiveRef.current = true;
   pausedRef.current = false;
   
-  // Simplified welcome - FIXED: Removed duplicate ternary operator
   const welcome = languageValue === "sw"
-    ? "Systolic."
-    : "Systolic.";
+    ? "Karibu. Tutaanza na muktadha wa kipimo cha sukari."
+    : "Welcome. Let's start with the glucose measurement context.";
   
+  // Ensure welcome message completes before starting
   await handleSpeak(welcome);
-  await new Promise(resolve => setTimeout(resolve, 300));
+  await new Promise(resolve => setTimeout(resolve, 500));
   
   const allFields = [
     { 
@@ -1061,6 +1084,7 @@ export const startVoiceMode = async (params: {
 
       if (result === 'skip') {
         if (!field.required) {
+          toast.success(`⏭️ ${field.label}: ${currentLanguage.skip || "Skipped"}`, { duration: 2000 });
           validInput = true;
           break;
         } else {
@@ -1075,6 +1099,8 @@ export const startVoiceMode = async (params: {
         ? result 
         : getDisplayValue(field.name, result as string, currentLanguage);
       
+      toast.success(`✅ ${field.label}: ${displayValue}`, { duration: 2000 });
+      
       if (!voiceModeState.muted && voiceModeActiveRef.current) {
         await handleSpeak(languageValue === "sw" ? `${displayValue}` : `${displayValue}`);
       }
@@ -1085,8 +1111,10 @@ export const startVoiceMode = async (params: {
     if (!validInput && voiceModeActiveRef.current) {
       if (field.required) {
         const manualMsg = languageValue === "sw"
-          ? `Tafadhali weka ${field.label} mwenyewe.`
-          : `Please enter ${field.label} manually.`;
+          ? `Weka ${field.label} mwenyewe.`
+          : `Enter ${field.label} manually.`;
+        
+        toast.error(`❌ ${manualMsg}`, { duration: 4000 });
         
         if (!voiceModeState.muted) {
           await handleSpeak(manualMsg);
@@ -1106,16 +1134,17 @@ export const startVoiceMode = async (params: {
     }
 
     if (voiceModeActiveRef.current) {
-      await new Promise(resolve => setTimeout(resolve, 300)); // Reduced delay
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
 
   if (voiceModeActiveRef.current) {
     const complete = languageValue === "sw"
-      ? "Imekamilika."
-      : "Complete.";
+      ? "Asante! Vipimo vya shinikizo la damu vimekamilika."
+      : "Thank you! Blood pressure measurements are complete.";
     
     await handleSpeak(complete);
+    toast.success(currentLanguage.voiceComplete || "Voice entry complete", { duration: 3000 });
   }
   
   setVoiceModeState({ 
@@ -1138,7 +1167,6 @@ export const stopVoiceMode = (params: {
   setVoiceModeState: (state: Partial<VoiceModeState>) => void;
   handleSpeak: (text: string) => Promise<void>;
   isMuted: boolean;
-  languageValue: string; // ADD THIS PARAMETER
 }) => {
   const {
     voiceModeActiveRef,
@@ -1147,8 +1175,7 @@ export const stopVoiceMode = (params: {
     currentLanguage,
     setVoiceModeState,
     handleSpeak,
-    isMuted,
-    languageValue // ADD THIS DESTRUCTURING
+    isMuted
   } = params;
 
   stopCurrentSpeech();
@@ -1173,6 +1200,6 @@ export const stopVoiceMode = (params: {
   });
   
   if (!isMuted) {
-    handleSpeak(languageValue === "sw" ? "Imezimwa." : "Stopped.").catch(() => {});
+    handleSpeak(currentLanguage.voiceCancelled || "Voice mode stopped").catch(() => {});
   }
 };

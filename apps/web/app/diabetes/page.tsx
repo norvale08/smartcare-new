@@ -528,7 +528,7 @@ const Page = () => {
             {/* Content Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               {/* Header */}
-              <div className="bg-gradient-to-r from-blue-500 to-emerald-500 text-white p-4 md:p-6">
+              <div className="bg-emerald-500 text-white p-4 md:p-6">
                 <div className="flex items-center gap-3 mb-2">
                   {activeTab === "vitals" && <Activity className="w-6 h-6" />}
                   {activeTab === "lifestyle" && <Heart className="w-6 h-6" />}
@@ -572,7 +572,7 @@ const Page = () => {
                         <div className="pt-6 border-t border-gray-200">
                           <button
                             onClick={() => setActiveTab("lifestyle")}
-                            className="w-full sm:w-auto bg-emerald-900 text-white px-8 py-3 rounded-lg hover:bg-emerald-800 transition-colors font-semibold flex items-center justify-center gap-2"
+                            className="w-full sm:w-auto bg-emerald-500 text-white px-8 py-3 rounded-lg hover:bg-blue-500 transition-colors font-semibold flex items-center justify-center gap-2"
                           >
                             {currentLanguage.continueToLifestyle}
                             <ChevronRight className="w-5 h-5" />
@@ -595,7 +595,7 @@ const Page = () => {
                           setLifestyleDone(true);
                           setTimeout(() => setActiveTab("medications"), 300);
                         }}
-                        className="w-full sm:w-auto bg-emerald-900 text-white px-8 py-3 rounded-lg hover:bg-emerald-800 transition-colors font-semibold flex items-center justify-center gap-2"
+                        className="w-full sm:w-auto bg-emerald-500 text-white px-8 py-3 rounded-lg hover:bg-blue-500 transition-colors font-semibold flex items-center justify-center gap-2"
                       >
                         {currentLanguage.continueToMeds}
                         <ChevronRight className="w-5 h-5" />
@@ -650,7 +650,7 @@ const Page = () => {
                             {currentLanguage.latestReport}
                           </h4>
                         </div>
-                        <p className="text-blue-900 text-base">
+                        <p className="text-blue-500 text-base">
                           {currentLanguage.reportSuccess}
                         </p>
                       </div>
@@ -669,7 +669,7 @@ const Page = () => {
                           setFinalFeedback("");
                           setRefreshToken((prev) => prev + 1);
                         }}
-                        className="w-full sm:w-auto bg-blue-900 text-white py-3 px-8 rounded-lg hover:bg-blue-800 transition-colors font-semibold flex items-center justify-center gap-2"
+                        className="w-full sm:w-auto bg-blue-500 text-white py-3 px-8 rounded-lg hover:bg-emerald-500 transition-colors font-semibold flex items-center justify-center gap-2"
                       >
                         <RotateCcw className="w-5 h-5" />
                         {currentLanguage.startNew}
