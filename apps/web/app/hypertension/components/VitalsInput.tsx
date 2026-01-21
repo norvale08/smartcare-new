@@ -1,5 +1,5 @@
 "use client";
-
+//All errors are fixed
 import React from "react";
 import { MicVocal } from "lucide-react";
 import { wordsToNumbers } from "./words-to-numbers";
