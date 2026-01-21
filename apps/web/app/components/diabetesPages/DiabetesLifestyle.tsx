@@ -60,9 +60,9 @@ const languageContent = {
     adviceSuccess: "AI advice generated successfully!",
     saveDataFirst: "Please save your lifestyle data first",
     alreadyGenerating: "AI advice is already being generated",
-    aiPlaceholder: "AI advice will appear here once you save your lifestyle data.",
-    generatingAdvice: "Generating personalized lifestyle advice",
-    refreshingAdvice: "Refreshing AI advice...",
+    aiPlaceholder: "🤖 AI advice will appear here once you save your lifestyle data.",
+    generatingAdvice: "🤖 Generating personalized lifestyle advice",
+    refreshingAdvice: "🤖 Refreshing AI advice...",
   },
   sw: {
     alcoholTitle: "Matumizi ya Pombe",
@@ -82,9 +82,9 @@ const languageContent = {
     adviceSuccess: "Ushauri wa AI umeundwa!",
     saveDataFirst: "Tafadhali hifadhi data yako ya mtindo wa maisha kwanza",
     alreadyGenerating: "Ushauri wa AI tayari unaundwa",
-    aiPlaceholder: " Ushauri wa AI utaonekana hapa ukisha hifadhi data yako ya mtindo wa maisha.",
-    generatingAdvice: " Inaunda ushauri wa kibinafsi wa mtindo wa maisha",
-    refreshingAdvice: " Inasasisha ushauri wa AI...",
+    aiPlaceholder: "🤖 Ushauri wa AI utaonekana hapa ukisha hifadhi data yako ya mtindo wa maisha.",
+    generatingAdvice: "🤖 Inaunda ushauri wa kibinafsi wa mtindo wa maisha",
+    refreshingAdvice: "🤖 Inasasisha ushauri wa AI...",
   }
 };
 

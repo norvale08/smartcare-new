@@ -394,7 +394,7 @@ router.get("/stats/summary", verifyToken, async (req: AuthenticatedRequest, res:
 
     res.status(200).json({
       success: true,
-      message: " Statistics retrieved successfully",
+      message: "✅ Statistics retrieved successfully",
       patientName,
       selectedDiseases,
       conditions: {
