@@ -1,5 +1,9 @@
 "use client";
 
+import React from "react";
+import { HeartPulse, Globe, LogOut } from "lucide-react";
+import { signOut } from "next-auth/react";
+
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -25,6 +29,9 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
   const userName = patient?.fullName || "Sarah ";
   const userInitials = userName.slice(0, 2).toUpperCase();
 
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/login" });
   // Handle logout
   const handleLogout = async () => {
     try {
@@ -52,6 +59,7 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
     } finally {
       setLoggingOut(false);
     }
+
   };
 
   return (
@@ -82,7 +90,11 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
           </div>
         </div>
 
+        
+
+
         {/* User Info */}
+
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
             <span className="text-white font-semibold">{userInitials}</span>
@@ -91,6 +103,15 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
             {userName}
           </span>
         </div>
+
+
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Logout"
+        >
+          <LogOut size={18} />
+          <span className="text-sm font-medium">Logout</span>
 
         {/* Logout Button */}
         <button
@@ -102,6 +123,7 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
           <span className="hidden sm:inline">
             {loggingOut ? (language === "sw-TZ" ? "Inatoka..." : "Logging out...") : (language === "sw-TZ" ? "Toka" : "Logout")}
           </span>
+
         </button>
       </div>
     </header>
