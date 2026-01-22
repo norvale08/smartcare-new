@@ -692,6 +692,34 @@ export const askConfirmation = async (
   });
 };
 
+const getOptionsList = (fieldName: string, currentLanguage: any): string[] => {
+  switch (fieldName) {
+    case 'activityType': {
+      const o = currentLanguage?.activityTypeOptions;
+      if (!o) return ['none', 'exercise', 'walking', 'eating', 'stress', 'sleep', 'caffeine', 'medication', 'illness'];
+      return [
+        o.none,
+        o.exercise,
+        o.walking,
+        o.eating,
+        o.stress,
+        o.sleep,
+        o.caffeine,
+        o.medication,
+        o.illness,
+        o.other
+      ].filter(Boolean);
+    }
+    case 'intensity': {
+      const o = currentLanguage?.intensityOptions;
+      if (!o) return ['light', 'moderate', 'vigorous'];
+      return [o.light, o.moderate, o.vigorous].filter(Boolean);
+    }
+    default:
+      return [];
+  }
+};
+
 // Simplified listenForField function
 export const listenForField = async (
   fieldName: string,
@@ -726,10 +754,16 @@ export const listenForField = async (
 
   setVoiceModeState({ currentField: fieldName });
 
-  // SIMPLIFIED: Just say the field name
-  const announcement = fieldLabel;
+  // Match diabetes voice UX: for selects, read out options list
+  let prompt = fieldLabel;
+  if (fieldType === 'select') {
+    const options = getOptionsList(fieldName, currentLanguage);
+    if (options.length > 0) {
+      prompt = `${fieldLabel}. ${options.join(', ')}.`;
+    }
+  }
   
-  await handleSpeak(announcement);
+  await handleSpeak(prompt);
   await new Promise(resolve => setTimeout(resolve, 300));
 
   while (pausedRef.current && voiceModeActiveRef.current) {
@@ -949,11 +983,7 @@ export const startVoiceMode = async (params: {
     ?"Systolic."
     :"Systolic.";
 
-  // Simplified welcome
-  const welcome = languageValue === "sw"
-
-    ? "Systolic."
-    : "Systolic.";
+  
 
     
 

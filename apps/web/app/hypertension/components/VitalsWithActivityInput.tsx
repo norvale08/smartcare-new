@@ -27,7 +27,6 @@ const activityOptions = [
   { value: "walking", label: "Walking" },
   { value: "eating", label: "Eating/Meal" },
   { value: "stress", label: "Stress/Anxiety" },
-  // FIXED: Changed from "sleep_deprivation" to "sleep" to match backend expectations
   { value: "sleep", label: "Sleep Deprivation" },
   { value: "caffeine", label: "Caffeine Intake" },
   { value: "medication", label: "Recent Medication" },
@@ -190,7 +189,7 @@ export default function VitalsWithActivityInput({
         reader.onloadend = () => {
           const arrayBuffer = reader.result as ArrayBuffer;
           const hash = Array.from(new Uint8Array(arrayBuffer))
-           .slice(0, 100) // Only use first 100 bytes for hash
+           .slice(0, 100)
            .map(b => b.toString(16).padStart(2, '0'))
            .join('');
           resolve(hash);
@@ -216,7 +215,7 @@ export default function VitalsWithActivityInput({
       const response = await fetch(`${API_URL}/api/python-speech/transcribe`, {
         method: "POST",
         body: formData,
-        signal: AbortSignal.timeout(8000) // Reduced from 10000 to 8000
+        signal: AbortSignal.timeout(8000)
       });
 
       if (!response.ok) {
@@ -234,11 +233,11 @@ export default function VitalsWithActivityInput({
         
         // Limit cache size
         if (voiceResponseCache.size > 50) {
-  const oldestKey = Array.from(voiceResponseCache.keys())[0];
-  if (oldestKey!== undefined) {
-    voiceResponseCache.delete(oldestKey);
-  }
-}
+          const oldestKey = Array.from(voiceResponseCache.keys())[0];
+          if (oldestKey !== undefined) {
+            voiceResponseCache.delete(oldestKey);
+          }
+        }
         
         return data.text;
       }
@@ -277,7 +276,7 @@ export default function VitalsWithActivityInput({
 
   // Function to auto-submit after voice mode
   const autoSubmitVitals = async () => {
-    if (!collectedVitalsRef.current.systolic ||!collectedVitalsRef.current.diastolic ||!collectedVitalsRef.current.heartRate) {
+    if (!collectedVitalsRef.current.systolic || !collectedVitalsRef.current.diastolic || !collectedVitalsRef.current.heartRate) {
       console.error("Missing required vitals for auto-submit");
       return false;
     }
@@ -290,7 +289,7 @@ export default function VitalsWithActivityInput({
       const token = localStorage.getItem("token");
       if (!token) throw new Error("User not authenticated.");
 
-      // Prepare submission data - FIXED: Use "sleep" instead of "sleep_deprivation"
+      // Prepare submission data
       const submitData = {
         systolic: collectedVitalsRef.current.systolic,
         diastolic: collectedVitalsRef.current.diastolic,
@@ -306,7 +305,7 @@ export default function VitalsWithActivityInput({
 
       // Save vitals + activity to backend
       const saveResp = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/hypertensionVitals`,
+        `${API_URL}/api/hypertensionVitals`,
         {
           method: "POST",
           headers: {
@@ -322,7 +321,7 @@ export default function VitalsWithActivityInput({
       // Call AI analysis with language parameter
       const languageParam = t.language === "sw-TZ"? "sw-TZ" : "en-US"
       const aiResp = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/hypertensionVitals/analyze?language=${languageParam}`,
+        `${API_URL}/api/hypertensionVitals/analyze?language=${languageParam}`,
         {
           method: "POST",
           headers: {
@@ -363,13 +362,13 @@ export default function VitalsWithActivityInput({
       if (collectedVitalsRef.current.activityType) {
         setActivityType(collectedVitalsRef.current.activityType);
       }
-      if (collectedVitalsRef.current.duration!== undefined) {
+      if (collectedVitalsRef.current.duration !== undefined) {
         setDuration(collectedVitalsRef.current.duration.toString());
       }
       if (collectedVitalsRef.current.intensity) {
         setIntensity(collectedVitalsRef.current.intensity);
       }
-      if (collectedVitalsRef.current.timeSinceActivity!== undefined) {
+      if (collectedVitalsRef.current.timeSinceActivity !== undefined) {
         setTimeSinceActivity(collectedVitalsRef.current.timeSinceActivity.toString());
       }
 
@@ -420,7 +419,7 @@ export default function VitalsWithActivityInput({
             analysis.description,
             analysis.activityInfluence,
             analysis.recommendation,
-            analysis.shouldNotifyDoctor? 
+            analysis.shouldNotifyDoctor ? 
               (languageValue === "sw" 
                ? "Daktari wako atataarifiwa kuhusu usomaji huu." 
                 : "Your doctor will be notified about this reading.") 
@@ -487,7 +486,7 @@ export default function VitalsWithActivityInput({
       // Return the value itself as fallback
       if (fieldName === 'activityType') {
         const option = activityOptions.find(opt => opt.value === value);
-        return option? option.label : value;
+        return option ? option.label : value;
       } else if (fieldName === 'intensity') {
         if (value === 'light') return 'Light';
         if (value === 'moderate') return 'Moderate';
@@ -538,10 +537,9 @@ export default function VitalsWithActivityInput({
       setVoiceModeState(prev => ({...prev, currentField: 'systolic', status: languageValue === "sw"? "Soma systolic" : "Reading systolic" }));
       scrollToField('systolic');
       const systolicValue = await collectNumberFieldWithConfirm('systolic', 70, 250, currentLanguage.systolicLabel, true, 3);
-      if (systolicValue!== undefined) {
+      if (systolicValue !== undefined) {
         collectedVitalsRef.current.systolic = systolicValue;
         setSystolic(systolicValue.toString());
-        // Skip toast for cleaner UI
       } else {
         await handleSpeak(languageValue === "sw" 
          ? "Rudi." 
@@ -552,7 +550,7 @@ export default function VitalsWithActivityInput({
       setVoiceModeState(prev => ({...prev, currentField: 'diastolic', status: languageValue === "sw"? "Soma diastolic" : "Reading diastolic" }));
       scrollToField('diastolic');
       const diastolicValue = await collectNumberFieldWithConfirm('diastolic', 40, 150, currentLanguage.diastolicLabel, true, 3);
-      if (diastolicValue!== undefined) {
+      if (diastolicValue !== undefined) {
         collectedVitalsRef.current.diastolic = diastolicValue;
         setDiastolic(diastolicValue.toString());
       } else {
@@ -565,7 +563,7 @@ export default function VitalsWithActivityInput({
       setVoiceModeState(prev => ({...prev, currentField: 'heartRate', status: languageValue === "sw"? "Soma kiwango cha moyo" : "Reading heart rate" }));
       scrollToField('heartRate');
       const heartRateValue = await collectNumberFieldWithConfirm('heartRate', 40, 200, currentLanguage.heartRateLabel, true, 3);
-      if (heartRateValue!== undefined) {
+      if (heartRateValue !== undefined) {
         collectedVitalsRef.current.heartRate = heartRateValue;
         setHeartRate(heartRateValue.toString());
       } else {
@@ -589,12 +587,12 @@ export default function VitalsWithActivityInput({
       scrollToField('activityType');
       
       const activityTypeValue = await collectSelectField('activityType', currentLanguage.activityTypeLabel, false);
-      if (activityTypeValue && activityTypeValue!== 'skip') {
+      if (activityTypeValue && activityTypeValue !== 'skip') {
         collectedVitalsRef.current.activityType = activityTypeValue;
         setActivityType(activityTypeValue);
         
         // If activity is not "none", collect additional activity details
-        if (activityTypeValue!== "none") {
+        if (activityTypeValue !== "none") {
           // Collect duration
           setVoiceModeState(prev => ({ 
            ...prev, 
@@ -608,7 +606,7 @@ export default function VitalsWithActivityInput({
             : "Minutes.", true);
           
           const durationValue = await collectNumberField('duration', 0, 480, currentLanguage.durationLabel, false, 2);
-          if (durationValue!== undefined) {
+          if (durationValue !== undefined) {
             collectedVitalsRef.current.duration = durationValue;
             setDuration(durationValue.toString());
           }
@@ -626,7 +624,7 @@ export default function VitalsWithActivityInput({
             : "Intensity.", true);
           
           const intensityValue = await collectSimpleSelectField('intensity', currentLanguage.intensityLabel, false);
-          if (intensityValue && intensityValue!== 'skip') {
+          if (intensityValue && intensityValue !== 'skip') {
             collectedVitalsRef.current.intensity = intensityValue;
             setIntensity(intensityValue);
           }
@@ -644,7 +642,7 @@ export default function VitalsWithActivityInput({
             : "Minutes.", true);
           
           const timeSinceValue = await collectNumberField('timeSinceActivity', 0, 1440, currentLanguage.timeSinceActivityLabel, false, 2);
-          if (timeSinceValue!== undefined) {
+          if (timeSinceValue !== undefined) {
             collectedVitalsRef.current.timeSinceActivity = timeSinceValue;
             setTimeSinceActivity(timeSinceValue.toString());
           }
@@ -668,7 +666,7 @@ export default function VitalsWithActivityInput({
         : "Notes.", true);
       
       const notesValue = await collectSimpleTextField('notes', currentLanguage.notesLabel || "Notes");
-      if (notesValue && notesValue!== 'skip' && notesValue!== 'none') {
+      if (notesValue && notesValue !== 'skip' && notesValue !== 'none') {
         setNotes(notesValue);
       }
 
@@ -970,7 +968,7 @@ export default function VitalsWithActivityInput({
         mediaRecorder.onstop = async () => {
           stream.getTracks().forEach(track => track.stop());
           
-          if (audioChunks.length === 0 ||!voiceModeActiveRef.current) {
+          if (audioChunks.length === 0 || !voiceModeActiveRef.current) {
             setVoiceModeState(prev => ({...prev, listening: false, status: "" }));
             resolve(undefined);
             return;
@@ -1054,7 +1052,7 @@ export default function VitalsWithActivityInput({
         mediaRecorder.onstop = async () => {
           stream.getTracks().forEach(track => track.stop());
           
-          if (audioChunks.length === 0 ||!voiceModeActiveRef.current) {
+          if (audioChunks.length === 0 || !voiceModeActiveRef.current) {
             setVoiceModeState(prev => ({...prev, listening: false, status: "" }));
             resolve(undefined);
             return;
@@ -1132,7 +1130,7 @@ export default function VitalsWithActivityInput({
         mediaRecorder.onstop = async () => {
           stream.getTracks().forEach(track => track.stop());
           
-          if (audioChunks.length === 0 ||!voiceModeActiveRef.current) {
+          if (audioChunks.length === 0 || !voiceModeActiveRef.current) {
             setVoiceModeState(prev => ({...prev, listening: false, status: "" }));
             resolve(false);
             return;
@@ -1181,7 +1179,6 @@ export default function VitalsWithActivityInput({
 
   // Stop voice mode
   const handleStopVoiceMode = () => {
-
     stopVoiceMode({
       voiceModeActiveRef,
       pausedRef,
@@ -1194,22 +1191,9 @@ export default function VitalsWithActivityInput({
     });
   };
 
-  stopVoiceMode({
-    voiceModeActiveRef,
-    pausedRef,
-    mediaRecorderRef,
-    currentLanguage,
-    setVoiceModeState: (state) => setVoiceModeState(prev => ({...prev,...state })),
-    handleSpeak,
-    isMuted: voiceModeState.muted,
-    
-  });
-};
-
-
   // Toggle mute
   const handleToggleMute = () => {
-    setVoiceModeState(prev => ({...prev, muted:!prev.muted }))
+    setVoiceModeState(prev => ({...prev, muted: !prev.muted }))
   }
 
   const reset = () => {
@@ -1228,7 +1212,7 @@ export default function VitalsWithActivityInput({
     setMessage("")
     setAnalysis(null)
 
-    if (!systolic ||!diastolic ||!heartRate) {
+    if (!systolic || !diastolic || !heartRate) {
       setMessage(t.vitals.allFieldsRequired)
       return
     }
@@ -1258,7 +1242,7 @@ export default function VitalsWithActivityInput({
 
       // Save vitals + activity to backend
       const saveResp = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/hypertensionVitals`,
+        `${API_URL}/api/hypertensionVitals`,
         {
           method: "POST",
           headers: {
@@ -1283,7 +1267,7 @@ export default function VitalsWithActivityInput({
       // Call AI analysis with language parameter
       const languageParam = t.language === "sw-TZ"? "sw-TZ" : "en-US"
       const aiResp = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/hypertensionVitals/analyze?language=${languageParam}`,
+        `${API_URL}/api/hypertensionVitals/analyze?language=${languageParam}`,
         {
           method: "POST",
           headers: {
@@ -1347,13 +1331,13 @@ export default function VitalsWithActivityInput({
       setActivityType(data.activityType)
     }
     if (typeof data.duration === "number") {
-      setDuration(data.duration? data.duration.toString() : "")
+      setDuration(data.duration ? data.duration.toString() : "")
     }
     if (data.intensity && ["light", "moderate", "vigorous"].includes(data.intensity)) {
       setIntensity(data.intensity)
     }
     if (typeof data.timeSinceActivity === "number") {
-      setTimeSinceActivity(data.timeSinceActivity? data.timeSinceActivity.toString() : "")
+      setTimeSinceActivity(data.timeSinceActivity ? data.timeSinceActivity.toString() : "")
     }
     setShowVoiceForm(false)
     
@@ -1402,7 +1386,7 @@ export default function VitalsWithActivityInput({
           currentLanguage={currentLanguage}
           languageValue={languageValue}
           onToggleMute={handleToggleMute}
-          onToggleVoiceMode={voiceModeState.active? handleStopVoiceMode : handleStartVoiceMode}
+          onToggleVoiceMode={voiceModeState.active ? handleStopVoiceMode : handleStartVoiceMode}
           onPauseResume={handlePauseResume}
           onReadContent={handleReadContent}
         />
@@ -1423,7 +1407,7 @@ export default function VitalsWithActivityInput({
                   disabled={saving}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
-                {voiceModeState.active &&!voiceModeState.paused && (
+                {voiceModeState.active && !voiceModeState.paused && (
                   <button
                     type="button"
                     onClick={() => {
@@ -1456,7 +1440,7 @@ export default function VitalsWithActivityInput({
                   disabled={saving}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
-                {voiceModeState.active &&!voiceModeState.paused && (
+                {voiceModeState.active && !voiceModeState.paused && (
                   <button
                     type="button"
                     onClick={() => {
@@ -1489,7 +1473,7 @@ export default function VitalsWithActivityInput({
                   disabled={saving}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
-                {voiceModeState.active &&!voiceModeState.paused && (
+                {voiceModeState.active && !voiceModeState.paused && (
                   <button
                     type="button"
                     onClick={() => {
@@ -1512,7 +1496,7 @@ export default function VitalsWithActivityInput({
           <div className="border-t border-gray-200 my-4"></div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Activity Select - FIXED: Use correct value for sleep */}
+            {/* Activity Select */}
             <div className="space-y-2" data-field="activityType">
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                 <ActivityIcon className="w-4 h-4" />
@@ -1532,7 +1516,7 @@ export default function VitalsWithActivityInput({
                       opt.value === "walking"? "Kutembea" :
                       opt.value === "eating"? "Kula/Chakula" :
                       opt.value === "stress"? "Mkazo/Wasiwasi" :
-                      opt.value === "sleep"? "Upungufu wa Usingizi" : // FIXED: Changed from "sleep_deprivation"
+                      opt.value === "sleep"? "Upungufu wa Usingizi" :
                       opt.value === "caffeine"? "Kunywa Kahawa" :
                       opt.value === "medication"? "Dawa ya Hivi Karibuni" :
                       opt.value === "illness"? "Ugonjwa/Homa" :
@@ -1627,7 +1611,7 @@ export default function VitalsWithActivityInput({
           {message && (
             <div
               className={`p-3 rounded-lg ${
-                message.includes("")
+                message.includes("success")
                  ? "bg-emerald-50 text-emerald-700"
                   : "bg-red-50 text-red-700"
               }`}
@@ -1641,7 +1625,7 @@ export default function VitalsWithActivityInput({
             disabled={saving}
             className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving? (
+            {saving ? (
               <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                 {t.language === "en-US"? "Saving..." : "Inahifadhi..."}

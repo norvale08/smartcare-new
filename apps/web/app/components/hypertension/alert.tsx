@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TriangleAlert, CheckCircle } from "lucide-react";
 import { useTranslation } from"../../../lib/hypertension/useTranslation";
+import TTSReader from "../diabetesPages/components/TTSReader";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -285,12 +286,81 @@ export default function HypertensionAlert({ refreshToken }: { refreshToken?: num
   const bpCategory = getBloodPressureCategory(statusData.systolic, statusData.diastolic, statusData.age);
   const heartRateAlert = getHeartRateAlert(statusData.heartRate, statusData.age);
 
+  const getAlertText = () => {
+    const isSwahili = language === "sw-TZ";
+    let alertText = `${bpCategory.title}. `;
+    
+    if (statusData.age) {
+      alertText += isSwahili 
+        ? `Tathmini kulingana na umri kwa umri wa miaka ${statusData.age}. `
+        : `Age-based assessment for ${statusData.age} years old. `;
+    }
+    
+    switch (bpCategory.level) {
+      case 'Normal':
+      case 'Kawaida':
+        alertText += isSwahili 
+          ? 'Usomaji wako wa shinikizo la damu uko ndani ya kiwango cha kawaida, ukionyesha hakuna sababu ya wasiwasi ya haraka.'
+          : 'Your blood pressure reading is within the normal range, indicating no immediate cause for concern.';
+        break;
+      case 'Elevated':
+      case 'Kiwango Cha Juu':
+        alertText += isSwahili
+          ? 'Shinikizo lako la damu limeinuka kidogo. Fikiria mabadiliko ya maisha na ufuatiliaji wa mara kwa mara.'
+          : 'Your blood pressure is slightly elevated. Consider lifestyle changes and regular monitoring.';
+        break;
+      case 'Stage 1 Hypertension':
+      case 'Hatua ya 1 ya Shinikizo la Juu la Damu':
+        alertText += isSwahili
+          ? 'Uko katika Hatua ya 1 ya Shinikizo la Juu la Damu. Tafadhali fuatilia shinikizo lako la damu mara kwa mara na shauriana na daktari wako ikiwa hii inaendelea.'
+          : 'You are in Stage 1 Hypertension. Please monitor your blood pressure regularly and consult your doctor if this persists.';
+        break;
+      case 'Stage 2 Hypertension':
+      case 'Hatua ya 2 ya Shinikizo la Juu la Damu':
+        alertText += isSwahili
+          ? 'Uko katika Hatua ya 2 ya Shinikizo la Juu la Damu. Inapendekezwa ushauriane na daktari wako hivi karibuni kwa usimamizi sahihi.'
+          : 'You are in Stage 2 Hypertension. It is recommended to consult your doctor soon for proper management.';
+        break;
+      case 'Hypertensive Crisis':
+      case 'Mgongano wa Shinikizo la Juu la Damu':
+        alertText += isSwahili
+          ? 'Mgongano wa Shinikizo la Juu la Damu! Tafuta huduma ya matibabu mara moja.'
+          : 'Hypertensive Crisis! Seek immediate medical attention.';
+        break;
+      case 'Low Blood Pressure':
+      case 'Shinikizo la Chini la Damu':
+        alertText += isSwahili
+          ? 'Shinikizo lako la damu ni la chini. Ikiwa unapata kizunguzungu au unajisikia vibaya, wasiliana na mtoa huduma wako wa afya.'
+          : 'Your blood pressure is low. If you experience dizziness or feel unwell, contact your healthcare provider.';
+        break;
+      default:
+        alertText += isSwahili
+          ? 'Endelea kufuatilia shinikizo la damu mara kwa mara na kudumisha maisha ya afya.'
+          : 'Continue to monitor blood pressure regularly and maintain a healthy lifestyle.';
+    }
+    
+    alertText += ` ${language === "sw-TZ" ? "Sistolic:" : "Systolic:"} ${statusData.systolic} mmHg. ${language === "sw-TZ" ? "Diastolic:" : "Diastolic:"} ${statusData.diastolic} mmHg. ${language === "sw-TZ" ? "Kasi ya Moyo:" : "Heart Rate:"} ${statusData.heartRate} bpm.`;
+    
+    if (heartRateAlert) {
+      alertText += ` ${heartRateAlert.message}.`;
+    }
+    
+    return alertText;
+  };
+
   return (
     <div className={`bg-white shadow-lg w-full max-w-4xl rounded-lg p-6 border-l-4 ${bpCategory.color}`}>
       <div data-content="health-alert" className="space-y-4">
-      <div className="flex items-center gap-2 mb-2">
-        {bpCategory.icon}
-        <h3 className={`text-lg font-bold ${bpCategory.text}`}>{bpCategory.title}</h3>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          {bpCategory.icon}
+          <h3 className={`text-lg font-bold ${bpCategory.text}`}>{bpCategory.title}</h3>
+        </div>
+        <TTSReader 
+          text={getAlertText()} 
+          language={language === "sw-TZ" ? "sw" : "en"}
+          showControls={true}
+        />
       </div>
       
       {statusData.age && (
