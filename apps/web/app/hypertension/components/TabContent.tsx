@@ -52,10 +52,6 @@ const TabContent: React.FC<TabContentProps> = ({
   onRegenerateDiet,
   patient
 }) => {
-  const sectionCardClass =
-    "bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-emerald-100/60 overflow-hidden";
-  const sectionBodyClass = "p-5 sm:p-6";
-
   const computeAge = (dob?: string) => {
     if (!dob) return undefined;
     const birth = new Date(dob);
@@ -92,11 +88,7 @@ const TabContent: React.FC<TabContentProps> = ({
     case 'doctor':
       return (
         <>
-          <div className={sectionCardClass}>
-            <div className={sectionBodyClass}>
-              <DoctorManagement condition="hypertension" />
-            </div>
-          </div>
+          <DoctorManagement condition="hypertension" />
           {/* <NearbyClinics /> */}
         </>
       );
@@ -104,15 +96,11 @@ const TabContent: React.FC<TabContentProps> = ({
     case 'medicine':
       return (
         <>
-          <div className={`${sectionCardClass} mb-6`}>
-            <div className={sectionBodyClass}>
-              <MedicationAnalysisPage />
-            </div>
+          <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
+            <MedicationAnalysisPage />
           </div>
-          <div className={`${sectionCardClass} mb-6`}>
-            <div className={sectionBodyClass}>
-              <MedicationReminders />
-            </div>
+          <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
+            <MedicationReminders />
           </div>
         </>
       );
@@ -134,22 +122,18 @@ const TabContent: React.FC<TabContentProps> = ({
             loadingAI={loadingAI}
             onRegenerateLifestyle={onRegenerateLifestyle}
             loadingRegenerate={regeneratingLifestyle}
-            patientName={patient?.fullName}
           />
-          <div className={`${sectionCardClass} mb-6`}>
-            <div className={sectionBodyClass}>
-              <DietRecommendations 
-                dietData={dietData} 
-                loading={dietLoading} 
-                onRegenerate={onRegenerateDiet}
-                patient={patient ? {
-                  name: patient?.fullName,
-                  age: computeAge(patient?.dob),
-                  weight: patient?.weight,
-                  gender: patient?.gender
-                } : undefined}
-              />
-            </div>
+          <div className="shadow-lg bg-white w-full max-w-4xl rounded-lg px-6 py-6 mb-6">
+            <DietRecommendations 
+              dietData={dietData} 
+              loading={dietLoading} 
+              onRegenerate={onRegenerateDiet}
+              patient={patient ? {
+                age: computeAge(patient?.dob),
+                weight: patient?.weight,
+                gender: patient?.gender
+              } : undefined}
+            />
           </div>
         </>
       );

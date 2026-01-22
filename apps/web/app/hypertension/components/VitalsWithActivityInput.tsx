@@ -306,7 +306,7 @@ export default function VitalsWithActivityInput({
 
       // Save vitals + activity to backend
       const saveResp = await fetch(
-        `${API_URL}/api/hypertensionVitals`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/hypertensionVitals`,
         {
           method: "POST",
           headers: {
@@ -322,7 +322,7 @@ export default function VitalsWithActivityInput({
       // Call AI analysis with language parameter
       const languageParam = t.language === "sw-TZ"? "sw-TZ" : "en-US"
       const aiResp = await fetch(
-        `${API_URL}/api/hypertensionVitals/analyze?language=${languageParam}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/hypertensionVitals/analyze?language=${languageParam}`,
         {
           method: "POST",
           headers: {
@@ -1258,7 +1258,7 @@ export default function VitalsWithActivityInput({
 
       // Save vitals + activity to backend
       const saveResp = await fetch(
-        `${API_URL}/api/hypertensionVitals`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/hypertensionVitals`,
         {
           method: "POST",
           headers: {
@@ -1283,7 +1283,7 @@ export default function VitalsWithActivityInput({
       // Call AI analysis with language parameter
       const languageParam = t.language === "sw-TZ"? "sw-TZ" : "en-US"
       const aiResp = await fetch(
-        `${API_URL}/api/hypertensionVitals/analyze?language=${languageParam}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/hypertensionVitals/analyze?language=${languageParam}`,
         {
           method: "POST",
           headers: {

@@ -1,19 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Bell, Phone, MessageSquare, Activity, Heart } from 'lucide-react';
 
-type GlucoseContext = 'Fasting' | 'Post-meal' | 'Random';
-type GlucoseAlertType = 'high_fasting' | 'high_post_meal' | 'high_random';
-
 interface Notification {
   id: string;
-  type:
-    | 'vital_alert'
-    | 'message'
-    | 'call'
-    | 'system'
-    | 'appointment'
-    | 'hypertension_alert'
-    | 'diabetes_alert';
+  type: 'vital_alert' | 'message' | 'call' | 'system' | 'appointment' | 'hypertension_alert';
   title: string;
   message: string;
   patientId?: string;
@@ -24,10 +14,6 @@ interface Notification {
   bpCategory?: 'Stage 1' | 'Stage 2' | 'Hypertensive Crisis';
   systolic?: number;
   diastolic?: number;
-  // Diabetes / glucose specific fields (mirrors AlertsPanel)
-  glucose?: number;
-  glucoseContext?: GlucoseContext;
-  glucoseAlertType?: GlucoseAlertType;
 }
 
 interface RealTimeNotificationsProps {
@@ -41,28 +27,6 @@ const RealTimeNotifications: React.FC<RealTimeNotificationsProps> = ({ onNotific
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const getGlucoseAlertType = (glucose?: number, context?: GlucoseContext): GlucoseAlertType | undefined => {
-    if (!glucose || !context) return undefined;
-
-    // Only surface HIGH glucose values – lows are handled by generic vital alerts
-    if (glucose < 70) {
-      return undefined;
-    }
-
-    if (context === 'Fasting') {
-      if (glucose > 125) return 'high_fasting';
-      return undefined;
-    }
-
-    if (context === 'Post-meal') {
-      if (glucose > 180) return 'high_post_meal';
-      return undefined;
-    }
-
-    if (glucose > 200) return 'high_random';
-    return undefined;
-  };
 
   // Fetch real notifications from API
   const fetchNotifications = async () => {
@@ -84,29 +48,20 @@ const RealTimeNotifications: React.FC<RealTimeNotificationsProps> = ({ onNotific
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          const realNotifications: Notification[] = result.data.map((notification: any) => {
-            const glucose = notification.metadata?.glucose as number | undefined;
-            const glucoseContext = notification.metadata?.context as GlucoseContext | undefined;
-            const glucoseAlertType = getGlucoseAlertType(glucose, glucoseContext);
-
-            return {
-              id: notification._id,
-              type: notification.type,
-              title: notification.title,
-              message: notification.message,
-              patientId: notification.patientId,
-              patientName: notification.patientName,
-              timestamp: new Date(notification.createdAt),
-              read: notification.read,
-              priority: notification.priority,
-              bpCategory: notification.bpCategory,
-              systolic: notification.systolic,
-              diastolic: notification.diastolic,
-              glucose,
-              glucoseContext,
-              glucoseAlertType,
-            };
-          });
+          const realNotifications: Notification[] = result.data.map((notification: any) => ({
+            id: notification._id,
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            patientId: notification.patientId,
+            patientName: notification.patientName,
+            timestamp: new Date(notification.createdAt),
+            read: notification.read,
+            priority: notification.priority,
+            bpCategory: notification.bpCategory,
+            systolic: notification.systolic,
+            diastolic: notification.diastolic
+          }));
           
           setNotifications(realNotifications);
           // Only show if there are unread notifications
@@ -191,8 +146,6 @@ const RealTimeNotifications: React.FC<RealTimeNotificationsProps> = ({ onNotific
         return <Activity className="w-4 h-4 text-red-500" />;
       case 'hypertension_alert':
         return <Heart className="w-4 h-4 text-red-500" />;
-      case 'diabetes_alert':
-        return <Activity className="w-4 h-4 text-emerald-500" />;
       case 'message':
         return <MessageSquare className="w-4 h-4 text-blue-500" />;
       case 'call':
@@ -203,11 +156,6 @@ const RealTimeNotifications: React.FC<RealTimeNotificationsProps> = ({ onNotific
   };
 
   const getNotificationColor = (notification: Notification) => {
-    // Special styling for diabetes glucose alerts
-    if (notification.glucoseAlertType) {
-      return 'border-cyan-200 bg-gradient-to-r from-cyan-50 via-emerald-50 to-blue-50 border-l-4 border-l-emerald-500';
-    }
-
     // Special handling for hypertension alerts
     if (notification.type === 'hypertension_alert') {
       const bpColors = {
