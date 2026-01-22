@@ -433,29 +433,36 @@ const CaretakerDashboard = () => {
 
   if (status === "unauthenticated" && !hasToken) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Please Log In</h2>
-          <p className="text-gray-600">You need to log in first to access this dashboard.</p>
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex items-center justify-center">
+        <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl px-8 py-10 border border-emerald-100/60 max-w-md w-full">
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Please Log In</h2>
+          <p className="text-gray-600 text-sm">
+            You need to log in first to access this SmartCare clinician dashboard.
+          </p>
         </div>
       </div>
     );
   }
-
+ 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <DashboardHeader />
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+      {/* Non-sticky header with beautiful gradient */}
+      <div className="w-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 shadow-xl border-b border-emerald-600/20">
+        <DashboardHeader />
+      </div>
+ 
+      {/* Floating realtime notifications tray */}
       <RealTimeNotifications onNotificationSelect={handleNotificationSelect} />
-
-      <main className="flex flex-col items-center px-4 py-6 gap-6">
+ 
+      <main className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 flex flex-col gap-6">
         {message && (
-          <div className="fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50">
+          <div className="fixed top-24 right-4 bg-emerald-50 border border-emerald-300 text-emerald-800 px-4 py-3 rounded-xl shadow-md z-50 text-sm">
             {message}
           </div>
         )}
-
+ 
         {error && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 w-full max-w-7xl">
+          <div className="bg-amber-50/90 border-l-4 border-amber-400 p-4 w-full rounded-xl shadow-sm max-w-7xl mx-auto">
             <div className="flex">
               <AlertTriangle className="h-5 w-5 text-yellow-400" />
               <p className="ml-3 text-sm text-yellow-700">{error}</p>
@@ -465,8 +472,8 @@ const CaretakerDashboard = () => {
 
         {/* When a patient is selected, show their key details at the top */}
         {selectedPatient && (
-          <div className="w-full max-w-7xl mb-4 transition-all duration-300 ease-out">
-            <div className="transform scale-100 opacity-100">
+          <div className="w-full max-w-7xl mb-4 transition-all duration-300 ease-out mx-auto">
+            <div className="transform scale-100 opacity-100 drop-shadow-md">
               <PatientHeader 
                 patient={selectedPatient} 
                 onOpenMessaging={handleOpenMessaging}
@@ -475,27 +482,30 @@ const CaretakerDashboard = () => {
           </div>
         )}
 
-        <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main responsive grid layout – mirrors hypertension dashboard structure */}
+        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
           {/* Left Sidebar - Stats, Requests, and Patient Actions */}
           <div className="lg:col-span-1 space-y-6">
             {/* Patient Actions / Tabs in Sidebar - Show at top when patient is selected */}
             {selectedPatient && (
-              <Card className="shadow-lg border-emerald-100">
-                <CardHeader className="bg-gradient-to-r from-emerald-50 via-cyan-50 to-blue-50 rounded-t-lg">
+              <Card className="shadow-xl border-emerald-100/70 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 rounded-t-xl">
                   <CardTitle className="flex items-center justify-between text-sm font-semibold text-gray-900">
                     <span className="flex items-center space-x-2">
-                      <Activity className="w-4 h-4 text-emerald-600" />
-                      <span>Patient Actions</span>
+                      <span className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
+                        <Activity className="w-4 h-4 text-white" />
+                      </span>
+                      <span className="text-white">Patient Actions</span>
                     </span>
                     <button
                       onClick={() => setSelectedPatient(null)}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      className="text-xs text-emerald-50 hover:text-white font-medium underline-offset-2 hover:underline"
                     >
                       Back to Patients
                     </button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-4 space-y-2">
+                <CardContent className="pt-4 space-y-2 bg-white/80 rounded-b-xl">
                   {[
                     { id: 'overview', label: 'Overview', icon: Users },
                     { id: 'current-vitals', label: 'Current Vitals', icon: Activity },
@@ -515,8 +525,8 @@ const CaretakerDashboard = () => {
                         onClick={() => setActivePatientTab(tab.id as any)}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                           isActive
-                            ? 'bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 text-white shadow-md'
-                            : 'bg-white text-gray-700 border border-gray-100 hover:border-emerald-300 hover:bg-emerald-50'
+                            ? 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 text-white shadow-md scale-[1.01]'
+                            : 'bg-white/90 text-gray-700 border border-gray-100 hover:border-emerald-300 hover:bg-emerald-50'
                         }`}
                       >
                         <span className="flex items-center space-x-2">
@@ -540,39 +550,42 @@ const CaretakerDashboard = () => {
 
             {/* Quick Stats Section */}
             <QuickStats patients={patients} />
-
-            
-
+ 
             {/* Assignment Info – admin controlled */}
-            <Card className="shadow border-cyan-100">
-              <CardHeader className="bg-gradient-to-r from-cyan-50 via-emerald-50 to-blue-50 rounded-t-lg">
-                <CardTitle className="text-xs font-semibold text-gray-900">
+            <Card className="shadow-md border-cyan-100/70 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-cyan-500 via-emerald-500 to-teal-500 rounded-t-xl">
+                <CardTitle className="text-xs font-semibold text-white flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-white/15 flex items-center justify-center">
+                    <Users className="w-3.5 h-3.5 text-white" />
+                  </span>
                   Patient Assignment
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-3">
-                <p className="text-xs text-gray-600">
+              <CardContent className="pt-3 bg-white/80 rounded-b-xl">
+                <p className="text-xs text-gray-700 leading-relaxed">
                   Patients are assigned to you by an administrator. You cannot search or attach new
                   patients from this dashboard. Contact your admin team to update assignments.
                 </p>
               </CardContent>
             </Card>
-
+ 
             {/* Assigned Patients List in Sidebar - Show when no patient is selected */}
             {!selectedPatient && (
-              <Card className="shadow-lg border-emerald-100">
-                <CardHeader className="bg-gradient-to-r from-emerald-50 via-cyan-50 to-blue-50 rounded-t-lg">
+              <Card className="shadow-xl border-emerald-100/70 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 rounded-t-xl">
                   <CardTitle className="flex items-center justify-between">
                     <span className="flex items-center space-x-2">
-                      <Users className="w-4 h-4 text-emerald-700" />
-                      <span className="text-sm font-semibold text-gray-900">Patients</span>
+                      <span className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
+                        <Users className="w-4 h-4 text-white" />
+                      </span>
+                      <span className="text-sm font-semibold text-white">Patients</span>
                     </span>
-                    <span className="text-xs text-gray-600">
+                    <span className="text-xs text-emerald-50">
                       {filteredPatients.length}
                     </span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 pt-4 max-h-96 overflow-y-auto">
+                <CardContent className="space-y-3 pt-4 max-h-96 overflow-y-auto bg-white/80 rounded-b-xl">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3" />
                     <Input
@@ -585,8 +598,8 @@ const CaretakerDashboard = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    {filteredPatients.map((patient) => {
-                      const isSelected = selectedPatient ? selectedPatient.id === patient.id : false;
+                    {(filteredPatients as Patient[]).map((patient) => {
+                      const isSelected = ((selectedPatient as Patient | null)?.id ?? null) === patient.id;
                       return (
                         <div
                           key={patient.id}
@@ -629,31 +642,39 @@ const CaretakerDashboard = () => {
           {/* Right Main Content */}
           <div className="lg:col-span-3 space-y-6">
             {/* Show assigned patients grid when no patient is selected */}
-            {!selectedPatient ? (
-              <AssignedPatientsGrid
-                patients={filteredPatients}
-                onPatientSelect={handlePatientSelect}
-                selectedPatient={selectedPatient}
-              />
-            ) : (
-              <>
-                <PatientHeader 
-                  patient={selectedPatient} 
-                  onOpenMessaging={handleOpenMessaging}
-                />
-
-                <PatientTabs
-                  patient={selectedPatient}
-                  patientVitals={patientVitals}
-                  isLoading={isLoading}
-                  onRefreshVitals={refreshVitals}
-                  onPrescribeMedication={handlePrescribeMedication}
-                  onOpenMessaging={handleOpenMessaging}
-                  activeTab={activePatientTab}
-                  onTabChange={setActivePatientTab}
-                />
-              </>
-            )}
+            <div className="bg-white/85 backdrop-blur-sm rounded-2xl shadow-2xl border border-emerald-100/60 overflow-hidden">
+              {!selectedPatient ? (
+                <div className="p-4 sm:p-6">
+                  <AssignedPatientsGrid
+                    patients={filteredPatients}
+                    onPatientSelect={handlePatientSelect}
+                    selectedPatient={selectedPatient}
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 px-4 sm:px-6 py-4">
+                    <PatientHeader 
+                      patient={selectedPatient} 
+                      onOpenMessaging={handleOpenMessaging}
+                    />
+                  </div>
+ 
+                  <div className="p-4 sm:p-6 bg-gradient-to-b from-white via-white to-emerald-50/40">
+                    <PatientTabs
+                      patient={selectedPatient}
+                      patientVitals={patientVitals}
+                      isLoading={isLoading}
+                      onRefreshVitals={refreshVitals}
+                      onPrescribeMedication={handlePrescribeMedication}
+                      onOpenMessaging={handleOpenMessaging}
+                      activeTab={activePatientTab}
+                      onTabChange={setActivePatientTab}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </main>

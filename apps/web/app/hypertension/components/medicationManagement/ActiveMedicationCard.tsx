@@ -9,12 +9,15 @@ import {
   Info,
   MessageSquare,
   AlertCircle,
-  UserCheck
+  UserCheck,
+  Calendar,
+  Clock3
 } from 'lucide-react';
 import SideEffectsSection from './SideEffectsSection';
 import MissMedicationDialog from './MissMedicationDialog';
 import StopMedicationDialog from './StopMedicationDialog';
 import { Medication } from '../../types/medication-types';
+import { getMedicationTiming } from '../../../components/utils/medicationDates';
 
 interface ActiveMedicationCardProps {
   medication: Medication;
@@ -44,6 +47,8 @@ const ActiveMedicationCard: React.FC<ActiveMedicationCardProps> = ({
     notes: '',
     intensity: 'moderate' as const
   });
+
+  const timing = getMedicationTiming(medication.startDate || medication.createdAt, medication.duration);
 
   const toggleSideEffect = (effectName: string) => {
     setSelectedSideEffects(prev => 
@@ -93,6 +98,33 @@ const ActiveMedicationCard: React.FC<ActiveMedicationCardProps> = ({
               <strong className="text-blue-700">{isEnglish() ? 'Frequency:' : 'Mara ngapi:'}</strong>{" "}
               {medication.frequency}
             </p>
+            {medication.duration && (
+              <p>
+                <strong className="text-blue-700">{isEnglish() ? 'Duration:' : 'Muda:'}</strong>{" "}
+                {medication.duration}
+              </p>
+            )}
+            {timing.endDate && medication.status === 'active' && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                <span className="text-xs px-2 py-1 rounded-lg bg-cyan-50 text-cyan-800 border border-cyan-100 inline-flex items-center">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  {isEnglish() ? 'Ends:' : 'Inaisha:'}{" "}
+                  {timing.endDate.toLocaleDateString()}
+                </span>
+                {typeof timing.daysRemaining === 'number' && (
+                  <span className={`text-xs px-2 py-1 rounded-lg border inline-flex items-center ${
+                    timing.isExpired ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  }`}>
+                    <Clock3 className="w-3 h-3 mr-1" />
+                    {timing.isExpired
+                      ? (isEnglish() ? 'Completed' : 'Imekamilika')
+                      : (isEnglish()
+                          ? `${timing.daysRemaining} day${timing.daysRemaining === 1 ? '' : 's'} left`
+                          : `Zimebaki siku ${timing.daysRemaining}`)}
+                  </span>
+                )}
+              </div>
+            )}
             {medication.instructions && (
               <p><strong>{isEnglish() ? 'Instructions:' : 'Maelekezo:'}</strong> {medication.instructions}</p>
             )}
