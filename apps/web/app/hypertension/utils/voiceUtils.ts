@@ -983,11 +983,7 @@ export const startVoiceMode = async (params: {
     ?"Systolic."
     :"Systolic.";
 
-  // Simplified welcome
-  const welcome = languageValue === "sw"
-
-    ? "Systolic."
-    : "Systolic.";
+  
 
     
 

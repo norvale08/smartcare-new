@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react"; // Added useState import
 import { HeartPulse, Globe, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation"; // Added useRouter
 import { Translations } from "../../../lib/hypertension/useTranslation";
 
 interface HeaderProps {
@@ -13,6 +14,9 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient }) => {
+  const [loggingOut, setLoggingOut] = useState(false); // Added loggingOut state
+  const router = useRouter(); // Added router
+  
   const availableLanguages = [
     { code: "en-US", name: "English", nativeName: "English" },
     { code: "sw-TZ", name: "Swahili", nativeName: "Kiswahili" },
@@ -20,12 +24,19 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
   const userName = patient?.fullName || "Sarah ";
   const userInitials = userName.slice(0, 2).toUpperCase();
 
-
-
-  // CORRECTED: Single handleLogout function
-
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/login" });
+    setLoggingOut(true);
+    try {
+      await signOut({ callbackUrl: "/login" });
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Fallback if next-auth fails
+      localStorage.removeItem("token");
+      localStorage.removeItem("userData");
+      router.push("/login");
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   return (
@@ -66,20 +77,25 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 px-4 py-2 text-white hover:bg-white/20 rounded-lg transition-colors border border-white/30"
-          title="Logout"
+          disabled={loggingOut}
+          className="flex items-center gap-2 px-4 py-2 text-white hover:bg-white/20 rounded-lg transition-colors border border-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          title={language === "sw-TZ" ? "Toka" : "Logout"}
         >
-
-          <LogOut size={18} />
-          <span className="text-sm font-medium">Logout</span>
-
-          <LogOut size={16} />
-          <span className="hidden sm:inline">
-            {loggingOut 
-              ? (language === "sw-TZ" ? "Inatoka..." : "Logging out...") 
-              : (language === "sw-TZ" ? "Toka" : "Logout")}
-          </span>
-
+          {loggingOut ? (
+            <>
+              <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+              <span className="text-sm font-medium">
+                {language === "sw-TZ" ? "Inatoka..." : "Logging out..."}
+              </span>
+            </>
+          ) : (
+            <>
+              <LogOut size={18} />
+              <span className="text-sm font-medium">
+                {language === "sw-TZ" ? "Toka" : "Logout"}
+              </span>
+            </>
+          )}
         </button>
       </div>
     </header>
