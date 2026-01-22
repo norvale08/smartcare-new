@@ -1,3 +1,4 @@
+// AdminDoctorAssignment.tsx
 import React, { useState, useEffect } from 'react';
 import { Search, Users, UserCheck, UserX, RefreshCw, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { Button, Card, Input } from '@repo/ui';
@@ -26,12 +27,12 @@ interface Patient {
     id: string;
     fullName: string;
     specialization: string;
-  };
+  } | null;
   assignmentSource?: string;
   condition?: string;
 }
 
-// Custom Badge component since @repo/ui doesn't have it
+// Custom Badge component
 const Badge: React.FC<{
   children: React.ReactNode;
   variant?: 'default' | 'secondary' | 'success' | 'warning' | 'error' | 'outline';
@@ -69,7 +70,6 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
     return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   };
 
-  // Helper function to safely get token
   const getToken = (): string | null => {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('token');
@@ -79,24 +79,23 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
   const fetchDoctors = async () => {
     try {
       const token = getToken();
-      
+
       if (!token) {
         toast.error('Please login first');
         return;
       }
-      
+
       const response = await fetch(`${getApiBaseUrl()}/api/admin/doctors`, {
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` 
+          Authorization: `Bearer ${token}`
         }
       });
 
       if (response.ok) {
         const data = await response.json();
-        
+
         if (data.success && data.doctors) {
-          // Format doctors
           const formattedDoctors = data.doctors.map((doctor: any) => ({
             id: doctor.id || doctor._id,
             fullName: doctor.fullName || `${doctor.firstName} ${doctor.lastName}`,
@@ -105,83 +104,98 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
             patientCount: doctor.patientCount || 0,
             assignedPatients: []
           }));
-          
+
           setDoctors(formattedDoctors);
+          console.log('✅ Fetched doctors:', formattedDoctors.length);
         }
+      } else {
+        console.error('Failed to fetch doctors:', response.status);
+        toast.error('Failed to fetch doctors');
       }
     } catch (error: any) {
       console.error('Error fetching doctors:', error);
-      toast.error(`Error: ${error.message}`);
+      toast.error(`Error fetching doctors: ${error.message}`);
     }
   };
 
-  // Fetch patients
+  // Fetch patients - using the simple endpoint for better compatibility
   const fetchPatients = async () => {
     try {
       const token = getToken();
-      
+
       if (!token) {
         toast.error('Please login first');
         return;
       }
-      
-      const response = await fetch(`${getApiBaseUrl()}/api/admin/patients`, {
-        headers: { 
+
+      console.log('📥 Fetching patients from /api/admin/patients/simple');
+
+      const response = await fetch(`${getApiBaseUrl()}/api/admin/patients/simple`, {
+        headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` 
+          Authorization: `Bearer ${token}`
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Patients data from API:', data); // Debug log
-        
-        if (data.success && data.patients) {
-          const formattedPatients = data.patients.map((patient: any) => {
-            console.log('Processing patient:', patient); // Debug log
-            
-            // Handle assignedDoctor - it might be null, string, or object
-            let assignedDoctorInfo = undefined;
-            if (patient.assignedDoctor) {
-              if (typeof patient.assignedDoctor === 'object' && patient.assignedDoctor !== null) {
-                // It's an object
-                assignedDoctorInfo = {
-                  id: patient.assignedDoctor.id || patient.assignedDoctor._id,
-                  fullName: patient.assignedDoctor.fullName || 
-                           `${patient.assignedDoctor.firstName || ''} ${patient.assignedDoctor.lastName || ''}`.trim(),
-                  specialization: patient.assignedDoctor.specialization || 'General Practice'
-                };
-              } else if (typeof patient.assignedDoctor === 'string') {
-                // It's a string ID - we need to find the doctor object
-                assignedDoctorInfo = {
-                  id: patient.assignedDoctor,
-                  fullName: 'Unknown Doctor',
-                  specialization: 'General Practice'
-                };
-              }
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Patient fetch failed:', response.status, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('📦 Raw patients response:', data);
+
+      if (data.success && data.patients) {
+        const formattedPatients = data.patients.map((patient: any) => {
+          // Handle assignedDoctor carefully
+          let assignedDoctorInfo: Patient['assignedDoctor'] = null;
+
+          if (patient.assignedDoctor) {
+            if (typeof patient.assignedDoctor === 'object' && patient.assignedDoctor !== null) {
+              assignedDoctorInfo = {
+                id: patient.assignedDoctor.id || patient.assignedDoctor._id || '',
+                fullName: patient.assignedDoctor.fullName ||
+                  `${patient.assignedDoctor.firstName || ''} ${patient.assignedDoctor.lastName || ''}`.trim() ||
+                  'Unknown Doctor',
+                specialization: patient.assignedDoctor.specialization || 'General Practice'
+              };
+            } else if (typeof patient.assignedDoctor === 'string') {
+              assignedDoctorInfo = {
+                id: patient.assignedDoctor,
+                fullName: 'Unknown Doctor',
+                specialization: 'General Practice'
+              };
             }
-            
-            return {
-              id: patient.id || patient._id,
-              fullName: patient.fullName || 'Unknown Patient',
-              email: patient.email || '',
-              phoneNumber: patient.phoneNumber || '',
-              assignedDoctor: assignedDoctorInfo,
-              assignmentSource: patient.assignmentSource || 'unassigned',
-              condition: patient.condition || 'Unknown'
-            };
-          });
-          
-          setPatients(formattedPatients);
-          console.log('Formatted patients:', formattedPatients); // Debug log
-          
-          // Update doctors with their assigned patients
-          updateDoctorsWithPatients(formattedPatients);
-        }
+          }
+
+          const phoneNumber = patient.phoneNumber != null ? String(patient.phoneNumber) : '';
+
+          return {
+            id: patient.id || patient._id,
+            fullName: patient.fullName || 'Unknown Patient',
+            email: patient.email || '',
+            phoneNumber: phoneNumber,
+            assignedDoctor: assignedDoctorInfo,
+            assignmentSource: patient.assignmentSource || 'unassigned',
+            condition: patient.condition || 'General'
+          };
+        });
+
+        setPatients(formattedPatients);
+        console.log('✅ Formatted patients:', formattedPatients.length);
+        console.log('Assigned patients:', formattedPatients.filter((p: Patient) => p.assignedDoctor).length);
+        console.log('Unassigned patients:', formattedPatients.filter((p: Patient) => !p.assignedDoctor).length);
+
+        // Update doctors with their assigned patients
+        updateDoctorsWithPatients(formattedPatients);
+      } else {
+        console.error('❌ Invalid response format:', data);
+        toast.error('Invalid data format received');
       }
     } catch (error: any) {
-      console.error('Error fetching patients:', error);
-      toast.error(`Error: ${error.message}`);
+      console.error('❌ Error fetching patients:', error);
+      toast.error(`Error fetching patients: ${error.message}`);
     }
   };
 
@@ -189,10 +203,12 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
   const updateDoctorsWithPatients = (patientList: Patient[]) => {
     setDoctors(prevDoctors => {
       return prevDoctors.map(doctor => {
-        const assignedPatients = patientList.filter(patient => 
+        const assignedPatients = patientList.filter(patient =>
           patient.assignedDoctor?.id === doctor.id
         );
-        
+
+        console.log(`Doctor ${doctor.fullName} has ${assignedPatients.length} patients`);
+
         return {
           ...doctor,
           patientCount: assignedPatients.length,
@@ -205,10 +221,13 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
   const fetchDoctorsAndPatients = async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchDoctors(), fetchPatients()]);
+      console.log('🔄 Refreshing doctors and patients...');
+      await fetchDoctors();
+      await fetchPatients();
       toast.success('Data refreshed successfully');
     } catch (error) {
       console.error('Fetch error:', error);
+      toast.error('Failed to refresh data');
     } finally {
       setLoading(false);
     }
@@ -226,9 +245,9 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
         toast.error('Please login first');
         return;
       }
-      
+
       const loadingToast = toast.loading('Assigning patient...');
-      
+
       const response = await fetch(`${getApiBaseUrl()}/api/admin/doctor-assignments/assign-doctor`, {
         method: 'POST',
         headers: {
@@ -246,7 +265,7 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
       if (response.ok) {
         toast.success('Patient assigned successfully!', { id: loadingToast });
         refreshTrigger();
-        fetchPatients(); // Refresh to get updated assignments
+        await fetchPatients();
         return true;
       } else {
         toast.error(result.message || 'Failed to assign patient', { id: loadingToast });
@@ -276,9 +295,9 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
         toast.error('Please login first');
         return;
       }
-      
+
       const loadingToast = toast.loading(`Assigning ${selectedPatients.length} patients...`);
-      
+
       const response = await fetch(`${getApiBaseUrl()}/api/admin/doctor-assignments/bulk-assign`, {
         method: 'POST',
         headers: {
@@ -294,12 +313,12 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
       const result = await response.json();
 
       if (response.ok) {
-        toast.success(`Successfully assigned ${selectedPatients.length} patients!`, { 
+        toast.success(`Successfully assigned ${selectedPatients.length} patients!`, {
           id: loadingToast,
-          duration: 3000 
+          duration: 3000
         });
         refreshTrigger();
-        fetchPatients();
+        await fetchPatients();
         setSelectedDoctor(null);
         setSelectedPatients([]);
       } else {
@@ -316,32 +335,42 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
   }, []);
 
   // Filter patients based on search and filters
+  // Filter patients with proper null checks and string conversion
   const filteredPatients = patients.filter(patient => {
-    const matchesSearch = patient.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.phoneNumber?.toString().toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
     
-    const matchesAssignedFilter = showAssignedOnly ? patient.assignedDoctor : true;
+    // Safely handle all fields with proper null checks
+    const fullNameMatch = patient.fullName?.toLowerCase().includes(searchLower) || false;
+    const emailMatch = patient.email?.toLowerCase().includes(searchLower) || false;
+    
+    // phoneNumber is now guaranteed to be a string, but add extra safety
+    const phoneMatch = patient.phoneNumber 
+      ? String(patient.phoneNumber).toLowerCase().includes(searchLower) 
+      : false;
+
+    const matchesSearch = fullNameMatch || emailMatch || phoneMatch;
+
+    const matchesAssignedFilter = showAssignedOnly ? !!patient.assignedDoctor : true;
     const matchesUnassignedFilter = showUnassignedOnly ? !patient.assignedDoctor : true;
-    
+
     return matchesSearch && matchesAssignedFilter && matchesUnassignedFilter;
   });
 
   // Get patients for selected doctor
-  const selectedDoctorPatients = selectedDoctor 
+  const selectedDoctorPatients = selectedDoctor
     ? patients.filter(patient => patient.assignedDoctor?.id === selectedDoctor)
     : [];
 
   // Get selected doctor details
-  const selectedDoctorDetails = selectedDoctor 
+  const selectedDoctorDetails = selectedDoctor
     ? doctors.find(d => d.id === selectedDoctor)
     : null;
 
   // Color functions for the theme
   const getDoctorCardColor = (index: number) => {
-    const colors = ['bg-gradient-to-r from-cyan-50 to-blue-50 border-cyan-200', 
-                    'bg-gradient-to-r from-emerald-50 to-cyan-50 border-emerald-200',
-                    'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200'];
+    const colors = ['bg-gradient-to-r from-cyan-50 to-blue-50 border-cyan-200',
+      'bg-gradient-to-r from-emerald-50 to-cyan-50 border-emerald-200',
+      'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200'];
     return colors[index % colors.length];
   };
 
@@ -370,17 +399,6 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            onClick={() => {
-              console.log('Current doctors:', doctors);
-              console.log('Current patients:', patients);
-            }}
-            className="flex items-center gap-2 border-cyan-300 text-cyan-700 hover:bg-cyan-50"
-          >
-            {/* <AlertCircle className="w-4 h-4" />
-            Debug */}
-          </Button>
-          <Button
-            variant="outline"
             onClick={fetchDoctorsAndPatients}
             disabled={loading}
             className="flex items-center gap-2 border-cyan-300 text-cyan-700 hover:bg-cyan-50"
@@ -400,7 +418,7 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
               <UserCheck className="w-5 h-5 text-cyan-600" />
               Select Doctor
             </h3>
-            
+
             <div className="space-y-3 mb-6">
               <label className="block text-sm font-medium text-gray-700">
                 Choose a Doctor
@@ -453,13 +471,12 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                 {doctors.map((doctor, index) => {
                   const doctorPatients = patients.filter(p => p.assignedDoctor?.id === doctor.id);
                   const patientCount = doctorPatients.length;
-                  
+
                   return (
                     <div
                       key={doctor.id}
-                      className={`p-4 rounded-xl border ${getDoctorCardColor(index)} cursor-pointer transition-all hover:scale-[1.02] ${
-                        selectedDoctor === doctor.id ? 'ring-2 ring-cyan-500' : ''
-                      }`}
+                      className={`p-4 rounded-xl border ${getDoctorCardColor(index)} cursor-pointer transition-all hover:scale-[1.02] ${selectedDoctor === doctor.id ? 'ring-2 ring-cyan-500' : ''
+                        }`}
                       onClick={() => {
                         setSelectedDoctor(doctor.id);
                         setExpandedDoctor(doctor.id === expandedDoctor ? null : doctor.id);
@@ -472,7 +489,7 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                           <p className="text-xs text-gray-500 mt-1">{doctor.email}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge 
+                          <Badge
                             variant={patientCount > 0 ? "success" : "secondary"}
                             className="px-2 py-1"
                           >
@@ -485,28 +502,18 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                           )}
                         </div>
                       </div>
-                      
+
                       {expandedDoctor === doctor.id && (
                         <div className="mt-3 pt-3 border-t border-cyan-200">
                           <div className="flex justify-between items-center mb-2">
                             <h6 className="text-xs font-medium text-gray-700">Assigned Patients ({patientCount}):</h6>
-                            {patientCount > 0 && (
-                              <span className="text-xs text-cyan-600">
-                                Click patient to view details
-                              </span>
-                            )}
                           </div>
                           <div className="space-y-2 max-h-48 overflow-y-auto">
                             {doctorPatients.length > 0 ? (
                               doctorPatients.map(patient => (
-                                <div 
-                                  key={patient.id} 
-                                  className="flex items-center justify-between p-2 bg-white rounded-lg border border-cyan-100 hover:bg-cyan-50 cursor-pointer"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    // You can add a modal or side panel to show patient details
-                                    console.log('Patient clicked:', patient);
-                                  }}
+                                <div
+                                  key={patient.id}
+                                  className="flex items-center justify-between p-2 bg-white rounded-lg border border-cyan-100 hover:bg-cyan-50"
                                 >
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2">
@@ -526,7 +533,6 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                               <div className="text-center py-4">
                                 <UserX className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                                 <p className="text-xs text-gray-500">No patients assigned yet</p>
-                                <p className="text-xs text-gray-400 mt-1">Select this doctor and assign patients</p>
                               </div>
                             )}
                           </div>
@@ -552,8 +558,8 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                 </h3>
                 <div className="flex items-center gap-4">
                   <p className="text-sm text-gray-600">
-                    {selectedDoctor 
-                      ? `Showing ${selectedDoctorPatients.length} patients assigned to Dr. ${selectedDoctorDetails?.fullName}` 
+                    {selectedDoctor
+                      ? `Showing ${selectedDoctorPatients.length} patients assigned to Dr. ${selectedDoctorDetails?.fullName}`
                       : 'All patients in the system'}
                   </p>
                   <Badge variant="secondary" className="text-xs">
@@ -564,7 +570,7 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                   </Badge>
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap gap-3">
                 <Button
                   variant={showAssignedOnly ? "default" : "outline"}
@@ -578,7 +584,7 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                   <UserCheck className="w-4 h-4" />
                   Assigned ({patients.filter(p => p.assignedDoctor).length})
                 </Button>
-                
+
                 <Button
                   variant={showUnassignedOnly ? "default" : "outline"}
                   size="sm"
@@ -591,7 +597,7 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                   <UserX className="w-4 h-4" />
                   Unassigned ({patients.filter(p => !p.assignedDoctor).length})
                 </Button>
-                
+
                 {(showAssignedOnly || showUnassignedOnly) && (
                   <Button
                     variant="outline"
@@ -629,8 +635,8 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                       <Users className="w-16 h-16 mb-4 text-cyan-200" />
                       <p className="text-lg font-medium mb-2">No patients found</p>
                       <p className="text-sm text-center max-w-md">
-                        {searchTerm 
-                          ? `No patients match "${searchTerm}". Try adjusting your search or filters.` 
+                        {searchTerm
+                          ? `No patients match "${searchTerm}". Try adjusting your search or filters.`
                           : "There are no patients in the system matching your filters."}
                       </p>
                     </div>
@@ -639,13 +645,12 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                       {filteredPatients.map(patient => {
                         const isAssignedToSelectedDoctor = selectedDoctor && patient.assignedDoctor?.id === selectedDoctor;
                         const isUnassigned = !patient.assignedDoctor;
-                        
+
                         return (
-                          <div 
-                            key={patient.id} 
-                            className={`p-4 transition-colors ${getPatientStatusColor(patient)} ${
-                              selectedPatients.includes(patient.id) ? 'ring-2 ring-cyan-500' : ''
-                            }`}
+                          <div
+                            key={patient.id}
+                            className={`p-4 transition-colors ${getPatientStatusColor(patient)} ${selectedPatients.includes(patient.id) ? 'ring-2 ring-cyan-500' : ''
+                              }`}
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
@@ -672,7 +677,7 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                                     </div>
                                   </div>
                                 </div>
-                                
+
                                 <div className="ml-7">
                                   {patient.assignedDoctor ? (
                                     <div className="flex items-center gap-3 mt-2">
@@ -682,13 +687,13 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                                           Assigned to: {patient.assignedDoctor.fullName}
                                         </span>
                                       </div>
-                                      <Badge 
+                                      <Badge
                                         variant={patient.assignedDoctor.id === selectedDoctor ? "success" : "secondary"}
                                         className="text-xs"
                                       >
                                         {patient.assignedDoctor.specialization}
                                       </Badge>
-                                      <Badge 
+                                      <Badge
                                         variant="outline"
                                         className="text-xs"
                                       >
@@ -712,7 +717,7 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                                   )}
                                 </div>
                               </div>
-                              
+
                               {patient.assignedDoctor && selectedDoctor && !isAssignedToSelectedDoctor && (
                                 <Button
                                   size="sm"
@@ -744,13 +749,13 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                     <div>
                       <p className="font-medium text-gray-900">{selectedPatients.length} patients selected</p>
                       <p className="text-sm text-gray-600">
-                        {selectedDoctor 
-                          ? `Will be assigned to Dr. ${selectedDoctorDetails?.fullName}` 
+                        {selectedDoctor
+                          ? `Will be assigned to Dr. ${selectedDoctorDetails?.fullName}`
                           : 'Select a doctor to assign'}
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-3">
                     <Button
                       variant="outline"
@@ -759,7 +764,7 @@ const AdminDoctorAssignment: React.FC<DoctorAssignmentProps> = ({ refreshTrigger
                     >
                       Clear Selection
                     </Button>
-                    
+
                     <Button
                       onClick={handleBulkAssign}
                       disabled={!selectedDoctor || loading}
