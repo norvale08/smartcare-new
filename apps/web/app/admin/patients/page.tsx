@@ -1,3 +1,4 @@
+// patients/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -237,9 +238,12 @@ export default function AdminPatientsPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const cleanSearch = searchTerm.trim();
+
     if (activeTab === "patients") {
-      fetchPatients(1, searchTerm, diseaseFilter);
-    }
+    fetchPatients(1, cleanSearch, diseaseFilter);
+  }
   };
 
   const handleDiseaseFilterChange = (disease: string) => {
