@@ -31,6 +31,12 @@ export interface Medication {
   medicationName: string;
   dosage: string;
   frequency: string;
+  /** Optional free-form duration (e.g., "7 days", "2 weeks") */
+  duration?: string;
+  /** Optional start date for the course (ISO or YYYY-MM-DD) */
+  startDate?: string;
+  /** Optional creation timestamp if provided by backend */
+  createdAt?: string;
   instructions: string;
   reminders: string[];
   status: 'active' | 'completed' | 'missed' | 'stopped';

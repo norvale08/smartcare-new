@@ -6,6 +6,7 @@ import {
   CheckSquare, Square, Clock3, Calendar, Clock, AlertTriangle,
   Droplets, Info, FileText
 } from 'lucide-react';
+import { getMedicationTiming } from '../../components/utils/medicationDates';
 
 interface PatientInfo {
   _id: string;
@@ -189,6 +190,8 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
   const hasUnresolved = sideEffects.some(se => !se.resolved);
   const adherenceStatus = medication.adherence?.currentStatus || 'unknown';
   const patientName = getPatientName(medication.patientId);
+  const timing = getMedicationTiming(medication.startDate || medication.createdAt, medication.duration);
+  const showTiming = medication.status === 'active' && timing.endDate;
 
   return (
     <div
@@ -239,6 +242,28 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
                 </span>
               )}
             </div>
+
+            {/* Duration / End Date (active meds) */}
+            {showTiming && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-800 px-2 py-1 rounded">
+                  <Calendar className="w-3 h-3" />
+                  <span>
+                    Ends {timing.endDate ? formatDate(timing.endDate.toISOString()) : '—'}
+                  </span>
+                </span>
+                {typeof timing.daysRemaining === 'number' && (
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded border ${
+                    timing.isExpired ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  }`}>
+                    <Clock3 className="w-3 h-3" />
+                    <span>
+                      {timing.isExpired ? 'Completed (time elapsed)' : `${timing.daysRemaining} day${timing.daysRemaining === 1 ? '' : 's'} left`}
+                    </span>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           
           {/* Compact Action Buttons */}
