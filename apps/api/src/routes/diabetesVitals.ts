@@ -3,6 +3,7 @@ import Diabetes from "../models/diabetesModel";
 import Patient from "../models/patient";
 import { connectMongoDB } from "../lib/mongodb";
 import { verifyToken, AuthenticatedRequest } from "../middleware/verifyToken";
+import { NotificationService } from "../services/NotificationService";
 
 const router = express.Router();
 
@@ -177,9 +178,16 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
 
     const saved = await newVitals.save();
 
+    // CHECK FOR VITAL ALERTS AND NOTIFY DOCTORS IF NEEDED
+    await NotificationService.checkVitalAlerts(
+      saved.toObject(),
+      userId,
+      userId // patientId
+    );
+
     // LOG COMPREHENSIVE INFO
-    const diseaseInfo = hasBothConditions 
-      ? " DUAL MANAGEMENT: Diabetes + Hypertension" 
+    const diseaseInfo = hasBothConditions
+      ? " DUAL MANAGEMENT: Diabetes + Hypertension"
       : "DIABETES ONLY";
 
   

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone, MessageSquare, Camera, User } from 'lucide-react';
+import { MessageSquare, User } from 'lucide-react';
 import { Patient } from '../types';
 
 interface PatientHeaderProps {
@@ -8,12 +8,6 @@ interface PatientHeaderProps {
 }
 
 const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging }) => {
-  const handleCall = () => {
-    if (patient.phoneNumber) {
-      window.open(`tel:${patient.phoneNumber}`, '_self');
-    }
-  };
-
   const handleMessage = () => {
     onOpenMessaging(); // Just call the function without parameters
   };
@@ -27,9 +21,9 @@ const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging 
             <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
               <User className="w-8 h-8 text-white" />
             </div>
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white"></div>
+            {/* Removed the green call box as requested */}
           </div>
-          
+
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{patient.fullName}</h2>
             <p className="text-gray-600">
@@ -37,7 +31,7 @@ const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging 
             </p>
           </div>
         </div>
-        
+
         <div className="flex space-x-3">
           <button
             onClick={handleMessage}
@@ -46,18 +40,7 @@ const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging 
             <MessageSquare className="w-4 h-4" />
             <span>Message</span>
           </button>
-          <button
-            onClick={handleCall}
-            disabled={!patient.phoneNumber}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-              patient.phoneNumber
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {/* <Phone className="w-4 h-4" />
-            <span>Call</span> */}
-          </button>
+          {/* Removed the call button completely as requested */}
         </div>
       </div>
     </div>
