@@ -1,6 +1,7 @@
 // relative/dashboard/types.ts
 export interface PatientInfo {
-  id: string;
+  id: string;      // Medical Record ID
+  userId?: string; // Account ID (REQUIRED for messaging)
   name: string;
   email: string;
   phoneNumber: string;
@@ -88,6 +89,8 @@ export interface HealthAlert {
   timestamp: string;
   vital: string;
   value: number;
+  category?: string;
+  recommendation?: string;
 }
 
 export type ChartMetric = 'bloodPressure' | 'heartRate' | 'glucose';

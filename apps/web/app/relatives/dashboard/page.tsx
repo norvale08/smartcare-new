@@ -1,4 +1,4 @@
-// relative/dashboard/page.tsx
+// relative/dashboard/page.tsx - FIXED VERSION
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,7 +8,7 @@ import { PatientHeader } from './components/PatientHeader';
 import { TabNavigation } from './components/TabNavigation';
 import { OverviewTab } from './components/tabs/OverviewTab';
 import { VitalsTab } from './components/tabs/VitalsTab';
-import { MedicationsTab } from './components/tabs/MedicationsTab';
+import MedicationsTab from './components/tabs/MedicationsTab';
 import { MessagesTab } from './components/tabs/MessagesTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { HealthAlerts } from './components/HealthAlerts';
@@ -18,6 +18,7 @@ import { useDashboardData } from './hooks/useDashboardData';
 import { useDismissedAlerts } from './hooks/useDismissedAlerts';
 import { DashboardUtils } from './utils';
 import { TabType, ChartMetric, ChartPeriod, HealthAlert } from './types';
+import { AlertTriangle } from 'lucide-react';
 
 export default function RelativeDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -52,13 +53,13 @@ export default function RelativeDashboard() {
     isAlertDismissed
   } = useDismissedAlerts();
 
-  // Generate health alerts when vitals change
+  // Generate health alerts when vitals or patient data changes
   useEffect(() => {
-    if (vitals.length > 0) {
-      const alerts = DashboardUtils.generateHealthAlerts(vitals);
+    if (vitals.length > 0 && patientData) {
+      const alerts = DashboardUtils.generateHealthAlerts(vitals, patientData);
       setHealthAlerts(alerts);
     }
-  }, [vitals]);
+  }, [vitals, patientData]);
 
   // Filter out dismissed alerts
   const filteredAlerts = healthAlerts.filter(alert => !isAlertDismissed(alert.id));
@@ -66,8 +67,7 @@ export default function RelativeDashboard() {
   // Handle dismissing a single alert
   const handleDismissAlert = (alertId: string) => {
     dismissAlert(alertId);
-    
-    // Show a success message
+
     const dismissedAlert = healthAlerts.find(a => a.id === alertId);
     if (dismissedAlert) {
       setSuccess(`Alert dismissed: ${dismissedAlert.vital} alert`);
@@ -85,40 +85,61 @@ export default function RelativeDashboard() {
     }
   };
 
-  // Auto-dismiss old alerts after 7 days
-  useEffect(() => {
-    const autoDismissOldAlerts = () => {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const oldAlerts = healthAlerts.filter(alert => {
-        const alertDate = new Date(alert.timestamp);
-        return alertDate < sevenDaysAgo && !isAlertDismissed(alert.id);
+  // Handle contact doctor action
+  const handleContactDoctor = async () => {
+    setSuccess('Contacting medical team...');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/emergency/notify-doctor`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patientId: user?.monitoredPatient,
+          alerts: filteredAlerts,
+          relativeInfo: {
+            name: user?.name,
+            email: user?.email,
+            relationship: user?.relationship
+          }
+        }),
       });
 
-      if (oldAlerts.length > 0) {
-        oldAlerts.forEach(alert => dismissAlert(alert.id));
-        console.log(`Auto-dismissed ${oldAlerts.length} old alerts`);
+      if (response.ok) {
+        setSuccess('Medical team has been notified. They will contact you shortly.');
+      } else {
+        setError('Failed to contact medical team. Please call directly.');
       }
-    };
-
-    // Run once when alerts change
-    autoDismissOldAlerts();
-
-    // Set up interval to check every hour
-    const interval = setInterval(autoDismissOldAlerts, 60 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [healthAlerts, dismissAlert, isAlertDismissed]);
+    } catch (error) {
+      console.error('Error contacting doctor:', error);
+      setError('Failed to contact medical team. Please call directly.');
+    }
+  };
 
   const chartData = DashboardUtils.prepareChartData(vitals, chartPeriod);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!message.trim() || !user?.monitoredPatient) {
+
+    // The relative is messaging the patient. 
+    // The receiverId should be the patient's User ID.
+    const receiverId = user?.monitoredPatient || patientData?.id;
+    const patientRecordId = patientData?.id;
+
+    if (!message || !message.trim()) {
       setError('Please enter a message');
       return;
     }
+
+    // Debugging log to see which one is missing
+    console.log("Messaging IDs:", { receiverId, patientRecordId });
+
+    if (!receiverId) {
+    setError('Cannot identify the recipient. Please refresh or contact support.');
+    return;
+  }
 
     try {
       setSendingMessage(true);
@@ -133,17 +154,19 @@ export default function RelativeDashboard() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          toUserId: user.monitoredPatient,
-          message: message.trim(),
-          messageType: 'relative_to_patient'
+          receiverId: receiverId,      // The Patient's User ID
+          patientId: patientRecordId,  // The Patient's Mongo Document ID
+          content: message.trim(),
+          type: 'text'
         }),
       });
 
       const data = await response.json();
       if (data.success) {
         setSuccess('Message sent successfully!');
-        setMessage('');
+        setMessage(''); // This clears the textarea via onMessageChange
         setTimeout(() => setSuccess(''), 3000);
+
       } else {
         setError(data.message || 'Failed to send message');
       }
@@ -155,10 +178,19 @@ export default function RelativeDashboard() {
     }
   };
 
+  useEffect(() => {
+    console.log('🔍 Patient Data Debug:', {
+      patientData: patientData,
+      monitoredPatient: user?.monitoredPatient,
+      patientHasEmail: !!patientData?.email,
+      patientHasPhone: !!patientData?.phoneNumber
+    });
+  }, [patientData, user]);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    clearDismissedAlerts(); // Clear dismissed alerts on logout
+    clearDismissedAlerts();
     router.push('/login');
   };
 
@@ -215,39 +247,59 @@ export default function RelativeDashboard() {
             bmiResult={bmiResult}
           />
 
-          {/* Alert Summary */}
-          {filteredAlerts.length > 0 && (
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Health Alerts ({filteredAlerts.length})
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {filteredAlerts.filter(a => a.severity === 'critical').length} critical, 
-                    {' '}{filteredAlerts.filter(a => a.severity === 'warning').length} warnings
-                  </p>
-                </div>
-                <div className="flex gap-2">
+          {/* Alert Settings & Summary Bar */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  Health Monitoring Status
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {filteredAlerts.length > 0
+                    ? `${filteredAlerts.length} active condition alert${filteredAlerts.length > 1 ? 's' : ''}`
+                    : 'No critical alerts'}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {dismissedAlerts.size > 0 && (
                   <button
-                    onClick={() => handleDismissAllAlerts()}
-                    className="px-3 py-1.5 text-sm bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Dismiss All
-                  </button>
-                  <button
-                    onClick={() => clearDismissedAlerts()}
+                    onClick={clearDismissedAlerts}
                     className="px-3 py-1.5 text-sm bg-blue-100 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                   >
                     Show All Alerts
                   </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Regular Health Alerts - Critical Condition Alerts */}
+          {filteredAlerts.length > 0 && (
+            <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 rounded-lg p-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-red-900 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    Critical Health Alerts ({filteredAlerts.length})
+                  </h3>
+                  <p className="text-sm text-red-700">
+                    {filteredAlerts.filter(a => a.severity === 'critical').length} critical condition alerts detected
+                  </p>
                 </div>
+                {filteredAlerts.length > 1 && (
+                  <button
+                    onClick={handleDismissAllAlerts}
+                    className="px-3 py-1.5 text-sm bg-white border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors font-medium"
+                  >
+                    Dismiss All
+                  </button>
+                )}
               </div>
             </div>
           )}
 
-          <HealthAlerts 
-            alerts={filteredAlerts} 
+          <HealthAlerts
+            alerts={filteredAlerts}
             onDismissAlert={handleDismissAlert}
           />
 
@@ -279,9 +331,6 @@ export default function RelativeDashboard() {
 
             {activeTab === 'medications' && (
               <MedicationsTab
-                medications={medications}
-                patientData={patientData}
-                onMarkAsTaken={markMedicationAsTaken}
               />
             )}
 
