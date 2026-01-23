@@ -446,8 +446,8 @@ const CaretakerDashboard = () => {
  
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
-      {/* Non-sticky header with beautiful gradient */}
-      <div className="w-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 shadow-xl border-b border-emerald-600/20">
+      {/* Non-sticky header with white background */}
+      <div className="w-full bg-white shadow-xl border-b border-gray-200">
         <DashboardHeader />
       </div>
  
@@ -470,17 +470,7 @@ const CaretakerDashboard = () => {
           </div>
         )}
 
-        {/* When a patient is selected, show their key details at the top */}
-        {selectedPatient && (
-          <div className="w-full max-w-7xl mb-4 transition-all duration-300 ease-out mx-auto">
-            <div className="transform scale-100 opacity-100 drop-shadow-md">
-              <PatientHeader 
-                patient={selectedPatient} 
-                onOpenMessaging={handleOpenMessaging}
-              />
-            </div>
-          </div>
-        )}
+        {/* Removed duplicate patient header - keeping only the one in the patient details section */}
 
         {/* Main responsive grid layout – mirrors hypertension dashboard structure */}
         <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
@@ -548,9 +538,9 @@ const CaretakerDashboard = () => {
               </Card>
             )}
 
-            {/* Quick Stats Section */}
+            {/* Enhanced Quick Stats Section */}
             <QuickStats patients={patients} />
- 
+
             {/* Assignment Info – admin controlled */}
             <Card className="shadow-md border-cyan-100/70 bg-white/80 backdrop-blur-sm">
               <CardHeader className="bg-gradient-to-r from-cyan-500 via-emerald-500 to-teal-500 rounded-t-xl">
@@ -568,75 +558,9 @@ const CaretakerDashboard = () => {
                 </p>
               </CardContent>
             </Card>
- 
-            {/* Assigned Patients List in Sidebar - Show when no patient is selected */}
-            {!selectedPatient && (
-              <Card className="shadow-xl border-emerald-100/70 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 rounded-t-xl">
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center space-x-2">
-                      <span className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
-                        <Users className="w-4 h-4 text-white" />
-                      </span>
-                      <span className="text-sm font-semibold text-white">Patients</span>
-                    </span>
-                    <span className="text-xs text-emerald-50">
-                      {filteredPatients.length}
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 pt-4 max-h-96 overflow-y-auto bg-white/80 rounded-b-xl">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3" />
-                    <Input
-                      type="text"
-                      placeholder="Search..."
-                      className="w-full pl-8 text-xs h-8"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {(filteredPatients as Patient[]).map((patient) => {
-                      const isSelected = ((selectedPatient as Patient | null)?.id ?? null) === patient.id;
-                      return (
-                        <div
-                          key={patient.id}
-                          className={`p-3 rounded-lg border cursor-pointer transition-all text-xs ${
-                            isSelected
-                              ? 'bg-gradient-to-r from-emerald-50 via-cyan-50 to-blue-50 border-emerald-300 shadow-md'
-                              : 'bg-white border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/40'
-                          }`}
-                          onClick={() => {
-                            handlePatientSelect(patient);
-                            setActivePatientTab('overview');
-                          }}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold text-gray-900 truncate">{patient.fullName}</h4>
-                            {getStatusIcon(patient.status)}
-                          </div>
-                          <div className="flex items-center justify-between text-gray-600">
-                            <span className="truncate">{patient.age}y • {patient.gender}</span>
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${getConditionColor(patient.condition)}`}>
-                              {getConditionIcon(patient.condition)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
 
-                    {filteredPatients.length === 0 && (
-                      <div className="py-6 text-center text-gray-500">
-                        <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                        <p className="text-xs font-medium">No patients found</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* Removed the duplicate patient list from sidebar to avoid redundancy */}
+            {/* Patients are now only shown in the main content area via AssignedPatientsGrid */}
           </div>
 
           {/* Right Main Content */}

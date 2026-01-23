@@ -23,6 +23,7 @@ import PatientProfile from "./components/PatientProfile";
 import EditProfileModal from "./components/EditProfileModal";
 import TabContent from "./components/TabContent";
 import HypertensionAlert from "../components/hypertension/alert";
+import SidebarHealthAlert from "../components/hypertension/SidebarHealthAlert";
 import { usePatientData } from "./hooks/usePatientData";
 import { useVitalsData } from "./hooks/useVitalsData";
 import { useLifestyleData } from "./hooks/useLifestyleData";
@@ -232,7 +233,7 @@ function DashboardPage() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <HypertensionAlert refreshToken={alertRefreshToken} />
+                  <SidebarHealthAlert refreshToken={alertRefreshToken} />
                 </div>
               </div>
 

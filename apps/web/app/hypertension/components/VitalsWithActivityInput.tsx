@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react"
-import ContextAwareAlert, { type ContextAnalysis } from "./ContextAwareAlert"
+import SidebarAlert, { type ContextAnalysis } from "./SidebarAlert"
 import { Heart, Activity as ActivityIcon, Clock, Zap, Mic } from "lucide-react"
 import { useTranslation } from "../../../lib/hypertension/useTranslation"
 import InteractiveVoiceForm from "./InteractiveVoiceForm"
@@ -1638,7 +1638,7 @@ export default function VitalsWithActivityInput({
 
         {analysis && lastAnalyzedVitals && (
           <div className="mt-6">
-            {analysis && lastAnalyzedVitals && <ContextAwareAlert analysis={analysis} vitals={lastAnalyzedVitals} />}
+            {analysis && lastAnalyzedVitals && <SidebarAlert analysis={analysis} vitals={lastAnalyzedVitals} />}
           </div>
         )}
       </div>
