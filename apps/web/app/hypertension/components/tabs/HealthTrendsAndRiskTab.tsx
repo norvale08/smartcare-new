@@ -145,12 +145,12 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
   }
 
   // Calculate risk level for current data
-const getRiskLevel = (score: number) => {
-  if (score >= 46) return "critical";
-  if (score >= 31) return "high";
-  if (score >= 16) return "moderate";
-  return "low";
-};
+  const getRiskLevel = (score: number) => {
+    if (score >= 46) return "critical";
+    if (score >= 31) return "high";
+    if (score >= 16) return "moderate";
+    return "low";
+  };
 
   const currentRiskLevel = getRiskLevel(currentRiskScore);
 
@@ -238,8 +238,10 @@ const getRiskLevel = (score: number) => {
     const earliest = bpVitals[0];
     const latestBP = bpVitals[bpVitals.length - 1];
     
-const systolicChange = latestBP && latestBP.systolic && earliest && earliest.systolic? latestBP.systolic - earliest.systolic : 0;
-const diastolicChange = latestBP && latestBP.diastolic && earliest && earliest.diastolic? latestBP.diastolic - earliest.diastolic : 0;
+    const systolicChange = latestBP && latestBP.systolic && earliest && earliest.systolic ? 
+      latestBP.systolic - earliest.systolic : 0;
+    const diastolicChange = latestBP && latestBP.diastolic && earliest && earliest.diastolic ? 
+      latestBP.diastolic - earliest.diastolic : 0;
     const avgChange = (systolicChange + diastolicChange) / 2;
 
     let trend: 'improving' | 'worsening' | 'stable' | 'insufficient_data' = 'stable';
@@ -282,8 +284,8 @@ const diastolicChange = latestBP && latestBP.diastolic && earliest && earliest.d
   const averages = calculateAverages();
 
   // Prepare chart data - FIXED DATE FORMAT
-const chartData = sortedVitals.map((vital) => {
-  const dateStr = vital.parsedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' });
+  const chartData = sortedVitals.map((vital) => {
+    const dateStr = vital.parsedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' });
     
     // Calculate risk for this specific reading
     const risk = historicalRiskData.find(r => 
@@ -477,172 +479,218 @@ const chartData = sortedVitals.map((vital) => {
           </div>
         </div>
 
-        {/* CHARTS SECTION */}
+          {/* CHARTS SECTION */}
         <div className="shadow-lg bg-white w-full rounded-lg px-6 py-6">
           <h4 className="text-lg font-semibold text-gray-900 mb-6">Health Data Trends</h4>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Blood Pressure Chart */}
-            {bpChartData.length > 0 ? (
-              <div className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <HeartPulse className="w-5 h-5 text-red-500" />
-                    <h5 className="font-medium text-gray-900">Blood Pressure Trends</h5>
+
+          {/* Blood Pressure Chart - Full Width, Above Heart Rate */}
+          {bpChartData.length > 0 ? (
+            <div className="border border-gray-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <HeartPulse className="w-5 h-5 text-red-500" />
+                  <h5 className="font-medium text-gray-900">Blood Pressure Trends</h5>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <span className="text-xs text-gray-600">Systolic</span>
+                  <div className="w-3 h-3 bg-blue-500 rounded-full ml-2"></div>
+                  <span className="text-xs text-gray-600">Diastolic</span>
+                </div>
+              </div>
+
+              {/* Blood Pressure Information Panel */}
+              <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                <h6 className="text-sm font-semibold text-gray-800 mb-2">Blood Pressure Guidelines</h6>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span>Normal: {"<"}120/{"<"}80</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-xs text-gray-600">Systolic</span>
-                    <div className="w-3 h-3 bg-blue-500 rounded-full ml-2"></div>
-                    <span className="text-xs text-gray-600">Diastolic</span>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                    <span>Elevated: 120-129/{"<"}80</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
+                    <span>Stage 1: 130-139/80-89</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
+                    <span>Stage 2: {"≥"}140/{"≥"}90</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                    <span>Crisis: {"≥"}180/{"≥"}120</span>
                   </div>
                 </div>
-                
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsLineChart data={bpChartData}>
-                      <defs>
-                        <linearGradient id="systolicGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#dc2626" stopOpacity={0.1}/>
-                        </linearGradient>
-                        <linearGradient id="diastolicGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.1}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                      <XAxis 
-                        dataKey="date" 
-                        angle={-45}
-                        textAnchor="end"
-                        height={60}
-                        fontSize={12}
-                        stroke="#6b7280"
-                      />
-                      <YAxis domain={[60, 180]} fontSize={12} stroke="#6b7280" />
-                      <Tooltip 
-                        labelFormatter={(value, payload) => {
-                          const data = payload && payload[0]?.payload;
-                          return data?.fullDate || `Date: ${value}`;
-                        }}
-                        formatter={(value, name) => [`${value} mmHg`, name]}
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                        }}
-                      />
-                      <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="systolic" 
-                        stroke="#dc2626" 
-                        strokeWidth={3}
-                        name="Systolic"
-                        dot={{ fill: '#dc2626', strokeWidth: 2, r: 5 }}
-                        activeDot={{ r: 7, fill: '#dc2626' }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="diastolic" 
-                        stroke="#2563eb" 
-                        strokeWidth={3}
-                        name="Diastolic"
-                        dot={{ fill: '#2563eb', strokeWidth: 2, r: 5 }}
-                        activeDot={{ r: 7, fill: '#2563eb' }}
-                      />
-                    </RechartsLineChart>
-                  </ResponsiveContainer>
+              </div>
+
+              <div className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsLineChart data={bpChartData}>
+                    <defs>
+                      <linearGradient id="systolicGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#dc2626" stopOpacity={0.1}/>
+                      </linearGradient>
+                      <linearGradient id="diastolicGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                    <XAxis
+                      dataKey="date"
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                      fontSize={12}
+                      stroke="#6b7280"
+                    />
+                    <YAxis domain={[60, 180]} fontSize={12} stroke="#6b7280" />
+                    <Tooltip
+                      labelFormatter={(value, payload) => {
+                        const data = payload && payload[0]?.payload;
+                        return data?.fullDate || `Date: ${value}`;
+                      }}
+                      formatter={(value, name) => [`${value} mmHg`, name]}
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="systolic"
+                      stroke="#dc2626"
+                      strokeWidth={3}
+                      name="Systolic"
+                      dot={{ fill: '#dc2626', strokeWidth: 2, r: 5 }}
+                      activeDot={{ r: 7, fill: '#dc2626' }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="diastolic"
+                      stroke="#2563eb"
+                      strokeWidth={3}
+                      name="Diastolic"
+                      dot={{ fill: '#2563eb', strokeWidth: 2, r: 5 }}
+                      activeDot={{ r: 7, fill: '#2563eb' }}
+                    />
+                    {/* Single Middle Threshold Line at 120/80 */}
+                    <Line
+                      type="monotone"
+                      dataKey={() => 120}
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      name="Normal Threshold (120/80)"
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Chart Legend and Information */}
+              <div className="mt-3">
+                <div className="flex justify-center space-x-4 text-xs">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-red-500 rounded-full mr-1"></div>
+                    <span>Systolic</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-1"></div>
+                    <span>Diastolic</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-10 h-1 border-t-2 border-yellow-500 mr-1" style={{borderStyle: 'dashed'}}></div>
+                    <span>Normal Threshold (120/80)</span>
+                  </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2 text-center">
                   Showing {bpChartData.length} blood pressure reading{bpChartData.length !== 1 ? 's' : ''}
                 </p>
-              </div>
-            ) : (
-              <div className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center space-x-2 mb-4">
-                  <HeartPulse className="w-5 h-5 text-gray-400" />
-                  <h5 className="font-medium text-gray-900">Blood Pressure Trends</h5>
-                </div>
-                <div className="h-32 flex items-center justify-center text-gray-500 text-sm">
-                  <Clock className="w-5 h-5 mr-2" />
-                  No blood pressure data available for chart
-                </div>
-              </div>
-            )}
-
-            {/* Heart Rate Chart */}
-            {hrChartData.length > 0 ? (
-              <div className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Activity className="w-5 h-5 text-orange-500" />
-                  <h5 className="font-medium text-gray-900">Heart Rate Trends</h5>
-                </div>
-                
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsLineChart data={hrChartData}>
-                      <defs>
-                        <linearGradient id="heartRateGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ea580c" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#ea580c" stopOpacity={0.1}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                      <XAxis 
-                        dataKey="date" 
-                        angle={-45}
-                        textAnchor="end"
-                        height={60}
-                        fontSize={12}
-                        stroke="#6b7280"
-                      />
-                      <YAxis domain={[50, 120]} fontSize={12} stroke="#6b7280" />
-                      <Tooltip 
-                        labelFormatter={(value, payload) => {
-                          const data = payload && payload[0]?.payload;
-                          return data?.fullDate || `Date: ${value}`;
-                        }}
-                        formatter={(value, name) => [`${value} BPM`, name]}
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                        }}
-                      />
-                      <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="heartRate" 
-                        stroke="#ea580c" 
-                        strokeWidth={3}
-                        name="Heart Rate"
-                        dot={{ fill: '#ea580c', strokeWidth: 2, r: 5 }}
-                        activeDot={{ r: 7, fill: '#ea580c' }}
-                      />
-                    </RechartsLineChart>
-                  </ResponsiveContainer>
-                </div>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  Showing {hrChartData.length} heart rate reading{hrChartData.length !== 1 ? 's' : ''}
+                <p className="text-xs text-gray-400 mt-1 text-center">
+                  Normal BP: {"<"}120/{"<"}80 | Elevated: 120-129/{"<"}80 | Stage 1: 130-139/80-89 | Stage 2: {"≥"}140/{"≥"}90 | Crisis: {"≥"}180/{"≥"}120
                 </p>
               </div>
-            ) : (
-              <div className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Activity className="w-5 h-5 text-gray-400" />
-                  <h5 className="font-medium text-gray-900">Heart Rate Trends</h5>
-                </div>
-                <div className="h-32 flex items-center justify-center text-gray-500 text-sm">
-                  <Clock className="w-5 h-5 mr-2" />
-                  No heart rate data available for chart
-                </div>
+            </div>
+          ) : (
+            <div className="border border-gray-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <HeartPulse className="w-5 h-5 text-gray-400" />
+                <h5 className="font-medium text-gray-900">Blood Pressure Trends</h5>
               </div>
-            )}
-          </div>
+              <div className="h-32 flex items-center justify-center text-gray-500 text-sm">
+                <Clock className="w-5 h-5 mr-2" />
+                No blood pressure data available for chart
+              </div>
+            </div>
+          )}
+
+          {/* Heart Rate Chart - Now below Blood Pressure */}
+          {hrChartData.length > 0 && (
+            <div className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-4">
+                <Activity className="w-5 h-5 text-orange-500" />
+                <h5 className="font-medium text-gray-900">Heart Rate Trends</h5>
+              </div>
+
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsLineChart data={hrChartData}>
+                    <defs>
+                      <linearGradient id="heartRateGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ea580c" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#ea580c" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                    <XAxis
+                      dataKey="date"
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                      fontSize={12}
+                      stroke="#6b7280"
+                    />
+                    <YAxis domain={[50, 120]} fontSize={12} stroke="#6b7280" />
+                    <Tooltip
+                      labelFormatter={(value, payload) => {
+                        const data = payload && payload[0]?.payload;
+                        return data?.fullDate || `Date: ${value}`;
+                      }}
+                      formatter={(value, name) => [`${value} BPM`, name]}
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="heartRate"
+                      stroke="#ea580c"
+                      strokeWidth={3}
+                      name="Heart Rate"
+                      dot={{ fill: '#ea580c', strokeWidth: 2, r: 5 }}
+                      activeDot={{ r: 7, fill: '#ea580c' }}
+                    />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Showing {hrChartData.length} heart rate reading{hrChartData.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          )}
 
           {/* Risk Level Over Time Chart */}
           {riskChartData.length > 0 && (

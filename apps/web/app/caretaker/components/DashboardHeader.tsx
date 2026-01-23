@@ -137,7 +137,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ doctorName }) => {
         };
 
         setDoctorData(basicDoctorData);
-        setError('Using profile data from login - complete your doctor profile for full features');
+        // setError('Using profile data from login - complete your doctor profile for full features');
       } catch (tokenError) {
         console.error('Error extracting token data:', tokenError);
         // Minimal fallback with just the basics
@@ -203,24 +203,24 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ doctorName }) => {
     });
   };
 
-  if (isLoading) {
+      if (isLoading) {
     return (
-      <header className="w-full bg-transparent">
+      <header className="w-full bg-white">
         <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
-              <Stethoscope className="w-8 h-8 text-white" />
+              <Stethoscope className="w-8 h-8 text-emerald-600" />
               <div>
-                <h1 className="text-2xl font-bold text-white">Caretaker Dashboard</h1>
-                <p className="text-sm text-emerald-100">SmartCare</p>
+                <h1 className="text-2xl font-bold text-gray-900">Caretaker Dashboard</h1>
+                <p className="text-sm text-emerald-600">SmartCare</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="animate-pulse">
-                <div className="h-4 bg-white/30 rounded w-24 mb-1"></div>
-                <div className="h-3 bg-white/20 rounded w-16"></div>
+                <div className="h-4 bg-gray-200 rounded w-24 mb-1"></div>
+                <div className="h-3 bg-gray-100 rounded w-16"></div>
               </div>
-              <div className="w-8 h-8 bg-white/25 rounded-full animate-pulse"></div>
+              <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
             </div>
           </div>
         </div>
@@ -229,52 +229,52 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ doctorName }) => {
   }
 
   return (
-    <header className="w-full bg-transparent">
+    <header className="w-full bg-white">
       <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
         {error && (
-          <div className="bg-white/15 border-l-4 border-amber-300 p-3 rounded-md mt-3">
+          <div className="bg-red-50 border-l-4 border-red-300 p-3 rounded-md mt-3">
             <div className="flex items-center">
-              <AlertCircle className="w-5 h-5 text-amber-100 mr-2" />
-              <p className="text-sm text-amber-50">{error}</p>
+              <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+              <p className="text-sm text-red-700">{error}</p>
             </div>
           </div>
         )}
 
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center space-x-3">
-            <Stethoscope className="w-8 h-8 text-white" />
+            <Stethoscope className="w-8 h-8 text-emerald-600" />
             <div>
-              <h1 className="text-2xl font-bold text-white">Caretaker Dashboard</h1>
-              {/* <p className="text-sm text-gray-500">Doctor Dashboard</p> */}
+              <h1 className="text-2xl font-bold text-gray-900">Caretaker Dashboard</h1>
+              <p className="text-sm text-emerald-600">SmartCare</p>
             </div>
           </div>
 
           <div className="flex items-center space-x-4">
             <div className="text-right">
-              <p className="font-medium text-white">
+              <p className="font-medium text-gray-900">
                 {getCurrentGreeting()}, Dr. {doctorData?.firstName} {doctorData?.lastName}
               </p>
-              <p className="text-sm text-emerald-100">
+              <p className="text-sm text-emerald-600">
                 {formatCurrentDate()}
               </p>
             </div>
             <div className="relative">
-              <User className="w-8 h-8 bg-white/25 rounded-full p-1 text-white" />
+              <User className="w-8 h-8 bg-emerald-100 rounded-full p-1 text-emerald-600" />
               {doctorData?.licenseNumber && (
-                <BadgeCheck className="w-3 h-3 text-white absolute -top-1 -right-1" />
+                <BadgeCheck className="w-3 h-3 text-emerald-600 absolute -top-1 -right-1" />
               )}
             </div>
           </div>
         </div>
 
         {doctorData && (
-          <div className="border-t border-white/20 pt-4 pb-4">
-            <div className="flex flex-wrap items-center gap-4 text-sm text-white/95">
+          <div className="border-t border-gray-200 pt-4 pb-4">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-700">
               {doctorData.specialization && (
                 <div className="flex items-center space-x-2">
-                  <Stethoscope className="w-4 h-4 text-emerald-100" />
-                  <span className="font-medium text-emerald-50">Specialization:</span>
-                  <span className="px-2 py-1 rounded-full text-xs font-medium border border-white/25 bg-white/15 text-white">
+                  <Stethoscope className="w-4 h-4 text-emerald-600" />
+                  <span className="font-medium text-emerald-700">Specialization:</span>
+                  <span className="px-2 py-1 rounded-full text-xs font-medium border border-emerald-200 bg-emerald-50 text-emerald-800">
                     {doctorData.specialization}
                   </span>
                 </div>
@@ -282,54 +282,54 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ doctorName }) => {
 
               {doctorData.hospital && doctorData.hospital !== 'Medical Center' && (
                 <div className="flex items-center space-x-2">
-                  <Building className="w-4 h-4 text-emerald-100" />
-                  <span className="font-medium text-emerald-50">Hospital:</span>
-                  <span className="text-emerald-50/90">{doctorData.hospital}</span>
+                  <Building className="w-4 h-4 text-emerald-600" />
+                  <span className="font-medium text-emerald-700">Hospital:</span>
+                  <span className="text-emerald-700">{doctorData.hospital}</span>
                 </div>
               )}
 
               {doctorData.licenseNumber && !doctorData.licenseNumber.startsWith('LIC-000000') && (
                 <div className="flex items-center space-x-2">
-                  <BadgeCheck className="w-4 h-4 text-emerald-100" />
-                  <span className="font-medium text-emerald-50">License:</span>
-                  <span className="text-emerald-50/90 font-mono text-xs">{doctorData.licenseNumber}</span>
+                  <BadgeCheck className="w-4 h-4 text-emerald-600" />
+                  <span className="font-medium text-emerald-700">License:</span>
+                  <span className="text-emerald-700 font-mono text-xs">{doctorData.licenseNumber}</span>
                 </div>
               )}
 
               {doctorData.phoneNumber && (
                 <div className="flex items-center space-x-2">
-                  <span className="font-medium text-emerald-50">Phone:</span>
-                  <span className="text-emerald-50/90">{formatPhoneNumber(doctorData.phoneNumber)}</span>
+                  <span className="font-medium text-emerald-700">Phone:</span>
+                  <span className="text-emerald-700">{formatPhoneNumber(doctorData.phoneNumber)}</span>
                 </div>
               )}
 
               <div className="flex items-center space-x-2">
-                <Calendar className="w-4 h-4 text-emerald-100" />
-                <span className="font-medium text-emerald-50">Treats:</span>
+                <Calendar className="w-4 h-4 text-emerald-600" />
+                <span className="font-medium text-emerald-700">Treats:</span>
                 <div className="flex space-x-2">
                   {doctorData.diabetes && (
-                    <span className="px-2 py-1 bg-white/15 text-white text-xs rounded-full border border-white/25">
+                    <span className="px-2 py-1 bg-emerald-50 text-emerald-800 text-xs rounded-full border border-emerald-200">
                       Diabetes
                     </span>
                   )}
                   {doctorData.hypertension && (
-                    <span className="px-2 py-1 bg-white/15 text-white text-xs rounded-full border border-white/25">
+                    <span className="px-2 py-1 bg-emerald-50 text-emerald-800 text-xs rounded-full border border-emerald-200">
                       Hypertension
                     </span>
                   )}
                   {!doctorData.diabetes && !doctorData.hypertension && doctorData.specialization && (
-                    <span className="text-emerald-50/80 text-xs">{doctorData.specialization}</span>
+                    <span className="text-emerald-700 text-xs">{doctorData.specialization}</span>
                   )}
                   {!doctorData.diabetes && !doctorData.hypertension && !doctorData.specialization && (
-                    <span className="text-emerald-50/80 text-xs">General Practice</span>
+                    <span className="text-emerald-700 text-xs">General Practice</span>
                   )}
                 </div>
               </div>
 
               {doctorData.createdAt && (
                 <div className="flex items-center space-x-2 ml-auto">
-                  <span className="font-medium text-emerald-50">Member since:</span>
-                  <span className="text-emerald-50/90">
+                  <span className="font-medium text-emerald-700">Member since:</span>
+                  <span className="text-emerald-700">
                     {new Date(doctorData.createdAt).toLocaleDateString()}
                   </span>
                 </div>
