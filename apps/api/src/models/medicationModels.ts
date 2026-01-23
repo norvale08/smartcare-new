@@ -182,6 +182,23 @@ const medicationSchema = new mongoose.Schema({
       trim: true
     }
   }],
+  endDate: {
+  type: Date,
+  // Calculated based on startDate + duration
+},
+expiryAlert: {
+  sent: {
+    type: Boolean,
+    default: false
+  },
+  sentAt: {
+    type: Date
+  },
+  daysBeforeExpiry: {
+    type: Number,
+    default: 3 // Alert 3 days before expiry
+  }
+},
   
   // Potential side effects of THIS medication (added by doctor)
   potentialSideEffects: [{

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { 
   HeartPulse, Users, Search, Phone, MessageSquare, Calendar,
   Stethoscope, AlertTriangle, CheckCircle, Clock, Filter, Activity, Pill, PlusCircle,
-  TrendingUp,Shield,Bell
+  TrendingUp, Shield, Bell
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button, Input, Card, CardHeader, CardContent, CardTitle } from "@repo/ui";
@@ -19,6 +19,10 @@ import DoctorMedicationManagement from './components/DoctorMedicationManagement'
 import AppointmentsView from './components/AppointmentsView';
 import MedicationPrescriptionModal from './components/MedicationPrescriptionModal';
 import AssignedPatientsGrid from './components/AssignedPatientsGrid';
+
+// NEW: Import expiring medications components
+import ExpiringMedicationsAlert from './components/ExpiringMedicationsAlert';
+import ExpiringMedicationsDashboard from "./components/ExpiringMedicationDashboard";
 
 interface Patient {
   id: string;
@@ -274,6 +278,28 @@ const CaretakerDashboard = () => {
     }
   };
 
+  // NEW: Handle medication alert click
+  const handleMedicationAlertClick = (patientId: string, medicationId: string) => {
+    // Find the patient
+    const patient = patients.find(p => 
+      p.id === patientId || 
+      p.userId === patientId || 
+      p.user?._id === patientId || 
+      p.user?.id === patientId
+    );
+
+    if (patient) {
+      // Select the patient
+      handlePatientSelect(patient);
+      // Switch to medications tab
+      setActivePatientTab('medications');
+      // Show success message
+      setMessage(`Viewing medications for ${patient.fullName}`);
+    } else {
+      setMessage('Patient not found in your assigned patients');
+    }
+  };
+
   const refreshAssignedPatients = () => {
     setRefreshTrigger(prev => prev + 1);
   };
@@ -470,6 +496,13 @@ const CaretakerDashboard = () => {
           </div>
         )}
 
+        {/* NEW: Expiring Medications Alert Banner - Shows at top when not viewing a patient */}
+        {!selectedPatient && (
+          <div className="w-full max-w-7xl mx-auto">
+            <ExpiringMedicationsAlert onMedicationClick={handleMedicationAlertClick} />
+          </div>
+        )}
+
         {/* When a patient is selected, show their key details at the top */}
         {selectedPatient && (
           <div className="w-full max-w-7xl mb-4 transition-all duration-300 ease-out mx-auto">
@@ -641,6 +674,11 @@ const CaretakerDashboard = () => {
 
           {/* Right Main Content */}
           <div className="lg:col-span-3 space-y-6">
+            {/* NEW: Expiring Medications Dashboard Widget - Shows when no patient selected */}
+            {!selectedPatient && (
+              <ExpiringMedicationsDashboard onMedicationClick={handleMedicationAlertClick} />
+            )}
+
             {/* Show assigned patients grid when no patient is selected */}
             <div className="bg-white/85 backdrop-blur-sm rounded-2xl shadow-2xl border border-emerald-100/60 overflow-hidden">
               {!selectedPatient ? (
