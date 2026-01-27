@@ -58,13 +58,15 @@ const toObjectId = (userId: any) => {
 
 // ✅ GET /api/relative/patient-profile
 // Get the monitored patient's profile
+// apps/api/src/routes/relativePatient.ts
+// Update the /patient-profile endpoint
+
 router.get("/patient-profile", authenticateRelative, async (req: any, res: any) => {
   try {
     await connectMongoDB();
 
     console.log("🔍 Relative fetching patient profile, relativeId:", req.userId);
 
-    // Get the relative's user record
     const relativeUser = await User.findById(toObjectId(req.userId));
     
     if (!relativeUser || relativeUser.role !== "relative") {
@@ -82,7 +84,6 @@ router.get("/patient-profile", authenticateRelative, async (req: any, res: any) 
       monitoredPatientProfile: relativeUser.monitoredPatientProfile
     });
 
-    // Get the patient profile
     if (!relativeUser.monitoredPatientProfile) {
       return res.status(404).json({
         success: false,
@@ -101,8 +102,8 @@ router.get("/patient-profile", authenticateRelative, async (req: any, res: any) 
     }
 
     console.log("✅ Patient profile found:", patient._id);
+    console.log("📍 Patient location:", patient.location); // Add this log
 
-    // Get patient's user account for additional info
     const patientUser = await User.findById(toObjectId(patient.userId));
 
     res.status(200).json({
@@ -125,7 +126,8 @@ router.get("/patient-profile", authenticateRelative, async (req: any, res: any) 
         surgeries: patient.surgeries || "",
         picture: patient.picture,
         weight: patient.weight,
-        height: patient.height
+        height: patient.height,
+        location: patient.location || null  // ADD THIS LINE - Include location data
       }
     });
 

@@ -1,15 +1,29 @@
 import React from 'react';
-import { MessageSquare, User } from 'lucide-react';
+import { MessageSquare, User, MapPin } from 'lucide-react';
 import { Patient } from '../types';
 
 interface PatientHeaderProps {
   patient: Patient;
-   onOpenMessaging: () => void; 
+  onOpenMessaging: () => void;
+  onViewLocation?: () => void; // Add optional location handler
 }
 
-const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging }) => {
+const PatientHeader: React.FC<PatientHeaderProps> = ({ 
+  patient, 
+  onOpenMessaging,
+  onViewLocation 
+}) => {
   const handleMessage = () => {
-    onOpenMessaging(); // Just call the function without parameters
+    onOpenMessaging();
+  };
+
+  const handleViewLocation = () => {
+    if (onViewLocation) {
+      onViewLocation();
+    } else {
+      // Fallback: Navigate to location page if no handler provided
+      window.location.href = '/patient-location';
+    }
   };
 
   return (
@@ -21,7 +35,6 @@ const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging 
             <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
               <User className="w-8 h-8 text-white" />
             </div>
-            {/* Removed the green call box as requested */}
           </div>
 
           <div>
@@ -34,13 +47,20 @@ const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging 
 
         <div className="flex space-x-3">
           <button
+            onClick={handleViewLocation}
+            className="flex items-center space-x-2 px-4 py-2 border border-green-300 bg-green-50 rounded-lg text-green-700 hover:bg-green-100 transition-colors"
+          >
+            <MapPin className="w-4 h-4" />
+            <span>View Location</span>
+          </button>
+
+          <button
             onClick={handleMessage}
             className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
           >
             <MessageSquare className="w-4 h-4" />
             <span>Message</span>
           </button>
-          {/* Removed the call button completely as requested */}
         </div>
       </div>
     </div>

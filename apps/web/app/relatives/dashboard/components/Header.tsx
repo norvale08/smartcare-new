@@ -1,6 +1,7 @@
 // relative/dashboard/components/Header.tsx
-import { RefreshCw, LogOut } from 'lucide-react';
+import { RefreshCw, LogOut, MapPin } from 'lucide-react';
 import { User } from '../types';
+import Link from 'next/link';
 
 interface HeaderProps {
   user: User | null;
@@ -29,6 +30,14 @@ export function Header({ user, isRefreshing, onRefresh, onLogout }: HeaderProps)
             </p>
 
             <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+              {/* Patient Location Button */}
+              <Link href="/patient-location">
+                <button className="flex items-center justify-center px-4 py-2 bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 text-green-700 font-medium rounded-lg border border-green-200 shadow-sm transition-all duration-200 text-sm sm:text-base w-full sm:w-auto">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Patient Location
+                </button>
+              </Link>
+
               <button
                 onClick={onRefresh}
                 disabled={isRefreshing}

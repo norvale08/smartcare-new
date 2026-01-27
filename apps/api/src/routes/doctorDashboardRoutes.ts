@@ -75,26 +75,58 @@ router.get("/doctor", authenticateUser, async (req: AuthRequest, res) => {
     }
 });
 
-// --- Assigned Patients (NEW) ---
+// --- Assigned Patients (FIXED) ---
 router.get("/assignedPatients", authenticateUser, async (req: AuthRequest, res) => {
     try {
         const { search } = req.query;
-        const query: any = {};
-
-        if (search) {
-            query.fullName = { $regex: search, $options: "i" }; // case-insensitive search
-        }
         if (!req.user?.id) return res.status(401).json({ error: "Unauthorized" });
 
-        // fetch only patients where doctorId matches the logged in doctor
-        const patients = await Patient.find({ doctorId: req.user.id });
+        console.log(`🔍 Doctor ${req.user.id} requesting assigned patients`);
 
+        // FIXED: Query User model for patients assigned to this doctor
+        const userQuery: any = { 
+            role: "patient", 
+            assignedDoctor: req.user.id 
+        };
+
+        if (search) {
+            userQuery.$or = [
+                { fullName: { $regex: search, $options: "i" } },
+                { firstName: { $regex: search, $options: "i" } },
+                { lastName: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } }
+            ];
+        }
+
+        // Get patient users assigned to this doctor
+        const patientUsers = await User.find(userQuery)
+            .select("_id firstName lastName fullName email phoneNumber condition diabetes hypertension")
+            .lean();
+
+        console.log(`📊 Found ${patientUsers.length} patient users for doctor ${req.user.id}`);
+
+        // Get their corresponding Patient records
+        const patientUserIds = patientUsers.map(u => u._id);
+        const patientRecords = await Patient.find({ userId: { $in: patientUserIds } })
+            .lean();
+
+        console.log(`📋 Found ${patientRecords.length} patient records`);
+
+        // Create a map for quick lookup
+        const patientRecordMap = new Map();
+        patientRecords.forEach((record: any) => {
+            patientRecordMap.set(record.userId.toString(), record);
+        });
+
+        // Build response with vitals and location data
         const patientsWithVitals = await Promise.all(
-            patients.map(async (patient) => {
+            patientUsers.map(async (user: any) => {
+                const patientRecord = patientRecordMap.get(user._id.toString());
+                
                 let vitals: any = {};
 
-                // Diabetes
-                const diabetes: IDiabetes | null = await Diabetes.findOne({ userId: patient.userId })
+                // Diabetes - using user._id as userId
+                const diabetes: IDiabetes | null = await Diabetes.findOne({ userId: user._id })
                     .sort({ createdAt: -1 })
                     .lean<IDiabetes>();
                 if (diabetes) {
@@ -102,8 +134,8 @@ router.get("/assignedPatients", authenticateUser, async (req: AuthRequest, res) 
                     vitals.context = diabetes.context;
                 }
 
-                // Hypertension
-                const hypertension: IHypertensionVital | null = await HypertensionVital.findOne({ userId: patient.userId })
+                // Hypertension - using user._id as userId
+                const hypertension: IHypertensionVital | null = await HypertensionVital.findOne({ userId: user._id })
                     .sort({ createdAt: -1 })
                     .lean<IHypertensionVital>();
                 if (hypertension) {
@@ -111,48 +143,89 @@ router.get("/assignedPatients", authenticateUser, async (req: AuthRequest, res) 
                     vitals.heartRate = hypertension.heartRate;
                 }
 
-                const bmi = calculateBMI(patient.weight, patient.height);
-                if (bmi) vitals.bmi = bmi;
-
-                // Risk Level
-                const riskLevel = await evaluateRiskLevel(patient.toObject(), vitals);
-
-                // Location handling with coordinates
-                const locationData = patient.location;
-                let locationDisplay = "No location data";
-                let coordinates = null;
-
-                if (locationData && locationData.lat && locationData.lng) {
-                    locationDisplay = locationData.address || `${locationData.lat.toFixed(4)}, ${locationData.lng.toFixed(4)}`;
-                    coordinates = {
-                        lat: locationData.lat,
-                        lng: locationData.lng
-                    };
-                    console.log(`📍 Patient ${patient.fullName} location:`, locationDisplay);
-                } else {
-                    console.log(`⚠️ No location data for patient ${patient.fullName}`);
+                // BMI from patient record
+                if (patientRecord) {
+                    const bmi = calculateBMI(patientRecord.weight, patientRecord.height);
+                    if (bmi) vitals.bmi = bmi;
                 }
 
-                return {
-                    ...patient.toObject(),
+                // Risk Level
+                const patientData = patientRecord ? patientRecord : {
+                    diabetes: user.diabetes,
+                    hypertension: user.hypertension
+                };
+                const riskLevel = await evaluateRiskLevel(patientData, vitals);
+
+                // Location handling - from Patient record
+                const locationData = patientRecord?.location;
+
+                // Debug: Log the raw patient data
+                console.log(`\n🔍 Patient: ${user.fullName || `${user.firstName} ${user.lastName}`}`);
+                console.log(`   User ID: ${user._id}`);
+                console.log(`   Patient Record ID: ${patientRecord?._id}`);
+                console.log(`   location field exists: ${!!locationData}`);
+                console.log(`   location data:`, JSON.stringify(locationData, null, 2));
+
+                // Format location to match what the frontend expects
+                let formattedLocation = null;
+                if (locationData && locationData.lat && locationData.lng) {
+                    formattedLocation = {
+                        lat: locationData.lat,
+                        lng: locationData.lng,
+                        address: locationData.address || `${locationData.lat.toFixed(4)}, ${locationData.lng.toFixed(4)}`,
+                        updatedAt: locationData.updatedAt || patientRecord?.updatedAt
+                    };
+                    console.log(`   ✅ Location formatted:`, formattedLocation);
+                } else {
+                    console.log(`   ⚠️ No valid location data`);
+                    if (locationData) {
+                        console.log(`   ⚠️ Location object exists but missing lat/lng`);
+                        console.log(`   ⚠️ lat: ${locationData.lat}, lng: ${locationData.lng}`);
+                    }
+                }
+
+                const result = {
+                    _id: user._id.toString(),
+                    userId: user._id.toString(),
+                    fullName: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+                    firstname: patientRecord?.firstname || user.firstName || '',
+                    lastname: patientRecord?.lastname || user.lastName || '',
+                    email: user.email || patientRecord?.email || '',
+                    phoneNumber: user.phoneNumber || patientRecord?.phoneNumber || '',
+                    age: patientRecord?.age,
+                    dob: patientRecord?.dob,
+                    gender: patientRecord?.gender,
+                    weight: patientRecord?.weight,
+                    height: patientRecord?.height,
+                    picture: patientRecord?.picture,
                     vitals,
                     riskLevel,
-                    location: locationDisplay,
-                    coordinates: coordinates,
+                    location: formattedLocation,  // Matches the relative route format
+                    coordinates: formattedLocation ? { lat: formattedLocation.lat, lng: formattedLocation.lng } : null,
                     conditions: {
-                        diabetes: patient.diabetes,
-                        hypertension: patient.hypertension,
+                        diabetes: patientRecord?.diabetes || user.diabetes || false,
+                        hypertension: patientRecord?.hypertension || user.hypertension || false,
                     },
                 };
+
+                return result;
             })
         );
 
+        // Summary logging
+        const patientsWithLocation = patientsWithVitals.filter(p => p.location !== null);
+        console.log(`\n📊 Summary:`);
+        console.log(`   Total patients: ${patientsWithVitals.length}`);
+        console.log(`   Patients with location: ${patientsWithLocation.length}`);
+        
         res.json(patientsWithVitals);
     } catch (err: any) {
         console.error("❌ Error in GET /assignedPatients:", err.message, err.stack);
         res.status(500).json({ error: err.message });
     }
 });
+
+
 
 router.get("/api/doctorDashboard", async (req, res) => {
     try {
