@@ -1,6 +1,8 @@
+"use client";
+
 // FILE: app/caretaker/components/MedicationCard.tsx
 import React from 'react';
-import { 
+import {
   Pill, Trash2, CheckCircle, UserX, ChevronDown, ChevronUp, User,
   AlertCircle, Thermometer, MessageSquare, Shield, Activity, XCircle,
   CheckSquare, Square, Clock3, Calendar, Clock, AlertTriangle,
@@ -95,19 +97,19 @@ interface MedicationCardProps {
   formatDate: (dateString: string) => string;
 }
 
-// Helper function to get status color (Blue theme)
+// Helper function to get status color (Emerald/Teal/Red theme)
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'active':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
     case 'completed':
-      return 'bg-blue-50 text-blue-700 border-blue-100';
+      return 'bg-teal-100 text-teal-800 border-teal-200';
     case 'stopped':
-      return 'bg-blue-25 text-blue-600 border-blue-50';
+      return 'bg-red-100 text-red-800 border-red-200';
     case 'cancelled':
       return 'bg-gray-100 text-gray-800 border-gray-200';
     case 'missed':
-      return 'bg-blue-25 text-blue-600 border-blue-50';
+      return 'bg-orange-100 text-orange-800 border-orange-200';
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200';
   }
@@ -117,15 +119,17 @@ const getStatusColor = (status: string) => {
 const getStatusIcon = (status: string) => {
   switch (status) {
     case 'active':
-      return <Activity className="w-3 h-3 text-blue-600" />;
+      return <Activity className="w-3 h-3 text-emerald-600" />;
     case 'stopped':
-      return <UserX className="w-3 h-3 text-blue-600" />;
+      return <UserX className="w-3 h-3 text-red-600" />;
     case 'completed':
-      return <CheckCircle className="w-3 h-3 text-blue-600" />;
+      return <CheckCircle className="w-3 h-3 text-teal-600" />;
     case 'cancelled':
-      return <XCircle className="w-3 h-3 text-blue-600" />;
+      return <XCircle className="w-3 h-3 text-gray-600" />;
+    case 'missed':
+      return <AlertTriangle className="w-3 h-3 text-orange-600" />;
     default:
-      return <Pill className="w-3 h-3 text-blue-600" />;
+      return <Pill className="w-3 h-3 text-emerald-600" />;
   }
 };
 
@@ -133,44 +137,44 @@ const getStatusIcon = (status: string) => {
 const getAdherenceIcon = (status: string) => {
   switch (status) {
     case 'taken':
-      return <CheckSquare className="w-3 h-3 text-blue-600" />;
+      return <CheckSquare className="w-3 h-3 text-emerald-600" />;
     case 'missed':
-      return <Square className="w-3 h-3 text-blue-600" />;
+      return <Square className="w-3 h-3 text-orange-600" />;
     case 'stopped':
-      return <UserX className="w-3 h-3 text-blue-600" />;
+      return <UserX className="w-3 h-3 text-red-600" />;
     default:
-      return <Clock3 className="w-3 h-3 text-blue-600" />;
+      return <Clock3 className="w-3 h-3 text-gray-600" />;
   }
 };
 
-// Helper function to get adherence color (Blue theme)
+// Helper function to get adherence color (Emerald/Teal/Red theme)
 const getAdherenceColor = (status: string) => {
   switch (status) {
     case 'taken':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
     case 'missed':
-      return 'bg-blue-50 text-blue-700 border-blue-100';
+      return 'bg-orange-100 text-orange-800 border-orange-200';
     case 'stopped':
-      return 'bg-blue-25 text-blue-600 border-blue-50';
+      return 'bg-red-100 text-red-800 border-red-200';
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 };
 
-// Helper function to get severity color (Blue theme)
+// Helper function to get severity color (Emerald/Teal/Red theme)
 const getSeverityColor = (severity: string) => {
   switch (severity) {
     case 'severe':
     case 'very severe':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'bg-red-100 text-red-800 border-red-200';
     case 'moderate':
-      return 'bg-blue-50 text-blue-700 border-blue-100';
+      return 'bg-orange-100 text-orange-800 border-orange-200';
     case 'mild':
-      return 'bg-blue-25 text-blue-600 border-blue-50';
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200';
   }
-};
+}
 
 const MedicationCard: React.FC<MedicationCardProps> = ({
   medication,
@@ -186,7 +190,7 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
 }) => {
   const sideEffects = medication.experiencedSideEffects || [];
   const hasSideEffects = sideEffects.length > 0;
-  const hasSevereSideEffects = sideEffects.some(se => 
+  const hasSevereSideEffects = sideEffects.some(se =>
     se.severity === 'severe' || se.intensity === 'severe' || se.intensity === 'very severe'
   );
   const hasUnresolved = sideEffects.some(se => !se.resolved);
@@ -198,19 +202,20 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
   return (
     <div
       className={`border rounded-lg hover:shadow-md transition-all duration-200 bg-white ${
-        medication.status === 'stopped' ? 'border-blue-300' :
-        medication.status === 'active' ? 'border-blue-400' :
-        medication.status === 'completed' ? 'border-blue-300' :
+        medication.status === 'stopped' ? 'border-red-300' :
+        medication.status === 'active' ? 'border-emerald-400' :
+        medication.status === 'completed' ? 'border-teal-300' :
+        medication.status === 'missed' ? 'border-orange-300' :
         'border-gray-300'
-      } ${isExpanded ? 'ring-1 ring-blue-100' : ''}`}
+      } ${isExpanded ? 'ring-1 ring-emerald-100' : ''}`}
     >
       <div className="p-4">
         {/* Compact Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2 mb-2">
-              <div className="p-1.5 bg-blue-50 rounded-md">
-                <Pill className="w-4 h-4 text-blue-600" />
+              <div className="p-1.5 bg-emerald-50 rounded-md">
+                <Pill className="w-4 h-4 text-emerald-600" />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-gray-900 text-sm truncate" title={medication.medicationName}>
@@ -224,19 +229,19 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
                 )}
               </div>
             </div>
-            
+
             {/* Status Row */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(medication.status)} flex items-center`}>
                 {getStatusIcon(medication.status)}
                 <span className="ml-1">{medication.status.charAt(0).toUpperCase() + medication.status.slice(1)}</span>
               </span>
-              
+
               <div className={`px-2 py-1 rounded text-xs font-medium ${getAdherenceColor(adherenceStatus)} flex items-center`}>
                 {getAdherenceIcon(adherenceStatus)}
                 <span className="ml-1">{adherenceStatus}</span>
               </div>
-              
+
               {medication.lastTaken && (
                 <span className="text-xs text-gray-500 flex items-center">
                   <Clock className="w-3 h-3 mr-0.5" />
@@ -248,7 +253,7 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
             {/* Duration / End Date (active meds) */}
             {showTiming && (
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">
-                <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-800 px-2 py-1 rounded">
+                <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-100 text-emerald-800 px-2 py-1 rounded">
                   <Calendar className="w-3 h-3" />
                   <span>
                     Ends {timing.endDate ? formatDate(timing.endDate.toISOString()) : '—'}
@@ -267,7 +272,7 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
               </div>
             )}
           </div>
-          
+
           {/* Compact Action Buttons */}
           <div className="flex items-center space-x-0.5 ml-2 flex-shrink-0">
             {/* Edit Button - Show if onEdit is provided */}
@@ -284,14 +289,14 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
               <>
                 <button
                   onClick={() => onUpdateStatus(medication.id, 'completed')}
-                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                   title="Mark as completed"
                 >
                   <CheckCircle className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => onUpdateStatus(medication.id, 'stopped')}
-                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
                   title="Stop prescription"
                 >
                   <UserX className="w-3.5 h-3.5" />
@@ -300,7 +305,7 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
             )}
             <button
               onClick={() => onDelete(medication.id)}
-              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
               title="Delete prescription"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -320,44 +325,44 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-gray-50 p-2 rounded-md">
               <div className="flex items-center mb-1">
-                <Droplets className="w-3 h-3 text-blue-600 mr-1" />
+                <Droplets className="w-3 h-3 text-emerald-600 mr-1" />
                 <span className="text-xs font-medium text-gray-700">Dosage</span>
               </div>
               <p className="text-sm font-semibold text-gray-900 truncate">{medication.dosage}</p>
             </div>
-            
+
             <div className="bg-gray-50 p-2 rounded-md">
               <div className="flex items-center mb-1">
-                <Clock className="w-3 h-3 text-blue-600 mr-1" />
+                <Clock className="w-3 h-3 text-teal-600 mr-1" />
                 <span className="text-xs font-medium text-gray-700">Frequency</span>
               </div>
               <p className="text-sm font-semibold text-gray-900 truncate">{medication.frequency}</p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-gray-50 p-2 rounded-md">
               <div className="flex items-center mb-1">
-                <Calendar className="w-3 h-3 text-blue-600 mr-1" />
+                <Calendar className="w-3 h-3 text-emerald-600 mr-1" />
                 <span className="text-xs font-medium text-gray-700">Duration</span>
               </div>
               <p className="text-sm font-semibold text-gray-900 truncate">{medication.duration}</p>
             </div>
-            
+
             <div className="bg-gray-50 p-2 rounded-md">
               <div className="flex items-center mb-1">
-                <Calendar className="w-3 h-3 text-blue-600 mr-1" />
+                <Calendar className="w-3 h-3 text-teal-600 mr-1" />
                 <span className="text-xs font-medium text-gray-700">Started</span>
               </div>
               <p className="text-xs text-gray-900 truncate">{formatDate(medication.startDate)}</p>
             </div>
           </div>
-          
+
           {medication.instructions && (
-            <div className="bg-blue-50 p-2 rounded-md border border-blue-100">
+            <div className="bg-emerald-50 p-2 rounded-md border border-emerald-100">
               <div className="flex items-center mb-1">
-                <Info className="w-3 h-3 text-blue-600 mr-1" />
-                <span className="text-xs font-medium text-blue-700">Instructions</span>
+                <Info className="w-3 h-3 text-emerald-600 mr-1" />
+                <span className="text-xs font-medium text-emerald-700">Instructions</span>
               </div>
               <p className="text-xs text-gray-700 truncate">{medication.instructions}</p>
             </div>
@@ -368,8 +373,8 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
         <div className="mb-3">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
-              <div className={`p-1 rounded ${hasSideEffects ? (hasSevereSideEffects ? 'bg-blue-100' : 'bg-blue-50') : 'bg-blue-25'}`}>
-                <AlertCircle className={`w-3.5 h-3.5 ${hasSideEffects ? (hasSevereSideEffects ? 'text-blue-600' : 'text-blue-500') : 'text-blue-400'}`} />
+              <div className={`p-1 rounded ${hasSideEffects ? (hasSevereSideEffects ? 'bg-red-100' : 'bg-orange-100') : 'bg-emerald-50'}`}>
+                <AlertCircle className={`w-3.5 h-3.5 ${hasSideEffects ? (hasSevereSideEffects ? 'text-red-600' : 'text-orange-600') : 'text-emerald-600'}`} />
               </div>
               <div>
                 <p className="text-xs font-medium text-gray-700">Side Effects</p>
@@ -382,13 +387,13 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
             {hasSideEffects && (
               <button
                 onClick={onToggleExpand}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                className="text-xs text-emerald-600 hover:text-emerald-800 font-medium"
               >
                 {isExpanded ? 'Hide' : 'View'}
               </button>
             )}
           </div>
-          
+
           {hasSideEffects && !isExpanded && (
             <div className="flex flex-wrap gap-1">
               {sideEffects.slice(0, 2).map((effect, idx) => (
@@ -399,7 +404,7 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
                 >
                   {effect.sideEffectName}
                   {effect.resolved && (
-                    <CheckCircle className="w-2.5 h-2.5 inline ml-0.5 text-blue-600" />
+                    <CheckCircle className="w-2.5 h-2.5 inline ml-0.5 text-emerald-600" />
                   )}
                 </span>
               ))}
@@ -416,7 +421,7 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
         {medication.patientAllergies && medication.patientAllergies.length > 0 && (
           <div className="mb-3">
             <div className="flex items-center space-x-2 mb-2">
-              <Thermometer className="w-3.5 h-3.5 text-blue-600" />
+              <Thermometer className="w-3.5 h-3.5 text-red-600" />
               <p className="text-xs font-medium text-gray-700">Allergies</p>
               <span className="text-xs text-gray-500">({medication.patientAllergies.length})</span>
             </div>
@@ -424,7 +429,7 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
               {medication.patientAllergies.slice(0, 2).map((allergy, index) => (
                 <span
                   key={index}
-                  className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium border border-blue-200 truncate max-w-full"
+                  className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium border border-red-200 truncate max-w-full"
                   title={`${allergy.allergyName} - ${allergy.severity}`}
                 >
                   {allergy.allergyName}
@@ -441,14 +446,14 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
 
         {/* Stopped Medication Reason */}
         {medication.status === 'stopped' && medication.adherence?.reasonForStopping && (
-          <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-md">
             <div className="flex items-start space-x-2">
-              <UserX className="w-3.5 h-3.5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <UserX className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-blue-800">Stopped</p>
-                <p className="text-xs text-blue-700 truncate">{medication.adherence.reasonForStopping}</p>
+                <p className="text-xs font-medium text-red-800">Stopped</p>
+                <p className="text-xs text-red-700 truncate">{medication.adherence.reasonForStopping}</p>
                 {medication.adherence.stoppedAt && (
-                  <p className="text-xs text-blue-600 mt-1">
+                  <p className="text-xs text-red-600 mt-1">
                     {formatDate(medication.adherence.stoppedAt)}
                   </p>
                 )}
@@ -465,17 +470,17 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h5 className="text-sm font-medium text-gray-900 flex items-center">
-                    <AlertCircle className="w-3.5 h-3.5 mr-1.5 text-blue-600" />
+                    <AlertCircle className="w-3.5 h-3.5 mr-1.5 text-red-600" />
                     Side Effects ({sideEffects.length})
                   </h5>
                   <span className="text-xs text-gray-500">
                     {sideEffects.filter(se => se.resolved).length} resolved
                   </span>
                 </div>
-                
+
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {sideEffects.map((effect, index) => (
-                    <div key={index} className={`p-2 rounded border ${effect.resolved ? 'bg-blue-50 border-blue-200' : 'bg-blue-25 border-blue-100'}`}>
+                    <div key={index} className={`p-2 rounded border ${effect.resolved ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-1.5 mb-1">
@@ -484,34 +489,34 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
                               {effect.severity}
                             </span>
                             {effect.resolved && (
-                              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-medium flex items-center flex-shrink-0">
+                              <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded text-xs font-medium flex items-center flex-shrink-0">
                                 <CheckCircle className="w-2.5 h-2.5 mr-0.5" />
                                 Resolved
                               </span>
                             )}
                           </div>
-                          
+
                           {effect.notes && (
                             <p className="text-xs text-gray-600 mb-1 truncate">
                               <span className="font-medium">Notes:</span> {effect.notes}
                             </p>
                           )}
-                          
+
                           {effect.doctorNotes && (
                             <div className="mb-1 p-1.5 bg-white rounded border text-xs">
-                              <p className="font-medium text-blue-700 mb-0.5">Doctor:</p>
+                              <p className="font-medium text-emerald-700 mb-0.5">Doctor:</p>
                               <p className="text-gray-700 truncate">{effect.doctorNotes}</p>
                             </div>
                           )}
-                          
+
                           <p className="text-xs text-gray-500">
                             {formatDate(effect.reportedAt)}
                           </p>
                         </div>
-                        
+
                         <button
                           onClick={() => onOpenSideEffectModal(effect, medication.id, index, medication.medicationName)}
-                          className="ml-2 p-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex-shrink-0"
+                          className="ml-2 p-1.5 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors flex-shrink-0"
                           title="Update side effect"
                         >
                           <MessageSquare className="w-3 h-3" />
@@ -527,12 +532,12 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
             {medication.potentialSideEffects && medication.potentialSideEffects.length > 0 && (
               <div>
                 <h5 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                  <Shield className="w-3.5 h-3.5 mr-1.5 text-blue-600" />
+                  <Shield className="w-3.5 h-3.5 mr-1.5 text-teal-600" />
                   Potential Side Effects
                 </h5>
                 <div className="grid grid-cols-1 gap-1.5">
                   {medication.potentialSideEffects.slice(0, 3).map((effect, index) => (
-                    <div key={index} className="p-2 bg-blue-50 border border-blue-200 rounded">
+                    <div key={index} className="p-2 bg-teal-50 border border-teal-200 rounded">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium truncate">{effect.name}</span>
                         <span className={`px-1.5 py-0.5 rounded text-xs ${getSeverityColor(effect.severity)} flex-shrink-0`}>

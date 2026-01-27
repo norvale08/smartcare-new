@@ -13,6 +13,7 @@ import LifestyleAssessment from "./LifestyleAssessment";
 import DietRecommendations from "./DietRecommendations";
 import type { LifestyleData } from "./LifestyleAssessment";
 import Maps from "../../../app/components/Map"
+import PatientAppointments from "../../../app/components/PatientAppointments";
 import { useTranslation } from "../../../lib/hypertension/useTranslation";
 
 interface TabContentProps {
@@ -95,6 +96,11 @@ const TabContent: React.FC<TabContentProps> = ({
           <div className={sectionCardClass}>
             <div className={sectionBodyClass}>
               <DoctorManagement condition="hypertension" />
+            </div>
+          </div>
+          <div className={`${sectionCardClass} mt-6`}>
+            <div className={sectionBodyClass}>
+              {patient && <PatientAppointments patientId={patient._id} />}
             </div>
           </div>
           {/* <NearbyClinics /> */}
