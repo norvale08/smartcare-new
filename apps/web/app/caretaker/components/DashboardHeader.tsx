@@ -1,6 +1,6 @@
 // app/caretaker/components/DashboardHeader.tsx
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, User, Calendar, Building, BadgeCheck, AlertCircle } from 'lucide-react';
+import { Stethoscope, User, Calendar, Building, BadgeCheck, AlertCircle, MessageSquare } from 'lucide-react';
 
 interface DoctorData {
   _id: string;
@@ -21,9 +21,11 @@ interface DoctorData {
 
 interface DashboardHeaderProps {
   doctorName?: string;
+  onOpenMessages?: () => void;
+  hasUnreadMessages?: boolean;
 }
 
-const DashboardHeader: React.FC<DashboardHeaderProps> = ({ doctorName }) => {
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({ doctorName, onOpenMessages, hasUnreadMessages }) => {
   const [doctorData, setDoctorData] = useState<DoctorData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -258,11 +260,23 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ doctorName }) => {
                 {formatCurrentDate()}
               </p>
             </div>
-            <div className="relative">
-              <User className="w-8 h-8 bg-emerald-100 rounded-full p-1 text-emerald-600" />
-              {doctorData?.licenseNumber && (
-                <BadgeCheck className="w-3 h-3 text-emerald-600 absolute -top-1 -right-1" />
-              )}
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => onOpenMessages && onOpenMessages()}
+                className="relative p-1 rounded-full hover:bg-emerald-50 transition-colors"
+                title="Messages"
+              >
+                <MessageSquare className="w-6 h-6 text-emerald-600" />
+                {hasUnreadMessages && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
+              </button>
+              <div className="relative">
+                <User className="w-8 h-8 bg-emerald-100 rounded-full p-1 text-emerald-600" />
+                {doctorData?.licenseNumber && (
+                  <BadgeCheck className="w-3 h-3 text-emerald-600 absolute -top-1 -right-1" />
+                )}
+              </div>
             </div>
           </div>
         </div>
