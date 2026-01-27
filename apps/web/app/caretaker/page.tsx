@@ -272,8 +272,10 @@ const CaretakerDashboard = () => {
   const handleOpenMessaging = () => {
     if (selectedPatient) {
       // Set the active tab to messages
-      // This will be handled by the PatientTabs component internally
+      setActivePatientTab('messages');
+      setFullScreenMode(true);
     } else {
+      setMessage("Please select a patient first to open messaging");
       console.error("No patient selected for messaging");
     }
   };
@@ -472,10 +474,13 @@ const CaretakerDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
-      {/* Non-sticky header with beautiful gradient */}
-      <div className="w-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 shadow-xl border-b border-emerald-600/20">
-        <DashboardHeader />
-      </div>
+          {/* Non-sticky header with beautiful gradient */}
+          <div className="w-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 shadow-xl border-b border-emerald-600/20">
+            <DashboardHeader
+              onOpenMessages={handleOpenMessaging}
+              hasUnreadMessages={false} // You can implement unread message detection here
+            />
+          </div>
 
       {/* Floating realtime notifications tray */}
       <RealTimeNotifications onNotificationSelect={handleNotificationSelect} />
