@@ -1,5 +1,6 @@
 // ============================================
 // FILE: apps/web/app/caretaker/components/MedicationPrescriptionModal/hooks.ts
+// UPDATED: Added setFormData export for edit mode support
 // ============================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -48,15 +49,20 @@ export const useMedicationData = (
   }, [patient?.id, fetchExistingMedications]);
 
   const handlePrescribe = useCallback(async (formData: MedicationFormData) => {
-    // Check for duplicate medication
-    const isDuplicate = existingMedications.some(
-      med => med.medicationName.toLowerCase() === formData.medicationName.toLowerCase() &&
-             med.status === 'active'
-    );
+    // Check if we're updating or creating
+    const isUpdating = !!formData.medicationId;
 
-    if (isDuplicate) {
-      if (!confirm('This patient already has an active prescription for this medication. Do you want to prescribe it again?')) {
-        return;
+    if (!isUpdating) {
+      // Check for duplicate medication only when creating new
+      const isDuplicate = existingMedications.some(
+        med => med.medicationName.toLowerCase() === formData.medicationName.toLowerCase() &&
+               med.status === 'active'
+      );
+
+      if (isDuplicate) {
+        if (!confirm('This patient already has an active prescription for this medication. Do you want to prescribe it again?')) {
+          return;
+        }
       }
     }
 
@@ -69,21 +75,25 @@ export const useMedicationData = (
     try {
       const token = localStorage.getItem("token");
       
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medications/reminders/prescribe`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token ?? ''}`,
-          },
-          body: JSON.stringify(prescriptionData)
-        }
-      );
+      // Different endpoints for update vs create
+      const url = isUpdating
+        ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medications/prescribe/${formData.medicationId}`
+        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medications/reminders/prescribe`;
+      
+      const method = isUpdating ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token ?? ''}`,
+        },
+        body: JSON.stringify(prescriptionData)
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to prescribe medication');
+        throw new Error(errorData.message || `Failed to ${isUpdating ? 'update' : 'prescribe'} medication`);
       }
 
       const result = await response.json();
@@ -92,15 +102,15 @@ export const useMedicationData = (
       onPrescribe(result.data);
       
       // Show success message
-      alert('Medication prescribed successfully!');
+      alert(`Medication ${isUpdating ? 'updated' : 'prescribed'} successfully!`);
       
       // Refresh existing medications
       fetchExistingMedications();
       
       onClose();
     } catch (error: any) {
-      console.error('❌ Error prescribing medication:', error);
-      alert(error.message || 'Failed to prescribe medication. Please try again.');
+      console.error('❌ Error with medication:', error);
+      alert(error.message || `Failed to ${isUpdating ? 'update' : 'prescribe'} medication. Please try again.`);
       throw error;
     }
   }, [existingMedications, patient?.id, onPrescribe, onClose, fetchExistingMedications]);
@@ -239,6 +249,7 @@ export const useMedicationForm = () => {
 
   return {
     formData,
+    setFormData, // ⭐ ADDED: Export setFormData for edit mode
     newAllergy,
     newSideEffect,
     updateFormData,

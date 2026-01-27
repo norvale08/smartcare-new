@@ -4,7 +4,7 @@ import {
   Pill, Trash2, CheckCircle, UserX, ChevronDown, ChevronUp, User,
   AlertCircle, Thermometer, MessageSquare, Shield, Activity, XCircle,
   CheckSquare, Square, Clock3, Calendar, Clock, AlertTriangle,
-  Droplets, Info, FileText
+  Droplets, Info, FileText, Edit
 } from 'lucide-react';
 import { getMedicationTiming } from '../../components/utils/medicationDates';
 
@@ -87,6 +87,7 @@ interface MedicationCardProps {
   };
   isExpanded: boolean;
   onToggleExpand: () => void;
+  onEdit?: (medication: Medication) => void;
   onUpdateStatus: (medicationId: string, newStatus: 'active' | 'completed' | 'stopped' | 'cancelled') => void;
   onDelete: (medicationId: string) => void;
   onOpenSideEffectModal: (sideEffect: SideEffect, medicationId: string, effectIndex: number, medicationName: string) => void;
@@ -176,6 +177,7 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
   patient,
   isExpanded,
   onToggleExpand,
+  onEdit,
   onUpdateStatus,
   onDelete,
   onOpenSideEffectModal,
@@ -268,6 +270,16 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
           
           {/* Compact Action Buttons */}
           <div className="flex items-center space-x-0.5 ml-2 flex-shrink-0">
+            {/* Edit Button - Show if onEdit is provided */}
+            {onEdit && (
+              <button
+                onClick={() => onEdit(medication)}
+                className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                title="Edit prescription"
+              >
+                <Edit className="w-3.5 h-3.5" />
+              </button>
+            )}
             {medication.status === 'active' && (
               <>
                 <button
