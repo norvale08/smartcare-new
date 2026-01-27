@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Plus
 } from 'lucide-react';
+import AppointmentSchedulerModal from './AppointmentSchedulerModal'; // Import the modal
 
 interface Appointment {
   _id: string;
@@ -47,6 +48,9 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ patient }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming');
+  
+  // State for appointment scheduling modal
+  const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
 
   useEffect(() => {
     if (patient) {
@@ -175,6 +179,12 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ patient }) => {
     }
   };
 
+  // Handler for successful appointment scheduling
+  const handleScheduleSuccess = () => {
+    // Refresh the appointments list
+    fetchAppointments();
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'short',
@@ -247,157 +257,185 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ patient }) => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Appointments</h2>
-          <p className="text-gray-600">Manage appointments for {patient.fullName}</p>
-        </div>
-        <div className="flex space-x-3">
-          <button
-            onClick={fetchAppointments}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Refresh</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex space-x-4">
-        {(['all', 'upcoming', 'past'] as const).map((filterType) => (
-          <button
-            key={filterType}
-            onClick={() => setFilter(filterType)}
-            className={`px-4 py-2 rounded-lg font-medium capitalize ${
-              filter === filterType
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {filterType} ({filterType === 'all' ? appointments.length : 
-                         filterType === 'upcoming' ? appointments.filter(a => new Date(a.scheduledDate) >= new Date() && a.status === 'scheduled').length :
-                         appointments.filter(a => new Date(a.scheduledDate) < new Date() || a.status !== 'scheduled').length})
-          </button>
-        ))}
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          <div className="flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={fetchAppointments} className="text-red-700 hover:text-red-900">
-              Try Again
+    <>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Appointments</h2>
+            <p className="text-gray-600">Manage appointments for {patient.fullName}</p>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={fetchAppointments}
+              className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh</span>
+            </button>
+            {/* Updated Schedule Appointment Button */}
+            <button
+              onClick={() => setIsSchedulerOpen(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Schedule Appointment</span>
             </button>
           </div>
         </div>
-      )}
 
-      {/* Appointments List */}
-      <div className="space-y-4">
-        {filteredAppointments.length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 rounded-lg border">
-            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Appointments Found</h3>
-            <p className="text-gray-500">
-              {filter === 'upcoming' 
-                ? 'No upcoming appointments scheduled.'
-                : filter === 'past'
-                ? 'No past appointments found.'
-                : 'No appointments found for this patient.'
-              }
-            </p>
-          </div>
-        ) : (
-          filteredAppointments.map((appointment) => (
-            <div
-              key={appointment._id}
-              className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow"
+        {/* Filters */}
+        <div className="flex space-x-4">
+          {(['all', 'upcoming', 'past'] as const).map((filterType) => (
+            <button
+              key={filterType}
+              onClick={() => setFilter(filterType)}
+              className={`px-4 py-2 rounded-lg font-medium capitalize transition-colors ${
+                filter === filterType
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
             >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-3">
-                    {getTypeIcon(appointment.type)}
-                    <h3 className="text-lg font-semibold text-gray-900 capitalize">
-                      {appointment.type.replace('-', ' ')}
-                    </h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(appointment.status)}`}>
-                      {appointment.status.toUpperCase()}
-                    </span>
-                  </div>
+              {filterType} ({filterType === 'all' ? appointments.length : 
+                           filterType === 'upcoming' ? appointments.filter(a => new Date(a.scheduledDate) >= new Date() && a.status === 'scheduled').length :
+                           appointments.filter(a => new Date(a.scheduledDate) < new Date() || a.status !== 'scheduled').length})
+            </button>
+          ))}
+        </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        <span>{formatDate(appointment.scheduledDate)}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        <span>Duration: {appointment.duration} minutes</span>
-                      </div>
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="flex items-center justify-between">
+              <span>{error}</span>
+              <button onClick={fetchAppointments} className="text-red-700 hover:text-red-900">
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Appointments List */}
+        <div className="space-y-4">
+          {filteredAppointments.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-lg border">
+              <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Appointments Found</h3>
+              <p className="text-gray-500 mb-4">
+                {filter === 'upcoming' 
+                  ? 'No upcoming appointments scheduled.'
+                  : filter === 'past'
+                  ? 'No past appointments found.'
+                  : 'No appointments found for this patient.'
+                }
+              </p>
+              {/* Add call-to-action for scheduling first appointment */}
+              {filter === 'upcoming' && (
+                <button
+                  onClick={() => setIsSchedulerOpen(true)}
+                  className="inline-flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Schedule First Appointment</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            filteredAppointments.map((appointment) => (
+              <div
+                key={appointment._id}
+                className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-3">
+                      {getTypeIcon(appointment.type)}
+                      <h3 className="text-lg font-semibold text-gray-900 capitalize">
+                        {appointment.type.replace('-', ' ')}
+                      </h3>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(appointment.status)}`}>
+                        {appointment.status.toUpperCase()}
+                      </span>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <User className="w-4 h-4 text-gray-400" />
-                        <span>Doctor: {appointment.doctorId.fullName}</span>
-                      </div>
-                      {appointment.doctorId.specialization && (
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                      <div className="space-y-2">
                         <div className="flex items-center space-x-2">
-                          <Stethoscope className="w-4 h-4 text-gray-400" />
-                          <span>{appointment.doctorId.specialization}</span>
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          <span>{formatDate(appointment.scheduledDate)}</span>
                         </div>
-                      )}
+                        <div className="flex items-center space-x-2">
+                          <Clock className="w-4 h-4 text-gray-400" />
+                          <span>Duration: {appointment.duration} minutes</span>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <User className="w-4 h-4 text-gray-400" />
+                          <span>Doctor: {appointment.doctorId.fullName}</span>
+                        </div>
+                        {appointment.doctorId.specialization && (
+                          <div className="flex items-center space-x-2">
+                            <Stethoscope className="w-4 h-4 text-gray-400" />
+                            <span>{appointment.doctorId.specialization}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
+
+                    {appointment.notes && (
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-700">
+                          <strong>Notes:</strong> {appointment.notes}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
-                  {appointment.notes && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-700">
-                        <strong>Notes:</strong> {appointment.notes}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Menu */}
-                <div className="flex space-x-2 ml-4">
-                  {appointment.status === 'scheduled' && (
-                    <>
-                      <button
-                        onClick={() => updateAppointmentStatus(appointment._id, 'completed')}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Mark as completed"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => updateAppointmentStatus(appointment._id, 'cancelled')}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Cancel appointment"
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
-                  <button
-                    onClick={() => deleteAppointment(appointment._id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Delete appointment"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {/* Action Menu */}
+                  <div className="flex space-x-2 ml-4">
+                    {appointment.status === 'scheduled' && (
+                      <>
+                        <button
+                          onClick={() => updateAppointmentStatus(appointment._id, 'completed')}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Mark as completed"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => updateAppointmentStatus(appointment._id, 'cancelled')}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Cancel appointment"
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => deleteAppointment(appointment._id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete appointment"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Appointment Scheduler Modal */}
+      <AppointmentSchedulerModal
+        isOpen={isSchedulerOpen}
+        onClose={() => setIsSchedulerOpen(false)}
+        patient={patient}
+        onScheduleSuccess={handleScheduleSuccess}
+      />
+    </>
   );
 };
 

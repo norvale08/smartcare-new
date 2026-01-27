@@ -252,29 +252,33 @@ const PatientTabs: React.FC<PatientTabsProps> = ({
         );
       case 'health-trends':
         return (
-          <HealthTrendsTab
-            patient={patient}
-            patientVitals={patientVitals}
-          />
+          <div className="h-[calc(100vh-120px)] overflow-y-auto pr-2">
+            <HealthTrendsTab
+              patient={patient}
+              patientVitals={patientVitals}
+            />
+          </div>
         );
       case 'risk-assessment':
         return (
-          <HealthRiskAssessmentTab
-            patient={patient}
-            patientVitals={patientVitals}
-          />
-        );
-      case 'alerts':
-        return (
-          <AlertsNotificationsTab
-            patient={patient}
-          />
+          <div className="h-[calc(100vh-120px)] overflow-y-auto pr-2">
+            <HealthRiskAssessmentTab
+              patient={patient}
+              patientVitals={patientVitals}
+            />
+          </div>
         );
       case 'medications':
         return (
-          <DoctorMedicationManagement 
-            patient={{ id: patient.id, fullName: patient.fullName }} 
-          />
+          <div className="h-[calc(100vh-120px)] overflow-y-auto pr-2">
+            <DoctorMedicationManagement
+              patient={{ id: patient.id, fullName: patient.fullName }}
+            />
+          </div>
+        );
+      case 'alerts':
+        return (
+          <AlertsNotificationsTab patient={patient} />
         );
       case 'appointments':
         return (
@@ -293,7 +297,7 @@ const PatientTabs: React.FC<PatientTabsProps> = ({
                   <p className="text-sm text-gray-500">Conversation with {patient.fullName}</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={onOpenMessaging}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
               >
@@ -309,9 +313,9 @@ const PatientTabs: React.FC<PatientTabsProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border shadow-sm overflow-hidden h-full flex flex-col">
       {/* Tab Content only – navigation is handled from the sidebar */}
-      <div className="p-6">{renderTabContent()}</div>
+      <div className="p-6 flex-1 overflow-auto">{renderTabContent()}</div>
     </div>
   );
 };

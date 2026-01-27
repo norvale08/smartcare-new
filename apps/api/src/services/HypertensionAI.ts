@@ -8,6 +8,16 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const model = "llama-3.3-70b-versatile"; // High-quality model
 
 // ========== HELPER FUNCTIONS ==========
+function computeAge(dob: string | Date): number {
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return 0;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 async function getDailyAlerts(userId: string, language: string = "en-US"): Promise<string[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -764,16 +774,106 @@ Keep your response professional, evidence-based, and easy to understand for pati
 }
 
 // ========== VITALS ANALYSIS ==========
-export async function analyzeVitalsWithAI(input: { vitals: any; activity: any }, language: string = "en-US"): Promise<any> {
-    const { vitals, activity } = input;
+export async function analyzeVitalsWithAI(input: { vitals: any; activity: any; userId?: string }, language: string = "en-US"): Promise<any> {
+    const { vitals, activity, userId } = input;
+
+    // AHA/ACC Blood Pressure Guidelines
+    const bloodPressureGuidelines = {
+        "normal": { systolic: { max: 120 }, diastolic: { max: 80 } },
+        "elevated": { systolic: { min: 120, max: 129 }, diastolic: { max: 80 } },
+        "hypertension_stage_1": { systolic: { min: 130, max: 139 }, diastolic: { min: 80, max: 89 } },
+        "hypertension_stage_2": { systolic: { min: 140 }, diastolic: { min: 90 } },
+        "hypertensive_crisis": { systolic: { min: 180 }, diastolic: { min: 120 } }
+    };
+
+    // Blood pressure chart based on age and gender
+    const bloodPressureChart = {
+        "18-39": {
+            "Male": { systolic: 119, diastolic: 70 },
+            "Female": { systolic: 119, diastolic: 70 }
+        },
+        "40-59": {
+            "Male": { systolic: 124, diastolic: 77 },
+            "Female": { systolic: 122, diastolic: 74 }
+        },
+        "60+": {
+            "Male": { systolic: 139, diastolic: 68 },
+            "Female": { systolic: 139, diastolic: 68 }
+        }
+    };
+
+    // Get patient information to determine age group and gender
+    let ageGroup = "40-59";
+    let gender = "Male";
+    let normalSystolic = 124;
+    let normalDiastolic = 77;
+    let patientName = "Patient";
+    let patientAge = "unknown";
+
+    // Try to get patient information from database
+    try {
+        if (userId) {
+            const patient = await Patient.findOne({ userId: new mongoose.Types.ObjectId(userId) });
+            if (patient) {
+                // Use fullName directly since it's required in the Patient model
+                patientName = patient.fullName;
+
+                // Calculate age if date of birth is available
+                if (patient.dob) {
+                    const age = computeAge(patient.dob);
+                    patientAge = age.toString();
+                    if (age < 40) ageGroup = "18-39";
+                    else if (age >= 60) ageGroup = "60+";
+                    else ageGroup = "40-59";
+                }
+
+                // Handle gender properly - capitalize first letter
+                gender = patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : "Male";
+                // Ensure ageGroup is a valid key
+                const validAgeGroup = ageGroup in bloodPressureChart ? ageGroup : "40-59";
+                // Ensure gender is a valid key for the age group
+                const ageGroupData = bloodPressureChart[validAgeGroup as keyof typeof bloodPressureChart];
+                const validGender = gender in ageGroupData ? gender : "Male";
+                normalSystolic = ageGroupData[validGender as keyof typeof ageGroupData].systolic;
+                normalDiastolic = ageGroupData[validGender as keyof typeof ageGroupData].diastolic;
+            }
+        }
+    } catch (error) {
+        console.log("Could not retrieve patient data for personalized analysis, using defaults");
+    }
+
+    // Determine AHA/ACC category
+    let ahaAccCategory = "normal";
+    if (vitals.systolic >= 180 || vitals.diastolic >= 120) {
+        ahaAccCategory = "hypertensive_crisis";
+    } else if (vitals.systolic >= 140 || vitals.diastolic >= 90) {
+        ahaAccCategory = "hypertension_stage_2";
+    } else if (vitals.systolic >= 130 || vitals.diastolic >= 80) {
+        ahaAccCategory = "hypertension_stage_1";
+    } else if (vitals.systolic >= 120) {
+        ahaAccCategory = "elevated";
+    }
 
     const prompt = language === "sw-TZ" ? `
         Wewe ni msaidizi wa matibabu wa AI. Chambua data ifuatayo ya mgonjwa ili kubaini ikiwa usomaji wao wa shinikizo la damu ni wa kushtua au athari ya kawaida kwa shughuli yao ya hivi karibuni.
+
+        Taarifa za Mgonjwa:
+        - Jina: ${patientName}
+        - Umri: ${patientAge}
+        - Jinsia: ${gender}
 
         Vitali za Mgonjwa:
         - Sistolic: ${vitals.systolic} mmHg
         - Diastolic: ${vitals.diastolic} mmHg
         - Kasi ya Moyo: ${vitals.heartRate} bpm
+
+        Shinikizo la Damu la Kawaida kwa Umri na Jinsia (kufuatana na chati ya shinikizo la damu):
+        - Kikundi cha Umri: ${ageGroup}
+        - Jinsia: ${gender}
+        - Shinikizo la Damu la Kawaida: ${normalSystolic}/${normalDiastolic} mmHg
+
+        Mwongozo wa AHA/ACC wa Shinikizo la Damu:
+        - ${ahaAccCategory.replace(/_/g, ' ')}: ${vitals.systolic}/${vitals.diastolic} mmHg
 
         Shughuli ya Hivi Karibuni ya Mgonjwa:
         - Aina ya Shughuli: ${activity.activityType}
@@ -782,27 +882,61 @@ export async function analyzeVitalsWithAI(input: { vitals: any; activity: any },
         - Muda Ulio Pita Tangu Shughuli: ${activity.timeSinceActivity} dakika zilizopita
         - Maelezo: ${activity.notes || "Hakuna"}
 
-        Kulingana na data hii, toa majibu ya JSON na muundo ufuatao:
+        Kulingana na data hii, chati ya shinikizo la damu, na mwongozo wa AHA/ACC, toa majibu ya JSON na muundo ufuatao:
+
+        MUHIMU SANA: Kwa kila uchambuzi, toa maelezo ya kina juu ya iwapo shughuli ya hivi karibuni imesababisha au kuathiri usomaji wa shinikizo la damu. Jumuisha:
+        1. Uchambuzi wa athari ya shughuli (ukali, muda, na wakati uliopita) kwa shinikizo la damu
+        2. Tathmini ya iwapo usomaji unaonyesha mabadiliko ya kawaida baada ya shughuli hii
+        3. Ushauri maalum kwa mgonjwa kuhusu jinsi ya kufuatilia au kutibu athari zozote
+
         {
           "severity": "green" | "yellow" | "red",
           "title": "Kichwa kifupi, kinachoelezea kwa uchambuzi",
-          "description": "Maelezo mafupi ya hali hiyo",
+          "description": "Maelezo mafupi ya hali hiyo, ikijumuisha linganishi na shinikizo la damu la kawaida kwa umri na jinsia, na kitengo cha AHA/ACC",
           "recommendation": "Mapendekezo yanayoweza kutekelezeka kwa mgonjwa",
-          "activityInfluence": "Jinsi shughuli ya hivi karibuni inavyoathiri vitali",
+          "activityInfluence": "Uchambuzi wa kina wa jinsi shughuli ya hivi karibuni imesababisha au kuathiri usomaji wa shinikizo la damu, ikijumuisha tathmini ya iwapo hii ni mabadiliko ya kawaida baada ya shughuli hii",
           "shouldNotifyDoctor": boolean,
-          "confidence": nambari (kutoka 0 hadi 100)
+          "confidence": nambari (kutoka 0 hadi 100),
+          "normalRange": {
+            "systolic": ${normalSystolic},
+            "diastolic": ${normalDiastolic},
+            "ageGroup": "${ageGroup}",
+            "gender": "${gender}"
+          },
+          "ahaAccCategory": "${ahaAccCategory}",
+          "patientInfo": {
+            "name": "${patientName}",
+            "age": "${patientAge}",
+            "gender": "${gender}"
+          }
         }
 
-        - Tumia "green" kwa usomaji wa kawaida.
+        - Tumia "green" kwa usomaji wa kawaida unaolengwa na umri na jinsia.
         - Tumia "yellow" kwa usomaji ambao umeinuka kidogo lakini uwezekano ni kutokana na shughuli, au unahitaji ufuatiliaji.
-        - Tumia "red" kwa usomaji ambao ni wa hatari sana au unahitaji umakini wa haraka.
+        - Tumia "red" kwa usomaji ambao ni wa hatari sana au unahitaji umakini wa haraka, haswa ikiwa ni mgongano wa shinikizo la damu.
+        - Jumuisha linganishi na shinikizo la damu la kawaida kwa umri na jinsia na kitengo cha AHA/ACC katika maelezo.
+        - Weka mapendekezo yanayolingana na kitengo cha AHA/ACC.
+        - Kwa "activityInfluence", toa uchambuzi wa kina wa athari ya shughuli kwa shinikizo la damu, ukizingatia ukali, muda, na wakati uliopita.
     ` : `
         You are an AI medical assistant. Analyze the following patient data to determine if their blood pressure reading is a cause for concern or a normal reaction to their recent activity.
+
+        Patient Information:
+        - Name: ${patientName}
+        - Age: ${patientAge}
+        - Gender: ${gender}
 
         Patient's Vitals:
         - Systolic: ${vitals.systolic} mmHg
         - Diastolic: ${vitals.diastolic} mmHg
         - Heart Rate: ${vitals.heartRate} bpm
+
+        Normal Blood Pressure for Age and Gender (based on blood pressure chart):
+        - Age Group: ${ageGroup}
+        - Gender: ${gender}
+        - Normal Blood Pressure: ${normalSystolic}/${normalDiastolic} mmHg
+
+        AHA/ACC Blood Pressure Guideline Category:
+        - ${ahaAccCategory.replace(/_/g, ' ')}: ${vitals.systolic}/${vitals.diastolic} mmHg
 
         Patient's Recent Activity:
         - Activity Type: ${activity.activityType}
@@ -811,20 +945,34 @@ export async function analyzeVitalsWithAI(input: { vitals: any; activity: any },
         - Time Since Activity: ${activity.timeSinceActivity} minutes ago
         - Notes: ${activity.notes || "None"}
 
-        Based on this data, provide a JSON response with the following structure:
+        Based on this data, the blood pressure chart, and AHA/ACC guidelines, provide a JSON response with the following structure:
         {
           "severity": "green" | "yellow" | "red",
           "title": "A short, descriptive title for the analysis",
-          "description": "A brief explanation of the situation",
+          "description": "A brief explanation of the situation, including comparison with normal blood pressure for age and gender, and AHA/ACC category",
           "recommendation": "A clear, actionable recommendation for the patient",
           "activityInfluence": "How the recent activity is likely influencing the vitals",
           "shouldNotifyDoctor": boolean,
-          "confidence": number (from 0 to 100)
+          "confidence": number (from 0 to 100),
+          "normalRange": {
+            "systolic": ${normalSystolic},
+            "diastolic": ${normalDiastolic},
+            "ageGroup": "${ageGroup}",
+            "gender": "${gender}"
+          },
+          "ahaAccCategory": "${ahaAccCategory}",
+          "patientInfo": {
+            "name": "${patientName}",
+            "age": "${patientAge}",
+            "gender": "${gender}"
+          }
         }
 
-        - Use "green" for normal readings.
+        - Use "green" for normal readings targeted for age and gender.
         - Use "yellow" for readings that are slightly elevated but likely due to activity, or require monitoring.
-        - Use "red" for readings that are dangerously high or require immediate attention.
+        - Use "red" for readings that are dangerously high or require immediate attention, especially if hypertensive crisis.
+        - Include comparison with normal blood pressure for age and gender and AHA/ACC category in the description.
+        - Provide recommendations appropriate for the AHA/ACC category.
     `;
 
     try {
@@ -858,15 +1006,6 @@ export async function analyzeVitalsWithAI(input: { vitals: any; activity: any },
 }
 
 // ========== UTILITY FUNCTIONS ==========
-function computeAge(dob: string | Date): number {
-  const birth = new Date(dob);
-  if (isNaN(birth.getTime())) return 0;
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
 
 export async function updateLifestyle(
   userId: string,

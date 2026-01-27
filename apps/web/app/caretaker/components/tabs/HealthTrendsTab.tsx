@@ -201,8 +201,8 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
   const latestReading = getLatestReading();
 
   if (patientVitalsFiltered.length === 0) {
-    return (
-      <div className="bg-white rounded-lg border shadow-sm p-6">
+  return (
+    <div className="bg-white rounded-lg border shadow-sm p-6 h-full">
         <div className="flex items-center space-x-3 mb-6">
           <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center">
             <TrendingUp className="w-5 h-5 text-green-600" />

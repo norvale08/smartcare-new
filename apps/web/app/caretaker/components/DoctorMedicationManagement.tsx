@@ -1,13 +1,15 @@
+"use client";
+
 // FILE: app/caretaker/components/DoctorMedicationManagement.tsx
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, RefreshCw, FileText as FileTextIcon, Pill } from 'lucide-react';
+import { Stethoscope, RefreshCw, FileText as FileTextIcon, Pill, PlusCircle, Search, Filter, AlertTriangle } from 'lucide-react';
 
 // Import components
 import SideEffectUpdateModal from'./SideEffectUpdateModal';
 import StatsCards from './StatsCards';
 import FiltersSection from './FiltersSection';
 import MedicationCard from'./MedicationCard';
-import MedicationPrescriptionModal from './MedicationPrescriptionModal'; // Add this import
+import MedicationPrescriptionModal from './MedicationPrescriptionModal';
 
 interface PatientInfo {
   _id: string;
@@ -106,7 +108,7 @@ type ReportRow = {
   Resolved: string;
   'Reported Date': string;
   'Last Updated': string;
-};
+}
 
 const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({ patient, onMedicationSelect }) => {
   const [medications, setMedications] = useState<Medication[]>([]);
@@ -121,10 +123,10 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
     sideEffect: null,
     patientName: ''
   });
-  
+
   // Add state for prescription modal
   const [prescriptionModalOpen, setPrescriptionModalOpen] = useState(false);
-  
+
   const [stats, setStats] = useState({
     totalMedications: 0,
     active: 0,
@@ -160,7 +162,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return 'Invalid date';
-      
+
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -182,7 +184,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      
+
       if (!token) {
         console.error("❌ No authentication token found");
         setMedications([]);
@@ -201,7 +203,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
       // Determine which endpoint to call
       let endpoint = '';
       let isPatientView = false;
-      
+
       if (patient && patient.id) {
         endpoint = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medications/reminders/doctor-view/${patient.id}`;
         isPatientView = true;
@@ -212,7 +214,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
       }
 
       console.log(`📡 API Endpoint: ${endpoint}`);
-      
+
       const response = await fetch(endpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -225,24 +227,24 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
       if (response.ok) {
         const data = await response.json();
         console.log(`✅ API Response Received:`, data);
-        
+
         let transformedMedications: Medication[] = [];
-        
+
         if (isPatientView) {
           if (data.success && data.data) {
             const medicationsData = data.data.medications || [];
             console.log(`📊 Found ${medicationsData.length} medications in response`);
-            
+
             // Use Set to filter out duplicates based on medication ID and name
             const uniqueMedicationsMap = new Map();
-            
+
             medicationsData.forEach((med: any, index: number) => {
               const medId = med._id || med.id || `med-${index}-${Date.now()}`;
               const medName = med.medicationName || 'Unknown Medication';
-              
+
               // Create a unique key to identify duplicates
               const uniqueKey = `${medId}-${medName}`;
-              
+
               // Only add if not already in map (prevents duplicates)
               if (!uniqueMedicationsMap.has(uniqueKey)) {
                 // Extract patient information
@@ -288,7 +290,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
 
                 // Calculate summary
                 const totalSideEffects = experiencedSideEffects.length;
-                const severeSideEffects = experiencedSideEffects.filter(e => 
+                const severeSideEffects = experiencedSideEffects.filter(e =>
                   e.severity === 'severe' || e.intensity === 'severe' || e.intensity === 'very severe'
                 ).length;
                 const unresolvedSideEffects = experiencedSideEffects.filter(e => !e.resolved).length;
@@ -325,7 +327,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
                 console.log(`⚠️ Duplicate medication skipped: ${medName} (${medId})`);
               }
             });
-            
+
             transformedMedications = Array.from(uniqueMedicationsMap.values());
             console.log(`🏁 Successfully transformed ${transformedMedications.length} unique medications (removed ${medicationsData.length - transformedMedications.length} duplicates)`);
           } else {
@@ -336,10 +338,10 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
           if (data.success && data.data) {
             const allSideEffects = data.data.recentSideEffects || [];
             console.log(`📊 Found ${allSideEffects.length} side effects in summary`);
-            
+
             // Use Map to filter out duplicates based on medication ID and patient ID
             const medicationsMap = new Map();
-            
+
             allSideEffects.forEach((se: any) => {
               const key = `${se.patientId}_${se.medicationId}`;
               if (!medicationsMap.has(key)) {
@@ -370,7 +372,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
                 lastUpdated: se.lastUpdated
               });
             });
-            
+
             transformedMedications = Array.from(medicationsMap.values()).map((med: any) => ({
               id: med.id,
               medicationName: med.medicationName,
@@ -390,7 +392,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
               potentialSideEffects: [],
               summary: {
                 totalSideEffects: med.experiencedSideEffects.length,
-                severeSideEffects: med.experiencedSideEffects.filter((e: any) => 
+                severeSideEffects: med.experiencedSideEffects.filter((e: any) =>
                   e.severity === 'severe' || e.intensity === 'severe' || e.intensity === 'very severe'
                 ).length,
                 unresolvedSideEffects: med.experiencedSideEffects.filter((e: any) => !e.resolved).length
@@ -401,7 +403,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
 
         // Update state with transformed medications
         setMedications(transformedMedications);
-        
+
         // Calculate and update statistics
         const calculatedStats = {
           totalMedications: transformedMedications.length,
@@ -409,22 +411,22 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
           stopped: transformedMedications.filter(m => m.status === 'stopped').length,
           completed: transformedMedications.filter(m => m.status === 'completed').length,
           totalSideEffects: transformedMedications.reduce((sum, m) => sum + (m.experiencedSideEffects?.length || 0), 0),
-          severeSideEffects: transformedMedications.reduce((sum, m) => sum + 
-            (m.experiencedSideEffects?.filter((e: any) => 
+          severeSideEffects: transformedMedications.reduce((sum, m) =>
+            sum + (m.experiencedSideEffects?.filter((e: any) =>
               e.severity === 'severe' || e.intensity === 'severe' || e.intensity === 'very severe'
             ).length || 0), 0),
-          unresolvedSideEffects: transformedMedications.reduce((sum, m) => 
+          unresolvedSideEffects: transformedMedications.reduce((sum, m) =>
             sum + (m.experiencedSideEffects?.filter((e: any) => !e.resolved).length || 0), 0)
         };
-        
+
         console.log(`📈 Updated Statistics:`, calculatedStats);
         setStats(calculatedStats);
-        
+
       } else {
         console.error(`❌ API Error: ${response.status}`);
         const errorText = await response.text();
         console.error(`❌ Error Details:`, errorText);
-        
+
         setMedications([]);
         setStats({
           totalMedications: 0,
@@ -485,7 +487,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
       });
 
       console.log("📡 Response Status:", response.status);
-      
+
       if (response.ok) {
         console.log("✅ Medication deleted successfully");
         // Remove from local state
@@ -495,7 +497,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error('❌ Failed to delete medication:', errorData);
-        
+
         // Check if it's a permission error
         if (response.status === 403) {
           alert('You can only delete medications you prescribed');
@@ -531,7 +533,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: newStatus,
           // Include other fields that might be required
           lastUpdated: new Date().toISOString()
@@ -539,7 +541,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
       });
 
       console.log("📡 Response Status:", response.status);
-      
+
       if (response.ok) {
         console.log("✅ Medication status updated successfully");
         // Update local state
@@ -553,7 +555,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error('❌ Failed to update medication status:', errorData);
-        
+
         if (response.status === 403) {
           alert('You can only update medications you prescribed');
         } else if (response.status === 404) {
@@ -576,9 +578,9 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
         alert('Authentication required');
         return false;
       }
-      
+
       console.log(`🔄 Updating side effect for medication ${medicationId}, index ${effectIndex}`);
-      
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medications/reminders/${medicationId}/side-effects/${effectIndex}/doctor-update`,
         {
@@ -594,7 +596,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
       if (response.ok) {
         const result = await response.json();
         console.log('✅ Side effect updated successfully:', result);
-        
+
         // Update local state
         setMedications(prev => prev.map(med => {
           if (med.id === medicationId && med.experiencedSideEffects) {
@@ -612,10 +614,10 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
           }
           return med;
         }));
-        
+
         // Refresh to get updated stats
         fetchDoctorPrescriptions();
-        
+
         alert('Side effect updated successfully');
         return true;
       } else {
@@ -649,7 +651,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
       console.error('Medication not found:', medicationId);
       return;
     }
-    
+
     const patientName = getPatientName(medication.patientId);
     setSideEffectModal({
       isOpen: true,
@@ -672,7 +674,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
   };
 
   const exportSideEffectsReport = () => {
-    const reportData: ReportRow[] = medications.flatMap(med => 
+    const reportData: ReportRow[] = medications.flatMap(med =>
       (med.experiencedSideEffects || []).map(se => ({
         Patient: getPatientName(med.patientId),
         Medication: med.medicationName,
@@ -708,7 +710,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
 
     const csvRows = [
       headers.join(','),
-      ...reportData.map(row => 
+      ...reportData.map(row =>
         headers.map(header => {
           const value = row[header];
           return `"${String(value).replace(/"/g, '""')}"`;
@@ -732,23 +734,23 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
   const filteredMedications = medications.filter(medication => {
     // Convert search term to lowercase for case-insensitive comparison
     const searchLower = searchTerm.toLowerCase();
-    
+
     // Check search term
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       medication.medicationName.toLowerCase().includes(searchLower) ||
       getPatientName(medication.patientId).toLowerCase().includes(searchLower);
-    
+
     // Check status filter
     const matchesStatus = filterStatus === 'all' || medication.status === filterStatus;
-    
+
     // Check severity filter
-    const matchesSeverity = filterSeverity === 'all' || 
-      (medication.experiencedSideEffects && 
+    const matchesSeverity = filterSeverity === 'all' ||
+      (medication.experiencedSideEffects &&
        medication.experiencedSideEffects.some(se => {
-         return se.severity === filterSeverity || 
+         return se.severity === filterSeverity ||
                 (se.intensity && se.intensity === filterSeverity);
        }));
-    
+
     return matchesSearch && matchesStatus && matchesSeverity;
   });
 
@@ -810,12 +812,12 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
 
       {/* Main Content */}
       <div className="bg-white rounded-lg border shadow-sm">
-        {/* Header */}
+        {/* Header with Emerald/Teal/Red theme */}
         <div className="p-6 border-b">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h3 className="text-xl font-semibold text-gray-900 flex items-center space-x-2">
-                <Stethoscope className="w-6 h-6 text-blue-600" />
+                <Stethoscope className="w-6 h-6 text-emerald-600" />
                 <span>Medication Management</span>
               </h3>
               <p className="text-sm text-gray-500 mt-1">
@@ -827,7 +829,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
               {patient && (
                 <button
                   onClick={() => setPrescriptionModalOpen(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                  className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
                   title="Prescribe new medication"
                 >
                   <Pill className="w-4 h-4" />
@@ -836,7 +838,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
               )}
               <button
                 onClick={exportSideEffectsReport}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                className="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors shadow-sm"
                 title="Export side effects report"
               >
                 <FileTextIcon className="w-4 h-4" />
@@ -854,13 +856,13 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <StatsCards 
-          stats={stats} 
+        {/* Stats Cards with Emerald/Teal/Red theme */}
+        <StatsCards
+          stats={stats}
           patientCount={[...new Set(medications.map(m => getPatientId(m.patientId)))].length}
         />
 
-        {/* Filters and Search */}
+        {/* Filters and Search with Emerald theme */}
         <FiltersSection
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -896,7 +898,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
                   setFilterStatus('all');
                   setFilterSeverity('all');
                 }}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
               >
                 Clear All Filters
               </button>
@@ -910,7 +912,7 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
               </div>
               <h4 className="text-xl font-medium text-gray-900 mb-2">No Medications Found</h4>
               <p className="text-gray-500 mb-6">
-                {patient 
+                {patient
                   ? `No medications have been prescribed for ${patient.fullName} yet.`
                   : 'No patient medications found in the system.'
                 }
@@ -918,14 +920,14 @@ const DoctorMedicationManagement: React.FC<DoctorMedicationManagementProps> = ({
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button
                   onClick={handleRefresh}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
                 >
                   Refresh Data
                 </button>
                 {patient && (
                   <button
                     onClick={() => setPrescriptionModalOpen(true)}
-                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                    className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
                   >
                     Prescribe First Medication
                   </button>

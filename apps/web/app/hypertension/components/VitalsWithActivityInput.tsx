@@ -372,16 +372,34 @@ export default function VitalsWithActivityInput({
         setTimeSinceActivity(collectedVitalsRef.current.timeSinceActivity.toString());
       }
 
-      const successMsg = t.language === "en-US" 
-       ? " Vitals saved & analyzed successfully!"
-        : " Vitali zimehifadhiwa na kuchambuliwa kwa mafanikio!";
-      
-      setMessage(successMsg);
-      toast.success(successMsg);
-      
-      if (onAfterSave) onAfterSave();
-      
-      return true;
+          const successMsg = t.language === "en-US"
+           ? " Vitals saved & analyzed successfully!"
+            : " Vitali zimehifadhiwa na kuchambuliwa kwa mafanikio!";
+
+          setMessage(successMsg);
+          toast.success(successMsg);
+
+          // Read the context alert after successful submission
+          if (voiceModeState.active && aiJson) {
+            // Use the aiJson directly since it's available here
+            const analysisText = [
+              aiJson.title,
+              aiJson.description,
+              aiJson.activityInfluence,
+              aiJson.recommendation,
+              aiJson.shouldNotifyDoctor ?
+                (languageValue === "sw"
+                 ? "Daktari wako atataarifiwa kuhusu usomaji huu."
+                 : "Your doctor will be notified about this reading.")
+                : ""
+            ].filter(Boolean).join(". ");
+
+            await handleSpeak(analysisText);
+          }
+
+          if (onAfterSave) onAfterSave();
+
+          return true;
     } catch (e: any) {
       const errorMsg = e.message || (t.language === "en-US" 
        ? " There was an error. Please try again."
@@ -612,17 +630,17 @@ export default function VitalsWithActivityInput({
           }
 
           // Collect intensity
-          setVoiceModeState(prev => ({ 
-           ...prev, 
-            currentField: 'intensity', 
-            status: languageValue === "sw"? "Soma ukali" : "Reading intensity" 
+          setVoiceModeState(prev => ({
+           ...prev,
+            currentField: 'intensity',
+            status: languageValue === "sw"? "Soma ukali" : "Reading intensity"
           }));
           scrollToField('intensity');
-          
-          await handleSpeak(languageValue === "sw" 
-           ? "Ukali." 
-            : "Intensity.", true);
-          
+
+          await handleSpeak(languageValue === "sw"
+           ? "Ukali. Neno nyepesi, wastani au kali."
+            : "Intensity. Say light, moderate, or vigorous.", true);
+
           const intensityValue = await collectSimpleSelectField('intensity', currentLanguage.intensityLabel, false);
           if (intensityValue && intensityValue !== 'skip') {
             collectedVitalsRef.current.intensity = intensityValue;
@@ -630,17 +648,17 @@ export default function VitalsWithActivityInput({
           }
 
           // Collect time since activity
-          setVoiceModeState(prev => ({ 
-           ...prev, 
-            currentField: 'timeSinceActivity', 
-            status: languageValue === "sw"? "Soma muda uliopita" : "Reading time since" 
+          setVoiceModeState(prev => ({
+           ...prev,
+            currentField: 'timeSinceActivity',
+            status: languageValue === "sw"? "Soma muda uliopita" : "Reading time since"
           }));
           scrollToField('timeSinceActivity');
-          
-          await handleSpeak(languageValue === "sw" 
-           ? "Dakika." 
-            : "Minutes.", true);
-          
+
+          await handleSpeak(languageValue === "sw"
+           ? "Muda uliopita tangu shughuli katika dakika."
+            : "Time since activity in minutes.", true);
+
           const timeSinceValue = await collectNumberField('timeSinceActivity', 0, 1440, currentLanguage.timeSinceActivityLabel, false, 2);
           if (timeSinceValue !== undefined) {
             collectedVitalsRef.current.timeSinceActivity = timeSinceValue;
@@ -671,48 +689,30 @@ export default function VitalsWithActivityInput({
       }
 
       // Check if we have all required vitals
-      const hasRequiredVitals = collectedVitalsRef.current.systolic && 
-                               collectedVitalsRef.current.diastolic && 
+      const hasRequiredVitals = collectedVitalsRef.current.systolic &&
+                               collectedVitalsRef.current.diastolic &&
                                collectedVitalsRef.current.heartRate;
 
       if (hasRequiredVitals) {
-        // Confirm before submitting
-        setVoiceModeState(prev => ({ 
-         ...prev, 
-          currentField: 'confirmation', 
-          status: languageValue === "sw"? "Ngoja kuthibitisha" : "Waiting for confirmation" 
-        }));
-        
-        await handleSpeak(languageValue === "sw" 
-         ? "Hifadhi? Ndio au hapana." 
-          : "Save? Yes or no.", true);
-        
-        const confirmResult = await collectSimpleConfirmation();
-        
-        if (confirmResult) {
-          await handleSpeak(languageValue === "sw" 
-           ? "Inatumwa." 
-            : "Submitting.", true);
-          
-          const success = await autoSubmitVitals();
-          
-          if (success) {
-            await handleSpeak(languageValue === "sw" 
-             ? "Imesajiliwa." 
-              : "Saved.", true);
-          } else {
-            await handleSpeak(languageValue === "sw" 
-             ? "Hitilafu." 
-              : "Error.", true);
-          }
+        // Auto-submit without confirmation
+        await handleSpeak(languageValue === "sw"
+         ? "Inatumwa."
+          : "Submitting.", true);
+
+        const success = await autoSubmitVitals();
+
+        if (success) {
+          await handleSpeak(languageValue === "sw"
+           ? "Imesajiliwa."
+            : "Saved.", true);
         } else {
-          await handleSpeak(languageValue === "sw" 
-           ? "Imekataliwa." 
-            : "Cancelled.", true);
+          await handleSpeak(languageValue === "sw"
+           ? "Hitilafu."
+            : "Error.", true);
         }
       } else {
-        await handleSpeak(languageValue === "sw" 
-         ? "Vipimo vya kutosha." 
+        await handleSpeak(languageValue === "sw"
+         ? "Vipimo vya kutosha."
           : "Insufficient measurements.", true);
       }
 
@@ -738,29 +738,29 @@ export default function VitalsWithActivityInput({
 
   // Enhanced helper function to collect number fields with confirmation
   const collectNumberFieldWithConfirm = async (
-    fieldName: string, 
-    min: number, 
-    max: number, 
-    label: string, 
+    fieldName: string,
+    min: number,
+    max: number,
+    label: string,
     isRequired: boolean,
     maxAttempts: number = 3
   ): Promise<number | undefined> => {
     if (!voiceModeActiveRef.current) return undefined;
-    
+
     let attempts = 0;
-    
+
     while (attempts < maxAttempts) {
       if (!voiceModeActiveRef.current) break;
-      
+
       try {
         // Listen for number
-        setVoiceModeState(prev => ({ 
-         ...prev,
-          status: languageValue === "sw" 
-           ? `Inasoma ${label.toLowerCase()}` 
+        setVoiceModeState(prev => ({
+          ...prev,
+          status: languageValue === "sw"
+           ? `Inasoma ${label.toLowerCase()}`
             : `Reading ${label.toLowerCase()}`
         }));
-        
+
         const result = await listenForField(
           fieldName,
           label,
@@ -779,50 +779,38 @@ export default function VitalsWithActivityInput({
           handleSpeak,
           isRequired
         );
-        
+
         if (typeof result === 'number') {
-          // Confirm the value
-          await handleSpeak(languageValue === "sw" 
-           ? `${result}. Ndio au hapana?` 
-            : `${result}. Yes or no?`, true);
-          
-          const confirmResult = await collectSimpleConfirmation();
-          
-          if (confirmResult) {
-            return result;
-          } else {
-            // User said no, ask to repeat
-            await handleSpeak(languageValue === "sw" 
-             ? "Rudi." 
-              : "Repeat.", true);
-            attempts++;
-            continue;
-          }
+          // Just confirm the value without asking "Yes or no?"
+          await handleSpeak(languageValue === "sw"
+           ? `${result}.`
+            : `${result}.`, true);
+          return result;
         } else if (result === 'skip') {
           return undefined;
         } else if (result === null) {
           attempts++;
           if (attempts < maxAttempts) {
-            await handleSpeak(languageValue === "sw" 
-             ? "Rudi." 
+            await handleSpeak(languageValue === "sw"
+             ? "Rudi."
               : "Repeat.", true);
             continue;
           }
         }
-        
+
         return undefined;
       } catch (error) {
         console.error(`Error collecting number field ${fieldName}:`, error);
         attempts++;
-        
+
         if (attempts < maxAttempts) {
-          await handleSpeak(languageValue === "sw" 
-           ? "Rudi." 
+          await handleSpeak(languageValue === "sw"
+           ? "Rudi."
             : "Repeat.", true);
         }
       }
     }
-    
+
     return undefined;
   };
 

@@ -13,12 +13,12 @@ const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging 
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-6">
+    <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-emerald-100/60 p-6">
       <div className="flex justify-between items-start">
         <div className="flex items-center space-x-4">
           {/* Profile Picture Placeholder */}
           <div className="relative">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center">
               <User className="w-8 h-8 text-white" />
             </div>
             {/* Removed the green call box as requested */}
@@ -35,7 +35,7 @@ const PatientHeader: React.FC<PatientHeaderProps> = ({ patient, onOpenMessaging 
         <div className="flex space-x-3">
           <button
             onClick={handleMessage}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 border border-emerald-300 rounded-lg text-emerald-700 hover:bg-emerald-50 transition-colors"
           >
             <MessageSquare className="w-4 h-4" />
             <span>Message</span>
