@@ -40,6 +40,7 @@ const MessagesTab: React.FC<MessagesTabProps> = ({ patient }) => {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const getApiBaseUrl = () => {
@@ -86,10 +87,12 @@ const MessagesTab: React.FC<MessagesTabProps> = ({ patient }) => {
         const result = await response.json();
         if (result.success) {
           setMessages(result.data);
+          setInitialLoad(false);
         }
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
+      setInitialLoad(false);
     } finally {
       setLoading(false);
     }
@@ -171,14 +174,33 @@ const MessagesTab: React.FC<MessagesTabProps> = ({ patient }) => {
     fetchConversations();
   }, []);
 
+  const prevMessagesCount = useRef(messages.length);
+  
   useEffect(() => {
     if (selectedConversation) {
       fetchMessages(selectedConversation);
+      
+      // Refresh messages every 30 seconds when tab is visible
+      const interval = setInterval(() => {
+        if (!document.hidden) {
+          fetchMessages(selectedConversation);
+        }
+      }, 30000);
+      
+      return () => clearInterval(interval);
     }
   }, [selectedConversation, patient.id]);
 
+  // Combined scroll effect handler
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length !== prevMessagesCount.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: messages.length > prevMessagesCount.current ? 'smooth' : 'auto'
+        });
+      }, 100);
+      prevMessagesCount.current = messages.length;
+    }
   }, [messages]);
 
   const formatTime = (dateString: string) => {
@@ -252,7 +274,11 @@ const MessagesTab: React.FC<MessagesTabProps> = ({ patient }) => {
       {/* Conversation Header */}
       <div className="flex items-center p-4 bg-white border-b border-gray-200">
         <button
-          onClick={() => setSelectedConversation(null)}
+          onClick={() => {
+            setSelectedConversation(null);
+            setInitialLoad(true);
+            setMessages([]);
+          }}
           className="mr-3 p-1 rounded-full hover:bg-gray-100 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
@@ -281,9 +307,10 @@ const MessagesTab: React.FC<MessagesTabProps> = ({ patient }) => {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+        {initialLoad ? (
+          <div className="text-center text-gray-500 py-8">
+            <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300 animate-pulse" />
+            <p className="animate-pulse">Loading messages...</p>
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
@@ -316,6 +343,15 @@ const MessagesTab: React.FC<MessagesTabProps> = ({ patient }) => {
               </div>
             );
           })
+        )}
+        {loading && messages.length > 0 && (
+          <div className="text-center p-2 text-sm text-gray-500">
+            <div className="inline-flex items-center space-x-2">
+              <div className="w-2 h-2 bg-gray-300 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-gray-300 rounded-full animate-pulse animation-delay-200"></div>
+              <div className="w-2 h-2 bg-gray-300 rounded-full animate-pulse animation-delay-400"></div>
+            </div>
+          </div>
         )}
         <div ref={messagesEndRef} />
       </div>

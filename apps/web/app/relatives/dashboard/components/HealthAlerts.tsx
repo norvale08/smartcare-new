@@ -1,5 +1,5 @@
 // relative/dashboard/components/HealthAlerts.tsx
-import { AlertTriangle, X, Heart, Activity, AlertCircle } from 'lucide-react';
+import { AlertTriangle, X, Heart, Activity } from 'lucide-react';
 import { HealthAlert } from '../types';
 import { DashboardUtils } from '../utils';
 
@@ -11,21 +11,13 @@ interface HealthAlertsProps {
 export function HealthAlerts({ alerts, onDismissAlert }: HealthAlertsProps) {
   if (alerts.length === 0) return null;
 
-  const getAlertIcon = (vital: string, severity: string) => {
-    const iconClass = `w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 mt-0.5 ${
-      severity === 'critical' ? 'text-red-600' : 
-      severity === 'warning' ? 'text-yellow-600' : 
-      'text-blue-600'
-    }`;
-
+  const getAlertIcon = (vital: string) => {
     if (vital === 'Hypertension') {
-      return <Heart className={iconClass} />;
+      return <Heart className="w-4 h-4 flex-shrink-0" />;
     } else if (vital === 'Diabetes') {
-      return <Activity className={iconClass} />;
-    } else if (vital === 'Multiple Conditions') {
-      return <AlertCircle className={iconClass} />;
+      return <Activity className="w-4 h-4 flex-shrink-0" />;
     }
-    return <AlertTriangle className={iconClass} />;
+    return <AlertTriangle className="w-4 h-4 flex-shrink-0" />;
   };
 
   const getAlertColor = (severity: string) => {
@@ -34,70 +26,69 @@ export function HealthAlerts({ alerts, onDismissAlert }: HealthAlertsProps) {
         bg: 'bg-red-50',
         border: 'border-red-300',
         text: 'text-red-900',
-        badge: 'bg-red-200 text-red-800',
-        close: 'text-red-600 hover:text-red-800'
+        badge: 'bg-red-100 text-red-800 border-red-300',
+        icon: 'text-red-600',
+        close: 'text-red-600 hover:bg-red-100'
       };
     } else if (severity === 'warning') {
       return {
         bg: 'bg-yellow-50',
         border: 'border-yellow-300',
         text: 'text-yellow-900',
-        badge: 'bg-yellow-200 text-yellow-800',
-        close: 'text-yellow-600 hover:text-yellow-800'
+        badge: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+        icon: 'text-yellow-600',
+        close: 'text-yellow-600 hover:bg-yellow-100'
       };
     } else {
       return {
         bg: 'bg-blue-50',
         border: 'border-blue-300',
         text: 'text-blue-900',
-        badge: 'bg-blue-200 text-blue-800',
-        close: 'text-blue-600 hover:text-blue-800'
+        badge: 'bg-blue-100 text-blue-800 border-blue-300',
+        icon: 'text-blue-600',
+        close: 'text-blue-600 hover:bg-blue-100'
       };
     }
   };
 
   return (
-    <div className="mb-6 space-y-3">
+    <div className="space-y-2">
       {alerts.map(alert => {
         const colors = getAlertColor(alert.severity);
         
         return (
           <div
             key={alert.id}
-            className={`flex flex-col sm:flex-row sm:items-start gap-3 p-4 sm:p-5 rounded-lg border-2 transition-all duration-300 ${colors.bg} ${colors.border}`}
+            className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${colors.bg} ${colors.border}`}
           >
-            {/* Icon */}
-            {getAlertIcon(alert.vital, alert.severity)}
+            {/* Icon and Category Badge */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className={colors.icon}>
+                {getAlertIcon(alert.vital)}
+              </div>
+              <span className={`px-2 py-0.5 rounded-md text-xs font-semibold border ${colors.badge}`}>
+                {alert.category || alert.vital}
+              </span>
+            </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-start gap-3">
-                <div className="flex-1">
-                  {/* Alert Category Badge */}
-                  {alert.category && (
-                    <div className="mb-2">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${colors.badge}`}>
-                        {alert.category}
-                      </span>
-                    </div>
-                  )}
-
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
                   {/* Alert Message */}
-                  <p className={`text-sm sm:text-base font-semibold leading-snug break-words mb-2 ${colors.text}`}>
+                  <p className={`text-sm font-semibold ${colors.text} mb-1`}>
                     {alert.message}
                   </p>
 
                   {/* Recommendation */}
                   {alert.recommendation && (
-                    <div className="mb-2 p-2 bg-white/50 rounded border border-gray-200">
-                      <p className="text-xs sm:text-sm text-gray-700">
-                        <strong>Recommendation:</strong> {alert.recommendation}
-                      </p>
-                    </div>
+                    <p className="text-xs text-gray-700 mb-1">
+                      {alert.recommendation}
+                    </p>
                   )}
 
                   {/* Timestamp */}
-                  <p className="text-xs sm:text-sm text-gray-600">
+                  <p className="text-xs text-gray-500">
                     {DashboardUtils.formatDate(alert.timestamp)}
                   </p>
                 </div>
@@ -106,61 +97,27 @@ export function HealthAlerts({ alerts, onDismissAlert }: HealthAlertsProps) {
                 {onDismissAlert && (
                   <button
                     onClick={() => onDismissAlert(alert.id)}
-                    className="flex-shrink-0 p-1 rounded-full hover:bg-white/50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1"
+                    className={`flex-shrink-0 p-1 rounded transition-colors ${colors.close}`}
                     aria-label="Dismiss alert"
-                    title="Mark as read"
+                    title="Dismiss"
                   >
-                    <X className={`w-4 h-4 sm:w-5 sm:h-5 ${colors.close}`} />
+                    <X className="w-4 h-4" />
                   </button>
                 )}
               </div>
-
-              {/* Alert Details */}
-              <div className="mt-3 pt-3 border-t border-gray-200/50">
-                <div className="flex flex-wrap gap-2">
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${colors.badge}`}>
-                    {alert.vital}
-                  </span>
-                  
-                  {alert.value > 0 && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      Value: {alert.value}
-                      {alert.vital === 'Hypertension' ? ' mmHg (Systolic)' : 
-                       alert.vital === 'Diabetes' ? ' mg/dL' : ''}
-                    </span>
-                  )}
-
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold uppercase ${
-                    alert.severity === 'critical' ? 'bg-red-600 text-white' :
-                    alert.severity === 'warning' ? 'bg-yellow-600 text-white' :
-                    'bg-blue-600 text-white'
-                  }`}>
-                    {alert.severity}
-                  </span>
-                </div>
-              </div>
-
-              {/* Critical Alert Actions */}
-              {alert.severity === 'critical' && alert.vital === 'Multiple Conditions' && (
-                <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-600 rounded">
-                  <p className="text-xs sm:text-sm text-red-900 font-semibold">
-                    ⚠️ URGENT: Patient requires immediate medical evaluation. Consider contacting their healthcare provider or emergency services.
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         );
       })}
 
-      {/* Dismiss All Button - Only show if there are multiple alerts */}
+      {/* Dismiss All Button */}
       {alerts.length > 1 && onDismissAlert && (
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-1">
           <button
             onClick={() => alerts.forEach(alert => onDismissAlert(alert.id))}
-            className="text-xs sm:text-sm text-gray-600 hover:text-gray-800 px-4 py-2 rounded-lg border-2 border-gray-300 hover:border-gray-400 bg-white hover:bg-gray-50 transition-colors duration-200 font-medium"
+            className="text-xs text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-md border border-gray-300 hover:bg-gray-50 transition-colors font-medium"
           >
-            Dismiss All Alerts
+            Dismiss All
           </button>
         </div>
       )}

@@ -51,24 +51,30 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
       const payload = {
         smoking: lifestyle.smoking ? "Heavy" : "None",
         alcohol: lifestyle.alcohol ? "Frequently" : "None",
+        caffeine: lifestyle.caffeine,
         exercise: lifestyle.exercise === "high" ? "Daily" : lifestyle.exercise === "moderate" ? "Few times/week" : lifestyle.exercise === "low" ? "Rarely" : "None",
         sleep: "7-8 hrs",
         language: language
       };
       const response = await axios.post(`${API_URL}/api/hypertension/lifestyle/update`, payload, {
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json', 
           Authorization: `Bearer ${token}`,
         },
         withCredentials: true,
       });
       
       if (response.data) {
-        const res = await axios.get(`${API_URL}/api/hypertension/lifestyle`, {
+        // Refresh lifestyle data and regenerate AI recommendations
+        await axios.get(`${API_URL}/api/hypertension/lifestyle`, {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true,
         });
-        console.log('Lifestyle updated, AI refreshed');
+        
+        if (onRegenerateLifestyle) {
+          onRegenerateLifestyle(); // Trigger AI recommendations refresh
+        }
+        console.log('Lifestyle updated, AI recommendations refreshed');
       }
     } catch (error: any) {
       console.error("Failed to update lifestyle:", error);
@@ -265,9 +271,15 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
           <div className="mt-6 flex justify-end">
             <button 
               onClick={handleUpdateLifestyle}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
+              disabled={loadingRegenerate}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md disabled:opacity-50"
             >
-              {language === "en-US" ? "Update Lifestyle" : "Sasisha Maisha"}
+              {loadingRegenerate ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  {t.language === "en-US" ? "Updating..." : "Inasasisha..."}
+                </>
+              ) : language === "en-US" ? "Update Lifestyle" : "Sasisha Maisha"}
             </button>
           </div>
         </div>
@@ -349,7 +361,7 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
                   <>
                     {/* Key Insights Section */}
                     {sections.keyInsights && (
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border-l-4 border-blue-500 shadow-sm">
+                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm">
                         <div className="flex items-center gap-2 mb-3">
                           <h4 className="font-bold text-blue-900 text-lg">
                             {language === "en-US" ? "Key Insights" : "Uhakiki Muhimu"}
@@ -361,7 +373,7 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
 
                     {/* Today's Action Plan */}
                     {sections.actionPlan && (
-                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-5 rounded-xl border-l-4 border-green-500 shadow-sm">
+                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm">
                         <div className="flex items-center gap-2 mb-3">
                           <h4 className="font-bold text-green-900 text-lg">
                             {language === "en-US" ? "Today's Action Plan" : "Mpango wa Leo"}
@@ -373,7 +385,7 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
 
                     {/* Lifestyle Goals */}
                     {sections.lifestyleGoals && (
-                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-xl border-l-4 border-purple-500 shadow-sm">
+                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm">
                         <div className="flex items-center gap-2 mb-3">
                           <h4 className="font-bold text-purple-900 text-lg">
                             {language === "en-US" ? "Lifestyle Goals" : "Malengo ya Maisha"}
@@ -385,7 +397,7 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
 
                     {/* Weather Tips */}
                     {sections.weatherTips && (
-                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-xl border-l-4 border-amber-500 shadow-sm">
+                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm">
                         <div className="flex items-center gap-2 mb-3">
                           <h4 className="font-bold text-amber-900 text-lg">
                             {language === "en-US" ? "Weather Tips" : "Ushauri wa Hewa"}
@@ -400,7 +412,7 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
 
               {/* Warnings Section */}
               {aiRecommendations.warnings.length > 0 && (
-                <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-5 rounded-xl border-l-4 border-yellow-400 shadow-sm">
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <TriangleAlert className="text-yellow-600" size={20} />
                     <h4 className="font-bold text-yellow-900 text-lg">
@@ -419,7 +431,7 @@ function LifestyleAssessment({ lifestyle, onLifestyleChange, bpLevel, alertStatu
 
               {/* Critical Alerts Section */}
               {aiRecommendations.alerts.length > 0 && (
-                <div className="bg-gradient-to-r from-red-50 to-rose-50 p-5 rounded-xl border-l-4 border-red-500 shadow-sm">
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <TriangleAlert className="text-red-600" size={20} />
                     <h4 className="font-bold text-red-900 text-lg">

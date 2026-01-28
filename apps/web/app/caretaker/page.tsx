@@ -14,7 +14,7 @@ import PatientTabs from './components/PatientTabs';
 import RealTimeNotifications from './components/RealTimeNotifications';
 import PatientHeader from './components/PatientHeader';
 import PatientMessages from "./components/PatientMessages";
-import DoctorMedicationManagement from './components/DoctorMedicationManagement';
+
 import AppointmentsView from './components/AppointmentsView';
 import MedicationPrescriptionModal from './components/MedicationPrescriptionModal';
 import AssignedPatientsGrid from './components/AssignedPatientsGrid';
@@ -22,7 +22,6 @@ import AssignedPatientsGrid from './components/AssignedPatientsGrid';
 // NEW: Import expiring medications components
 import ExpiringMedicationsAlert from './components/ExpiringMedicationsAlert';
 import ExpiringMedicationsDashboard from "./components/ExpiringMedicationDashboard";
-
 interface Patient {
   id: string;
   userId?: string;
@@ -282,6 +281,9 @@ const CaretakerDashboard = () => {
 
   // NEW: Handle medication alert click
   const handleMedicationAlertClick = (patientId: string, medicationId: string) => {
+    console.log('🚨 handleMedicationAlertClick called with:', { patientId, medicationId });
+    console.log('📋 Current patients list:', patients);
+    
     // Find the patient
     const patient = patients.find(p =>
       p.id === patientId ||
@@ -290,6 +292,8 @@ const CaretakerDashboard = () => {
       p.user?.id === patientId
     );
 
+    console.log('🔍 Found patient:', patient);
+
     if (patient) {
       // Select the patient
       handlePatientSelect(patient);
@@ -297,8 +301,10 @@ const CaretakerDashboard = () => {
       setActivePatientTab('medications');
       // Show success message
       setMessage(`Viewing medications for ${patient.fullName}`);
+      console.log('✅ Successfully navigated to patient medications');
     } else {
       setMessage('Patient not found in your assigned patients');
+      console.log('❌ Patient not found in assigned patients list');
     }
   };
 
@@ -479,6 +485,7 @@ const CaretakerDashboard = () => {
             <DashboardHeader
               onOpenMessages={handleOpenMessaging}
               hasUnreadMessages={false} // You can implement unread message detection here
+              onMedicationClick={handleMedicationAlertClick}
             />
           </div>
 
@@ -504,12 +511,6 @@ const CaretakerDashboard = () => {
             </div>
           )}
 
-          {/* NEW: Expiring Medications Alert Banner - Shows at top when not viewing a patient */}
-          {!selectedPatient && (
-            <div className="w-full max-w-7xl mx-auto">
-              <ExpiringMedicationsAlert onMedicationClick={handleMedicationAlertClick} />
-            </div>
-          )}
 
           {/* When a patient is selected, show their key details at the top */}
           {selectedPatient && (
@@ -522,6 +523,7 @@ const CaretakerDashboard = () => {
               </div>
             </div>
           )}
+
 
           {/* Main responsive grid layout */}
           <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
@@ -664,11 +666,6 @@ const CaretakerDashboard = () => {
 
             {/* Right Main Content */}
             <div className="lg:col-span-3 space-y-6">
-              {/* NEW: Expiring Medications Dashboard Widget - Shows when no patient selected */}
-              {!selectedPatient && (
-                <ExpiringMedicationsDashboard onMedicationClick={handleMedicationAlertClick} />
-              )}
-
               {/* Show assigned patients grid when no patient is selected */}
               <div className="bg-white/85 backdrop-blur-sm rounded-2xl shadow-2xl border border-emerald-100/60 overflow-hidden">
                 {!selectedPatient ? (

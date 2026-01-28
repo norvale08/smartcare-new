@@ -1,6 +1,7 @@
 // app/caretaker/components/DashboardHeader.tsx
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, User, Calendar, Building, BadgeCheck, AlertCircle, MessageSquare } from 'lucide-react';
+import { Stethoscope, User, Calendar, Building, BadgeCheck, AlertCircle, MessageSquare, AlertTriangle } from 'lucide-react';
+import HeaderMedicationAlerts from './HeaderMedicationAlerts';
 
 interface DoctorData {
   _id: string;
@@ -23,9 +24,15 @@ interface DashboardHeaderProps {
   doctorName?: string;
   onOpenMessages?: () => void;
   hasUnreadMessages?: boolean;
+  onMedicationClick?: (patientId: string, medicationId: string) => void;
 }
 
-const DashboardHeader: React.FC<DashboardHeaderProps> = ({ doctorName, onOpenMessages, hasUnreadMessages }) => {
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({ 
+  doctorName, 
+  onOpenMessages, 
+  hasUnreadMessages,
+  onMedicationClick
+}) => {
   const [doctorData, setDoctorData] = useState<DoctorData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -251,6 +258,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ doctorName, onOpenMes
             </div>
           </div>
 
+          <HeaderMedicationAlerts onMedicationClick={onMedicationClick} />
           <div className="flex items-center space-x-4">
             <div className="text-right">
               <p className="font-medium text-gray-900">
