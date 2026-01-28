@@ -1,4 +1,3 @@
-// relative/dashboard/components/tabs/MessagesTab.tsx - FIXED VERSION
 import React, { useEffect, useState, useRef } from 'react';
 import { PatientInfo, User } from '../../types';
 import { Send, Loader2, MessageCircle, AlertCircle } from 'lucide-react';
@@ -31,14 +30,14 @@ export function MessagesTab({
   onSendMessage
 }: MessagesTabProps) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // Only show spinner on first load
+  const [localError, setLocalError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [relativeUserId, setRelativeUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-  // Extract current user ID from token
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (token) {
@@ -48,161 +47,178 @@ export function MessagesTab({
           const base64 = tokenParts[1];
           if (base64) {
             const payload = JSON.parse(atob(base64));
-            setCurrentUserId(payload?.userId || payload?.id || null);
-            console.log('👤 Current user ID:', payload?.userId || payload?.id);
+            const userId = payload?.userId || payload?.id || null;
+            setCurrentUserId(userId);
           }
         }
       } catch (error) {
-        console.error('Error decoding token:', error);
+        // Silently fail in production
+      }
+    }
+
+    const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        if (userData.userId) {
+          setRelativeUserId(userData.userId);
+        }
+      } catch (e) {
+        // Silently fail in production
       }
     }
   }, []);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('📊 MessagesTab State:', {
-      monitoredPatient: user?.monitoredPatient,
-      patientId: patientData?.id,
-      currentUserId,
-      messageLength: message.length,
-      sendingMessage
-    });
-  }, [user?.monitoredPatient, patientData?.id, currentUserId, message, sendingMessage])
-
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Fetch conversation with the patient
-  const fetchConversation = async () => {
-    // Use the ID we know exists from your logs
-    const targetId = user?.monitoredPatient || patientData?.id;
+  const getPatientUserId = () => {
+    if (user?.monitoredPatient) return user.monitoredPatient;
+    if ((patientData as any)?.userId) return (patientData as any).userId;
+    return null;
+  };
 
-    if (!targetId) return;
+  const fetchConversation = async (showSpinner = false) => {
+    const patientUserId = getPatientUserId();
+    if (!patientUserId) return;
 
     const token = localStorage.getItem('token');
-    const pId = patientData?.id;
-
-    if (!pId || !token) return;
+    if (!token) return;
 
     try {
-      setIsLoadingMessages(true);
+      // Only show spinner on initial load, not on polling refreshes
+      if (showSpinner && isInitialLoad) {
+        setIsInitialLoad(true);
+      }
 
-      // We'll use the patientId specifically as it's the most reliable link 
-      // between the Relative's messages and the Patient's record
-      const endpoint = `${API_URL}/api/messages/conversation?patientId=${patientData?.id}`;
-
-      console.log('🌐 Polling for messages using Patient ID:', patientData?.id);
-
+      const endpoint = `${API_URL}/api/relative-messages/conversation?otherUserId=${patientUserId}`;
       const res = await fetch(endpoint, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Cache-Control': 'no-cache' // Prevent browser caching
+          'Cache-Control': 'no-cache'
         },
       });
 
+      if (!res.ok) {
+        if (res.status === 400) setLocalError('Invalid request. Please check patient assignment.');
+        return;
+      }
+
       const data = await res.json();
 
-      if (res.ok && data.success) {
-        // Handle different possible API response structures
-        const messageData = data.data || data;
-        if (Array.isArray(messageData)) {
-          console.log('✅ Messages received:', messageData.length);
-          setMessages(messageData);
-          setError(null);
+      if (data.success && Array.isArray(data.data)) {
+        const newMessagesString = JSON.stringify(data.data);
+        const oldMessagesString = JSON.stringify(messages);
+
+        if (newMessagesString !== oldMessagesString) {
+          setMessages(data.data);
         }
       } else {
-        console.error('❌ Fetch failed:', data.message);
+        setMessages([]);
       }
     } catch (err) {
-      console.error('❌ Error fetching messages:', err);
+      // Fetch error handled by UI state
     } finally {
-      setIsLoadingMessages(false);
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+      }
     }
   };
 
-  // Handle sending message - now using the parent's onSendMessage
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLocalError(null);
 
-    // Clear any previous errors
-    setError(null);
-
-    // Use the prop 'message' directly to validate
-    if (!message || !message.trim()) {
-      setError('Please enter a message');
+    if (!message.trim()) {
+      setLocalError('Please enter a message');
       return;
     }
 
-    // Validate patient selection
-    const targetId = user?.monitoredPatient || patientData?.id;
-
-    if (!targetId) {
-      setError('No patient selected');
+    const patientUserId = getPatientUserId();
+    if (!patientUserId) {
+      setLocalError('Patient user ID not available');
       return;
     }
 
-    // Pass control to the parent handler
-    onSendMessage(e);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLocalError('Authentication required');
+        return;
+      }
+
+      const payload = {
+        receiverId: patientUserId,
+        content: message.trim(),
+        type: 'text'
+      };
+
+      const response = await fetch(`${API_URL}/api/relative-messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) throw new Error(`Failed to send: ${response.status}`);
+
+      const data = await response.json();
+
+      if (data.success) {
+        onMessageChange('');
+        // Immediately fetch without showing spinner
+        setTimeout(() => fetchConversation(false), 500);
+      } else {
+        setLocalError(data.message || 'Failed to send message');
+      }
+    } catch (err: any) {
+      setLocalError('Failed to send message. Please try again.');
+    }
   };
 
-  // Handle key press for sending
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as any);
     }
   };
 
-
-  // Handle textarea change
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onMessageChange(e.target.value);
-  };
-
-  // Fetch messages when component mounts and when patient changes
   useEffect(() => {
-    if (user?.monitoredPatient || patientData?.id) {
-      fetchConversation();
-    }
+    const patientUserId = getPatientUserId();
+    if (patientUserId) fetchConversation(true);
   }, [user?.monitoredPatient, patientData?.id]);
 
-  // Set up polling for new messages (every 5 seconds)
   useEffect(() => {
-    const targetId = user?.monitoredPatient || patientData?.id;
-    if (!targetId) return;
+    const patientUserId = getPatientUserId();
+    if (!patientUserId) return;
 
     const interval = setInterval(() => {
-      fetchConversation();
+      fetchConversation(false);
     }, 5000);
 
     return () => clearInterval(interval);
   }, [user?.monitoredPatient, patientData?.id]);
 
-  // Determine if message is from current user
   const isFromCurrentUser = (msg: Message) => {
-    if (!currentUserId) return false;
-
-    // Extract ID from object if senderId is populated, otherwise use string
-    const senderId = typeof msg.senderId === 'object'
-      ? (msg.senderId as any)?._id || (msg.senderId as any)?.id
-      : msg.senderId;
-
-    return String(senderId) === String(currentUserId);
+    let senderIdString: string | null = null;
+    if (typeof msg.senderId === 'string') {
+      senderIdString = msg.senderId;
+    } else if (typeof msg.senderId === 'object' && msg.senderId !== null) {
+      senderIdString = (msg.senderId as any)?._id || (msg.senderId as any)?.id || null;
+    }
+    return senderIdString === currentUserId || senderIdString === relativeUserId;
   };
 
-  // Check if send button should be enabled
-  const isSendEnabled = !sendingMessage &&
-    message.trim().length > 0 &&
-    (user?.monitoredPatient || patientData?.id);
+  const patientUserId = getPatientUserId();
+  const canSendMessage = !sendingMessage && message.trim().length > 0 && !!patientUserId;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Conversation View */}
       <div className="lg:col-span-2 order-1">
         <div className="bg-white shadow rounded-lg overflow-hidden flex flex-col" style={{ height: '600px' }}>
-          {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-4 border-b border-blue-800">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
@@ -219,19 +235,31 @@ export function MessagesTab({
             </div>
           </div>
 
-          {/* Error Display */}
-          {error && (
+          {localError && (
             <div className="bg-red-50 border-l-4 border-red-400 px-4 py-3 mx-4 mt-4">
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-700">{error}</p>
+                <p className="text-sm text-red-700">{localError}</p>
               </div>
             </div>
           )}
 
-          {/* Messages Area */}
+          {!patientUserId && !isInitialLoad && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 mx-4 mt-4">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-yellow-700 font-medium">Patient Not Linked to Account</p>
+                  <p className="text-xs text-yellow-600 mt-1">
+                    This patient doesn't have a user account yet. Messaging will be available once they create an account.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 bg-gray-50">
-            {isLoadingMessages ? (
+            {isInitialLoad ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-2" />
                 <p className="text-gray-500 text-sm">Loading messages...</p>
@@ -241,7 +269,9 @@ export function MessagesTab({
                 <MessageCircle className="w-12 h-12 text-gray-300 mb-3" />
                 <p className="text-gray-500 text-sm">No messages yet.</p>
                 <p className="text-gray-400 text-xs mt-1">
-                  Start a conversation with {patientData?.name?.split(' ')[0] || 'the patient'}!
+                  {patientUserId
+                    ? `Start a conversation with ${patientData?.name?.split(' ')[0] || 'the patient'}!`
+                    : 'Messaging unavailable - patient needs to create an account.'}
                 </p>
               </div>
             ) : (
@@ -254,26 +284,14 @@ export function MessagesTab({
                       className={`flex ${isFromMe ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[80%] sm:max-w-[70%] rounded-lg px-4 py-2.5 ${isFromMe
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white text-gray-800 border border-gray-200'
+                        className={`max-w-[80%] sm:max-w-[70%] rounded-lg px-4 py-2.5 ${isFromMe ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 border border-gray-200'
                           }`}
                       >
-                        <p className="text-sm whitespace-pre-wrap break-words">
-                          {msg.content}
-                        </p>
-                        <p
-                          className={`text-xs mt-1.5 ${isFromMe ? 'text-blue-100' : 'text-gray-500'
-                            }`}
-                        >
-                          {msg.createdAt
-                            ? new Date(msg.createdAt).toLocaleString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
-                            : ''}
+                        <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                        <p className={`text-xs mt-1.5 ${isFromMe ? 'text-blue-100' : 'text-gray-500'}`}>
+                          {msg.createdAt ? new Date(msg.createdAt).toLocaleString('en-US', {
+                            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                          }) : ''}
                         </p>
                       </div>
                     </div>
@@ -284,48 +302,28 @@ export function MessagesTab({
             )}
           </div>
 
-          {/* Message Input */}
           <div className="border-t border-gray-200 bg-white px-4 sm:px-6 py-4">
-            <form onSubmit={handleSubmit} className="flex gap-2">
+            <div className="flex gap-2">
               <textarea
                 value={message}
                 onChange={(e) => onMessageChange(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={`Type your message to ${patientData?.name?.split(' ')[0] || 'patient'}...`}
+                onKeyDown={handleKeyPress}
+                placeholder={patientUserId ? `Type your message to ${patientData?.name?.split(' ')[0] || 'patient'}...` : 'Messaging unavailable'}
                 rows={2}
-                disabled={sendingMessage}
-                className="
-                  flex-1
-                  px-3 py-2
-                  border border-gray-300 rounded-lg
-                  text-sm
-                  focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  resize-none
-                  disabled:bg-gray-50 disabled:text-gray-500
-                  transition-colors duration-200
-                  hover:border-blue-400
-                  focus:outline-none
-                "
+                disabled={sendingMessage || !patientUserId}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-50 focus:outline-none"
                 style={{ minHeight: '60px' }}
               />
               <button
-                type="submit"
-                disabled={!isSendEnabled}
-                className={`
-        px-4 py-2 text-white text-sm font-medium rounded-lg
-        transition-colors duration-200 flex items-center justify-center
-        ${isSendEnabled
-                    ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
-                    : 'bg-gray-300 cursor-not-allowed'}
-      `}
+                onClick={handleSubmit}
+                disabled={!canSendMessage}
+                className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center self-end ${canSendMessage ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300'
+                  }`}
+                style={{ minHeight: '44px', minWidth: '44px' }}
               >
-                {sendingMessage ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
+                {sendingMessage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </button>
-            </form>
+            </div>
             <p className="text-xs text-gray-500 mt-2">
               Press Enter to send, Shift+Enter for new line
             </p>
@@ -333,7 +331,6 @@ export function MessagesTab({
         </div>
       </div>
 
-      {/* Contact Info Sidebar */}
       <div className="order-2">
         <div className="bg-white shadow rounded-lg p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-4">

@@ -1,12 +1,12 @@
 // relative/dashboard/components/tabs/OverviewTab.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Area, AreaChart
 } from 'recharts';
-import { Clock, Thermometer, Heart, Droplets, Activity } from 'lucide-react';
+import { Clock, Thermometer, Heart, Droplets, Activity, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { HealthSummary, ChartDataPoint, HealthStats, PatientInfo, ChartMetric, ChartPeriod, TabType } from '../../types';
-import { DashboardUtils } from '../../utils';
+import { DashboardUtils, CriticalConditionDetector } from '../../utils';
 
 interface OverviewTabProps {
   summary: HealthSummary | null;
@@ -20,6 +20,16 @@ interface OverviewTabProps {
   onTabChange: (tab: TabType) => void;
 }
 
+interface TrendAnalysis {
+  vital: string;
+  trend: 'increasing' | 'decreasing' | 'stable' | 'no-data';
+  change: number;
+  percentage: number;
+  normalRange: string;
+  currentStatus: string;
+  recommendations: string[];
+}
+
 export function OverviewTab({
   summary,
   chartData,
@@ -31,6 +41,188 @@ export function OverviewTab({
   onPeriodChange,
   onTabChange
 }: OverviewTabProps) {
+  const [trendAnalyses, setTrendAnalyses] = useState<TrendAnalysis[]>([]);
+
+  useEffect(() => {
+    const analyses = analyzeVitalTrends(chartData, patientData);
+    setTrendAnalyses(analyses);
+  }, [chartData, patientData]);
+
+  // --- 1. Logic Helpers ---
+
+  const calculateTrend = (values: number[]): {
+    trend: 'increasing' | 'decreasing' | 'stable';
+    change: number;
+    percentage: number;
+  } => {
+    if (values.length < 2) return { trend: 'stable', change: 0, percentage: 0 };
+
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    const n = values.length;
+
+    for (let i = 0; i < n; i++) {
+      const val = values[i] ?? 0;
+      sumX += i;
+      sumY += val;
+      sumXY += i * val;
+      sumX2 += i * i;
+    }
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const firstVal = values[0] ?? 0;
+    const lastVal = values[values.length - 1] ?? 1;
+
+    const change = lastVal - firstVal; // Corrected: last minus first for actual trajectory
+    const percentage = firstVal !== 0 ? (change / firstVal) * 100 : 0;
+
+    if (Math.abs(slope) < 0.5) {
+      return { trend: 'stable', change, percentage: Math.round(percentage) };
+    } else if (slope > 0) {
+      return { trend: 'increasing', change, percentage: Math.round(percentage) };
+    } else {
+      return { trend: 'decreasing', change, percentage: Math.round(percentage) };
+    }
+  };
+
+  const analyzeVitalTrends = (data: ChartDataPoint[], patientInfo: PatientInfo | null): TrendAnalysis[] => {
+    if (!data || data.length < 2) return [];
+    const analyses: TrendAnalysis[] = [];
+
+    // --- 1. Blood Pressure Analysis ---
+    const bpData = data.filter(d => d.systolic !== undefined && d.diastolic !== undefined);
+    if (bpData.length >= 2) {
+      const systolicValues = bpData.map(d => d.systolic!);
+      const diastolicValues = bpData.map(d => d.diastolic!);
+      const sTrend = calculateTrend(systolicValues);
+
+      const latestBP = bpData[bpData.length - 1];
+
+      // FIX: Guard clause for latestBP
+      if (latestBP && latestBP.systolic !== undefined && latestBP.diastolic !== undefined) {
+        let status = '';
+        let recs: string[] = [];
+
+        if (patientInfo?.hypertension) {
+          if (latestBP.systolic >= 180 || latestBP.diastolic >= 120) {
+            status = '⚠️ Dangerously High';
+            recs = ['Seek immediate medical attention'];
+          } else if (latestBP.systolic >= 140 || latestBP.diastolic >= 90) {
+            status = 'High';
+            recs = ['Consult your doctor soon'];
+          } else {
+            status = '✅ Healthy Range';
+          }
+        } else {
+          if (latestBP.systolic < 90 || latestBP.diastolic < 60) {
+            status = 'Low Blood Pressure';
+            recs = ['Contact healthcare provider if dizzy'];
+          } else if (latestBP.systolic > 140 || latestBP.diastolic > 90) {
+            status = 'Elevated';
+            recs = ['Monitor regularly'];
+          } else {
+            status = '✅ Normal';
+          }
+        }
+
+        analyses.push({
+          vital: 'Blood Pressure',
+          trend: sTrend.trend,
+          change: sTrend.change,
+          percentage: sTrend.percentage,
+          normalRange: patientInfo?.hypertension ? '130/80 mmHg or lower' : '120/80 mmHg or lower',
+          currentStatus: status,
+          recommendations: recs
+        });
+      }
+    }
+
+    // --- 2. Heart Rate Analysis ---
+    const hrData = data.filter(d => d.heartRate !== undefined);
+    if (hrData.length >= 2) {
+      const values = hrData.map(d => d.heartRate!);
+      const trendInfo = calculateTrend(values);
+      const latestHR = values[values.length - 1];
+
+      // FIX: Guard clause for latestHR (checking against undefined specifically because 0 is falsy)
+      if (latestHR !== undefined) {
+        let status = latestHR > 100 ? '⚠️ Too Fast' : latestHR < 60 ? '⚠️ Too Slow' : '✅ Normal';
+
+        analyses.push({
+          vital: 'Heart Rate',
+          trend: trendInfo.trend,
+          change: trendInfo.change,
+          percentage: trendInfo.percentage,
+          normalRange: '60-100 BPM',
+          currentStatus: status,
+          recommendations: status.includes('⚠️') ? ['Consult healthcare provider'] : []
+        });
+      }
+    }
+
+    // --- 3. Glucose Analysis ---
+    const glucoseData = data.filter(d => d.glucose !== undefined);
+    if (glucoseData.length >= 2) {
+      const values = glucoseData.map(d => d.glucose!);
+      const trendInfo = calculateTrend(values);
+      const latestG = values[values.length - 1];
+
+      // FIX: Guard clause for latestG
+      if (latestG !== undefined) {
+        let status = '';
+        if (latestG < 70) status = '⚠️ Dangerously Low';
+        else if (patientInfo?.diabetes && latestG > 180) status = '⚠️ High Glucose Level';
+        else if (!patientInfo?.diabetes && latestG > 125) status = 'Slightly High Glucose Level';
+        else status = '✅ Normal';
+
+        analyses.push({
+          vital: 'Glucose',
+          trend: trendInfo.trend,
+          change: trendInfo.change,
+          percentage: trendInfo.percentage,
+          normalRange: patientInfo?.diabetes ? '70-180 mg/dL' : '70-125 mg/dL',
+          currentStatus: status,
+          recommendations: status.includes('⚠️') ? ['Monitor closely', 'Consult provider'] : []
+        });
+      }
+    }
+
+    return analyses;
+  };
+
+  const getTrendIcon = (trend: string) => {
+    switch (trend) {
+      case 'increasing': return <TrendingUp className="w-4 h-4 text-inherit" />;
+      case 'decreasing': return <TrendingDown className="w-4 h-4 text-inherit" />;
+      default: return <Minus className="w-4 h-4 text-gray-400" />;
+    }
+  };
+
+  const getTrendColor = (analysis: TrendAnalysis) => {
+    // 1. Critical Crisis Priority
+    if (analysis.currentStatus.includes('⚠️')) return 'text-red-600';
+
+    const isIncreasing = analysis.trend === 'increasing';
+    const isDecreasing = analysis.trend === 'decreasing';
+
+    // 2. Condition-specific logic (BP and Glucose)
+    if (analysis.vital === 'Blood Pressure' || analysis.vital === 'Glucose') {
+      if (analysis.currentStatus.includes('✅')) return 'text-green-600';
+      if (isIncreasing) return 'text-red-600';
+      if (isDecreasing) {
+        // Red if it's dropping into dangerous "Low" territory
+        if (analysis.currentStatus.toLowerCase().includes('low')) return 'text-red-600';
+        return 'text-green-600';
+      }
+    }
+
+    // 3. Heart Rate Logic
+    if (analysis.vital === 'Heart Rate') {
+      if (Math.abs(analysis.change) > 20) return 'text-yellow-600';
+      if (analysis.currentStatus.includes('✅')) return 'text-green-600';
+    }
+
+    return 'text-blue-600';
+  };
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
       {/* Left Column - Health Summary and Charts */}
@@ -126,11 +318,10 @@ export function OverviewTab({
                   <button
                     key={days}
                     onClick={() => onPeriodChange(days as ChartPeriod)}
-                    className={`px-3 py-2 text-sm rounded-md whitespace-nowrap flex-shrink-0 ${
-                      chartPeriod === days
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}
+                    className={`px-3 py-2 text-sm rounded-md whitespace-nowrap flex-shrink-0 ${chartPeriod === days
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-gray-100 text-gray-600'
+                      }`}
                   >
                     {days} Days
                   </button>
@@ -190,6 +381,86 @@ export function OverviewTab({
                       <Area type="monotone" dataKey="glucose" stroke="#f59e0b" fill="#fef3c7" strokeWidth={2} name="Glucose Level" />
                     </AreaChart>
                   </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* TREND ANALYSIS SECTION - ADDED BELOW CHARTS */}
+            {trendAnalyses.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <h4 className="text-lg font-medium text-gray-900 mb-4">Vital Trend Analysis</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {trendAnalyses.map((analysis, index) => (
+                    <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-medium text-gray-900">{analysis.vital}</h5>
+                        <div className="flex items-center gap-1">
+                          {getTrendIcon(analysis.trend)}
+                          <span className={`text-sm font-medium ${getTrendColor(analysis)}`}>
+                            {analysis.trend.charAt(0).toUpperCase() + analysis.trend.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-sm">
+                          <span className="text-gray-600">Change: </span>
+                          <span className={`font-medium ${analysis.change > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {analysis.change > 0 ? '+' : ''}{analysis.change.toFixed(1)} ({analysis.percentage}%)
+                          </span>
+                        </div>
+
+                        <div className="text-sm">
+                          <span className="text-gray-600">Normal Range: </span>
+                          <span className="font-medium text-blue-600">{analysis.normalRange}</span>
+                        </div>
+
+                        <div className="text-sm">
+                          <span className="text-gray-600">Current Status: </span>
+                          <span className={`font-medium ${analysis.currentStatus.includes('⚠️') ? 'text-red-600' : analysis.currentStatus.includes('✅') ? 'text-green-600' : 'text-yellow-600'}`}>
+                            {analysis.currentStatus}
+                          </span>
+                        </div>
+
+                        {analysis.recommendations.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            <p className="text-xs text-gray-500 mb-1">Recommendations:</p>
+                            <ul className="text-xs space-y-1">
+                              {analysis.recommendations.map((rec, idx) => (
+                                <li key={idx} className="text-gray-700">• {rec}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Overall Health Assessment */}
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h5 className="font-medium text-blue-900 mb-2">Overall Health Assessment</h5>
+                  <div className="text-sm text-blue-800">
+                    {(() => {
+                      const criticalAnalyses = trendAnalyses.filter(a => a.currentStatus.includes('⚠️'));
+                      const normalAnalyses = trendAnalyses.filter(a => a.currentStatus.includes('✅'));
+
+                      if (criticalAnalyses.length > 0) {
+                        return (
+                          <p>
+                            ⚠️ {criticalAnalyses.length} vital(s) show concerning trends.
+                            {patientData?.hypertension && ' Blood pressure management is crucial.'}
+                            {patientData?.diabetes && ' Glucose control needs attention.'}
+                            Consider consulting healthcare provider.
+                          </p>
+                        );
+                      } else if (normalAnalyses.length === trendAnalyses.length) {
+                        return <p>✅ All vital trends are within normal ranges. Continue monitoring regularly.</p>;
+                      } else {
+                        return <p>Most vital trends are stable. Continue current health management plan.</p>;
+                      }
+                    })()}
+                  </div>
                 </div>
               </div>
             )}

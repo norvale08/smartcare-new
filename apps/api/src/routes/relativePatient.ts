@@ -12,6 +12,21 @@ import { connectMongoDB } from "../lib/mongodb";
 
 const router = express.Router();
 
+interface IUserRelative {
+  _id: mongoose.Types.ObjectId;
+  email: string;
+  fullName: string;
+  phoneNumber?: string;
+  role: string;
+  monitoredPatient?: mongoose.Types.ObjectId;
+  monitoredPatientProfile?: mongoose.Types.ObjectId;
+  relationshipToPatient?: string;
+  accessLevel?: string;
+  isEmergencyContact?: boolean;
+  invitationStatus?: string;
+}
+
+
 // Authentication middleware for relatives
 const authenticateRelative = (req: any, res: any, next: any) => {
   try {
@@ -56,6 +71,52 @@ const toObjectId = (userId: any) => {
   return userId;
 };
 
+// GET /api/relative/profile
+// Get the relative's own profile INCLUDING monitoredPatient
+// GET /api/relative/profile
+router.get("/profile", authenticateRelative, async (req: any, res: any) => {
+  try {
+    await connectMongoDB();
+
+    // Cast the result to our interface
+    const relativeUser = await User.findById(toObjectId(req.userId))
+      .select('_id email fullName phoneNumber role monitoredPatient monitoredPatientProfile relationshipToPatient accessLevel isEmergencyContact invitationStatus')
+      .lean() as IUserRelative | null;
+
+    // Check if relativeUser exists first
+    if (!relativeUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (relativeUser.role !== "relative") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Not a relative account."
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        userId: relativeUser._id.toString(),
+        email: relativeUser.email,
+        fullName: relativeUser.fullName,
+        phoneNumber: relativeUser.phoneNumber,
+        role: relativeUser.role,
+        monitoredPatient: relativeUser.monitoredPatient?.toString(),
+        monitoredPatientProfile: relativeUser.monitoredPatientProfile?.toString(),
+        relationship: relativeUser.relationshipToPatient,
+        accessLevel: relativeUser.accessLevel,
+        isEmergencyContact: relativeUser.isEmergencyContact,
+        invitationStatus: relativeUser.invitationStatus
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch relative profile" });
+  }
+});
+
 
 
 router.get("/patient-profile", authenticateRelative, async (req: any, res: any) => {
@@ -64,7 +125,7 @@ router.get("/patient-profile", authenticateRelative, async (req: any, res: any) 
 
     
     const relativeUser = await User.findById(toObjectId(req.userId));
-    
+
     if (!relativeUser || relativeUser.role !== "relative") {
       console.error(" Not a relative user");
       return res.status(403).json({
@@ -94,19 +155,37 @@ router.get("/patient-profile", authenticateRelative, async (req: any, res: any) 
 
     
 
-    const patientUser = await User.findById(toObjectId(patient.userId));
+    let patientUser = await User.findById(toObjectId(patient.userId));
+    // Get the patient's User record
+    let patientUserId = patient.userId;
+
+    // If patient.userId doesn't exist, try to find it by email or use monitoredPatient
+    if (!patientUserId && patient.email) {
+      patientUser = await User.findOne({
+        email: patient.email,
+        role: 'patient'
+      }).select('_id');
+      patientUserId = patientUser?._id;
+    }
+
+    // Fallback to relativeUser.monitoredPatient (which should be the patient's User ID)
+    if (!patientUserId) {
+      patientUserId = relativeUser.monitoredPatient;
+    }
+    console.log("✅ Patient User ID:", patientUserId);
 
     res.status(200).json({
       success: true,
       data: {
         id: patient._id.toString(),
         name: patient.fullName || `${patient.firstname} ${patient.lastname}`,
+        userId: patientUserId?.toString(),
         email: patientUser?.email || patient.email,
         phoneNumber: patient.phoneNumber || patientUser?.phoneNumber,
-        condition: patient.condition || 
-                   (patient.diabetes && patient.hypertension ? 'both' : 
-                    patient.diabetes ? 'diabetes' : 
-                    patient.hypertension ? 'hypertension' : 'unknown'),
+        condition: patient.condition ||
+          (patient.diabetes && patient.hypertension ? 'both' :
+            patient.diabetes ? 'diabetes' :
+              patient.hypertension ? 'hypertension' : 'unknown'),
         dob: patient.dob,
         gender: patient.gender,
         diabetes: patient.diabetes || false,
