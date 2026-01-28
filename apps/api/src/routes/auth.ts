@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import bcrypt from "bcryptjs";
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import User from '../models/user';
 import PasswordResetToken from '../models/resetToken';
 import { connectMongoDB } from '../lib/mongodb';
@@ -16,6 +17,14 @@ interface UserDocument {
   email: string;
   phoneNumber?: string;
   password: string;
+  role: string;
+  isApproved: boolean;
+  emailVerified: boolean;
+  isFirstLogin?: boolean;
+  profileCompleted?: boolean;
+  diabetes?: boolean;
+  hypertension?: boolean;
+  cardiovascular?: boolean;
 }
 
 interface ResetTokenDocument {
@@ -25,16 +34,25 @@ interface ResetTokenDocument {
   expiresAt: Date;
 }
 
-// Registration route
+// ============================================
+// REGISTRATION ROUTE
+// ============================================
 router.post('/', async (req, res) => {
   try {
-    const { firstName, lastName, email, phoneNumber, password } = req.body;
+    const { firstName, lastName, email, phoneNumber, password, dataConsent } = req.body;
 
     // Validate input
     if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({ 
         message: "Missing required fields",
         required: ['firstName', 'lastName', 'email', 'password']
+      });
+    }
+
+    // Validate data consent
+    if (!dataConsent) {
+      return res.status(400).json({ 
+        message: "Data consent is required to register" 
       });
     }
 
@@ -49,21 +67,33 @@ router.post('/', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user with approval pending
     const userData = {
       firstName, 
       lastName, 
       email, 
       phoneNumber, 
-      password: hashedPassword
+      password: hashedPassword,
+      isApproved: false, // ✅ Requires admin approval
+      emailVerified: true, // Email is validated during registration
+      role: 'patient'
     };
     
     await User.create(userData);
 
+    // Send registration pending email
+    emailService.sendRegistrationPendingEmail(
+      email,
+      `${firstName} ${lastName}`
+    ).catch(err => console.error('Email send error:', err));
+
+    // ✅ CHANGED: Don't redirect to login, return success status
     res.status(201).json({ 
-      message: "User registered successfully",
+      message: "Registration successful! Your account is pending admin approval. You will receive an email once approved.",
       success: true,
-      redirectTo: "/login"
+      pendingApproval: true,
+      // Remove redirectTo - handle in frontend instead
+      email: email // Send back email for confirmation display
     });
 
   } catch (error) {
@@ -72,7 +102,93 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Reset password route
+// ============================================
+// LOGIN ROUTE
+// ============================================
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({
+        message: 'Email and password are required'
+      });
+    }
+
+    await connectMongoDB();
+
+    // Find user
+    const user = await User.findOne({ email }).lean<UserDocument>();
+
+    if (!user) {
+      return res.status(401).json({
+        message: 'Invalid email or password'
+      });
+    }
+
+    // ✅ CHECK APPROVAL STATUS (for patients only)
+    if (user.role === 'patient' && !user.isApproved) {
+      return res.status(403).json({
+        message: 'Your account is pending admin approval. Please check your email for the activation link once your account has been approved.',
+        code: 'PENDING_APPROVAL',
+        pendingApproval: true
+      });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        email: user.email,
+        role: user.role
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
+    // Return user data and token
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        phoneNumber: user.phoneNumber,
+        isFirstLogin: user.isFirstLogin,
+        profileCompleted: user.profileCompleted,
+        isApproved: user.isApproved,
+        // Add disease flags for redirect logic
+        diabetes: user.diabetes,
+        hypertension: user.hypertension,
+        cardiovascular: user.cardiovascular
+      }
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
+      message: 'Server error during login'
+    });
+  }
+});
+
+// ============================================
+// RESET PASSWORD ROUTE
+// ============================================
 router.post('/reset-password', async (req: Request, res: Response) => {
   try {
     const { token, email, password } = req.body;
@@ -144,7 +260,9 @@ router.post('/reset-password', async (req: Request, res: Response) => {
   }
 });
 
-// Request password reset route
+// ============================================
+// REQUEST PASSWORD RESET ROUTE
+// ============================================
 router.post('/request-reset', async (req: Request, res: Response) => {
   try {
     const { email } = req.body;

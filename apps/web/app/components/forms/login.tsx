@@ -8,19 +8,21 @@ import CustomToaster from "../ui/CustomToaster";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FaHeartbeat } from "react-icons/fa";
-import { Mail, Eye, EyeOff, Lock, Users, AlertCircle } from "lucide-react";
+import { Mail, Eye, EyeOff, Lock, Users, AlertCircle, Clock } from "lucide-react";
 
 const Login = () => {
   const { register, handleSubmit, formState, reset, watch } = useForm<UserLoginType>();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
+  const [pendingApprovalError, setPendingApprovalError] = useState(false);
   const router = useRouter();
 
   const email = watch("email");
 
   const handleFormSubmit = async (data: UserLoginType) => {
     setIsLoading(true);
+    setPendingApprovalError(false); // Reset pending approval error
 
     try {
       const API_URL =
@@ -36,6 +38,13 @@ const Login = () => {
 
       if (!loginRes.ok) {
         console.log("Login failed response:", loginData);
+        
+        // ✅ Handle pending approval case (403 status)
+        if (loginRes.status === 403 && loginData.code === "PENDING_APPROVAL") {
+          setPendingApprovalError(true);
+          toast.error(loginData.message || "Account pending approval");
+          return;
+        }
         
         // ✅ Handle relative setup case
         if (loginData.needsSetup && loginData.role === "relative") {
@@ -169,7 +178,7 @@ const Login = () => {
         </div>
 
         {/* Right Section: Login Form */}
-        <div className="flex flex-col items-center justify-center h-full p-12 bg-white">
+        <div className="flex flex-col items-center justify-center h-full p-12 bg-white overflow-y-auto">
           <div className="w-full max-w-md">
             <div className="flex flex-col items-center mb-4 md:hidden">
               <FaHeartbeat className="text-blue-500 text-4xl mb-2" />
@@ -181,6 +190,27 @@ const Login = () => {
             <p className="text-center text-gray-600 mt-2 mb-3">
               Login into your SmartCare account
             </p>
+
+            {/* ✅ Pending Approval Warning */}
+            {pendingApprovalError && (
+              <div className='mb-4 bg-yellow-50 border-l-4 border-yellow-400 rounded p-4'>
+                <div className='flex items-start'>
+                  <Clock className='h-5 w-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0' />
+                  <div>
+                    <h3 className='text-sm font-semibold text-yellow-800 mb-1'>
+                      Account Pending Approval
+                    </h3>
+                    <p className='text-sm text-yellow-700 mb-2'>
+                      Your account is awaiting admin approval. You will receive an email with an 
+                      activation link once your account has been approved (typically within 24-48 hours).
+                    </p>
+                    <p className='text-sm text-yellow-700'>
+                      <strong>Important:</strong> Please check your email inbox and spam folder for updates.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <form
               onSubmit={handleSubmit(handleFormSubmit)}
@@ -259,7 +289,7 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Setup Required Modal */}
+      {/* Setup Required Modal - For Relatives */}
       {showSetupModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">

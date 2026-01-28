@@ -9,8 +9,8 @@ import { toast } from "react-hot-toast"
 import { useRouter } from 'next/navigation'
 import CustomToaster from '../ui/CustomToaster'
 import { FaHeartbeat } from "react-icons/fa"
-import { Mail, Lock, User, Phone, Eye, EyeOff, Shield } from "lucide-react"
-import PrivacyPolicyPage from '@/app/privacy-policy'
+import { Mail, Lock, User, Phone, Eye, EyeOff, Shield, CheckCircle, Clock } from "lucide-react"
+
 interface ExtendedUserRegisterType extends UserRegisterType {
     dataConsent: boolean;
 }
@@ -21,6 +21,8 @@ const Registration = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [registrationComplete, setRegistrationComplete] = useState(false);
+    const [userEmail, setUserEmail] = useState('');
     const password = watch("password");
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -38,13 +40,10 @@ const Registration = () => {
             const result = await response.json();
             if (!response.ok) throw new Error(result.message || "Failed to register user");
 
-            toast.success("Registration successful! Redirecting to login...");
+            // Store email and show success screen
+            setUserEmail(data.email);
+            setRegistrationComplete(true);
             reset();
-
-            // Redirect to login page
-            if (result.redirectTo) {
-                setTimeout(() => router.push(result.redirectTo), 1500);
-            }
 
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Registration failed. Please try again";
@@ -54,6 +53,130 @@ const Registration = () => {
         }
     }
 
+    // Pending Approval Success Screen
+    if (registrationComplete) {
+        return (
+            <div className='min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-emerald-50 p-4'>
+                <CustomToaster />
+                <div className='w-full max-w-2xl'>
+                    <div className='bg-white rounded-lg shadow-xl overflow-hidden'>
+                        {/* Header */}
+                        <div className='bg-gradient-to-r from-emerald-400 to-blue-950 p-6 text-white text-center'>
+                            <div className="flex items-center justify-center mb-3">
+                                <FaHeartbeat className="text-3xl mr-2" />
+                                <h1 className="text-2xl font-bold">SmartCare</h1>
+                            </div>
+                            <p className="text-sm opacity-90">Registration Successful</p>
+                        </div>
+
+                        {/* Content */}
+                        <div className='p-8'>
+                            <div className='text-center mb-6'>
+                                <div className='inline-flex items-center justify-center w-20 h-20 bg-yellow-100 rounded-full mb-4'>
+                                    <Clock className='w-10 h-10 text-yellow-600' />
+                                </div>
+                                <h2 className='text-2xl font-bold text-gray-900 mb-2'>
+                                    Account Pending Approval
+                                </h2>
+                                <p className='text-gray-600 mb-4'>
+                                    Thank you for registering with SmartCare!
+                                </p>
+                                <div className='bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6'>
+                                    <div className='flex items-start'>
+                                        <Mail className='w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0' />
+                                        <div className='text-left'>
+                                            <p className='text-sm text-gray-700'>
+                                                We've sent a confirmation email to:
+                                            </p>
+                                            <p className='font-semibold text-gray-900 mt-1'>
+                                                {userEmail}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Status Information */}
+                            <div className='bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6'>
+                                <div className='flex items-start'>
+                                    <div className='flex-shrink-0'>
+                                        <Clock className='h-5 w-5 text-yellow-400' />
+                                    </div>
+                                    <div className='ml-3'>
+                                        <h3 className='text-sm font-semibold text-yellow-800 mb-2'>
+                                            What happens next?
+                                        </h3>
+                                        <div className='text-sm text-yellow-700 space-y-2'>
+                                            <div className='flex items-start'>
+                                                <CheckCircle className='w-4 h-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0' />
+                                                <p>Our admin team will review your registration (typically within 24-48 hours)</p>
+                                            </div>
+                                            <div className='flex items-start'>
+                                                <CheckCircle className='w-4 h-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0' />
+                                                <p>Once approved, you'll receive an activation email with a secure link</p>
+                                            </div>
+                                            <div className='flex items-start'>
+                                                <CheckCircle className='w-4 h-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0' />
+                                                <p>Click the activation link to verify your email and activate your account</p>
+                                            </div>
+                                            <div className='flex items-start'>
+                                                <CheckCircle className='w-4 h-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0' />
+                                                <p>You'll then be able to log in and access all SmartCare features</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Important Notice */}
+                            <div className='bg-red-50 border border-red-200 rounded-lg p-4 mb-6'>
+                                <div className='flex items-start'>
+                                    <Shield className='w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0' />
+                                    <div>
+                                        <h3 className='font-semibold text-red-900 mb-1'>Important</h3>
+                                        <p className='text-sm text-red-700'>
+                                            Please do not attempt to log in until you receive your activation email. 
+                                            Your account will not be accessible until it has been approved and activated.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className='space-y-3'>
+                                <Button
+                                    onClick={() => {
+                                        setRegistrationComplete(false);
+                                        router.push('/');
+                                    }}
+                                    className='w-full bg-emerald-500 hover:bg-emerald-600'
+                                >
+                                    Return to Home
+                                </Button>
+                                
+                                <p className='text-center text-sm text-gray-600'>
+                                    Didn't receive the email? Check your spam folder or{' '}
+                                    <a href="mailto:support@smartcare.com" className='text-blue-600 hover:underline'>
+                                        contact support
+                                    </a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <p className='text-center text-sm text-gray-600 mt-6'>
+                        Need help? Contact{' '}
+                        <a href="mailto:support@smartcare.com" className='text-emerald-600 hover:underline'>
+                            support@smartcare.com
+                        </a>
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // Registration Form
     return (
         <div className='min-h-screen w-screen grid grid-cols-1 md:grid-cols-2'>
             <CustomToaster />
