@@ -9,17 +9,16 @@ const router = express.Router();
 // GET /api/doctors/search?q=query
 router.get("/", async (req: Request, res: Response) => {
   try {
-    console.log("=== DOCTOR SEARCH REQUEST ===");
     
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-      console.log("❌ No authorization header");
+     
       res.status(401).json({ message: "No token provided" });
       return;
     }
 
     const token = authHeader.split(" ")[1];
-    console.log("🔑 Token received:", token ? "Present" : "Missing");
+    
 
     let decoded: any;
     try {
@@ -35,24 +34,24 @@ router.get("/", async (req: Request, res: Response) => {
     }
 
     await connectMongoDB();
-    console.log("✅ Database connected");
+    
 
     // Ensure user exists
     const user = await User.findById(decoded.userId);
     if (!user) {
-      console.log("❌ User not found for ID:", decoded.userId);
+      
       res.status(404).json({ message: "User not found" });
       return;
     }
-    console.log("✅ User found:", user.email);
+   
 
     // Get query params
     const query = (req.query.q as string) || "";
-    console.log("🔍 Search query:", query);
+   
 
     // Build search query for doctors
     let searchQuery: any = { role: "doctor" };
-    console.log("📊 Initial search query:", searchQuery);
+    
 
     if (query) {
       const searchRegex = new RegExp(query, "i");
@@ -64,17 +63,17 @@ router.get("/", async (req: Request, res: Response) => {
         { specialization: searchRegex },
         { hospital: searchRegex },
       ];
-      console.log("🔍 Final search query with $or:", JSON.stringify(searchQuery, null, 2));
+      
     }
 
     // Find doctors
-    console.log("📋 Executing database query...");
+    
     const doctors = await User.find(searchQuery)
       .select("firstName lastName fullName email phoneNumber specialization hospital licenseNumber diabetes hypertension cardiovascular createdAt")
       .limit(20)
       .sort({ createdAt: -1 });
 
-    console.log(`✅ Found ${doctors.length} doctors in database query`);
+   
 
     // Format response
     const formattedDoctors = doctors.map((doctor) => {
@@ -103,11 +102,11 @@ router.get("/", async (req: Request, res: Response) => {
         createdAt: doctor.createdAt,
       };
 
-      console.log("👨‍⚕️ Formatted doctor:", formattedDoctor.fullName);
+      
       return formattedDoctor;
     });
 
-    console.log(`🎯 Sending response with ${formattedDoctors.length} doctors`);
+    
     
     res.json({ 
       success: true,
@@ -131,19 +130,19 @@ router.get("/", async (req: Request, res: Response) => {
 // Test endpoint to check doctors in database
 router.get("/test-doctors", async (req: Request, res: Response) => {
   try {
-    console.log("=== TEST DOCTORS ENDPOINT ===");
+   
     await connectMongoDB();
     
     // Count total doctors
     const doctorCount = await User.countDocuments({ role: "doctor" });
-    console.log(`📊 Total doctors in database: ${doctorCount}`);
+   
     
     // Get all doctors with their basic info
     const allDoctors = await User.find({ role: "doctor" })
       .select("firstName lastName email specialization hospital role")
       .limit(10);
 
-    console.log("📋 All doctors in database:", allDoctors);
+    
 
     res.json({
       success: true,
@@ -164,7 +163,7 @@ router.get("/test-doctors", async (req: Request, res: Response) => {
 // Create demo doctors if none exist
 router.post("/create-demo-doctors", async (req: Request, res: Response) => {
   try {
-    console.log("=== CREATE DEMO DOCTORS ===");
+    
     await connectMongoDB();
 
     // Check if demo doctors already exist
@@ -172,7 +171,7 @@ router.post("/create-demo-doctors", async (req: Request, res: Response) => {
       role: "doctor"
     });
 
-    console.log(`📊 Existing doctors count: ${existingCount}`);
+   
 
     if (existingCount > 0) {
       return res.json({
@@ -236,9 +235,9 @@ router.post("/create-demo-doctors", async (req: Request, res: Response) => {
       }
     ];
 
-    console.log("📝 Inserting demo doctors...");
+    
     await User.insertMany(demoDoctors);
-    console.log("✅ Demo doctors inserted successfully");
+    
 
     res.json({
       success: true,

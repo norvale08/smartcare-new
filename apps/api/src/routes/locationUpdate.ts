@@ -34,8 +34,7 @@ router.post("/update", authenticateUser, async (req: AuthRequest, res: Response)
       return res.status(400).json({ message: "Latitude and longitude are required" });
     }
 
-    console.log("📍 Updating location for user:", req.user?.id);
-    console.log("📍 Coordinates:", { lat: finalLat, lng: finalLng, address });
+  
 
     const patient = await Patient.findOneAndUpdate(
       { userId: req.user?.id },
@@ -53,14 +52,14 @@ router.post("/update", authenticateUser, async (req: AuthRequest, res: Response)
     );
 
     if (!patient) {
-      console.error("❌ Patient not found for userId:", req.user?.id);
+      console.error(" Patient not found for userId:", req.user?.id);
       return res.status(404).json({ message: "Patient not found" });
     }
 
-    console.log("✅ Location updated successfully:", patient.location);
+    
     res.json({ message: "Location updated successfully", location: patient.location });
   } catch (err: any) {
-    console.error("❌ Error updating location:", err.message);
+    console.error(" Error updating location:", err.message);
     res.status(500).json({ error: "Failed to update location" });
   }
 });

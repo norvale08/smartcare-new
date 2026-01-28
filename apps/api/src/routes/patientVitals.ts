@@ -22,26 +22,20 @@ router.get('/:patientId', verifyToken, async (req: AuthenticatedRequest, res: Re
     const patient = await Patient.findOne({ userId: patientId });
     
     if (!patient) {
-      console.log(`❌ Patient not found with userId: ${patientId}`);
+      
       return res.status(404).json({ 
         success: false,
         message: 'Patient not found' 
       });
     }
 
-    console.log(`📋 Patient found:`, {
-      patientId: patient._id,
-      userId: patient.userId,
-      condition: patient.condition,
-      fullName: patient.fullName
-    });
+    
 
     let vitals: any[] = [];
 
-    // ✅ FIX: Handle undefined condition by checking BOTH collections
+    // FIX: Handle undefined condition by checking BOTH collections
     if (!patient.condition || patient.condition === 'undefined') {
-      console.log(`⚠️ Patient condition is undefined, searching both collections`);
-      
+     
       // Search both hypertension and diabetes collections
       const [hypertensionVitals, diabetesVitals] = await Promise.all([
         HypertensionVital.find({ 
@@ -59,7 +53,7 @@ router.get('/:patientId', verifyToken, async (req: AuthenticatedRequest, res: Re
         }).sort({ createdAt: -1 }).limit(100)
       ]);
 
-      console.log(`🔍 Found ${hypertensionVitals.length} hypertension vitals and ${diabetesVitals.length} diabetes vitals`);
+     
 
       // Combine both types of vitals
       vitals = [
@@ -98,8 +92,7 @@ router.get('/:patientId', verifyToken, async (req: AuthenticatedRequest, res: Re
       .sort({ createdAt: -1 })
       .limit(100);
 
-      console.log(`💙 Found ${hypertensionVitals.length} hypertension vitals`);
-
+     
       vitals = hypertensionVitals.map(vital => ({
         id: vital._id.toString(),
         systolic: vital.systolic,
@@ -123,8 +116,7 @@ router.get('/:patientId', verifyToken, async (req: AuthenticatedRequest, res: Re
       .sort({ createdAt: -1 })
       .limit(100);
 
-      console.log(`💛 Found ${diabetesVitals.length} diabetes vitals`);
-
+     
       vitals = diabetesVitals.map(vital => ({
         id: vital._id.toString(),
         systolic: vital.systolic,
@@ -141,8 +133,7 @@ router.get('/:patientId', verifyToken, async (req: AuthenticatedRequest, res: Re
     // Sort all vitals by timestamp (newest first)
     vitals.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    console.log(`✅ Returning ${vitals.length} vitals for patient ${patientId}`);
-
+    
     res.status(200).json({
       success: true,
       data: vitals,
@@ -153,7 +144,7 @@ router.get('/:patientId', verifyToken, async (req: AuthenticatedRequest, res: Re
     });
 
   } catch (error) {
-    console.error('❌ Error fetching patient vitals:', error);
+    console.error('Error fetching patient vitals:', error);
     res.status(500).json({ 
       success: false,
       message: 'Failed to fetch patient vitals' 
@@ -161,7 +152,7 @@ router.get('/:patientId', verifyToken, async (req: AuthenticatedRequest, res: Re
   }
 });
 
-// ✅ FIX: Update summary route to handle undefined conditions
+//  FIX: Update summary route to handle undefined conditions
 router.get('/:patientId/summary', verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { patientId } = req.params;
@@ -181,9 +172,9 @@ router.get('/:patientId/summary', verifyToken, async (req: AuthenticatedRequest,
 
     let latestVital = null;
 
-    // ✅ FIX: Handle undefined condition by checking both collections
+    // FIX: Handle undefined condition by checking both collections
     if (!patient.condition || patient.condition === 'undefined') {
-      console.log(`⚠️ Patient condition undefined, checking both collections for summary`);
+      
       
       const [latestHypertension, latestDiabetes] = await Promise.all([
         HypertensionVital.findOne({ 
@@ -226,7 +217,7 @@ router.get('/:patientId/summary', verifyToken, async (req: AuthenticatedRequest,
     });
 
   } catch (error) {
-    console.error('❌ Error fetching patient vitals summary:', error);
+    console.error(' Error fetching patient vitals summary:', error);
     res.status(500).json({ 
       success: false,
       message: 'Failed to fetch patient vitals summary' 
@@ -234,7 +225,7 @@ router.get('/:patientId/summary', verifyToken, async (req: AuthenticatedRequest,
   }
 });
 
-// ✅ FIX: Update stats route to handle undefined conditions
+//  FIX: Update stats route to handle undefined conditions
 router.get('/:patientId/stats', verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { patientId } = req.params;
@@ -258,9 +249,9 @@ router.get('/:patientId/stats', verifyToken, async (req: AuthenticatedRequest, r
 
     let stats = {};
 
-    // ✅ FIX: Handle undefined condition by checking both collections
+    //  FIX: Handle undefined condition by checking both collections
     if (!patient.condition || patient.condition === 'undefined') {
-      console.log(`⚠️ Patient condition undefined, checking both collections for stats`);
+      
       
       const [hypertensionVitals, diabetesVitals] = await Promise.all([
         HypertensionVital.find({
@@ -340,12 +331,12 @@ router.get('/:patientId/stats', verifyToken, async (req: AuthenticatedRequest, r
   }
 });
 
-// ✅ ADD: Debug endpoint to check patient data
+//  ADD: Debug endpoint to check patient data
 router.get('/:patientId/debug', verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { patientId } = req.params;
     
-    console.log(`🔍 DEBUG: Looking for patient with ID: ${patientId}`);
+    
     
     // Try all possible ways to find patient
     const byUserId = await Patient.findOne({ userId: patientId });

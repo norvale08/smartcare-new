@@ -94,7 +94,7 @@ export const getDoctorPatientMedications = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error fetching medications for doctor view:', error);
+    console.error(' Error fetching medications for doctor view:', error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch patient medications",
@@ -166,7 +166,7 @@ export const getStoppedMedicationsSummary = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error fetching stopped medications summary:', error);
+    console.error('Error fetching stopped medications summary:', error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch stopped medications summary",
@@ -364,7 +364,7 @@ export const getSideEffectsDoctorSummary = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error fetching side effects doctor summary:', error);
+    console.error(' Error fetching side effects doctor summary:', error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch side effects summary",

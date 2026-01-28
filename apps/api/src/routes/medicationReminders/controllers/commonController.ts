@@ -68,7 +68,7 @@ export const restartMedication = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error restarting medication:', error);
+    console.error(' Error restarting medication:', error);
     res.status(500).json({
       success: false,
       message: "Failed to restart medication",
@@ -94,7 +94,7 @@ export const getTodayMedications = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error fetching today medications:', error);
+    console.error(' Error fetching today medications:', error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch today's medications",
@@ -172,7 +172,7 @@ export const getAdherenceSummary = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error fetching adherence summary:', error);
+    console.error('Error fetching adherence summary:', error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch adherence summary",
@@ -203,7 +203,7 @@ export const getDueMedications = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error fetching due medications:', error);
+    console.error(' Error fetching due medications:', error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch due medications",
@@ -237,7 +237,7 @@ export const getMedicationById = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error fetching medication:', error);
+    console.error(' Error fetching medication:', error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch medication",
@@ -275,7 +275,7 @@ export const getMedicationHistory = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error fetching medication history:', error);
+    console.error(' Error fetching medication history:', error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch medication history",
@@ -328,7 +328,7 @@ export const getSideEffectsSummary = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error fetching side effects summary:', error);
+    console.error(' Error fetching side effects summary:', error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch side effects summary",
@@ -388,7 +388,7 @@ export const removeSideEffect = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error removing side effect:', error);
+    console.error(' Error removing side effect:', error);
     res.status(500).json({
       success: false,
       message: "Failed to remove side effect",
@@ -434,7 +434,7 @@ export const deleteMedication = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error deleting medication:', error);
+    console.error(' Error deleting medication:', error);
     res.status(500).json({
       success: false,
       message: "Failed to delete medication",

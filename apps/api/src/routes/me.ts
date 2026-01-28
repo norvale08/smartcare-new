@@ -29,7 +29,7 @@ router.get("/", async (req: Request, res: Response) => {
       return;
     }
 
-    res.json({ user }); // ✅ no return here
+    res.json({ user }); //  no return here
   } catch (error) {
     console.error("Fetch user error:", error);
     res.status(500).json({ message: "Server error" });

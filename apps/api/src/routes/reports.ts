@@ -21,7 +21,7 @@ interface GenerateReportRequest {
 // Test endpoint to verify reports route is working
 router.get("/test", async (req: express.Request, res: express.Response) => {
   try {
-    console.log("🧪 Reports test endpoint hit");
+    
     res.status(200).json({
       success: true,
       message: "Reports API is working!",
@@ -39,8 +39,7 @@ router.get("/test", async (req: express.Request, res: express.Response) => {
 // Generate patient report
 router.post("/generate", async (req: express.Request, res: express.Response) => {
   try {
-    console.log("=== GENERATING REPORT ===");
-    console.log("Request body:", req.body);
+    
 
     const {
       patientId,
@@ -108,7 +107,7 @@ router.post("/generate", async (req: express.Request, res: express.Response) => 
 
     const { startDate, endDate } = getDateRange();
 
-    console.log(`📅 Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+    
 
     // Collect report data
     const reportData: any = {
@@ -147,7 +146,7 @@ router.post("/generate", async (req: express.Request, res: express.Response) => 
       .sort({ scheduledDate: -1 });
 
       reportData.appointments = appointments;
-      console.log(`📅 Found ${appointments.length} appointments`);
+      
     }
 
     // Add vitals data if requested
@@ -170,9 +169,9 @@ router.post("/generate", async (req: express.Request, res: express.Response) => 
           available: false
         };
         
-        console.log("📊 Vitals data placeholder added");
+       
       } catch (vitalsError) {
-        console.log("⚠️ Could not fetch vitals data:", vitalsError);
+        
         reportData.vitals = {
           note: "Vitals data not available",
         //   error: vitalsError.message
@@ -191,9 +190,9 @@ router.post("/generate", async (req: express.Request, res: express.Response) => 
           available: false
         };
         
-        console.log("💊 Medications data placeholder added");
+        
       } catch (medsError) {
-        console.log("⚠️ Could not fetch medications data:", medsError);
+        
         reportData.medications = {
           note: "Medications data not available",
         //   error: medsError.message
@@ -201,7 +200,7 @@ router.post("/generate", async (req: express.Request, res: express.Response) => 
       }
     }
 
-    console.log("✅ Report data collected successfully");
+   
 
     // Handle different formats
     if (format === 'csv') {
@@ -251,7 +250,7 @@ router.post("/generate", async (req: express.Request, res: express.Response) => 
     }
 
   } catch (err: any) {
-    console.error("❌ Error generating report:", err);
+    console.error(" Error generating report:", err);
     res.status(500).json({
       success: false,
       message: "Error generating report",
@@ -264,7 +263,7 @@ router.post("/generate", async (req: express.Request, res: express.Response) => 
 router.get("/download/:reportId", async (req: express.Request, res: express.Response) => {
   try {
     const { reportId } = req.params;
-    console.log("📥 Download request for report:", reportId);
+   
     
     // This would serve the actual generated file
     // For now, it's a placeholder that returns the report data

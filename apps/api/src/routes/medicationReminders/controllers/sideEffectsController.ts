@@ -79,7 +79,7 @@ export const reportSideEffect = async (req: any, res: any) => {
     await medication.save();
 
     if (severity === 'severe') {
-      console.log("⚠️ SEVERE SIDE EFFECT REPORTED - Doctor should be notified");
+     
     }
 
     res.json({
@@ -161,7 +161,7 @@ export const updateSideEffectByDoctor = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error updating side effect:', error);
+    console.error(' Error updating side effect:', error);
     res.status(500).json({
       success: false,
       message: "Failed to update side effect",
@@ -210,7 +210,7 @@ export const getSideEffects = async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error fetching side effects:', error);
+    console.error(' Error fetching side effects:', error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch side effects",

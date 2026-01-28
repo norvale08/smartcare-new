@@ -163,12 +163,7 @@ export class SmartCareAI {
   constructor() {
     const apiKey = process.env.GROQ_API_KEY;
 
-    console.log("🔍 SmartCareAI Initialization:");
-    console.log("- NODE_ENV:", process.env.NODE_ENV);
-    console.log("- API Key exists:", !!apiKey);
-    console.log("- API Key length:", apiKey?.length || 0);
-    console.log("- API Key prefix:", apiKey?.substring(0, 8) || "NONE");
-
+    
     if (!apiKey) {
       this.apiKeyError = "GROQ_API_KEY not found in environment variables";
       console.error("❌", this.apiKeyError);
@@ -181,7 +176,7 @@ export class SmartCareAI {
 
     try {
       this.groq = new Groq({ apiKey });
-      console.log("✅ Groq SDK initialized successfully");
+      
     } catch (error: any) {
       this.apiKeyError = `Failed to initialize Groq: ${error.message}`;
       console.error("❌", this.apiKeyError);
@@ -190,7 +185,7 @@ export class SmartCareAI {
 
   private checkApiKey(): boolean {
     if (this.apiKeyError || !this.groq) {
-      console.error("❌ Cannot use AI - API key issue:", this.apiKeyError);
+      console.error(" Cannot use AI - API key issue:", this.apiKeyError);
       return false;
     }
     return true;
@@ -198,7 +193,7 @@ export class SmartCareAI {
 
   async generateComprehensiveFeedback(data: ComprehensiveFeedbackInput): Promise<string> {
     if (!this.checkApiKey()) {
-      return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
+      return ` AI temporarily unavailable: ${this.apiKeyError}`;
     }
 
     try {
@@ -227,7 +222,7 @@ export class SmartCareAI {
 
 PATIENT NAME: ${patientName}
 DISEASE FOCUS: ${diseaseContext.focusText.toUpperCase()}
-${diseaseContext.isBoth ? "⚠️ DUAL CONDITION: Address BOTH diabetes AND hypertension together!" : ""}
+${diseaseContext.isBoth ? " DUAL CONDITION: Address BOTH diabetes AND hypertension together!" : ""}
 
 CONTEXT PROVIDED:
 ${data.summary}
@@ -287,7 +282,7 @@ MEDICAL COMMUNICATION STANDARDS:
       });
 
       const text = completion.choices[0]?.message?.content || "";
-      return text.trim() || "⚠️ No feedback available.";
+      return text.trim() || " No feedback available.";
     } catch (err: any) {
       return this.handleAIError(err);
     }
@@ -295,7 +290,7 @@ MEDICAL COMMUNICATION STANDARDS:
 
   async generateSummary(data: VitalsData): Promise<string> {
     if (!this.checkApiKey()) {
-      return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
+      return ` AI temporarily unavailable: ${this.apiKeyError}`;
     }
 
     try {
@@ -361,7 +356,7 @@ Write 3-4 detailed sentences that:
       });
 
       const text = completion.choices[0]?.message?.content || "";
-      return text.trim() || "⚠️ No summary available.";
+      return text.trim() || " No summary available.";
     } catch (err: any) {
       return this.handleAIError(err);
     }
@@ -369,7 +364,7 @@ Write 3-4 detailed sentences that:
 
   async generateGlucoseFeedback(data: VitalsData): Promise<string> {
     if (!this.checkApiKey()) {
-      return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
+      return ` AI temporarily unavailable: ${this.apiKeyError}`;
     }
 
     try {
@@ -414,7 +409,7 @@ BLOOD PRESSURE:
 YOUR READING:
 Glucose: ${data.glucose} mg/dL (${data.context}) = ${glucoseCategory.status}
 ${diseaseContext.isBoth && data.systolic && data.diastolic ? `Blood Pressure: ${data.systolic}/${data.diastolic} mmHg = ${bpCategory.status}` : ""}
-${diseaseContext.isBoth && data.systolic && data.diastolic ? `⚠️ Managing BOTH: Glucose ${glucoseCategory.status}, BP ${bpCategory.status}` : ""}
+${diseaseContext.isBoth && data.systolic && data.diastolic ? ` Managing BOTH: Glucose ${glucoseCategory.status}, BP ${bpCategory.status}` : ""}
 ${data.heartRate ? `Heart Rate: ${data.heartRate} bpm` : ""}
 ${data.exerciseRecent ? `Recent Exercise: ${data.exerciseRecent} (${data.exerciseIntensity})` : ""}
 
@@ -456,7 +451,7 @@ COMMUNICATION STANDARDS:
       });
 
       const text = completion.choices[0]?.message?.content || "";
-      return text.trim() || "⚠️ No feedback available.";
+      return text.trim() || " No feedback available.";
     } catch (err: any) {
       return this.handleAIError(err);
     }
@@ -464,7 +459,7 @@ COMMUNICATION STANDARDS:
 
   async generateLifestyleFeedback(data: LifestyleAIInput & VitalsData): Promise<string> {
     if (!this.checkApiKey()) {
-      return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
+      return ` AI temporarily unavailable: ${this.apiKeyError}`;
     }
 
     try {
@@ -542,7 +537,7 @@ PATIENT COMMUNICATION:
       });
 
       const text = completion.choices[0]?.message?.content || "";
-      return text.trim() || "⚠️ No lifestyle advice available.";
+      return text.trim() || " No lifestyle advice available.";
     } catch (err: any) {
       return this.handleAIError(err);
     }
@@ -632,10 +627,10 @@ CRITICAL RULES:
       const parsedAdvice = JSON.parse(text);
 
       return {
-        breakfast: parsedAdvice.breakfast || "⚠️ Breakfast advice unavailable",
-        lunch: parsedAdvice.lunch || "⚠️ Lunch advice unavailable",
-        supper: parsedAdvice.supper || "⚠️ Supper advice unavailable",
-        foods_to_avoid: parsedAdvice.foods_to_avoid || "⚠️ Foods to avoid list unavailable",
+        breakfast: parsedAdvice.breakfast || " Breakfast advice unavailable",
+        lunch: parsedAdvice.lunch || " Lunch advice unavailable",
+        supper: parsedAdvice.supper || " Supper advice unavailable",
+        foods_to_avoid: parsedAdvice.foods_to_avoid || " Foods to avoid list unavailable",
       };
     } catch (err: any) {
       console.error("Food advice error:", err);
@@ -645,7 +640,7 @@ CRITICAL RULES:
 
   async generateQuickTips(data: VitalsData): Promise<string> {
     if (!this.checkApiKey()) {
-      return `⚠️ AI temporarily unavailable: ${this.apiKeyError}`;
+      return ` AI temporarily unavailable: ${this.apiKeyError}`;
     }
 
     try {
@@ -683,31 +678,31 @@ Provide 3 specific tips that:
       });
 
       const text = completion.choices[0]?.message?.content || "";
-      return text.trim() || "⚠️ No quick tips available.";
+      return text.trim() || " No quick tips available.";
     } catch (err: any) {
       return this.handleAIError(err);
     }
   }
 
   private handleAIError(err: any): string {
-    console.error("❌ AI Error:", err);
+    console.error(" AI Error:", err);
 
     if (err.message?.includes("API key")) {
-      return "⚠️ AI service authentication failed. Please check configuration.";
+      return " AI service authentication failed. Please check configuration.";
     }
 
     if (err.message?.includes("rate limit") || err.status === 429) {
-      return "⚠️ AI service temporarily busy. Please try again in a moment.";
+      return " AI service temporarily busy. Please try again in a moment.";
     }
 
     if (err.message?.includes("timeout") || err.code === "ETIMEDOUT") {
-      return "⚠️ AI service took too long to respond. Please try again.";
+      return " AI service took too long to respond. Please try again.";
     }
 
     if (err.status === 503 || err.message?.includes("unavailable")) {
-      return "⚠️ AI service temporarily unavailable. Please try again shortly.";
+      return "AI service temporarily unavailable. Please try again shortly.";
     }
 
-    return "⚠️ AI feedback temporarily unavailable. Please try again.";
+    return " AI feedback temporarily unavailable. Please try again.";
   }
 }

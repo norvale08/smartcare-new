@@ -19,7 +19,7 @@ export function Header({ user, isRefreshing, onRefresh, onLogout }: HeaderProps)
           {/* Title */}
           <div className="flex items-center mb-3 sm:mb-0">
             <h1 className="text-lg sm:text-xl font-semibold text-gray-800">
-              👨‍👩‍👧‍👦 Family Health Dashboard
+              
             </h1>
           </div>
 

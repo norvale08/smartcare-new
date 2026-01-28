@@ -20,10 +20,10 @@ const authenticateUser = (req: any, res: any, next: any) => {
     req.userEmail = decoded.email;
     req.userRole = decoded.role;
 
-    console.log("✅ Authenticated user:", decoded.userId, "Role:", decoded.role);
+   
     next();
   } catch (error) {
-    console.error("❌ Token verification failed:", error);
+    console.error(" Token verification failed:", error);
     return res.status(401).json({ message: "Invalid token" });
   }
 };
@@ -31,8 +31,7 @@ const authenticateUser = (req: any, res: any, next: any) => {
 // GET /api/medications/patient/my-medications - Patient gets their medications
 router.get("/my-medications", authenticateUser, async (req: any, res: any) => {
   try {
-    console.log("=== FETCHING PATIENT MEDICATIONS ===");
-    console.log("Patient ID:", req.userId);
+   
 
     await connectMongoDB();
 
@@ -43,7 +42,7 @@ router.get("/my-medications", authenticateUser, async (req: any, res: any) => {
     .populate('prescribedBy', 'fullName specialization')
     .sort({ createdAt: -1 });
 
-    console.log(`✅ Found ${medications.length} active medications`);
+   
 
     res.json({
       success: true,
@@ -63,8 +62,7 @@ router.get("/my-medications", authenticateUser, async (req: any, res: any) => {
 // GET /api/medications/patient/history - Get medication history for patient
 router.get("/history", authenticateUser, async (req: any, res: any) => {
   try {
-    console.log("=== FETCHING MEDICATION HISTORY ===");
-    console.log("Patient ID:", req.userId);
+   
 
     await connectMongoDB();
 
@@ -74,7 +72,7 @@ router.get("/history", authenticateUser, async (req: any, res: any) => {
     .populate('prescribedBy', 'fullName specialization')
     .sort({ createdAt: -1 });
 
-    console.log(`✅ Found ${medications.length} total medications`);
+    
 
     res.json({
       success: true,
@@ -94,8 +92,7 @@ router.get("/history", authenticateUser, async (req: any, res: any) => {
 // GET /api/medications/patient/active - Get only active medications
 router.get("/active", authenticateUser, async (req: any, res: any) => {
   try {
-    console.log("=== FETCHING ACTIVE MEDICATIONS ===");
-    console.log("Patient ID:", req.userId);
+    
 
     await connectMongoDB();
 
@@ -106,7 +103,7 @@ router.get("/active", authenticateUser, async (req: any, res: any) => {
     .populate('prescribedBy', 'fullName specialization')
     .sort({ medicationName: 1 });
 
-    console.log(`✅ Found ${activeMedications.length} active medications`);
+    
 
     res.json({
       success: true,

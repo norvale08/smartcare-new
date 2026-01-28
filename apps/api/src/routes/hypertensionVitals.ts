@@ -112,7 +112,7 @@ router.post("/analyze", verifyToken, async (req: AuthenticatedRequest, res) => {
                     });
                 }
                 
-                console.log(`✅ Notified ${doctors.length} doctor(s) about AI analysis for patient ${patientName}`);
+                
             } catch (notifError) {
                 console.error('Error notifying doctors:', notifError);
                 // Don't fail the request if notification fails

@@ -19,7 +19,7 @@ const calculateAge = (dob: Date | string | undefined): number => {
   return age > 0 ? age : 0;
 };
 
-// ✅ Helper function to get patient name
+//  Helper function to get patient name
 const getPatientName = (patient: any): string => {
   if (!patient) return "Patient";
   
@@ -46,7 +46,7 @@ const getPatientName = (patient: any): string => {
   return "Patient";
 };
 
-// ✅ Helper function to get selected diseases
+//  Helper function to get selected diseases
 const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   const diseases: ("diabetes" | "hypertension")[] = [];
   
@@ -69,7 +69,7 @@ const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   return diseases;
 };
 
-// ✅ GET comprehensive AI feedback (with language query param support)
+//  GET comprehensive AI feedback (with language query param support)
 router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -77,9 +77,9 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
 
     const vitalId = req.params.vitalId;
     
-    // ✅ Extract language from query parameter
+    //  Extract language from query parameter
     const requestedLanguage = req.query.language as "en" | "sw" | undefined;
-    console.log(`🌐 Requested language for comprehensive feedback: ${requestedLanguage || 'not specified'}`);
+    
     
     // Validate vitalId
     if (!vitalId || vitalId === 'undefined' || vitalId === 'null') {
@@ -89,7 +89,7 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       });
     }
 
-    console.log("🎯 Generating comprehensive feedback for vital:", vitalId);
+    
 
     // Fetch all necessary data
     const [patient, vital, latestLifestyle] = await Promise.all([
@@ -115,17 +115,13 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
     const age = calculateAge(patient.dob);
     const patientName = getPatientName(patient);
     
-    // ✅ GET SELECTED DISEASES
+    //  GET SELECTED DISEASES
     const selectedDiseases = vital.selectedDiseases || getPatientDiseases(patient);
     const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
 
-    console.log(`🏥 Disease context for comprehensive feedback:`, {
-      patientName,
-      diseases: selectedDiseases,
-      managementType: hasBothConditions ? "DUAL (Diabetes + Hypertension)" : "DIABETES ONLY"
-    });
+   
 
-    // ✅ PRIORITY: query param → vital → patient → lifestyle → default
+    //  PRIORITY: query param → vital → patient → lifestyle → default
     const language = (
       requestedLanguage || 
       vital.language || 
@@ -134,14 +130,7 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       "en"
     ) as "en" | "sw";
     
-    console.log(`🌐 Using language: ${language} (source: ${
-      requestedLanguage ? 'query param' : 
-      vital.language ? 'vital' : 
-      patient.language ? 'patient' : 
-      latestLifestyle?.language ? 'lifestyle' : 
-      'default'
-    })`);
-
+    
     // Prepare data for AI with diseases and prioritized language
     const foodInput: FoodAdviceInput = {
       glucose: vital.glucose,
@@ -153,7 +142,7 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       height: patient.height,
       age,
       gender: patient.gender,
-      language: language, // ✅ Use prioritized language
+      language: language, //  Use prioritized language
       exerciseRecent: vital.exerciseRecent,
       exerciseIntensity: vital.exerciseIntensity,
       lastMealTime: vital.lastMealTime,
@@ -178,15 +167,7 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
         : [],
     };
 
-    console.log("🔄 Generating comprehensive AI feedback with context:", {
-      glucose: foodInput.glucose,
-      context: foodInput.context,
-      patientName: foodInput.patientName,
-      selectedDiseases: foodInput.selectedDiseases,
-      language: foodInput.language,
-      hasBP: !!(foodInput.systolic && foodInput.diastolic),
-      diseaseManagement: hasBothConditions ? "DUAL" : "DIABETES ONLY"
-    });
+   
 
     // Generate all AI components in parallel for better performance
     const [summary, foodAdvice, quickTips] = await Promise.all([
@@ -220,7 +201,7 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       patientData: patient,
       hasBloodPressure: !!(vital.systolic && vital.diastolic),
       hasHeartRate: !!vital.heartRate,
-      language: language, // ✅ Use prioritized language
+      language: language, 
       patientName: patientName,
       selectedDiseases: selectedDiseases,
     };
@@ -249,7 +230,7 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
         context: {
           glucose: vital.glucose,
           context: vital.context,
-          language: language, // ✅ Include language in response
+          language: language,
           bloodPressure: vital.systolic && vital.diastolic ? 
             `${vital.systolic}/${vital.diastolic}` : 'Not recorded',
           heartRate: vital.heartRate || 'Not recorded',
@@ -266,7 +247,7 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
       },
     });
   } catch (error: any) {
-    console.error("❌ Error generating comprehensive feedback:", error);
+    console.error(" Error generating comprehensive feedback:", error);
     res.status(500).json({
       success: false,
       message: "Server error generating comprehensive feedback",
@@ -275,15 +256,15 @@ router.get("/comprehensive-feedback/:vitalId", verifyToken, async (req: Authenti
   }
 });
 
-// ✅ Get comprehensive feedback using latest glucose reading (with language query param support)
+//  Get comprehensive feedback using latest glucose reading (with language query param support)
 router.get("/latest-comprehensive-feedback", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    // ✅ Extract language from query parameter to pass along
+    //  Extract language from query parameter to pass along
     const requestedLanguage = req.query.language as "en" | "sw" | undefined;
-    console.log(`🌐 Language for latest comprehensive feedback: ${requestedLanguage || 'not specified'}`);
+   
 
     // Get latest glucose reading
     const latestVital = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
@@ -295,15 +276,15 @@ router.get("/latest-comprehensive-feedback", verifyToken, async (req: Authentica
       });
     }
 
-    // ✅ Preserve language query parameter in redirect
+    //  Preserve language query parameter in redirect
     const redirectUrl = requestedLanguage 
       ? `/api/comprehensive-feedback/${latestVital._id}?language=${requestedLanguage}`
       : `/api/comprehensive-feedback/${latestVital._id}`;
     
-    console.log(`🔄 Redirecting to: ${redirectUrl}`);
+   
     res.redirect(redirectUrl);
   } catch (error: any) {
-    console.error("❌ Error getting latest comprehensive feedback:", error);
+    console.error(" Error getting latest comprehensive feedback:", error);
     res.status(500).json({
       success: false,
       message: "Server error",

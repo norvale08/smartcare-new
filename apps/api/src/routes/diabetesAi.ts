@@ -10,7 +10,7 @@ let smartCareAI: SmartCareAI | null = null;
 
 const getAIService = () => {
   if (!smartCareAI) {
-    console.log("🤖 Initializing SmartCareAI service...");
+   
     smartCareAI = new SmartCareAI();
   }
   return smartCareAI;
@@ -73,7 +73,7 @@ const getPatientName = (patient: any): string => {
   return "Patient";
 };
 
-// ✅ HELPER FUNCTION TO GET SELECTED DISEASES FROM PATIENT PROFILE
+//  HELPER FUNCTION TO GET SELECTED DISEASES FROM PATIENT PROFILE
 const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   const diseases: ("diabetes" | "hypertension")[] = [];
   
@@ -99,14 +99,14 @@ const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   return diseases;
 };
 
-// ✅ MAIN ENDPOINT: GET /api/diabetesAi/summary/:id
+//  MAIN ENDPOINT: GET /api/diabetesAi/summary/:id
 router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
   const startTime = Date.now();
   
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
     if (!userId) {
-      console.error("❌ Unauthorized: No userId in token");
+      console.error(" Unauthorized: No userId in token");
       return res.status(401).json({ 
         success: false,
         message: "Unauthorized" 
@@ -114,34 +114,26 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     }
 
     const vitalId = req.params.id;
-    // ✅ Extract language from query parameter
+    //  Extract language from query parameter
     const requestedLanguage = req.query.language as "en" | "sw" | undefined;
     
-    console.log("=".repeat(60));
-    console.log(`🔍 [${new Date().toISOString()}] Summary request for vital: ${vitalId}`);
-    console.log(`👤 User: ${userId}`);
-    console.log(`🌐 Requested language: ${requestedLanguage || 'not specified'}`);
-
-    // ✅ 1. Fetch vitals
+    
+    //  1. Fetch vitals
     const vitals = await Diabetes.findById(vitalId);
     
     if (!vitals) {
-      console.error(`❌ Vitals not found: ${vitalId}`);
+      console.error(` Vitals not found: ${vitalId}`);
       return res.status(404).json({ 
         success: false,
         message: "Vitals not found" 
       });
     }
 
-    // ✅ USE QUERY PARAM LANGUAGE, FALLBACK TO DB, THEN DEFAULT TO 'en'
+    //  USE QUERY PARAM LANGUAGE, FALLBACK TO DB, THEN DEFAULT TO 'en'
     const language = (requestedLanguage || vitals.language || "en") as "en" | "sw";
     
-    console.log(`📊 Vitals found - Glucose: ${vitals.glucose} mg/dL (${vitals.context})`);
-    console.log(`🌐 Language preference: ${language} (from ${requestedLanguage ? 'query param' : vitals.language ? 'database' : 'default'})`);
-    console.log(`💓 Additional data - BP: ${vitals.systolic || 'N/A'}/${vitals.diastolic || 'N/A'}, HR: ${vitals.heartRate || 'N/A'}`);
-    console.log(`🏃 Exercise: ${vitals.exerciseRecent || 'N/A'} (${vitals.exerciseIntensity || 'N/A'})`);
-
-    // ✅ 2. Check if we have a VALID cached summary IN THE RIGHT LANGUAGE
+  
+    //  2. Check if we have a VALID cached summary IN THE RIGHT LANGUAGE
     const hasCachedSummary = isValidSummary(vitals.aiFeedback);
     const isSameLanguage = vitals.language === language;
     
@@ -149,10 +141,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       const age = Date.now() - new Date(vitals.updatedAt).getTime();
       const ageMinutes = Math.floor(age / 60000);
       
-      console.log(`✅ Valid cached summary found in ${language} (${ageMinutes} minutes old)`);
-      console.log(`📝 Summary: ${vitals.aiFeedback?.substring(0, 100)}...`);
-      console.log(`⏱️  Response time: ${Date.now() - startTime}ms`);
-      console.log("=".repeat(60));
+      
       
       return res.status(200).json({ 
         success: true,
@@ -164,18 +153,13 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       });
     }
 
-    if (hasCachedSummary && !isSameLanguage) {
-      console.log(`🔄 Cached summary exists but in different language (${vitals.language} vs ${language}) - regenerating`);
-    } else {
-      console.log("🔄 No valid cached summary - generating new one");
-    }
 
-    // ✅ 3. Fetch patient profile
-    console.log(`🔍 Fetching patient profile for userId: ${userId}`);
+    //  3. Fetch patient profile
+  
     const patient = await Patient.findOne({ userId });
     
     if (!patient) {
-      console.error(`❌ Patient profile not found for userId: ${userId}`);
+      console.error(` Patient profile not found for userId: ${userId}`);
       return res.status(404).json({ 
         success: false,
         message: "Patient profile not found. Please complete your profile first." 
@@ -185,23 +169,17 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
     const age = calculateAge(patient.dob);
     const patientName = getPatientName(patient);
     
-    // ✅ 4. GET SELECTED DISEASES FROM PATIENT PROFILE
+    //  4. GET SELECTED DISEASES FROM PATIENT PROFILE
     const selectedDiseases = vitals.selectedDiseases || getPatientDiseases(patient);
     const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
     
-    console.log(`👤 Patient found - Name: ${patientName}, Age: ${age}, Gender: ${patient.gender}`);
-    console.log(`🏥 Disease Profile:`, {
-      diseases: selectedDiseases,
-      diabetes: selectedDiseases.includes("diabetes"),
-      hypertension: selectedDiseases.includes("hypertension"),
-      managementType: hasBothConditions ? "DUAL (Diabetes + Hypertension)" : "DIABETES ONLY"
-    });
-
-    // ✅ 5. Prepare COMPLETE glucose data with patient name AND diseases
+    
+  
+    // 5. Prepare COMPLETE glucose data with patient name AND diseases
     const glucoseData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
-      language: language, // ✅ Use prioritized language
+      language: language, //  Use prioritized language
       age,
       gender: patient.gender,
       weight: patient.weight,
@@ -217,22 +195,11 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       selectedDiseases: selectedDiseases,
     };
 
-    console.log("📋 Complete glucose data prepared:", {
-      glucose: glucoseData.glucose,
-      context: glucoseData.context,
-      language: glucoseData.language,
-      patientName: glucoseData.patientName,
-      selectedDiseases: glucoseData.selectedDiseases,
-      diseaseManagement: hasBothConditions ? "DUAL" : "DIABETES ONLY",
-      bp: `${glucoseData.systolic || 'N/A'}/${glucoseData.diastolic || 'N/A'}`,
-      hr: glucoseData.heartRate || 'N/A',
-      exercise: `${glucoseData.exerciseRecent || 'N/A'} (${glucoseData.exerciseIntensity || 'N/A'})`,
-      meal: glucoseData.lastMealTime ? `${glucoseData.mealType} (${glucoseData.lastMealTime} ago)` : 'N/A'
-    });
+    
 
-    // ✅ 6. Check if GROQ_API_KEY exists
+    //  6. Check if GROQ_API_KEY exists
     if (!process.env.GROQ_API_KEY) {
-      console.error("❌ GROQ_API_KEY not found in environment");
+      console.error(" GROQ_API_KEY not found in environment");
       return res.status(503).json({
         success: false,
         message: "AI service not configured. Please contact support.",
@@ -240,22 +207,20 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       });
     }
 
-    console.log("✅ GROQ_API_KEY is configured");
+   
 
-    // ✅ 7. Generate AI summary with patient name AND diseases
-    console.log(`🤖 Calling SmartCareAI.generateSummary() for ${patientName} with language: ${glucoseData.language} and diseases: ${selectedDiseases.join(", ")}...`);
+    //  7. Generate AI summary with patient name AND diseases
+    
     const aiStartTime = Date.now();
     
     const ai = getAIService();
     const aiFeedback = await ai.generateSummary(glucoseData);
     
     const aiDuration = Date.now() - aiStartTime;
-    console.log(`🤖 AI responded in ${aiDuration}ms`);
-    console.log(`📝 Generated feedback for ${patientName} (${glucoseData.language}): ${aiFeedback?.substring(0, 150)}...`);
-
+    
     // ✅ 8. Check if AI generation failed
     if (!isValidSummary(aiFeedback)) {
-      console.error("❌ AI generated invalid summary:", aiFeedback);
+      console.error(" AI generated invalid summary:", aiFeedback);
       
       return res.status(500).json({
         success: false,
@@ -278,18 +243,17 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
       });
     }
 
-    // ✅ 9. Save to database WITH THE NEW LANGUAGE
-    console.log("💾 Saving summary to database...");
+    //  9. Save to database WITH THE NEW LANGUAGE
+   
     vitals.aiFeedback = aiFeedback;
-    vitals.language = language; // ✅ Update language in DB
+    vitals.language = language; //  Update language in DB
     await vitals.save();
-    console.log("✅ Summary saved successfully");
+   
 
     const totalDuration = Date.now() - startTime;
-    console.log(`⏱️  Total request time: ${totalDuration}ms`);
-    console.log("=".repeat(60));
+    
 
-    // ✅ 10. Return success response
+    //  10. Return success response
     res.status(200).json({ 
       success: true,
       aiFeedback, 
@@ -322,7 +286,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
   } catch (error: any) {
     const duration = Date.now() - startTime;
     console.error("=".repeat(60));
-    console.error("❌ SUMMARY GENERATION ERROR:");
+    console.error(" SUMMARY GENERATION ERROR:");
     console.error("- Message:", error.message);
     console.error("- Stack:", error.stack);
     console.error("- Duration:", duration, "ms");
@@ -341,7 +305,7 @@ router.get("/summary/:id", verifyToken, async (req: Request, res: Response) => {
   }
 });
 
-// ✅ Food Advice Endpoint - Updated to include patient name, diseases, and language from query
+//  Food Advice Endpoint - Updated to include patient name, diseases, and language from query
 router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
@@ -350,11 +314,10 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
     }
 
     const vitalId = req.params.id;
-    // ✅ Extract language from query parameter
+    //  Extract language from query parameter
     const requestedLanguage = req.query.language as "en" | "sw" | undefined;
     
-    console.log(`🍽️ Food advice request for vital: ${vitalId}`);
-    console.log(`🌐 Requested language: ${requestedLanguage || 'not specified'}`);
+   
 
     const vitals = await Diabetes.findById(vitalId);
     if (!vitals) {
@@ -366,23 +329,19 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
       return res.status(404).json({ success: false, message: "Patient profile not found" });
     }
 
-    // ✅ USE QUERY PARAM LANGUAGE, FALLBACK TO DB, THEN DEFAULT TO 'en'
+    //  USE QUERY PARAM LANGUAGE, FALLBACK TO DB, THEN DEFAULT TO 'en'
     const language = (requestedLanguage || vitals.language || "en") as "en" | "sw";
 
     const age = calculateAge(patient.dob);
     const patientName = getPatientName(patient);
     
-    // ✅ GET SELECTED DISEASES
+    //  GET SELECTED DISEASES
     const selectedDiseases = vitals.selectedDiseases || getPatientDiseases(patient);
     const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
 
-    console.log(`🏥 Disease context for food advice:`, {
-      diseases: selectedDiseases,
-      managementType: hasBothConditions ? "DUAL" : "DIABETES ONLY",
-      language: language
-    });
+    
 
-    // ✅ Prepare food advice data with patient name, diseases, and prioritized language
+    //  Prepare food advice data with patient name, diseases, and prioritized language
     const foodAdviceData = {
       glucose: vitals.glucose,
       context: (vitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -393,7 +352,7 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
       height: patient.height,
       age,
       gender: patient.gender,
-      language: language, // ✅ Use prioritized language
+      language: language, //  Use prioritized language
       exerciseRecent: vitals.exerciseRecent,
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
@@ -404,17 +363,7 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
       medicalHistory: patient.selectedDiseases || [],
     };
 
-    console.log("🍽️ Food advice data:", {
-      glucose: foodAdviceData.glucose,
-      context: foodAdviceData.context,
-      language: foodAdviceData.language,
-      patientName: foodAdviceData.patientName,
-      selectedDiseases: foodAdviceData.selectedDiseases,
-      bp: `${foodAdviceData.systolic || 'N/A'}/${foodAdviceData.diastolic || 'N/A'}`,
-      exercise: `${foodAdviceData.exerciseRecent || 'N/A'} (${foodAdviceData.exerciseIntensity || 'N/A'})`,
-      allergies: foodAdviceData.allergies || [],
-      medicalHistory: foodAdviceData.medicalHistory || []
-    });
+    
 
     const ai = getAIService();
     const foodAdvice = await ai.generateKenyanFoodAdvice(foodAdviceData);
@@ -446,7 +395,7 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
     });
 
   } catch (error: any) {
-    console.error("❌ Food advice error:", error.message);
+    console.error(" Food advice error:", error.message);
     res.status(500).json({ 
       success: false,
       message: "Failed to generate food advice", 
@@ -455,7 +404,7 @@ router.get("/food-advice/:id", verifyToken, async (req: Request, res: Response) 
   }
 });
 
-// ✅ Quick Tips Endpoint - Updated to include patient name, diseases, and language from query
+//  Quick Tips Endpoint - Updated to include patient name, diseases, and language from query
 router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
@@ -464,7 +413,7 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
     }
 
     const vitalId = req.params.id;
-    // ✅ Extract language from query parameter
+    //  Extract language from query parameter
     const requestedLanguage = req.query.language as "en" | "sw" | undefined;
     
 
@@ -479,13 +428,13 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
       return res.status(404).json({ success: false, message: "Patient profile not found" });
     }
 
-    // ✅ USE QUERY PARAM LANGUAGE, FALLBACK TO DB, THEN DEFAULT TO 'en'
+    //  USE QUERY PARAM LANGUAGE, FALLBACK TO DB, THEN DEFAULT TO 'en'
     const language = (requestedLanguage || vitals.language || "en") as "en" | "sw";
 
     const age = calculateAge(patient.dob);
     const patientName = getPatientName(patient);
     
-    // ✅ GET SELECTED DISEASES
+    //  GET SELECTED DISEASES
     const selectedDiseases = vitals.selectedDiseases || getPatientDiseases(patient);
     const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
 
@@ -508,15 +457,7 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
       selectedDiseases: selectedDiseases,
     };
 
-    console.log("💡 Quick tips data:", {
-      glucose: quickTipsData.glucose,
-      context: quickTipsData.context,
-      language: quickTipsData.language,
-      patientName: quickTipsData.patientName,
-      selectedDiseases: quickTipsData.selectedDiseases,
-      bp: `${quickTipsData.systolic || 'N/A'}/${quickTipsData.diastolic || 'N/A'}`,
-      exercise: `${quickTipsData.exerciseRecent || 'N/A'} (${quickTipsData.exerciseIntensity || 'N/A'})`
-    });
+    
 
     const ai = getAIService();
     const quickTips = await ai.generateQuickTips(quickTipsData);
@@ -535,7 +476,7 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
     });
 
   } catch (error: any) {
-    console.error("❌ Quick tips error:", error.message);
+    console.error(" Quick tips error:", error.message);
     res.status(500).json({ 
       success: false,
       message: "Failed to generate quick tips", 
@@ -544,7 +485,7 @@ router.get("/quick-tips/:id", verifyToken, async (req: Request, res: Response) =
   }
 });
 
-// ✅ Comprehensive Feedback Endpoint - Updated with diseases and language from query
+//  Comprehensive Feedback Endpoint - Updated with diseases and language from query
 router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.userId;
@@ -553,7 +494,7 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
     }
 
     const vitalId = req.params.id;
-    // ✅ Extract language from query parameter
+    // Extract language from query parameter
     const requestedLanguage = req.query.language as "en" | "sw" | undefined;
     
    
@@ -567,13 +508,13 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
       return res.status(404).json({ success: false, message: "Patient profile not found" });
     }
 
-    // ✅ USE QUERY PARAM LANGUAGE, FALLBACK TO DB, THEN DEFAULT TO 'en'
+    //  USE QUERY PARAM LANGUAGE, FALLBACK TO DB, THEN DEFAULT TO 'en'
     const language = (requestedLanguage || vitals.language || "en") as "en" | "sw";
 
     const age = calculateAge(patient.dob);
     const patientName = getPatientName(patient);
     
-    // ✅ GET SELECTED DISEASES
+    //  GET SELECTED DISEASES
     const selectedDiseases = vitals.selectedDiseases || getPatientDiseases(patient);
     const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
 
@@ -587,7 +528,7 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
       height: patient.height,
       age,
       gender: patient.gender,
-      language: language, // ✅ Use prioritized language
+      language: language, //  Use prioritized language
       exerciseRecent: vitals.exerciseRecent,
       exerciseIntensity: vitals.exerciseIntensity,
       lastMealTime: vitals.lastMealTime,
@@ -596,8 +537,7 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
       selectedDiseases: selectedDiseases,
     };
 
-    console.log("📋 Generating comprehensive feedback for:", patientName, "with diseases:", selectedDiseases, "in language:", language);
-
+    
     const ai = getAIService();
 
     // Generate all components
@@ -628,7 +568,7 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
       },
       hasBloodPressure: !!(vitals.systolic && vitals.diastolic),
       hasHeartRate: !!vitals.heartRate,
-      language: language, // ✅ Use prioritized language
+      language: language, //  Use prioritized language
       patientName: patientName,
       selectedDiseases: selectedDiseases,
     };
@@ -655,7 +595,7 @@ router.get("/comprehensive-feedback/:id", verifyToken, async (req: Request, res:
     });
 
   } catch (error: any) {
-    console.error("❌ Comprehensive feedback error:", error.message);
+    console.error("Comprehensive feedback error:", error.message);
     res.status(500).json({ 
       success: false,
       message: "Failed to generate comprehensive feedback", 
@@ -686,7 +626,7 @@ router.get("/summary-status/:id", verifyToken, async (req: Request, res: Respons
       lastUpdated: vitals.updatedAt,
     });
   } catch (error: any) {
-    console.error("❌ Summary status check error:", error.message);
+    console.error(" Summary status check error:", error.message);
     res.status(500).json({ 
       success: false,
       message: "Server error", 
@@ -710,7 +650,7 @@ router.post("/summary/:id/regenerate", verifyToken, async (req: Request, res: Re
     vitals.aiFeedback = "";
     await vitals.save();
 
-    console.log("🔄 Summary cleared, triggering regeneration");
+    
 
     res.status(200).json({
       success: true,
@@ -718,7 +658,7 @@ router.post("/summary/:id/regenerate", verifyToken, async (req: Request, res: Re
     });
 
   } catch (error: any) {
-    console.error("❌ Regenerate Error:", error.message);
+    console.error(" Regenerate Error:", error.message);
 res.status(500).json({
 success: false,
 message: "Failed to regenerate summary",

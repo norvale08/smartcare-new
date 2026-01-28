@@ -174,7 +174,7 @@ router.get("/conversations", verifyToken, async (req: AuthenticatedRequest, res:
       }
     });
   } catch (error: any) {
-    console.error("❌ Error fetching conversations:", error);
+    console.error(" Error fetching conversations:", error);
     res.status(500).json({ 
       success: false, 
       message: "Failed to fetch conversations" 
@@ -227,7 +227,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       message: "Message sent successfully"
     });
   } catch (error: any) {
-    console.error("❌ Error sending message:", error);
+    console.error(" Error sending message:", error);
     res.status(500).json({ 
       success: false, 
       message: "Failed to send message" 
@@ -267,7 +267,7 @@ router.patch("/:id/read", verifyToken, async (req: AuthenticatedRequest, res: Re
       message: "Message marked as read"
     });
   } catch (error: any) {
-    console.error("❌ Error marking message as read:", error);
+    console.error(" Error marking message as read:", error);
     res.status(500).json({ 
       success: false, 
       message: "Failed to mark message as read" 
@@ -297,7 +297,7 @@ router.get("/unread/count", verifyToken, async (req: AuthenticatedRequest, res: 
       count
     });
   } catch (error: any) {
-    console.error("❌ Error counting unread messages:", error);
+    console.error("Error counting unread messages:", error);
     res.status(500).json({ 
       success: false, 
       message: "Failed to count unread messages" 

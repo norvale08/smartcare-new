@@ -88,7 +88,7 @@ router.get("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =>
       count: notifications.length,
     });
   } catch (error: any) {
-    console.error("❌ Error fetching notifications:", error);
+    console.error(" Error fetching notifications:", error);
     res.status(500).json({ 
       success: false, 
       message: "Failed to fetch notifications" 
@@ -127,7 +127,7 @@ router.get("/patient/:patientId", verifyToken, async (req: AuthenticatedRequest,
       count: notifications.length,
     });
   } catch (error: any) {
-    console.error("❌ Error fetching patient notifications:", error);
+    console.error(" Error fetching patient notifications:", error);
     res.status(500).json({ 
       success: false, 
       message: "Failed to fetch patient notifications" 
@@ -187,7 +187,7 @@ router.post("/:id/read", verifyToken, async (req: AuthenticatedRequest, res: Res
       data: notification,
     });
   } catch (error: any) {
-    console.error("❌ Error marking notification as read:", error);
+    console.error(" Error marking notification as read:", error);
     res.status(500).json({ 
       success: false, 
       message: "Failed to mark notification as read" 
@@ -213,7 +213,7 @@ router.post("/read-all", verifyToken, async (req: AuthenticatedRequest, res: Res
       message: "All notifications marked as read",
     });
   } catch (error: any) {
-    console.error("❌ Error marking all notifications as read:", error);
+    console.error(" Error marking all notifications as read:", error);
     res.status(500).json({ 
       success: false, 
       message: "Failed to mark all notifications as read" 
@@ -249,7 +249,7 @@ router.post("/:id/archive", verifyToken, async (req: AuthenticatedRequest, res: 
       data: notification,
     });
   } catch (error: any) {
-    console.error("❌ Error archiving notification:", error);
+    console.error(" Error archiving notification:", error);
     res.status(500).json({
       success: false,
       message: "Failed to archive notification"
@@ -282,7 +282,7 @@ router.delete("/:id", verifyToken, async (req: AuthenticatedRequest, res: Respon
       message: "Notification deleted successfully",
     });
   } catch (error: any) {
-    console.error("❌ Error deleting notification:", error);
+    console.error(" Error deleting notification:", error);
     res.status(500).json({ 
       success: false, 
       message: "Failed to delete notification" 

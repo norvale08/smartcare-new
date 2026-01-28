@@ -118,9 +118,7 @@ export const getPatientsWithRelativeRequests = async (req: Request, res: Respons
 };
 
 export const createRelativeAccount = async (req: Request, res: Response) => {
-  console.log('\n=== CREATE RELATIVE ACCOUNT DEBUG ===');
-  console.log('📦 Request Body:', JSON.stringify(req.body, null, 2));
-  
+ 
   try {
     await connectMongoDB();
 
@@ -165,13 +163,7 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
       });
     }
 
-    console.log('✅ Found patient:', {
-      id: patient._id,
-      name: patient.fullName,
-      email: patient.email,
-      userId: patient.userId
-    });
-
+    
     // ✅ CRITICAL: Get the patient's User account
     const patientUser = await User.findById(toObjectId(patient.userId));
     if (!patientUser) {
@@ -182,11 +174,7 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
       });
     }
 
-    console.log('✅ Found patient user:', {
-      id: patientUser._id,
-      email: patientUser.email,
-      name: patientUser.fullName
-    });
+    
 
     // Check if relative already exists
     const existingRelative = await User.findOne({ 
@@ -216,7 +204,7 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
     const invitationToken = crypto.randomBytes(32).toString("hex");
     const invitationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    console.log('🔑 Generated invitation token, expires:', invitationExpires);
+   
 
     // Get relative name from patient emergency contact info
     const relativeFirstName = patient.firstname || 'Family';
@@ -289,11 +277,7 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
 
     await relativeUser.save();
 
-    console.log(`✅ Relative account created: ${relativeUser._id}`);
-    console.log(`📧 Relative email: ${relativeUser.email}`);
-    console.log(`🔗 Linked to Patient User ID: ${relativeUser.monitoredPatient}`);
-    console.log(`🔗 Linked to Patient Profile ID: ${relativeUser.monitoredPatientProfile}`);
-
+  
     // Generate setup token for the relative
     const setupToken = jwt.sign(
       {
@@ -313,8 +297,7 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
 
     const patientName = patient.fullName;
     
-    console.log(`📧 Sending invitation email to relative: ${relativeUser.email}`);
-    console.log(`🔑 Setup Token: ${setupToken.substring(0, 50)}...`);
+   
     
     // Send email to the emergency contact (relative)
     const emailSent = await emailService.sendRelativeInvitationEmail(
@@ -326,7 +309,7 @@ export const createRelativeAccount = async (req: Request, res: Response) => {
       accessLevel
     );
 
-    console.log(`📧 Email send result: ${emailSent ? '✅ Success' : '❌ Failed'}`);
+    
 
     res.status(201).json({
       success: true,

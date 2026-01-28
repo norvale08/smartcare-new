@@ -26,10 +26,10 @@ const authenticateUser = (req: any, res: any, next: any) => {
     req.userId = decoded.userId;
     req.userEmail = decoded.email;
 
-    console.log("✅ Authenticated user:", decoded.userId);
+    
     next();
   } catch (error) {
-    console.error("❌ Token verification failed:", error);
+    console.error(" Token verification failed:", error);
     return res.status(401).json({ message: "Invalid token" });
   }
 };
@@ -51,18 +51,17 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
   try {
     await connectMongoDB();
 
-    console.log("🔍 Fetching profile for userId:", req.userId);
-    console.log("userId type:", typeof req.userId);
+   
 
     // Convert userId to ObjectId for consistent querying
     const userIdObj = toObjectId(req.userId);
-    console.log("Converted userId:", userIdObj);
+    
 
     // Try to get Patient document with ObjectId
     let patient = await Patient.findOne({ userId: userIdObj }).sort({ createdAt: -1 });
     
     if (patient) {
-      console.log("✅ Patient profile found:", patient._id);
+      
       return res.status(200).json({ 
         success: true,
         data: {
@@ -91,11 +90,11 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
     }
 
     // If no Patient document, try to get data from User
-    console.log("⚠️ No Patient document found, checking User...");
+    
     const user = await User.findById(userIdObj);
     
     if (!user) {
-      console.log("❌ User not found with ObjectId:", userIdObj);
+      
       return res.status(404).json({ 
         success: false,
         message: "User not found",
@@ -103,11 +102,10 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
       });
     }
 
-    console.log("✅ User found:", user.email);
 
     // Check if user has profile data
     if (!user.profileCompleted) {
-      console.log("⚠️ User profile not completed");
+      
       return res.status(404).json({ 
         success: false,
         message: "Profile not completed. Please complete your profile.",
@@ -115,7 +113,7 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
       });
     }
 
-    console.log("✅ Returning User data as fallback");
+   
     
     // Return User data in Patient format
     return res.status(200).json({ 
@@ -146,7 +144,7 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
     });
 
   } catch (error) {
-    console.error("❌ Fetch patient error:", error);
+    console.error(" Fetch patient error:", error);
     res.status(500).json({ 
       success: false,
       message: "Failed to fetch patient profile",
@@ -201,7 +199,7 @@ router.get("/debug", authenticateUser, async (req: any, res: any) => {
       }
     });
   } catch (error) {
-    console.error("❌ Debug error:", error);
+    console.error(" Debug error:", error);
     res.status(500).json({ success: false, message: "Debug failed", error: String(error) });
   }
 });
@@ -210,10 +208,6 @@ router.get("/debug", authenticateUser, async (req: any, res: any) => {
 router.post("/", authenticateUser, async (req: any, res: any) => {
   try {
     await connectMongoDB();
-
-    console.log("=== PROFILE SAVE DEBUG ===");
-    console.log("Authenticated userId:", req.userId);
-    console.log("Request body:", req.body);
 
     const body = req.body;
 
@@ -232,7 +226,7 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
       selectedDiseases.push("cardiovascular");
     }
 
-    console.log("🏥 Extracted diseases:", selectedDiseases);
+   
 
     // Save to Patient model with ObjectId
     const patientData = {
@@ -248,7 +242,7 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
 
     const newPatient = new Patient(patientData);
     const savedPatient = await newPatient.save();
-    console.log("✅ Patient saved:", savedPatient._id);
+    
 
     // Update User record with ObjectId
     const userUpdateData = {
@@ -288,8 +282,6 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    console.log("✅ User updated successfully");
-
     // Generate new JWT
     const newToken = jwt.sign(
       {
@@ -321,7 +313,7 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
       }
     }
 
-    console.log("🚀 Redirecting to:", redirectTo);
+    
 
     res.status(201).json({
       success: true,
@@ -338,7 +330,7 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
       redirectTo,
     });
   } catch (error) {
-    console.error("❌ Profile save error:", error);
+    console.error("Profile save error:", error);
 
     let details: string | undefined;
     if (error instanceof Error) {
@@ -445,12 +437,11 @@ router.put("/", authenticateUser, async (req: any, res: any) => {
       redirectTo,
     });
   } catch (error) {
-    console.error("❌ Update patient error:", error);
+    console.error("Update patient error:", error);
     res.status(500).json({ message: "Failed to update patient profile" });
   }
 });
 
-// ==================== LOCATION ENDPOINTS ====================
 
 // Update patient location
 router.put("/location", authenticateUser, async (req: any, res: any) => {
@@ -476,9 +467,7 @@ router.put("/location", authenticateUser, async (req: any, res: any) => {
       });
     }
 
-    console.log("📍 Updating location for userId:", req.userId);
-    console.log("Coordinates:", { lat, lng, address });
-
+  
     // Update patient location
     const patient = await Patient.findOneAndUpdate(
       { userId: userIdObj },
@@ -502,7 +491,7 @@ router.put("/location", authenticateUser, async (req: any, res: any) => {
       });
     }
 
-    console.log("✅ Location updated successfully");
+    
 
     res.status(200).json({
       success: true,
@@ -512,7 +501,7 @@ router.put("/location", authenticateUser, async (req: any, res: any) => {
       }
     });
   } catch (error) {
-    console.error("❌ Location update error:", error);
+    console.error("Location update error:", error);
     res.status(500).json({ 
       success: false,
       message: "Failed to update location" 
@@ -549,7 +538,7 @@ router.get("/location", authenticateUser, async (req: any, res: any) => {
       }
     });
   } catch (error) {
-    console.error("❌ Get location error:", error);
+    console.error(" Get location error:", error);
     res.status(500).json({ 
       success: false,
       message: "Failed to fetch location" 

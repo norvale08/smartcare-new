@@ -242,7 +242,7 @@ router.get("/assigned-patients", authenticateUser, async (req: any, res: any) =>
     }
 
     console.log("=== FETCHING ASSIGNED PATIENTS ===");
-    console.log("Doctor ID:", doctorId);
+    
 
     await connectMongoDB();
 

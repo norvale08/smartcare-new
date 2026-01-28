@@ -41,7 +41,7 @@ export class NotificationService {
       await notification.save();
       return notification;
     } catch (error) {
-      console.error("❌ Error creating notification:", error);
+      console.error(" Error creating notification:", error);
       throw error;
     }
   }
@@ -156,7 +156,7 @@ export class NotificationService {
             });
           }
 
-          console.log(`✅ Notified ${doctors.length} doctor(s) about critical vitals for patient ${patientName}`);
+         
         } catch (error) {
           console.error('Error notifying doctors:', error);
         }

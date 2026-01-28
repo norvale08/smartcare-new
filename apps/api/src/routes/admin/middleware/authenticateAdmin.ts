@@ -21,7 +21,7 @@ export const authenticateAdmin = async (req: Request, res: Response, next: NextF
     (req as any).userId = decoded.userId;
     (req as any).userEmail = decoded.email;
     
-    console.log("✅ Admin authenticated:", decoded.userId);
+   
     next();
   } catch (error) {
     console.error("❌ Admin authentication failed:", error);

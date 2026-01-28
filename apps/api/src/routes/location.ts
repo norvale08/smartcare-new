@@ -38,14 +38,8 @@ router.post('/send-location', async (req: Request, res: Response) => {
       });
     }
 
-    console.log('Received location data:', locationData);
+   
 
-    // TODO: Save to your database
-    // Example with MongoDB:
-    // await LocationModel.create(locationData);
-    
-    // TODO: Send notification to hospital
-    // await sendHospitalNotification(locationData);
 
     return res.status(200).json({
       success: true,
@@ -68,8 +62,6 @@ router.post('/send-location', async (req: Request, res: Response) => {
 // GET endpoint to retrieve patient locations (for hospital dashboard)
 router.get('/patient-locations', async (req: Request, res: Response) => {
   try {
-    // TODO: Fetch from your database
-    // const locations = await LocationModel.find().sort({ timestamp: -1 });
     
     return res.status(200).json({
       success: true,

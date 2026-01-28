@@ -433,7 +433,7 @@ router.get("/stats/summary", verifyToken, async (req: AuthenticatedRequest, res:
       },
     });
   } catch (error: any) {
-    console.error("❌ Error retrieving statistics:", error.message);
+    console.error(" Error retrieving statistics:", error.message);
     res.status(500).json({ 
       success: false,
       message: "Server error", 

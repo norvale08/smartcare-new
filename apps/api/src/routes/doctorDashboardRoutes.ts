@@ -51,7 +51,6 @@ const authenticateUser = (req: AuthRequest, res: Response, next: NextFunction) =
             role: decoded.role,
         };
 
-        console.log("✅ Authenticated user:", req.user);
         next();
     } catch (error) {
         console.error("❌ Token verification failed:", error);
@@ -81,8 +80,6 @@ router.get("/assignedPatients", authenticateUser, async (req: AuthRequest, res) 
         const { search } = req.query;
         if (!req.user?.id) return res.status(401).json({ error: "Unauthorized" });
 
-        console.log(`🔍 Doctor ${req.user.id} requesting assigned patients`);
-
         // FIXED: Query User model for patients assigned to this doctor
         const userQuery: any = { 
             role: "patient", 
@@ -103,14 +100,10 @@ router.get("/assignedPatients", authenticateUser, async (req: AuthRequest, res) 
             .select("_id firstName lastName fullName email phoneNumber condition diabetes hypertension")
             .lean();
 
-        console.log(`📊 Found ${patientUsers.length} patient users for doctor ${req.user.id}`);
-
         // Get their corresponding Patient records
         const patientUserIds = patientUsers.map(u => u._id);
         const patientRecords = await Patient.find({ userId: { $in: patientUserIds } })
             .lean();
-
-        console.log(`📋 Found ${patientRecords.length} patient records`);
 
         // Create a map for quick lookup
         const patientRecordMap = new Map();
@@ -159,13 +152,6 @@ router.get("/assignedPatients", authenticateUser, async (req: AuthRequest, res) 
                 // Location handling - from Patient record
                 const locationData = patientRecord?.location;
 
-                // Debug: Log the raw patient data
-                console.log(`\n🔍 Patient: ${user.fullName || `${user.firstName} ${user.lastName}`}`);
-                console.log(`   User ID: ${user._id}`);
-                console.log(`   Patient Record ID: ${patientRecord?._id}`);
-                console.log(`   location field exists: ${!!locationData}`);
-                console.log(`   location data:`, JSON.stringify(locationData, null, 2));
-
                 // Format location to match what the frontend expects
                 let formattedLocation = null;
                 if (locationData && locationData.lat && locationData.lng) {
@@ -175,13 +161,6 @@ router.get("/assignedPatients", authenticateUser, async (req: AuthRequest, res) 
                         address: locationData.address || `${locationData.lat.toFixed(4)}, ${locationData.lng.toFixed(4)}`,
                         updatedAt: locationData.updatedAt || patientRecord?.updatedAt
                     };
-                    console.log(`   ✅ Location formatted:`, formattedLocation);
-                } else {
-                    console.log(`   ⚠️ No valid location data`);
-                    if (locationData) {
-                        console.log(`   ⚠️ Location object exists but missing lat/lng`);
-                        console.log(`   ⚠️ lat: ${locationData.lat}, lng: ${locationData.lng}`);
-                    }
                 }
 
                 const result = {
@@ -211,12 +190,6 @@ router.get("/assignedPatients", authenticateUser, async (req: AuthRequest, res) 
                 return result;
             })
         );
-
-        // Summary logging
-        const patientsWithLocation = patientsWithVitals.filter(p => p.location !== null);
-        console.log(`\n📊 Summary:`);
-        console.log(`   Total patients: ${patientsWithVitals.length}`);
-        console.log(`   Patients with location: ${patientsWithLocation.length}`);
         
         res.json(patientsWithVitals);
     } catch (err: any) {

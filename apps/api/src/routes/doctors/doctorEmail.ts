@@ -13,8 +13,6 @@ router.post("/send-reset-email/:id", async (req: express.Request, res: express.R
   try {
     const { id } = req.params;
 
-    console.log("=== SEND RESET EMAIL REQUEST ===");
-    console.log("Doctor ID:", id);
 
     await connectMongoDB();
 
@@ -39,7 +37,7 @@ router.post("/send-reset-email/:id", async (req: express.Request, res: express.R
     );
 
     if (emailSent) {
-      console.log("✅ Password reset email sent to:", doctor.email);
+     
       res.json({ message: "Password reset email sent successfully", doctorEmail: doctor.email });
     } else {
       res.status(500).json({ message: "Failed to send password reset email" });
@@ -55,8 +53,6 @@ router.post("/reset-password", async (req: express.Request, res: express.Respons
   try {
     const { token, newPassword } = req.body;
 
-    console.log("=== RESET PASSWORD REQUEST ===");
-    console.log("Token:", token ? token.substring(0, 10) + "..." : "none");
 
     if (!token || !newPassword) {
       return res.status(400).json({ message: "Token and new password are required" });
@@ -86,7 +82,7 @@ router.post("/reset-password", async (req: express.Request, res: express.Respons
     // Delete used token
     await PasswordResetToken.deleteOne({ token });
 
-    console.log("✅ Password reset successful for:", doctor.email);
+    
     res.json({ message: "Password reset successful" });
   } catch (error: any) {
     console.error("Reset password error:", error);
@@ -99,9 +95,7 @@ router.post("/send-communication", async (req: express.Request, res: express.Res
   try {
     const { doctorIds, subject, message } = req.body;
 
-    console.log("=== SEND COMMUNICATION REQUEST ===");
-    console.log("Doctor IDs:", doctorIds);
-    console.log("Subject:", subject);
+    
 
     if (!doctorIds || !Array.isArray(doctorIds) || doctorIds.length === 0) {
       return res.status(400).json({ message: "No doctors selected" });
@@ -136,10 +130,10 @@ router.post("/send-communication", async (req: express.Request, res: express.Res
 
         if (emailSent) {
           successfulEmails++;
-          console.log(`✅ Email sent to: ${doctor.email}`);
+          
         } else {
           failedEmails++;
-          console.log(`❌ Failed to send email to: ${doctor.email}`);
+          
         }
       } catch (error) {
         failedEmails++;
@@ -161,7 +155,7 @@ router.post("/send-communication", async (req: express.Request, res: express.Res
 // Test Gmail connection route
 router.post("/test-gmail-connection", async (req: express.Request, res: express.Response) => {
   try {
-    console.log("🧪 Testing Gmail connection...");
+   
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
       return res.status(500).json({ success: false, message: "SMTP credentials not configured" });
     }

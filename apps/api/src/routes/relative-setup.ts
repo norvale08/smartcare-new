@@ -7,7 +7,7 @@ import { emailService } from '../lib/emailService';
 
 const router = express.Router();
 
-// ✅ Verify invitation token and get relative info
+//  Verify invitation token and get relative info
 router.get('/verify-invitation/:token', async (req: Request, res: Response) => {
   try {
     const { token } = req.params;
@@ -69,7 +69,7 @@ router.get('/verify-invitation/:token', async (req: Request, res: Response) => {
     });
 
   } catch (error: any) {
-    console.error("❌ Verify invitation error:", error);
+    console.error(" Verify invitation error:", error);
     
     if (error.name === 'TokenExpiredError') {
       return res.status(400).json({
@@ -177,7 +177,6 @@ router.post('/complete-setup', async (req: Request, res: Response) => {
     
     await relativeUser.save();
 
-    console.log(`✅ Relative setup completed: ${relativeUser.email}`);
 
     // Generate login token for immediate login
     const loginToken = jwt.sign(
@@ -211,7 +210,7 @@ router.post('/complete-setup', async (req: Request, res: Response) => {
     });
 
   } catch (error: any) {
-    console.error("❌ Complete setup error:", error);
+    console.error("Complete setup error:", error);
     
     if (error.name === 'TokenExpiredError') {
       return res.status(400).json({
@@ -234,7 +233,7 @@ router.post('/complete-setup', async (req: Request, res: Response) => {
   }
 });
 
-// ✅ Resend setup email
+// Resend setup email
 router.post('/resend-setup-email', async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
@@ -302,7 +301,7 @@ router.post('/resend-setup-email', async (req: Request, res: Response) => {
     );
 
     if (!emailSent) {
-      console.error('❌ Failed to resend setup email');
+      console.error(' Failed to resend setup email');
     }
 
     res.status(200).json({
@@ -314,7 +313,7 @@ router.post('/resend-setup-email', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error("❌ Resend setup email error:", error);
+    console.error(" Resend setup email error:", error);
     res.status(500).json({
       success: false,
       message: "Server error"

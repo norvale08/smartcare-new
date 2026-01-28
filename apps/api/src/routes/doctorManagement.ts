@@ -31,9 +31,6 @@ router.get("/assigned-patients", authenticateUser, async (req: any, res: any) =>
   try {
     const doctorId = req.userId;
 
-    console.log("=== FETCHING ASSIGNED PATIENTS ===");
-    console.log("Doctor ID:", doctorId);
-
     await connectMongoDB();
 
     const doctor = await User.findById(doctorId).populate('assignedPatients');

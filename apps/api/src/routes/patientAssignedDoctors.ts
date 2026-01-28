@@ -20,10 +20,10 @@ const authenticateUser = (req: any, res: any, next: any) => {
     req.userEmail = decoded.email;
     req.userRole = decoded.role;
 
-    console.log("✅ Authenticated patient:", decoded.userId);
+   
     next();
   } catch (error) {
-    console.error("❌ Token verification failed:", error);
+    console.error("Token verification failed:", error);
     return res.status(401).json({ message: "Invalid token" });
   }
 };
@@ -33,8 +33,7 @@ router.get("/assigned-doctors", authenticateUser, async (req: any, res: any) => 
   try {
     const patientId = req.userId;
 
-    console.log("=== FETCHING ASSIGNED DOCTOR ===");
-    console.log("Patient ID:", patientId);
+    
 
     await connectMongoDB();
 
@@ -50,7 +49,7 @@ router.get("/assigned-doctors", authenticateUser, async (req: any, res: any) => 
 
     // Check if patient has an assigned doctor
     if (!patient.assignedDoctor) {
-      console.log(`⚠️ No assigned doctor for patient ${patientId}`);
+     
       return res.status(200).json({
         success: true,
         assignedDoctor: null,
@@ -72,7 +71,6 @@ router.get("/assigned-doctors", authenticateUser, async (req: any, res: any) => 
       createdAt: doctor.createdAt
     };
 
-    console.log(`✅ Found assigned doctor for patient ${patientId}: ${assignedDoctor.fullName}`);
 
     res.status(200).json({
       success: true,
@@ -99,9 +97,6 @@ router.post("/request-doctor", authenticateUser, async (req: any, res: any) => {
       return res.status(400).json({ message: "Doctor ID is required" });
     }
 
-    console.log("=== PATIENT REQUESTING DOCTOR ===");
-    console.log("Patient ID:", patientId);
-    console.log("Doctor ID:", doctorId);
 
     await connectMongoDB();
 
@@ -140,8 +135,6 @@ router.post("/request-doctor", authenticateUser, async (req: any, res: any) => {
     doctor.pendingRequests.push(patientId);
     await doctor.save();
 
-    console.log("✅ Successfully sent doctor request");
-    console.log(`Patient ${patientId} requested doctor ${doctorId}`);
 
     res.status(200).json({
       success: true,

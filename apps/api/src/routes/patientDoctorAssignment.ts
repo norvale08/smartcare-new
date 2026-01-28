@@ -21,10 +21,10 @@ const authenticateUser = (req: any, res: any, next: any) => {
     req.userEmail = decoded.email;
     req.userRole = decoded.role;
 
-    console.log("✅ Authenticated user:", { id: req.userId, role: req.userRole });
+    
     next();
   } catch (error) {
-    console.error("❌ Token verification failed:", error);
+    console.error("Token verification failed:", error);
     return res.status(401).json({ message: "Invalid token" });
   }
 };
@@ -34,10 +34,6 @@ router.get("/my-doctor", authenticateUser, async (req: any, res: any) => {
   try {
     const patientId = req.userId;
     const userRole = req.userRole;
-
-    console.log("=== FETCHING PATIENT'S DOCTOR ===");
-    console.log("Patient ID:", patientId);
-    console.log("User Role:", userRole);
 
     if (userRole !== "patient") {
       return res.status(403).json({ 
@@ -52,7 +48,7 @@ router.get("/my-doctor", authenticateUser, async (req: any, res: any) => {
     let assignmentSource = "unknown";
     
     // FIRST: Check Patient model (where admin assignments are stored)
-    console.log("📋 Checking Patient model...");
+    
     const patientRecord = await Patient.findOne({ userId: patientId })
       .populate({
         path: "doctorId",
@@ -60,24 +56,24 @@ router.get("/my-doctor", authenticateUser, async (req: any, res: any) => {
       });
 
     if (patientRecord && patientRecord.doctorId) {
-      console.log("✅ Found doctor in Patient model");
+      
       doctor = patientRecord.doctorId;
       assignmentSource = patientRecord.assignmentSource || "admin";
     } else {
-      console.log("⚠️ No doctor in Patient model, checking User model...");
+     
       
       // SECOND: Check User model (for backward compatibility)
       const user = await User.findById(patientId).populate('assignedDoctor');
       
       if (user && user.assignedDoctor) {
-        console.log("✅ Found doctor in User model");
+
         doctor = user.assignedDoctor;
         assignmentSource = "user_model";
       }
     }
 
     if (!doctor) {
-      console.log(`ℹ️ No doctor assigned to patient ${patientId}`);
+      
       return res.status(200).json({
         success: true,
         assignedDoctor: null,
@@ -99,10 +95,7 @@ router.get("/my-doctor", authenticateUser, async (req: any, res: any) => {
       assignmentSource: assignmentSource
     };
 
-    console.log(`✅ Found assigned doctor for patient ${patientId}:`, {
-      name: assignedDoctor.fullName,
-      source: assignmentSource
-    });
+
 
     res.status(200).json({
       success: true,
@@ -111,7 +104,7 @@ router.get("/my-doctor", authenticateUser, async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Error fetching assigned doctor:', error);
+    console.error(' Error fetching assigned doctor:', error);
     res.status(500).json({ 
       success: false,
       message: 'Server error', 

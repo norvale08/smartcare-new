@@ -266,7 +266,7 @@ const server = app.listen(PORT, "0.0.0.0", () => {
   // Connect to MongoDB AFTER server starts
   connectMongoDB()
     .then(() => {
-      console.log('✅ MongoDB connected successfully');
+      console.log(' MongoDB connected successfully');
       startKeepAliveService();
     })
     .catch((err) => {

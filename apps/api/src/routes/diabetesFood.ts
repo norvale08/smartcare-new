@@ -17,7 +17,7 @@ const calculateAge = (dob: Date | string | undefined): number => {
   return age > 0 ? age : 0;
 };
 
-// ✅ Helper function to get patient name
+//  Helper function to get patient name
 const getPatientName = (patient: any): string => {
   if (!patient) return "Patient";
   
@@ -44,7 +44,7 @@ const getPatientName = (patient: any): string => {
   return "Patient";
 };
 
-// ✅ Helper function to get selected diseases
+//  Helper function to get selected diseases
 const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   const diseases: ("diabetes" | "hypertension")[] = [];
   
@@ -67,30 +67,26 @@ const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   return diseases;
 };
 
-// ✅ GET latest food advice for logged-in user (with language query param support)
+//  GET latest food advice for logged-in user (with language query param support)
 router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    // ✅ Extract language from query parameter
+    //  Extract language from query parameter
     const requestedLanguage = req.query.language as "en" | "sw" | undefined;
-    console.log(`🌐 Requested language: ${requestedLanguage || 'not specified'}`);
+    
 
     const patient = await Patient.findOne({ userId });
     if (!patient) return res.status(404).json({ message: "Patient not found" });
 
     const patientName = getPatientName(patient);
     
-    // ✅ GET SELECTED DISEASES
+    //  GET SELECTED DISEASES
     const selectedDiseases = getPatientDiseases(patient);
     const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
     
-    console.log(`👤 Patient: ${patientName}`);
-    console.log(`🏥 Disease Profile:`, {
-      diseases: selectedDiseases,
-      managementType: hasBothConditions ? "DUAL" : "DIABETES ONLY"
-    });
+  
 
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
     if (!latestVitals) {
@@ -112,11 +108,10 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
     // Use stored diseases from vitals or get from patient profile
     const vitalDiseases = latestVitals.selectedDiseases || selectedDiseases;
 
-    // ✅ PRIORITY: query param → vitals → default
+    //  PRIORITY: query param → vitals → default
     const language = (requestedLanguage || latestVitals.language || "en") as "en" | "sw";
-    console.log(`🌐 Using language: ${language} (source: ${requestedLanguage ? 'query param' : latestVitals.language ? 'vitals' : 'default'})`);
-
-    // ✅ Use the correct interface structure with patient name and diseases
+   
+    //  Use the correct interface structure with patient name and diseases
     const foodInput: FoodAdviceInput = {
       glucose: latestVitals.glucose,
       context: (latestVitals.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -127,7 +122,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
       height: patient.height,
       age,
       gender: patient.gender,
-      language: language, // ✅ Use prioritized language
+      language: language, //  Use prioritized language
       patientName: patientName,
       selectedDiseases: vitalDiseases,
       exerciseRecent: latestVitals.exerciseRecent,
@@ -152,17 +147,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
         : [],
     };
 
-    console.log("🍽️ Food input prepared:", {
-      glucose: foodInput.glucose,
-      context: foodInput.context,
-      language: foodInput.language,
-      patientName: foodInput.patientName,
-      selectedDiseases: foodInput.selectedDiseases,
-      bp: `${foodInput.systolic || 'N/A'}/${foodInput.diastolic || 'N/A'}`,
-      hr: foodInput.heartRate || 'N/A',
-      exercise: `${foodInput.exerciseRecent || 'N/A'} (${foodInput.exerciseIntensity || 'N/A'})`,
-      meal: foodInput.lastMealTime ? `${foodInput.mealType} (${foodInput.lastMealTime} ago)` : 'N/A'
-    });
+    
 
     const advice = await aiService.generateKenyanFoodAdvice(foodInput);
 
@@ -210,7 +195,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
       },
     });
   } catch (error: any) {
-    console.error("❌ Error fetching latest food advice:", error);
+    console.error(" Error fetching latest food advice:", error);
     res.status(500).json({
       success: false,
       message: "Server error fetching food advice",
@@ -219,7 +204,7 @@ router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Respon
   }
 });
 
-// ✅ POST generate new food advice manually (with language support)
+//  POST generate new food advice manually (with language support)
 router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -232,15 +217,15 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
     const patientName = getPatientName(patient);
     const age = calculateAge(patient.dob);
     
-    // ✅ GET SELECTED DISEASES
+    //  GET SELECTED DISEASES
     const selectedDiseases = getPatientDiseases(patient);
 
-    // ✅ Language from request body or default
+    //  Language from request body or default
     const requestedLanguage = req.body.language as "en" | "sw" | undefined;
     const language = (requestedLanguage || "en") as "en" | "sw";
-    console.log(`🌐 Manual advice language: ${language}`);
+    
 
-    // ✅ Use the correct input structure with patient name and diseases
+    //  Use the correct input structure with patient name and diseases
     const input: FoodAdviceInput = {
       ...req.body,
       context: (req.body.context as "Fasting" | "Post-meal" | "Random") || "Random",
@@ -276,17 +261,7 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
         : [],
     };
 
-    console.log("🤖 Generating advice for manual input:", {
-      glucose: input.glucose,
-      context: input.context,
-      language: input.language,
-      patientName: input.patientName,
-      selectedDiseases: input.selectedDiseases,
-      bp: `${input.systolic || 'N/A'}/${input.diastolic || 'N/A'}`,
-      hr: input.heartRate || 'N/A',
-      exercise: `${input.exerciseRecent || 'N/A'} (${input.exerciseIntensity || 'N/A'})`
-    });
-
+  
     const advice = await aiService.generateKenyanFoodAdvice(input);
 
     const hasBoth = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
@@ -315,7 +290,7 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
       }
     });
   } catch (error: any) {
-    console.error("❌ Error generating food advice:", error);
+    console.error(" Error generating food advice:", error);
     res.status(500).json({
       success: false,
       message: "Server error generating food advice",
@@ -324,7 +299,7 @@ router.post("/advice", verifyToken, async (req: AuthenticatedRequest, res: Respo
   }
 });
 
-// ✅ GET food advice by specific vital ID (with language query param support)
+//  GET food advice by specific vital ID (with language query param support)
 router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -332,9 +307,9 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
 
     const vitalId = req.params.id;
     
-    // ✅ Extract language from query parameter
+    //  Extract language from query parameter
     const requestedLanguage = req.query.language as "en" | "sw" | undefined;
-    console.log(`🌐 Requested language for vital ${vitalId}: ${requestedLanguage || 'not specified'}`);
+    
     
     // Fetch specific vital record
     const vital = await Diabetes.findOne({ _id: vitalId, userId });
@@ -348,17 +323,13 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
     const patientName = getPatientName(patient);
     const age = calculateAge(patient.dob);
     
-    // ✅ GET SELECTED DISEASES - prefer vitals, fallback to patient profile
+    // GET SELECTED DISEASES - prefer vitals, fallback to patient profile
     const selectedDiseases = vital.selectedDiseases || getPatientDiseases(patient);
     const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
 
-    // ✅ PRIORITY: query param → vitals → default
+    // PRIORITY: query param → vitals → default
     const language = (requestedLanguage || vital.language || "en") as "en" | "sw";
-    console.log(`🌐 Using language: ${language} (source: ${requestedLanguage ? 'query param' : vital.language ? 'vitals' : 'default'})`);
-    console.log(`🏥 Disease context:`, {
-      diseases: selectedDiseases,
-      managementType: hasBothConditions ? "DUAL" : "DIABETES ONLY"
-    });
+   
 
     const foodInput: FoodAdviceInput = {
       glucose: vital.glucose,
@@ -370,7 +341,7 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
       height: patient.height,
       age,
       gender: patient.gender,
-      language: language, // ✅ Use prioritized language
+      language: language, //  Use prioritized language
       patientName: patientName,
       selectedDiseases: selectedDiseases,
       exerciseRecent: vital.exerciseRecent,
@@ -395,15 +366,7 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
         : [],
     };
 
-    console.log(`🍽️ Food advice for vital ${vitalId}:`, {
-      glucose: foodInput.glucose,
-      context: foodInput.context,
-      language: foodInput.language,
-      patientName: foodInput.patientName,
-      selectedDiseases: foodInput.selectedDiseases,
-      bp: `${foodInput.systolic || 'N/A'}/${foodInput.diastolic || 'N/A'}`,
-      exercise: `${foodInput.exerciseRecent || 'N/A'} (${foodInput.exerciseIntensity || 'N/A'})`
-    });
+    
 
     const advice = await aiService.generateKenyanFoodAdvice(foodInput);
 
@@ -436,7 +399,7 @@ router.get("/vital/:id", verifyToken, async (req: AuthenticatedRequest, res: Res
       },
     });
   } catch (error: any) {
-    console.error("❌ Error generating food advice for vital:", error);
+    console.error(" Error generating food advice for vital:", error);
     res.status(500).json({
       success: false,
       message: "Server error generating food advice",

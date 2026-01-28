@@ -72,7 +72,7 @@ router.get("/:id/assigned-patients", async (req: express.Request, res: express.R
 
     const assignedPatients = (doctor.assignedPatients || []).map((patient: any) => ({
       id: patient._id.toString(),
-      userId: patient._id.toString(), // ✅ Added to support messaging
+      userId: patient._id.toString(), 
       fullName: patient.fullName || `${patient.firstName || ""} ${patient.lastName || ""}`.trim(),
       age: patient.age || calculateAge(patient.dob),
       gender: patient.gender,
@@ -93,11 +93,7 @@ router.get("/:id/assigned-patients", async (req: express.Request, res: express.R
   }
 });
 
-/**
- * ===========================
- * Helper functions
- * ===========================
- */
+
 
 function calculateAge(dob: Date): number {
   if (!dob) return 0;

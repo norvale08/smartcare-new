@@ -27,28 +27,20 @@ class EmailService {
       logger: process.env.NODE_ENV === 'development', // Log in dev
     });
     
-    // Log configuration (mask password)
-    console.log('📧 Email Service Initialized');
-    console.log('   Host:', process.env.SMTP_HOST || 'smtp.gmail.com');
-    console.log('   Port:', port);
-    console.log('   Secure:', port === 465);
-    console.log('   User:', process.env.SMTP_USER || 'NOT SET');
-    console.log('   Password:', process.env.SMTP_PASS ? 'SET (' + process.env.SMTP_PASS.length + ' chars)' : 'NOT SET');
+    
   }
 
   async sendEmail(options: EmailOptions): Promise<boolean> {
-    console.log('\n📧 === EMAIL SEND ATTEMPT ===');
-    console.log('   To:', options.to);
-    console.log('   Subject:', options.subject);
+    
     
     try {
       // Validate environment variables
       if (!process.env.SMTP_USER) {
-        console.error('   ❌ SMTP_USER is not set in environment variables');
+        console.error('    SMTP_USER is not set in environment variables');
         return false;
       }
       if (!process.env.SMTP_PASS) {
-        console.error('   ❌ SMTP_PASS is not set in environment variables');
+        console.error('    SMTP_PASS is not set in environment variables');
         return false;
       }
 
@@ -60,40 +52,39 @@ class EmailService {
         text: options.text,
       });
 
-      console.log(`   ✅ Email sent successfully to ${options.to}`);
-      console.log(`   📫 Message ID: ${info.messageId}`);
+     
       return true;
       
     } catch (error: any) {
-      console.error('   ❌ EMAIL SEND FAILED:');
+      console.error('    EMAIL SEND FAILED:');
       console.error('   Error Code:', error.code || 'UNKNOWN');
       console.error('   Error Message:', error.message);
       
       // Provide helpful error messages
       if (error.code === 'EAUTH') {
-        console.error('\n   🔐 AUTHENTICATION FAILED!');
+        console.error('\n    AUTHENTICATION FAILED!');
         console.error('   Possible reasons:');
         console.error('   1. Gmail App Password expired (most likely)');
         console.error('   2. Wrong app password');
         console.error('   3. 2FA not enabled');
-        console.error('\n   🔧 Fix: Generate NEW App Password:');
+        console.error('\n    Fix: Generate NEW App Password:');
         console.error('   1. Go to: https://myaccount.google.com/apppasswords');
         console.error('   2. Create new password for "Mail"');
         console.error('   3. Update .env file with new 16-char password');
         console.error('   4. Restart server');
         
       } else if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKET') {
-        console.error('\n   ⏰ CONNECTION TIMEOUT!');
+        console.error('\n   CONNECTION TIMEOUT!');
         console.error('   Possible reasons:');
         console.error('   1. Port 587 blocked by firewall/ISP');
         console.error('   2. Gmail temporarily blocked your IP');
-        console.error('\n   🔧 Try:');
+        console.error('\n    Try:');
         console.error('   1. Switch to port 465 (update SMTP_PORT=465)');
         console.error('   2. Wait 10 minutes and try again');
         console.error('   3. Check: https://accounts.google.com/b/0/DisplayUnlockCaptcha');
         
       } else if (error.code === 'EENVELOPE') {
-        console.error('\n   📭 ENVELOPE ERROR!');
+        console.error('\n   ENVELOPE ERROR!');
         console.error('   Invalid email address or missing fields');
       }
       

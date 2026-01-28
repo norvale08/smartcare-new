@@ -57,10 +57,7 @@ export const medicationAnalysis = async (req: AuthenticatedRequest, res: Respons
     // Get patient name if available
     patientName = patient?.name || patient?.fullName;
 
-    // OPTION 1: Use the original 2-argument function (backward compatible)
-    // const aiAnalysis = await generateMedicationInteractions(normalized, language);
-    
-    // OPTION 2: Use the enhanced 3-argument function with patient context (RECOMMENDED)
+   
 const aiAnalysis = await generateMedicationInteractions(
       normalized, 
       language

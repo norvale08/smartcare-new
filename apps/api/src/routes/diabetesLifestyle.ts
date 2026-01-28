@@ -7,12 +7,12 @@ import { verifyToken, AuthenticatedRequest } from "../middleware/verifyToken";
 
 const router = express.Router();
 
-// ✅ Create ONE shared instance instead of per-request
+// Create ONE shared instance instead of per-request
 let smartCareAI: SmartCareAI | null = null;
 
 const getAIService = () => {
   if (!smartCareAI) {
-    console.log("🤖 Initializing SmartCareAI service for lifestyle...");
+    
     smartCareAI = new SmartCareAI();
   }
   return smartCareAI;
@@ -29,7 +29,7 @@ const calculateAge = (dob: Date | string | undefined): number => {
   return age > 0 ? age : 0;
 };
 
-// ✅ Helper function to get patient name
+//  Helper function to get patient name
 const getPatientName = (patient: any): string => {
   if (!patient) return "Patient";
   
@@ -56,7 +56,7 @@ const getPatientName = (patient: any): string => {
   return "Patient";
 };
 
-// ✅ Helper function to get selected diseases
+//  Helper function to get selected diseases
 const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   const diseases: ("diabetes" | "hypertension")[] = [];
   
@@ -79,44 +79,37 @@ const getPatientDiseases = (patient: any): ("diabetes" | "hypertension")[] => {
   return diseases;
 };
 
-// ✅ GET latest lifestyle for user
+//  GET latest lifestyle for user
 router.get("/latest", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    console.log("📊 Fetching latest lifestyle for user:", userId);
+    
 
     const latestLifestyle = await Lifestyle.findOne({ userId }).sort({ createdAt: -1 });
     
     if (!latestLifestyle) {
-      console.log("⚠️ No lifestyle records found");
+      
       return res.status(200).json({ success: true, data: null });
     }
 
-    console.log("✅ Latest lifestyle found:", {
-      id: latestLifestyle._id,
-      createdAt: latestLifestyle.createdAt,
-      hasAIAdvice: !!latestLifestyle.aiAdvice,
-      language: latestLifestyle.language || 'en'
-    });
+    
 
     res.status(200).json({ success: true, data: latestLifestyle });
   } catch (error: any) {
-    console.error("❌ Fetch latest lifestyle error:", error.message);
+    console.error(" Fetch latest lifestyle error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-// ✅ POST new lifestyle (creates NEW record)
+//  POST new lifestyle (creates NEW record)
 router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    console.log("📝 Creating new lifestyle record for user:", userId);
-    console.log("Request body:", req.body);
-
+    
     const { alcohol, smoking, exercise, sleep, language } = req.body;
 
     // Validate required fields
@@ -127,22 +120,18 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
     // Fetch patient info
     const patient = await Patient.findOne({ userId });
     if (!patient) {
-      console.error("❌ Patient profile not found for userId:", userId);
+      console.error(" Patient profile not found for userId:", userId);
       return res.status(404).json({ message: "Patient profile not found" });
     }
 
     const age = calculateAge(patient.dob);
     const patientName = getPatientName(patient);
     
-    // ✅ GET SELECTED DISEASES
+    //  GET SELECTED DISEASES
     const selectedDiseases = getPatientDiseases(patient);
     const hasBothConditions = selectedDiseases.includes("diabetes") && selectedDiseases.includes("hypertension");
     
-    console.log(`👤 Patient found - Name: ${patientName}, Age: ${age}, Gender: ${patient.gender}`);
-    console.log(`🏥 Disease Profile:`, {
-      diseases: selectedDiseases,
-      managementType: hasBothConditions ? "DUAL (Diabetes + Hypertension)" : "DIABETES ONLY"
-    });
+    
 
     // Get latest glucose reading with ALL context
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
@@ -163,9 +152,9 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       heartRate: latestVitals?.heartRate
     });
 
-    // ✅ PRIORITY: Use language from request body first, then vitals, then default to 'en'
+    //  PRIORITY: Use language from request body first, then vitals, then default to 'en'
     const userLanguage = (language || latestVitals?.language || "en") as "en" | "sw";
-    console.log(`🌐 Using language: ${userLanguage} (source: ${language ? 'request' : latestVitals?.language ? 'vitals' : 'default'})`);
+    
 
     // Save lifestyle with pending AI advice
     const lifestyleDoc = new Lifestyle({
@@ -185,7 +174,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
         : "Generating personalized advice...",
     });
     await lifestyleDoc.save();
-    console.log("✅ Lifestyle record saved:", lifestyleDoc._id);
+    
 
     // Prepare COMPLETE input for AI with all available context and diseases
     const aiInput: LifestyleAIInput & {
@@ -216,33 +205,18 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
 
     const hasBoth = vitalDiseases.includes("diabetes") && vitalDiseases.includes("hypertension");
 
-    console.log("🤖 Generating lifestyle feedback with context:", {
-      glucose: aiInput.glucose,
-      context: aiInput.context,
-      language: aiInput.language,
-      patientName: aiInput.patientName,
-      selectedDiseases: aiInput.selectedDiseases,
-      managementType: hasBoth ? "DUAL" : "DIABETES ONLY",
-      bp: `${aiInput.systolic || 'N/A'}/${aiInput.diastolic || 'N/A'}`,
-      hr: aiInput.heartRate || 'N/A',
-      exercise: `${aiInput.exerciseRecent || 'N/A'} (${aiInput.exerciseIntensity || 'N/A'})`
-    });
+   
 
     try {
       const ai = getAIService();
       const aiAdvice = await ai.generateLifestyleFeedback(aiInput);
       
-      console.log("✅ AI advice generated:");
-      console.log("- Length:", aiAdvice.length);
-      console.log("- First 100 chars:", aiAdvice.substring(0, 100));
-      console.log("- Language used:", userLanguage);
-      console.log("- Disease focus:", hasBoth ? "DUAL" : "DIABETES ONLY");
+      
       
       // Update the document with AI advice
       lifestyleDoc.aiAdvice = aiAdvice;
       await lifestyleDoc.save();
-      console.log("✅ AI advice saved to document");
-
+     
       res.status(200).json({ 
         success: true, 
         recordId: lifestyleDoc._id, 
@@ -269,7 +243,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
         }
       });
     } catch (aiError: any) {
-      console.error("❌ AI generation failed:", aiError.message);
+      console.error(" AI generation failed:", aiError.message);
       console.error("Full error:", aiError);
       
       const errorMessage = userLanguage === "sw" 
@@ -291,13 +265,13 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
       });
     }
   } catch (error: any) {
-    console.error("❌ Save lifestyle error:", error.message);
+    console.error(" Save lifestyle error:", error.message);
     console.error("Stack trace:", error.stack);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-// ✅ PUT update existing lifestyle (regenerates AI advice)
+//  PUT update existing lifestyle (regenerates AI advice)
 router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -306,8 +280,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
     const { id } = req.params;
     const { alcohol, smoking, exercise, sleep, language } = req.body;
 
-    console.log("📝 Updating lifestyle record:", id);
-    console.log("Update data:", { alcohol, smoking, exercise, sleep, language });
+    
 
     const lifestyleDoc = await Lifestyle.findOne({ _id: id, userId });
     if (!lifestyleDoc) {
@@ -326,7 +299,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
     const age = calculateAge(patient.dob);
     const patientName = getPatientName(patient);
     
-    // ✅ GET SELECTED DISEASES
+    //  GET SELECTED DISEASES
     const selectedDiseases = getPatientDiseases(patient);
 
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
@@ -342,9 +315,9 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
       readingDate: latestVitals?.createdAt || new Date(),
     };
 
-    // ✅ PRIORITY: language from request body → existing doc → vitals → default
+    //  PRIORITY: language from request body → existing doc → vitals → default
     const userLanguage = (language || lifestyleDoc.language || latestVitals?.language || "en") as "en" | "sw";
-    console.log(`🌐 Using language for update: ${userLanguage} (source: ${language ? 'request' : lifestyleDoc.language ? 'existing' : latestVitals?.language ? 'vitals' : 'default'})`);
+    
     
     lifestyleDoc.language = userLanguage;
     lifestyleDoc.aiAdvice = userLanguage === "sw" 
@@ -385,14 +358,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
 
     const hasBoth = vitalDiseases.includes("diabetes") && vitalDiseases.includes("hypertension");
 
-    console.log("🤖 Regenerating lifestyle feedback with:", {
-      language: userLanguage,
-      patientName: patientName,
-      selectedDiseases: vitalDiseases,
-      managementType: hasBoth ? "DUAL" : "DIABETES ONLY",
-      glucose,
-      context
-    });
+    
 
     try {
       const ai = getAIService();
@@ -400,7 +366,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
       
       lifestyleDoc.aiAdvice = aiAdvice;
       await lifestyleDoc.save();
-      console.log("✅ AI advice regenerated, length:", aiAdvice.length);
+     
 
       res.status(200).json({ 
         success: true, 
@@ -417,7 +383,7 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
         updated: true
       });
     } catch (aiError: any) {
-      console.error("❌ AI regeneration failed:", aiError.message);
+      console.error(" AI regeneration failed:", aiError.message);
       
       const errorMessage = userLanguage === "sw" 
         ? "Haiwezekani kutengeneza ushauri wa kibinafsi upya kwa sasa."
@@ -438,12 +404,12 @@ router.put("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response)
       });
     }
   } catch (error: any) {
-    console.error("❌ Update lifestyle error:", error.message);
+    console.error(" Update lifestyle error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-// ✅ POST regenerate AI advice for existing record (with language support)
+//  POST regenerate AI advice for existing record (with language support)
 router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -452,9 +418,7 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
     const { id } = req.params;
     const { language } = req.body;
 
-    console.log("🔄 Regenerating AI advice for record:", id);
-    console.log("🌐 Requested language:", language || 'not specified');
-
+    
     const lifestyleDoc = await Lifestyle.findOne({ _id: id, userId });
     if (!lifestyleDoc) {
       return res.status(404).json({ message: "Lifestyle record not found" });
@@ -466,7 +430,7 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
     const age = calculateAge(patient.dob);
     const patientName = getPatientName(patient);
     
-    // ✅ GET SELECTED DISEASES
+    //  GET SELECTED DISEASES
     const selectedDiseases = getPatientDiseases(patient);
 
     const latestVitals = await Diabetes.findOne({ userId }).sort({ createdAt: -1 });
@@ -482,9 +446,9 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       readingDate: latestVitals?.createdAt || new Date(),
     };
 
-    // ✅ PRIORITY: language from request → existing doc → vitals → default
+    //  PRIORITY: language from request → existing doc → vitals → default
     const userLanguage = (language || lifestyleDoc.language || latestVitals?.language || "en") as "en" | "sw";
-    console.log(`🌐 Using language: ${userLanguage} (source: ${language ? 'request' : lifestyleDoc.language ? 'existing' : latestVitals?.language ? 'vitals' : 'default'})`);
+    
     
     lifestyleDoc.language = userLanguage;
     lifestyleDoc.aiAdvice = userLanguage === "sw" 
@@ -525,28 +489,14 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
 
     const hasBoth = vitalDiseases.includes("diabetes") && vitalDiseases.includes("hypertension");
 
-    console.log("🤖 Regenerating with full context:", {
-      language: userLanguage,
-      patientName: patientName,
-      selectedDiseases: vitalDiseases,
-      managementType: hasBoth ? "DUAL" : "DIABETES ONLY",
-      glucose,
-      context,
-      hasBP: !!(latestVitals?.systolic && latestVitals?.diastolic),
-      hasHR: !!latestVitals?.heartRate
-    });
-
+    
     try {
       const ai = getAIService();
       const aiAdvice = await ai.generateLifestyleFeedback(aiInput);
       
       lifestyleDoc.aiAdvice = aiAdvice;
       await lifestyleDoc.save();
-      
-      console.log("✅ AI advice regenerated successfully");
-      console.log("- Length:", aiAdvice.length);
-      console.log("- Language:", userLanguage);
-      console.log("- First 100 chars:", aiAdvice.substring(0, 100));
+     
 
       res.status(200).json({ 
         success: true, 
@@ -563,7 +513,7 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
         timestamp: new Date()
       });
     } catch (aiError: any) {
-      console.error("❌ AI regeneration failed:", aiError.message);
+      console.error(" AI regeneration failed:", aiError.message);
       
       const errorMessage = userLanguage === "sw" 
         ? "Haiwezekani kutengeneza ushauri wa kibinafsi upya kwa sasa."
@@ -579,12 +529,12 @@ router.post("/:id/regenerate", verifyToken, async (req: AuthenticatedRequest, re
       });
     }
   } catch (error: any) {
-    console.error("❌ Regenerate error:", error.message);
+    console.error(" Regenerate error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-// ✅ GET AI advice by record ID
+//  GET AI advice by record ID
 router.get("/advice/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -627,12 +577,12 @@ router.get("/advice/:id", verifyToken, async (req: AuthenticatedRequest, res: Re
       language: lifestyle.language || 'en'
     });
   } catch (error: any) {
-    console.error("❌ Fetch lifestyle advice error:", error.message);
+    console.error(" Fetch lifestyle advice error:", error.message);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 });
 
-// ✅ GET all lifestyle records for user (with pagination)
+//  GET all lifestyle records for user (with pagination)
 router.get("/history", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -642,7 +592,7 @@ router.get("/history", verifyToken, async (req: AuthenticatedRequest, res: Respo
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    console.log(`📊 Fetching lifestyle history for user: ${userId} (page ${page})`);
+    
 
     const lifestyleRecords = await Lifestyle.find({ userId })
       .sort({ createdAt: -1 })
@@ -666,12 +616,12 @@ router.get("/history", verifyToken, async (req: AuthenticatedRequest, res: Respo
       }
     });
   } catch (error: any) {
-    console.error("❌ Fetch lifestyle history error:", error.message);
+    console.error(" Fetch lifestyle history error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-// ✅ DELETE lifestyle record
+//  DELETE lifestyle record
 router.delete("/:id", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -685,14 +635,14 @@ router.delete("/:id", verifyToken, async (req: AuthenticatedRequest, res: Respon
       return res.status(404).json({ message: "Lifestyle record not found" });
     }
 
-    console.log("✅ Lifestyle record deleted:", id);
+  
 
     res.status(200).json({
       success: true,
       message: "Lifestyle record deleted successfully"
     });
   } catch (error: any) {
-    console.error("❌ Delete lifestyle error:", error.message);
+    console.error(" Delete lifestyle error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });

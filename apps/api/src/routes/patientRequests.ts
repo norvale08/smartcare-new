@@ -18,10 +18,10 @@ const authenticateUser = (req: any, res: any, next: any) => {
     req.userId = decoded.userId;
     req.userEmail = decoded.email;
 
-    console.log("✅ Authenticated user:", decoded.userId);
+    
     next();
   } catch (error) {
-    console.error("❌ Token verification failed:", error);
+    console.error(" Token verification failed:", error);
     return res.status(401).json({ message: "Invalid token" });
   }
 };
@@ -94,8 +94,7 @@ router.post("/request-doctor", authenticateUser, async (req: any, res: any) => {
     });
     await doctor.save();
 
-    console.log("✅ Doctor request created successfully");
-
+    
     res.status(200).json({ 
       success: true,
       message: "Doctor request sent successfully",

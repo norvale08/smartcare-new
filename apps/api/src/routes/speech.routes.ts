@@ -50,7 +50,7 @@ interface HealthResponse {
 // Health check endpoint
 router.get('/health', async (req: Request, res: Response) => {
   try {
-    console.log('🔍 Checking Python service health at:', `${PYTHON_SERVICE_URL}/health`);
+    
     const response = await axios.get(`${PYTHON_SERVICE_URL}/health`);
     
     const healthResponse: HealthResponse = {
@@ -58,10 +58,10 @@ router.get('/health', async (req: Request, res: Response) => {
       pythonService: response.data,
     };
     
-    console.log('✅ Python service health:', response.data);
+   
     res.json(healthResponse);
   } catch (error: any) {
-    console.error('❌ Python service health check failed:', error.message);
+    console.error(' Python service health check failed:', error.message);
     const errorResponse: HealthResponse = {
       status: 'error',
       message: 'Python service unavailable',
@@ -105,8 +105,7 @@ router.post('/transcribe', upload.single('audio'), async (req: Request, res: Res
     // Add language to form data
     formData.append('language', language);
 
-    console.log('🎯 Forwarding to Python service:', `${PYTHON_SERVICE_URL}/transcribe`, 'with language:', language);
-
+    
     // Forward to Python service
     const response = await axios.post<TranscriptionResponse>(
       `${PYTHON_SERVICE_URL}/transcribe`,
@@ -135,7 +134,7 @@ router.post('/transcribe', upload.single('audio'), async (req: Request, res: Res
       fs.unlinkSync(filePath);
     }
 
-    console.error('❌ Transcription error:', {
+    console.error(' Transcription error:', {
       message: error.message,
       response: error.response?.data,
       status: error.response?.status

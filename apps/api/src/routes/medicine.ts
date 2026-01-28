@@ -20,7 +20,7 @@ const authenticateUser = (req: any, res: any, next: any) => {
     req.userEmail = decoded.email;
     req.userRole = decoded.role;
 
-    console.log("✅ Authenticated user:", decoded.userId, "Role:", decoded.role);
+   
     next();
   } catch (error) {
     console.error("❌ Token verification failed:", error);
@@ -31,9 +31,7 @@ const authenticateUser = (req: any, res: any, next: any) => {
 // GET /api/medications - Get all medications (admin/doctor overview)
 router.get("/", authenticateUser, async (req: any, res: any) => {
   try {
-    console.log("=== FETCHING ALL MEDICATIONS ===");
-    console.log("User Role:", req.userRole);
-
+   
     await connectMongoDB();
 
     let medications;
@@ -57,7 +55,7 @@ router.get("/", authenticateUser, async (req: any, res: any) => {
       });
     }
 
-    console.log(`✅ Found ${medications.length} medications`);
+    
 
     res.json({
       success: true,
@@ -79,10 +77,7 @@ router.put("/:id", authenticateUser, async (req: any, res: any) => {
   try {
     const { id } = req.params;
 
-    console.log("=== UPDATING MEDICATION ===");
-    console.log("Medication ID:", id);
-    console.log("User Role:", req.userRole);
-
+    
     await connectMongoDB();
 
     const medication = await MedicationModel.findById(id);
@@ -109,7 +104,7 @@ router.put("/:id", authenticateUser, async (req: any, res: any) => {
     ).populate('patientId', 'fullName email')
      .populate('prescribedBy', 'fullName specialization');
 
-    console.log("✅ Medication updated successfully");
+   
 
     res.json({
       success: true,
@@ -132,9 +127,7 @@ router.delete("/:id", authenticateUser, async (req: any, res: any) => {
   try {
     const { id } = req.params;
 
-    console.log("=== DELETING MEDICATION ===");
-    console.log("Medication ID:", id);
-    console.log("User Role:", req.userRole);
+   
 
     await connectMongoDB();
 
@@ -157,8 +150,7 @@ router.delete("/:id", authenticateUser, async (req: any, res: any) => {
 
     await MedicationModel.findByIdAndDelete(id);
 
-    console.log("✅ Medication deleted successfully");
-
+    
     res.json({
       success: true,
       message: "Medication deleted successfully"

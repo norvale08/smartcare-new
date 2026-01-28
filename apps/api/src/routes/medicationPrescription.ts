@@ -21,7 +21,7 @@ const authenticateUser = (req: any, res: any, next: any) => {
     req.userEmail = decoded.email;
     req.userRole = decoded.role;
 
-    console.log("✅ Authenticated user:", decoded.userId, "Role:", decoded.role);
+    
     next();
   } catch (error) {
     console.error("❌ Token verification failed:", error);
@@ -96,10 +96,7 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
       });
     }
 
-    console.log("=== PRESCRIBING MEDICATION ===");
-    console.log("Doctor ID:", req.userId);
-    console.log("Patient ID:", patientId);
-    console.log("Medication:", medicationName);
+    
 
     await connectMongoDB();
 
@@ -140,8 +137,7 @@ router.post("/", authenticateUser, async (req: any, res: any) => {
       .populate('patientId', 'fullName email phoneNumber')
       .populate('prescribedBy', 'fullName specialization');
 
-    console.log("✅ Medication prescribed successfully");
-    console.log("End Date:", endDate);
+    
 
     res.status(201).json({
       success: true,
@@ -183,9 +179,7 @@ router.put("/:medicationId", authenticateUser, async (req: any, res: any) => {
       });
     }
 
-    console.log("=== UPDATING MEDICATION ===");
-    console.log("Doctor ID:", req.userId);
-    console.log("Medication ID:", medicationId);
+   
 
     await connectMongoDB();
 
@@ -238,8 +232,7 @@ router.put("/:medicationId", authenticateUser, async (req: any, res: any) => {
       .populate('patientId', 'fullName email phoneNumber')
       .populate('prescribedBy', 'fullName specialization');
 
-    console.log("✅ Medication updated successfully");
-    console.log("New End Date:", endDate);
+    
 
     res.json({
       success: true,
@@ -268,8 +261,7 @@ router.get("/my-prescriptions", authenticateUser, async (req: any, res: any) => 
       });
     }
 
-    console.log("=== FETCHING DOCTOR'S PRESCRIPTIONS ===");
-    console.log("Doctor ID:", req.userId);
+    
 
     await connectMongoDB();
 
@@ -280,7 +272,7 @@ router.get("/my-prescriptions", authenticateUser, async (req: any, res: any) => 
     .populate('prescribedBy', 'fullName specialization')
     .sort({ createdAt: -1 });
 
-    console.log(`✅ Found ${medications.length} prescriptions`);
+    
 
     res.json({
       success: true,
