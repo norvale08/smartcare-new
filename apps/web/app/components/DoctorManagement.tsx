@@ -1,3 +1,4 @@
+// FILE: app/caretaker/components/DoctorManagement.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { User, Phone, Mail, Building, Award, Clock, AlertCircle, 
@@ -61,7 +62,6 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [lastChecked, setLastChecked] = useState<string>("");
-  const [showMessagesSection, setShowMessagesSection] = useState(false);
 
   const getApiBaseUrl = () => {
     return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -111,11 +111,6 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
           setAssignedDoctor(formattedDoctor);
           setRetryCount(0);
           setLastChecked(new Date().toLocaleTimeString());
-          
-          // Auto-fetch messages when doctor is assigned
-          if (!showMessagesSection && !isMessaging) {
-            fetchMessages(formattedDoctor.id);
-          }
         } else if (data.success && data.assignedDoctor === null) {
           // No doctor assigned yet
           console.log('ℹ️ No doctor assigned yet');
@@ -161,14 +156,13 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
   useEffect(() => {
     // Auto-refresh every 60 seconds
     const interval = setInterval(() => {
-      if (!isMessaging && assignedDoctor) {
+      if (!isMessaging) {
         fetchAssignedDoctor();
-        fetchMessages(assignedDoctor.id);
       }
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [isMessaging, assignedDoctor]);
+  }, [isMessaging]);
 
   const fetchMessages = async (doctorId: string) => {
     try {
@@ -221,8 +215,6 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
         if (result.success) {
           setMessages(prev => [...prev, result.data]);
           setNewMessage('');
-          // Refresh messages after sending
-          fetchMessages(assignedDoctor.id);
         }
       }
     } catch (error) {
@@ -254,15 +246,6 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
     }
   };
 
-  const toggleMessagesSection = () => {
-    if (assignedDoctor) {
-      setShowMessagesSection(!showMessagesSection);
-      if (!showMessagesSection) {
-        fetchMessages(assignedDoctor.id);
-      }
-    }
-  };
-
   const handleCallClick = () => {
     if (assignedDoctor?.phoneNumber) {
       window.open(`tel:${assignedDoctor.phoneNumber}`, '_blank');
@@ -283,6 +266,14 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
       });
     } catch {
       return language === "en-US" ? 'Not specified' : 'Haijaainishwa';
+    }
+  };
+
+  const openDoctorProfile = () => {
+    if (assignedDoctor) {
+      // You can implement doctor profile view or redirect
+      console.log('Opening doctor profile:', assignedDoctor.id);
+      // Example: window.open(`/doctor/${assignedDoctor.id}`, '_blank');
     }
   };
 
@@ -373,11 +364,102 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
     );
   }
 
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  if (isMessaging) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden shadow-sm">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setIsMessaging(false)}
+                className="p-2 rounded-full hover:bg-blue-500 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-white" />
+              </button>
+              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                <User className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">{assignedDoctor.fullName}</h3>
+                <p className="text-blue-100 text-sm">{assignedDoctor.specialization}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-80 overflow-y-auto space-y-4 p-4 bg-gray-50">
+            {messagesLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p className="font-medium text-gray-600">
+                  {language === "en-US" ? "No messages yet" : "Hakuna ujumbe bado"}
+                </p>
+                <p className="text-sm">
+                  {language === "en-US" 
+                    ? "Start a conversation with your doctor" 
+                    : "Anza mazungumzo na daktari wako"}
+                </p>
+              </div>
+            ) : (
+              messages.map((message) => {
+                const userData = JSON.parse(localStorage.getItem('user') || '{}');
+                const isOwnMessage = message.senderId._id === userData?.userId;
+                return (
+                  <div
+                    key={message._id}
+                    className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-md px-4 py-3 rounded-2xl ${
+                        isOwnMessage
+                          ? 'bg-blue-600 text-white rounded-br-none'
+                          : 'bg-white text-gray-900 border-2 border-gray-200 rounded-bl-none'
+                      }`}
+                    >
+                      <p className="text-sm">{message.content}</p>
+                      <p className={`text-xs mt-2 ${
+                        isOwnMessage ? 'text-blue-100' : 'text-gray-500'
+                      }`}>
+                        {formatTime(message.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div className="border-t border-gray-200 p-4 bg-white">
+            <div className="flex space-x-3">
+              <textarea
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={language === "en-US" 
+                  ? "Type your message to the doctor..." 
+                  : "Andika ujumbe wako kwa daktari..."}
+                className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                rows={2}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!newMessage.trim()}
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 flex items-center"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Doctor Information Card */}
+    <div className="space-y-4">
       <div className="bg-white rounded-xl border-2 border-green-200 shadow-sm overflow-hidden">
         <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -473,16 +555,21 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
 
           <div className="flex space-x-3 pt-4 border-t border-gray-200">
             <button 
-              onClick={toggleMessagesSection}
+              onClick={handleMessageClick}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl text-sm font-medium flex items-center justify-center space-x-2 transition-colors shadow-sm"
             >
               <MessageSquare className="w-5 h-5" />
-              <span>
-                {showMessagesSection 
-                  ? (language === "en-US" ? "Hide Messages" : "Ficha Ujumbe")
-                  : (language === "en-US" ? "View Messages" : "Angalia Ujumbe")}
-              </span>
+              <span>{language === "en-US" ? "Send Message" : "Tuma Ujumbe"}</span>
             </button>
+            {/* {assignedDoctor.phoneNumber && (
+              <button 
+                onClick={handleCallClick}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl text-sm font-medium flex items-center justify-center space-x-2 transition-colors shadow-sm"
+              >
+                <PhoneCall className="w-5 h-5" />
+                <span>{language === "en-US" ? "Call Now" : "Piga Simu Sasa"}</span>
+              </button>
+            )} */}
           </div>
 
           <div className="text-center pt-4 border-t border-gray-100">
@@ -503,213 +590,6 @@ const AssignedDoctors: React.FC<{ className?: string; refreshTrigger?: number }>
           </div>
         </div>
       </div>
-
-      {/* Messages Section - Always visible when toggled */}
-      {showMessagesSection && (
-        <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden shadow-sm">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                  <MessageSquare className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white">
-                    {language === "en-US" ? "Messages with Doctor" : "Mazungumzo na Daktari"}
-                  </h3>
-                  <p className="text-blue-100 text-sm">{assignedDoctor.fullName}</p>
-                </div>
-              </div>
-              <button
-                onClick={toggleMessagesSection}
-                className="p-2 rounded-full hover:bg-blue-500 transition-colors"
-                title={language === "en-US" ? "Close messages" : "Funga ujumbe"}
-              >
-                <ArrowLeft className="w-5 h-5 text-white" />
-              </button>
-            </div>
-          </div>
-
-          <div className="h-96 overflow-y-auto p-4 bg-gray-50 flex flex-col space-y-3">
-            {messagesLoading ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p className="font-medium text-gray-600">
-                    {language === "en-US" ? "No messages yet" : "Hakuna ujumbe bado"}
-                  </p>
-                  <p className="text-sm">
-                    {language === "en-US" 
-                      ? "Start a conversation with your doctor" 
-                      : "Anza mazungumzo na daktari wako"}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              messages.map((message) => {
-                const isOwnMessage = message.senderId._id === currentUser?.userId;
-                
-                return (
-                  <div
-                    key={message._id}
-                    className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[70%] px-4 py-3 rounded-2xl ${
-                        isOwnMessage
-                          ? 'bg-blue-600 text-white rounded-br-none'
-                          : 'bg-white text-gray-900 border-2 border-gray-200 rounded-bl-none'
-                      }`}
-                    >
-                      {/* Message content */}
-                      <p className="text-sm break-words">{message.content}</p>
-                      
-                      {/* Timestamp */}
-                      <div className={`text-xs mt-2 ${
-                        isOwnMessage ? 'text-blue-100' : 'text-gray-500'
-                      }`}>
-                        {formatTime(message.createdAt)}
-                      </div>
-                      
-                      {/* Sender indicator */}
-                      {!isOwnMessage && (
-                        <div className="text-xs text-gray-400 mt-1">
-                          {message.senderId.fullName}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Message Input */}
-          <div className="border-t border-gray-200 p-4 bg-white">
-            <div className="flex space-x-3">
-              <textarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={language === "en-US" 
-                  ? "Type your message to the doctor..." 
-                  : "Andika ujumbe wako kwa daktari..."}
-                className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                rows={2}
-              />
-              <button
-                onClick={sendMessage}
-                disabled={!newMessage.trim()}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 flex items-center"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Full Screen Messaging View (optional) */}
-      {isMessaging && (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setIsMessaging(false)}
-                className="p-2 rounded-full hover:bg-blue-500 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-white" />
-              </button>
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-white">{assignedDoctor.fullName}</h3>
-                <p className="text-blue-100 text-sm">{assignedDoctor.specialization}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 bg-gray-50 flex flex-col space-y-3">
-            {messagesLoading ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p className="font-medium text-gray-600">
-                    {language === "en-US" ? "No messages yet" : "Hakuna ujumbe bado"}
-                  </p>
-                  <p className="text-sm">
-                    {language === "en-US" 
-                      ? "Start a conversation with your doctor" 
-                      : "Anza mazungumzo na daktari wako"}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              messages.map((message) => {
-                const isOwnMessage = message.senderId._id === currentUser?.userId;
-                
-                return (
-                  <div
-                    key={message._id}
-                    className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[70%] px-4 py-3 rounded-2xl ${
-                        isOwnMessage
-                          ? 'bg-blue-600 text-white rounded-br-none'
-                          : 'bg-white text-gray-900 border-2 border-gray-200 rounded-bl-none'
-                      }`}
-                    >
-                      <p className="text-sm break-words">{message.content}</p>
-                      <div className={`text-xs mt-2 ${
-                        isOwnMessage ? 'text-blue-100' : 'text-gray-500'
-                      }`}>
-                        {formatTime(message.createdAt)}
-                      </div>
-                      {!isOwnMessage && (
-                        <div className="text-xs text-gray-400 mt-1">
-                          {message.senderId.fullName}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          <div className="border-t border-gray-200 p-4 bg-white">
-            <div className="flex space-x-3">
-              <textarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={language === "en-US" 
-                  ? "Type your message to the doctor..." 
-                  : "Andika ujumbe wako kwa daktari..."}
-                className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                rows={2}
-              />
-              <button
-                onClick={sendMessage}
-                disabled={!newMessage.trim()}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 flex items-center"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

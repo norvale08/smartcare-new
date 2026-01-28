@@ -11,6 +11,7 @@ import DiabetesMedications from "../components/diabetesPages/DiabetesMedications
 import DiabetesFoodAdvice from "../components/diabetesPages/DiabetesFoodAdvice";
 import UserProfileHeader from "../components/UserProfileHeader";
 import DiabetesVitalsGraph from "../components/diabetesPages/components/DiabetesVitalsGraph";
+import PatientAppointments from "../components/PatientAppointments";
 import { 
   Activity, 
   Heart, 
@@ -148,12 +149,15 @@ const Page = () => {
   const [finalFeedback, setFinalFeedback] = useState<string>("");
 
   const [userDiseases, setUserDiseases] = useState<string[]>([]);
+  const [patientId, setPatientId] = useState<string | null>(null);
 
   useEffect(() => {
     const user = getUserFromToken();
     if (user?.disease) {
-    
       setUserDiseases(user.disease);
+    }
+    if (user?._id) {
+      setPatientId(user._id);
     }
   }, []);
 
@@ -655,6 +659,15 @@ const Page = () => {
                         </p>
                       </div>
                     )}
+
+                    {/* Patient Appointments Section for Doctors */}
+                    <div className="pt-6 border-t border-gray-200">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Appointments</h3>
+                      <PatientAppointments 
+                        patientId={patientId || undefined} 
+                        language={language} 
+                      />
+                    </div>
 
                     <div className="pt-6 border-t border-gray-200">
                       <button
