@@ -11,7 +11,8 @@ import {
   Users,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  UserCheck
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -42,6 +43,13 @@ interface Statistics {
   completedRelativeProfiles: number;
 }
 
+interface ApprovalStatistics {
+  totalPatients: number;
+  approvedPatients: number;
+  pendingApprovals: number;
+  approvalRate: string;
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function AdminPage() {
@@ -59,12 +67,19 @@ export default function AdminPage() {
     activeRelatives: 0,
     completedRelativeProfiles: 0,
   });
+  const [approvalStats, setApprovalStats] = useState<ApprovalStatistics>({
+    totalPatients: 0,
+    approvedPatients: 0,
+    pendingApprovals: 0,
+    approvalRate: '0'
+  });
 
   const router = useRouter();
 
   useEffect(() => {
     fetchDoctors();
     fetchStatistics();
+    fetchApprovalStatistics();
   }, []);
 
   const fetchDoctors = async () => {
@@ -150,9 +165,36 @@ export default function AdminPage() {
     }
   };
 
+  const fetchApprovalStatistics = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/api/admin/approval-statistics`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setApprovalStats(data.data);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching approval statistics:", err);
+    }
+  };
+
   const refreshData = () => {
     fetchDoctors();
     fetchStatistics();
+    fetchApprovalStatistics();
     toast.success("Dashboard refreshed", { duration: 2000 });
   };
 
@@ -215,6 +257,31 @@ export default function AdminPage() {
             </button>
           </div>
 
+          {/* Pending Approvals Alert */}
+          {approvalStats.pendingApprovals > 0 && (
+            <div 
+              onClick={() => router.push('/admin/pending-approvals')}
+              className="mb-6 bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-amber-100 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <UserCheck className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-amber-900">
+                    {approvalStats.pendingApprovals} Patient{approvalStats.pendingApprovals !== 1 ? 's' : ''} Awaiting Approval
+                  </h3>
+                  <p className="text-sm text-amber-700">
+                    Click here to review and approve new patient registrations
+                  </p>
+                </div>
+              </div>
+              <div className="px-4 py-2 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 transition-colors">
+                Review Now →
+              </div>
+            </div>
+          )}
+
           {/* Error Message */}
           {error && (
             <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
@@ -234,31 +301,94 @@ export default function AdminPage() {
             <StatsCard
               title="Total Doctors"
               value={doctors.length}
-              /* subtitle={`${doctors.length} active providers`} */
               icon={<BriefcaseMedical />}
               bgColor="bg-emerald-100"
             />
             <StatsCard
-              title="Total Patients"
-              value={stats.totalPatients}
-              /* subtitle={`${stats.totalUsers} registered users`} */
+              title="Active Patients"
+              value={approvalStats.approvedPatients}
               icon={<UsersRound />}
               bgColor="bg-purple-100"
             />
+            <div 
+              onClick={() => router.push('/admin/pending-approvals')}
+              className="cursor-pointer hover:scale-105 transition-transform"
+            >
+              <StatsCard
+                title="Pending Approvals"
+                value={approvalStats.pendingApprovals}
+                icon={<UserCheck />}
+                bgColor={approvalStats.pendingApprovals > 0 ? "bg-amber-100" : "bg-green-100"}
+              />
+            </div>
             <StatsCard
               title="Family Members"
               value={stats.totalRelatives}
-              /* subtitle={`${stats.activeRelatives} active accounts`} */
               icon={<Users />}
               bgColor="bg-blue-100"
             />
-            <StatsCard
-              title="System Health"
-              value="Optimal"
-              /* subtitle="All services running" */
-              icon={<Activity />}
-              bgColor="bg-green-100"
-            />
+          </div>
+
+          {/* Approval Overview Card */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Patient Approval Overview</h3>
+              <button
+                onClick={() => router.push('/admin/pending-approvals')}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                View Details →
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {/* Total Registrations */}
+              <div className="flex items-start space-x-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Registered</p>
+                  <p className="text-2xl font-bold text-gray-900">{approvalStats.totalPatients}</p>
+                  <p className="text-xs text-gray-500 mt-1">All time</p>
+                </div>
+              </div>
+
+              {/* Approved */}
+              <div className="flex items-start space-x-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Approved</p>
+                  <p className="text-2xl font-bold text-gray-900">{approvalStats.approvedPatients}</p>
+                  <p className="text-xs text-gray-500 mt-1">Active accounts</p>
+                </div>
+              </div>
+
+              {/* Pending */}
+              <div className="flex items-start space-x-3">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Pending</p>
+                  <p className="text-2xl font-bold text-gray-900">{approvalStats.pendingApprovals}</p>
+                  <p className="text-xs text-gray-500 mt-1">Awaiting review</p>
+                </div>
+              </div>
+
+              {/* Approval Rate */}
+              <div className="flex items-start space-x-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Approval Rate</p>
+                  <p className="text-2xl font-bold text-gray-900">{approvalStats.approvalRate}%</p>
+                  <p className="text-xs text-gray-500 mt-1">Success rate</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Medical Conditions Overview */}
@@ -363,7 +493,23 @@ export default function AdminPage() {
           {/* Quick Actions */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <button
+                onClick={() => router.push('/admin/pending-approvals')}
+                className="p-4 border-2 border-amber-200 bg-amber-50 rounded-lg hover:border-amber-500 hover:bg-amber-100 transition-all text-left group"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <UserCheck className="w-8 h-8 text-amber-600" />
+                  {approvalStats.pendingApprovals > 0 && (
+                    <span className="px-2 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
+                      {approvalStats.pendingApprovals}
+                    </span>
+                  )}
+                </div>
+                <h4 className="font-semibold text-gray-900 group-hover:text-amber-700">Pending Approvals</h4>
+                <p className="text-sm text-gray-600 mt-1">Review new patient registrations</p>
+              </button>
+
               <button
                 onClick={() => router.push('/admin/doctors')}
                 className="p-4 border-2 border-gray-200 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left group"

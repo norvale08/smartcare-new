@@ -34,6 +34,7 @@ interface UserDocument {
   invitationStatus?: string;
   monitoredPatient?: any;
   invitationExpires?: Date;
+  isApproved?: boolean; // ✅ Added for approval functionality
 }
 
 interface RedirectResult {
@@ -180,6 +181,16 @@ router.post("/", async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials"
+      });
+    }
+
+    // ✅ NEW: Check if patient account is pending approval
+    if (user.role === "patient" && user.isApproved === false) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account is pending admin approval. Please check your email for the activation link once your account has been approved.",
+        code: "PENDING_APPROVAL",
+        pendingApproval: true
       });
     }
 

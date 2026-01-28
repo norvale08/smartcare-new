@@ -31,6 +31,25 @@ const userSchema = new Schema(
       default: "patient",
     },
 
+    // ✅ APPROVAL FIELDS (for patient registration workflow)
+    isApproved: {
+      type: Boolean,
+      default: false, // New patients need admin approval
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // Reference to admin who approved
+      default: null,
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+
     // Patient fields
     isFirstLogin: {
       type: Boolean,
@@ -261,6 +280,7 @@ const userSchema = new Schema(
 // Index for faster queries
 userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
+userSchema.index({ isApproved: 1 }); // ✅ Add for approval queries
 userSchema.index({ assignedDoctor: 1 });
 userSchema.index({ 'assignedPatients': 1 });
 userSchema.index({ specialization: 1 }); // For doctor searches

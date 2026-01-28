@@ -56,7 +56,7 @@ import adminDoctorsRoutes from './routes/adminDoctors';
 import adminPatientsRoutes from './routes/adminPatients';
 import adminDoctorAssignmentsRouter from './routes/admin/doctorAssignments';
 import patientDoctorAssignmentRoutes from './routes/patientDoctorAssignment';
-
+import activateRouter from './routes/activation';
 
 import { startKeepAliveService ,stopKeepAliveService} from './services/keepAlive.service';
 
@@ -235,6 +235,7 @@ app.use('/api/python-speech', pythonSpeechRoutes);
 app.use('/api/relative-setup', relativeSetupRoutes);
 app.use('/api/relative', relativePatientRouter);
 app.use('/api', sendEmailRouter);
+app.use('/api/activate', activateRouter);
 
 
 
