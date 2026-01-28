@@ -233,13 +233,13 @@ const PatientAppointments: React.FC<PatientAppointmentsProps> = ({ patientId, la
 
       console.log('🔑 Using token for API request');
 
-      // For patients, they should use endpoints that don't require patientId in URL
+      // For patients, use patient-specific endpoints first to get only their appointments
       // Try multiple endpoints in order
       const endpoints = [
-        '/api/appointments/my-appointments',
-        '/api/appointments',
         patientId ? `/api/appointments/patient/${patientId}` : null,
-        targetPatientId ? `/api/appointments/patient/${targetPatientId}` : null
+        targetPatientId ? `/api/appointments/patient/${targetPatientId}` : null,
+        '/api/appointments/my-appointments',
+        '/api/appointments'
       ].filter(Boolean) as string[];
 
       let response: Response | null = null;
