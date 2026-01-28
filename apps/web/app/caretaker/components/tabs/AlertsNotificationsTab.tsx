@@ -121,8 +121,12 @@ const AlertsNotificationsTab: React.FC<AlertsNotificationsTabProps> = ({
   React.useEffect(() => {
     fetchNotifications();
 
-    // Poll for new notifications every 10 seconds (more frequent for critical alerts)
-    const interval = setInterval(fetchNotifications, 10000);
+    // Poll every 30 seconds only when tab is visible
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        fetchNotifications();
+      }
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [fetchNotifications]);
@@ -187,23 +191,57 @@ const AlertsNotificationsTab: React.FC<AlertsNotificationsTabProps> = ({
     return `${Math.floor(diffInHours / 24)}d ago`;
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    // Handle different notification types
-    switch (notification.type) {
-      case 'hypertension_alert':
-        console.log(`Viewing ${notification.bpCategory} hypertension alert for ${notification.patientName}`);
-        break;
-      case 'message':
-        console.log(`Opening conversation with ${notification.patientName}`);
-        break;
-      case 'vital_alert':
-        console.log(`Viewing vital alert for ${notification.patientName}`);
-        break;
-      case 'appointment':
-        console.log(`Viewing appointment details for ${notification.patientName}`);
-        break;
-      default:
-        console.log('Viewing notification details');
+  const handleNotificationClick = async (notification: Notification) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      // Mark notification as read
+      if (!notification.read) {
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/notifications/${notification.id}/read`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        // Update local state
+        setNotifications(prev =>
+          prev.map(n => 
+            n.id === notification.id ? { ...n, read: true } : n
+          )
+        );
+      }
+
+      // Handle different notification types
+      switch (notification.type) {
+        case 'hypertension_alert':
+          console.log(`Viewing ${notification.bpCategory} hypertension alert for ${notification.patientName}`);
+          break;
+        case 'message':
+          // Focus on messages tab and scroll to message
+          document.getElementById('messages-tab')?.click();
+          setTimeout(() => {
+            const messageElement = document.getElementById(`message-${notification.id}`);
+            messageElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            messageElement?.classList.add('bg-yellow-50', 'animate-pulse-once');
+          }, 100);
+          break;
+        case 'vital_alert':
+          console.log(`Viewing vital alert for ${notification.patientName}`);
+          break;
+        case 'appointment':
+          console.log(`Viewing appointment details for ${notification.patientName}`);
+          break;
+        default:
+          console.log('Viewing notification details');
+      }
+    } catch (error) {
+      console.error('Error handling notification click:', error);
     }
   };
 
@@ -244,7 +282,9 @@ const AlertsNotificationsTab: React.FC<AlertsNotificationsTabProps> = ({
           <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />
         </div>
         <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-pulse text-sm text-gray-500">
+            Loading...
+          </div>
         </div>
       </div>
     );

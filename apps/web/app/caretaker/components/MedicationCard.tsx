@@ -251,7 +251,7 @@ const MedicationCard: React.FC<MedicationCardProps> = ({
             </div>
 
             {/* Duration / End Date (active meds) */}
-            {showTiming && (
+{showTiming && (
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">
                 <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-100 text-emerald-800 px-2 py-1 rounded">
                   <Calendar className="w-3 h-3" />

@@ -184,17 +184,17 @@ const PatientMessages: React.FC<PatientMessagesProps> = ({ selectedPatient }) =>
   }, [selectedPatient?.id]);
 
   // Set up polling for new messages (every 5 seconds)
-  useEffect(() => {
-    if (!selectedPatient?.id) return;
+  // useEffect(() => {
+  //   if (!selectedPatient?.id) return;
 
-    const interval = setInterval(() => {
-      fetchConversation();
-    }, 5000);
+  //   const interval = setInterval(() => {
+  //     fetchConversation();
+  //   }, 5000);
 
-    return () => clearInterval(interval);
-  }, [selectedPatient?.id]);
+  //   return () => clearInterval(interval);
+  // }, [selectedPatient?.id]);
 
-  const receiverId = getReceiverId();
+   const receiverId = getReceiverId();
 
   return (
     <div className="space-y-4">
