@@ -1,5 +1,6 @@
 import React from 'react';
 import { TrendingUp, Clock, Calendar, Activity, HeartPulse, Droplets, User } from 'lucide-react';
+import { useTranslation } from "../../../../lib/hypertension/useTranslation";
 
 interface Patient {
   id: string;
@@ -30,6 +31,7 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
   patient,
   patientVitals
 }) => {
+  const { t, language } = useTranslation();
   // Filter vitals to only include data for the current patient
   const getPatientSpecificVitals = (vitals: VitalSigns[], currentPatient: Patient) => {
     if (!vitals || !currentPatient) return [];
@@ -137,32 +139,44 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
             <TrendingUp className="w-5 h-5 text-green-600" />
           </div>
           <div>
-            <h3 className="text-xl font-semibold text-gray-900">Health Trends</h3>
-            <p className="text-sm text-gray-500">Historical data analysis</p>
+            <h3 className="text-xl font-semibold text-gray-900">
+              {language === "sw-TZ" ? "Mienendo ya Afya" : "Health Trends"}
+            </h3>
+            <p className="text-sm text-gray-500">
+              {language === "sw-TZ" ? "Uchambuzi wa data ya kale" : "Historical data analysis"}
+            </p>
           </div>
         </div>
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Clock className="w-8 h-8 text-gray-400" />
           </div>
-          <h4 className="text-lg font-medium text-gray-900 mb-2">No Historical Data Available</h4>
-          <p className="text-gray-500">Vital signs data will appear here once recorded</p>
+          <h4 className="text-lg font-medium text-gray-900 mb-2">
+            {language === "sw-TZ" ? "Hakuna Data ya Kale inayopatikana" : "No Historical Data Available"}
+          </h4>
+          <p className="text-gray-500">
+            {language === "sw-TZ" ? "Data ya vitals itaonekana hapa mara tu inapowekwa" : "Vital signs data will appear here once recorded"}
+          </p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="bg-white rounded-lg border shadow-sm p-6">
-      <div className="flex items-center space-x-3 mb-6">
-        <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center">
-          <TrendingUp className="w-5 h-5 text-green-600" />
+    return (
+      <div className="bg-white rounded-lg border shadow-sm p-6">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center">
+            <TrendingUp className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900">
+              {language === "sw-TZ" ? "Mienendo ya Afya" : "Health Trends"}
+            </h3>
+            <p className="text-sm text-gray-500">
+              {language === "sw-TZ" ? "Uchambuzi wa data ya kale" : "Historical data analysis"}
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900">Health Trends</h3>
-          <p className="text-sm text-gray-500">Historical data analysis</p>
-        </div>
-      </div>
 
       {/* Patient Profile Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -194,10 +208,12 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
           <>
             <div className="bg-gradient-to-br from-red-50 to-orange-50 p-4 rounded-lg border border-orange-100">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-2">
-                  <HeartPulse className="w-5 h-5 text-red-500" />
-                  <span className="text-sm font-medium text-gray-700">BP Trend</span>
-                </div>
+            <div className="flex items-center space-x-2">
+              <HeartPulse className="w-5 h-5 text-red-500" />
+              <span className="text-sm font-medium text-gray-700">
+                {language === "sw-TZ" ? "Mwelekeo wa BP" : "BP Trend"}
+              </span>
+            </div>
                 {getTrendIcon(bpTrend)}
               </div>
               <div className={`px-2 py-1 rounded text-xs font-medium ${getTrendColor(bpTrend)}`}>
@@ -207,10 +223,12 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
 
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg border border-green-100">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-2">
-                  <Activity className="w-5 h-5 text-green-500" />
-                  <span className="text-sm font-medium text-gray-700">Heart Rate</span>
-                </div>
+            <div className="flex items-center space-x-2">
+              <Activity className="w-5 h-5 text-green-500" />
+              <span className="text-sm font-medium text-gray-700">
+                {language === "sw-TZ" ? "Mapigo ya Moyo" : "Heart Rate"}
+              </span>
+            </div>
                 {getTrendIcon(heartRateTrend)}
               </div>
               <div className={`px-2 py-1 rounded text-xs font-medium ${getTrendColor(heartRateTrend)}`}>
@@ -223,10 +241,12 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
         {(patient.condition === 'diabetes' || patient.condition === 'both') && (
           <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-100">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <Droplets className="w-5 h-5 text-orange-500" />
-                <span className="text-sm font-medium text-gray-700">Glucose Trend</span>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Droplets className="w-5 h-5 text-orange-500" />
+              <span className="text-sm font-medium text-gray-700">
+                {language === "sw-TZ" ? "Mwelekeo wa Glucose" : "Glucose Trend"}
+              </span>
+            </div>
               {getTrendIcon(glucoseTrend)}
             </div>
             <div className={`px-2 py-1 rounded text-xs font-medium ${getTrendColor(glucoseTrend)}`}>
@@ -243,13 +263,19 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
           <div className="border border-gray-200 rounded-lg p-6">
             <div className="flex items-center space-x-3 mb-4">
               <HeartPulse className="w-5 h-5 text-blue-500" />
-              <h4 className="text-lg font-medium text-gray-900">Blood Pressure Trends</h4>
-              <span className="text-xs text-gray-500">Last {healthData.bpData.length} readings</span>
+              <h4 className="text-lg font-medium text-gray-900">
+                {language === "sw-TZ" ? "Mienendo ya Shinikizo la Damu" : "Blood Pressure Trends"}
+              </h4>
+              <span className="text-xs text-gray-500">
+                {language === "sw-TZ" ? "Kisomaji cha mwisho" : "Last"} {healthData.bpData.length} {language === "sw-TZ" ? "kisomaji" : "readings"}
+              </span>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <h5 className="text-sm font-medium text-gray-700 mb-2">Systolic Trend</h5>
+              <h5 className="text-sm font-medium text-gray-700 mb-2">
+                {language === "sw-TZ" ? "Mwelekeo wa Systolic" : "Systolic Trend"}
+              </h5>
                 <div className="space-y-2">
                   {healthData.bpData.slice(-5).map((reading, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
@@ -261,7 +287,9 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
               </div>
               
               <div className="space-y-3">
-                <h5 className="text-sm font-medium text-gray-700 mb-2">Diastolic Trend</h5>
+              <h5 className="text-sm font-medium text-gray-700 mb-2">
+                {language === "sw-TZ" ? "Mwelekeo wa Diastolic" : "Diastolic Trend"}
+              </h5>
                 <div className="space-y-2">
                   {healthData.bpData.slice(-5).map((reading, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
@@ -280,8 +308,12 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
           <div className="border border-gray-200 rounded-lg p-6">
             <div className="flex items-center space-x-3 mb-4">
               <Activity className="w-5 h-5 text-green-500" />
-              <h4 className="text-lg font-medium text-gray-900">Heart Rate Trends</h4>
-              <span className="text-xs text-gray-500">Last {healthData.heartRateData.length} readings</span>
+              <h4 className="text-lg font-medium text-gray-900">
+                {language === "sw-TZ" ? "Mienendo ya Mapigo ya Moyo" : "Heart Rate Trends"}
+              </h4>
+              <span className="text-xs text-gray-500">
+                {language === "sw-TZ" ? "Kisomaji cha mwisho" : "Last"} {healthData.heartRateData.length} {language === "sw-TZ" ? "kisomaji" : "readings"}
+              </span>
             </div>
             
             <div className="space-y-2">
@@ -307,8 +339,12 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
           <div className="border border-gray-200 rounded-lg p-6">
             <div className="flex items-center space-x-3 mb-4">
               <Droplets className="w-5 h-5 text-orange-500" />
-              <h4 className="text-lg font-medium text-gray-900">Glucose Trends</h4>
-              <span className="text-xs text-gray-500">Last {healthData.glucoseData.length} readings</span>
+              <h4 className="text-lg font-medium text-gray-900">
+                {language === "sw-TZ" ? "Mienendo ya Glucose" : "Glucose Trends"}
+              </h4>
+              <span className="text-xs text-gray-500">
+                {language === "sw-TZ" ? "Kisomaji cha mwisho" : "Last"} {healthData.glucoseData.length} {language === "sw-TZ" ? "kisomaji" : "readings"}
+              </span>
             </div>
             
             <div className="space-y-2">
@@ -331,34 +367,42 @@ const HealthTrendsTab: React.FC<HealthTrendsTabProps> = ({
       </div>
 
       {/* Insights Section */}
-      <div className="mt-8 p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
-        <h4 className="text-lg font-medium text-gray-900 mb-4">Health Insights</h4>
+        <div className="mt-8 p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+          <h4 className="text-lg font-medium text-gray-900 mb-4">
+            {language === "sw-TZ" ? "Uwazo wa Afya" : "Health Insights"}
+          </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 bg-white rounded border">
-            <h5 className="text-sm font-medium text-gray-700 mb-2">Monitoring Frequency</h5>
+            <h5 className="text-sm font-medium text-gray-700 mb-2">
+              {language === "sw-TZ" ? "Mara ya Kufuatilia" : "Monitoring Frequency"}
+            </h5>
             <p className="text-xs text-gray-600">
-              Average readings per week: {(patientVitalsFiltered.length / 4).toFixed(1)}
+              {language === "sw-TZ" ? "Kisomaji kimaana kwa wiki:" : "Average readings per week:"} {(patientVitalsFiltered.length / 4).toFixed(1)}
             </p>
           </div>
           
           {(patient.condition === 'hypertension' || patient.condition === 'both') && (
             <div className="p-4 bg-white rounded border">
-              <h5 className="text-sm font-medium text-gray-700 mb-2">BP Stability</h5>
+              <h5 className="text-sm font-medium text-gray-700 mb-2">
+                {language === "sw-TZ" ? "Ustahimilio wa BP" : "BP Stability"}
+              </h5>
               <p className="text-xs text-gray-600">
-                {bpTrend === 'stable' ? 'Blood pressure is stable' : 
-                 bpTrend === 'increasing' ? 'Blood pressure trending upward - monitor closely' :
-                 'Blood pressure trending downward - positive trend'}
+                {bpTrend === 'stable' ? (language === "sw-TZ" ? "Shinikizo la damu linayakaa" : "Blood pressure is stable") : 
+                 bpTrend === 'increasing' ? (language === "sw-TZ" ? "Shinikizo la damu linavyopanda - fuatilia kwa karibu" : "Blood pressure trending upward - monitor closely") :
+                 (language === "sw-TZ" ? "Shinikizo la damu linavyopungua - mwelekeo mzuri" : "Blood pressure trending downward - positive trend")}
               </p>
             </div>
           )}
           
           {(patient.condition === 'diabetes' || patient.condition === 'both') && (
             <div className="p-4 bg-white rounded border">
-              <h5 className="text-sm font-medium text-gray-700 mb-2">Glucose Control</h5>
+              <h5 className="text-sm font-medium text-gray-700 mb-2">
+                {language === "sw-TZ" ? "Udhibiti wa Glucose" : "Glucose Control"}
+              </h5>
               <p className="text-xs text-gray-600">
-                {glucoseTrend === 'stable' ? 'Glucose levels are stable' : 
-                 glucoseTrend === 'increasing' ? 'Glucose levels trending upward - review diet' :
-                 'Glucose levels trending downward - good control'}
+                {glucoseTrend === 'stable' ? (language === "sw-TZ" ? "Ngazi za glucose zinayakaa" : "Glucose levels are stable") : 
+                 glucoseTrend === 'increasing' ? (language === "sw-TZ" ? "Ngazi za glucose zinavyopanda - chunguza chakula" : "Glucose levels trending upward - review diet") :
+                 (language === "sw-TZ" ? "Ngazi za glucose zinavyopungua - udhibiti mzuri" : "Glucose levels trending downward - good control")}
               </p>
             </div>
           )}

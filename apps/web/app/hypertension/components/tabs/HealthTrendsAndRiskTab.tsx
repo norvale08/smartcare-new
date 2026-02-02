@@ -3,6 +3,7 @@ import {
   TrendingUp, Clock, Activity, HeartPulse, User,
   AlertTriangle, Shield, CheckCircle 
 } from 'lucide-react';
+import { useTranslation } from "../../../../lib/hypertension/useTranslation";
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -48,6 +49,7 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
   patient,
   patientVitals
 }) => {
+  const { t, language } = useTranslation();
   // If no vitals at all, show empty state
   if (!patientVitals || patientVitals.length === 0) {
     return (
@@ -57,13 +59,17 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
             <TrendingUp className="w-5 h-5 text-green-600" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Health Trends & Risk Assessment</h3>
-            <p className="text-sm text-gray-500">Comprehensive health analysis and risk evaluation</p>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {language === "sw-TZ" ? "Mienendo ya Afya & Tathmini ya Hatari" : "Health Trends & Risk Assessment"}
+            </h3>
+            <p className="text-sm text-gray-500">
+              {language === "sw-TZ" ? "Uchambuzi wa kina wa afya na tathmini ya hatari" : "Comprehensive health analysis and risk evaluation"}
+            </p>
           </div>
         </div>
         <div className="flex items-center justify-center py-8 text-gray-500 text-sm">
           <Clock className="w-5 h-5 mr-2 text-gray-400" />
-          No vitals data available. Add vitals to see analysis and risk assessment.
+          {language === "sw-TZ" ? "Hakuna data ya vitals inayopatikana. Ongeza vitals ili uone uchambuzi na tathmini ya hatari." : "No vitals data available. Add vitals to see analysis and risk assessment."}
         </div>
       </div>
     );
@@ -115,32 +121,32 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
   if (systolic && diastolic) {
     if (systolic >= 180 || diastolic >= 120) {
       currentRiskScore += 30;
-      currentRiskFactors.push("Hypertensive crisis range");
+      currentRiskFactors.push(language === "sw-TZ" ? "Kiwango cha krisi ya shinikizo" : "Hypertensive crisis range");
     } else if (systolic >= 160 || diastolic >= 100) {
       currentRiskScore += 20;
-      currentRiskFactors.push("Stage 2 hypertension range");
+      currentRiskFactors.push(language === "sw-TZ" ? "Kiwango cha pili cha shinikizo" : "Stage 2 hypertension range");
     } else if (systolic >= 140 || diastolic >= 90) {
       currentRiskScore += 15;
-      currentRiskFactors.push("Stage 1 hypertension range");
+      currentRiskFactors.push(language === "sw-TZ" ? "Kiwango cha kwanza cha shinikizo" : "Stage 1 hypertension range");
     } else if (systolic >= 130 || diastolic >= 85) {
       currentRiskScore += 10;
-      currentRiskFactors.push("Elevated blood pressure");
+      currentRiskFactors.push(language === "sw-TZ" ? "Shinikizo limeongezeka" : "Elevated blood pressure");
     }
 
     const pulsePressure = systolic - diastolic;
     if (pulsePressure > 60) {
       currentRiskScore += 10;
-      currentRiskFactors.push("Wide pulse pressure");
+      currentRiskFactors.push(language === "sw-TZ" ? "Mwendo mkubwa wa shinikizo" : "Wide pulse pressure");
     }
   }
 
   if (heartRate) {
     if (heartRate > 100) {
       currentRiskScore += 10;
-      currentRiskFactors.push("Fast heart rate (tachycardia)");
+      currentRiskFactors.push(language === "sw-TZ" ? "Mapigo ya moyo yanapanda (tachycardia)" : "Fast heart rate (tachycardia)");
     } else if (heartRate < 60) {
       currentRiskScore += 5;
-      currentRiskFactors.push("Slow heart rate (bradycardia)");
+      currentRiskFactors.push(language === "sw-TZ" ? "Mapigo ya moyo yanapungua (bradycardia)" : "Slow heart rate (bradycardia)");
     }
   }
 
@@ -249,13 +255,13 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
     
     if (avgChange < -5) {
       trend = 'improving';
-      direction = 'Decreasing';
+      direction = language === "sw-TZ" ? "Inapungua" : "Decreasing";
     } else if (avgChange > 5) {
       trend = 'worsening';
-      direction = 'Increasing';
+      direction = language === "sw-TZ" ? "Inaongezeka" : "Increasing";
     } else {
       trend = 'stable';
-      direction = 'Stable';
+      direction = language === "sw-TZ" ? "Imeyakaa" : "Stable";
     }
 
     return { trend, direction, change: avgChange };
@@ -321,16 +327,16 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
     const recommendations: string[] = [];
     
     if (currentRiskLevel === "critical") {
-      recommendations.push("Seek urgent medical attention immediately.");
-      recommendations.push("Avoid physical exertion and follow your doctor's emergency plan.");
+      recommendations.push(language === "sw-TZ" ? "Tafuta matibabu ya haraka mara moja." : "Seek urgent medical attention immediately.");
+      recommendations.push(language === "sw-TZ" ? "Epuka mazoezi na ufuata mpango wa daktari wako wa kuumwa." : "Avoid physical exertion and follow your doctor's emergency plan.");
     } else if (currentRiskLevel === "high") {
-      recommendations.push("Book a follow-up appointment with your doctor as soon as possible.");
-      recommendations.push("Review medication adherence and limit salt, alcohol, and stress.");
+      recommendations.push(language === "sw-TZ" ? "Fanya mkusanyiko wa kufuatilia na daktari wako haraka iwezekanavyo." : "Book a follow-up appointment with your doctor as soon as possible.");
+      recommendations.push(language === "sw-TZ" ? "Chunguza kufuata dawa na upeleki chumvi, pombe, na msongo." : "Review medication adherence and limit salt, alcohol, and stress.");
     } else if (currentRiskLevel === "moderate") {
-      recommendations.push("Monitor your blood pressure regularly this week.");
-      recommendations.push("Focus on lifestyle changes: low-salt diet, exercise, and stress control.");
+      recommendations.push(language === "sw-TZ" ? "Fuata shinikizo lako la damu kila wiki." : "Monitor your blood pressure regularly this week.");
+      recommendations.push(language === "sw-TZ" ? "Linganisha mabadiliko ya maisha: chakula bila chumvi, mazoezi, na udhibiti wa msongo." : "Focus on lifestyle changes: low-salt diet, exercise, and stress control.");
     } else {
-      recommendations.push("Keep up your current routine and continue regular monitoring.");
+      recommendations.push(language === "sw-TZ" ? "Endelea na rutina yako sasa na uendelea kufuatilia kila siku." : "Keep up your current routine and continue regular monitoring.");
     }
     
     return recommendations;
@@ -341,72 +347,82 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
   return (
     <div className="space-y-6">
       <div data-content="trends" className="space-y-4">
-        {/* Header */}
-        <div className="shadow-lg bg-white w-full rounded-lg px-6 py-6">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-cyan-100 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Health Trends & Risk Assessment</h3>
-              <p className="text-sm text-gray-500">Summary based on patient vitals</p>
-            </div>
-          </div>
-
-          {/* PATIENT PROFILE SUMMARY */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-100">
-              <div className="flex items-center space-x-3 mb-3">
-                <User className="w-5 h-5 text-blue-600" />
-                <div>
-                  <h4 className="font-medium text-gray-900">{patient.fullName}</h4>
-                  <p className="text-xs text-gray-600">{patient.age} years • {patient.gender}</p>
-                </div>
+          {/* Header */}
+          <div className="shadow-lg bg-white w-full rounded-lg px-6 py-6">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-cyan-100 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-emerald-600" />
               </div>
-              <p className="text-xs font-medium text-blue-600 capitalize">{patient.condition}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {sortedVitals.length} reading{sortedVitals.length !== 1 ? 's' : ''} total
-              </p>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {language === "sw-TZ" ? "Mienendo ya Afya & Tathmini ya Hatari" : "Health Trends & Risk Assessment"}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {language === "sw-TZ" ? "Muhtasari kulingana na vitals vya mgonjwa" : "Summary based on patient vitals"}
+                </p>
+              </div>
             </div>
+
+            {/* PATIENT PROFILE SUMMARY */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-100">
+                <div className="flex items-center space-x-3 mb-3">
+                  <User className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <h4 className="font-medium text-gray-900">{patient.fullName}</h4>
+                    <p className="text-xs text-gray-600">{patient.age} {language === "sw-TZ" ? "miaka •" : "years •"} {patient.gender}</p>
+                  </div>
+                </div>
+                <p className="text-xs font-medium text-blue-600 capitalize">{patient.condition}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {sortedVitals.length} {language === "sw-TZ" ? "kisomaji" : "reading"}{sortedVitals.length !== 1 ? 's' : ''} {language === "sw-TZ" ? "jumla" : "total"}
+                </p>
+              </div>
 
             {/* Latest BP Card */}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-100">
-              <div className="flex items-center space-x-2 mb-2">
-                <HeartPulse className="w-5 h-5 text-blue-600" />
-                <span className="text-sm font-medium text-gray-800">Latest BP</span>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">
-                {systolic || '--'}/{diastolic || '--'} <span className="text-sm font-normal text-gray-600">mmHg</span>
-              </p>
-              {averages.avgSystolic !== null && averages.avgDiastolic !== null && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Avg: {averages.avgSystolic.toFixed(0)}/{averages.avgDiastolic.toFixed(0)} mmHg
+                <div className="flex items-center space-x-2 mb-2">
+                  <HeartPulse className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-800">
+                    {language === "sw-TZ" ? "BP ya Hivi Karibuni" : "Latest BP"}
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {systolic || '--'}/{diastolic || '--'} <span className="text-sm font-normal text-gray-600">mmHg</span>
                 </p>
-              )}
-              {latest?.activityType && (
-                <p className="text-xs text-blue-600 mt-1">
-                  Activity: {latest.activityType}
-                </p>
-              )}
+                {averages.avgSystolic !== null && averages.avgDiastolic !== null && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {language === "sw-TZ" ? "Wastani:" : "Avg:"} {averages.avgSystolic.toFixed(0)}/{averages.avgDiastolic.toFixed(0)} mmHg
+                  </p>
+                )}
+                {latest?.activityType && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    {language === "sw-TZ" ? "Shughuli:" : "Activity:"} {latest.activityType}
+                  </p>
+                )}
             </div>
 
             {/* Latest Heart Rate Card */}
             <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-lg border border-emerald-100">
-              <div className="flex items-center space-x-2 mb-2">
-                <Activity className="w-5 h-5 text-emerald-600" />
-                <span className="text-sm font-medium text-gray-800">Heart Rate</span>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">
-                {heartRate || '--'} <span className="text-sm font-normal text-gray-600">bpm</span>
-              </p>
-              {averages.avgHeartRate !== null && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Avg: {averages.avgHeartRate.toFixed(0)} bpm
+                <div className="flex items-center space-x-2 mb-2">
+                  <Activity className="w-5 h-5 text-emerald-600" />
+                  <span className="text-sm font-medium text-gray-800">
+                    {language === "sw-TZ" ? "Mapigo ya Moyo" : "Heart Rate"}
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {heartRate || '--'} <span className="text-sm font-normal text-gray-600">bpm</span>
                 </p>
-              )}
-              {!heartRate && (
-                <p className="text-xs text-gray-500 mt-1">No heart rate readings</p>
-              )}
+                {averages.avgHeartRate !== null && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {language === "sw-TZ" ? "Wastani:" : "Avg:"} {averages.avgHeartRate.toFixed(0)} bpm
+                  </p>
+                )}
+                {!heartRate && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {language === "sw-TZ" ? "Hakuna kisomaji cha mapigo ya moyo" : "No heart rate readings"}
+                  </p>
+                )}
             </div>
           </div>
 
@@ -415,9 +431,11 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
             <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-md font-semibold text-gray-900">Hypertension Trend Analysis</h4>
+                  <h4 className="text-md font-semibold text-gray-900">
+                    {language === "sw-TZ" ? "Uchambuzi wa Mienendo ya Shinikizo" : "Hypertension Trend Analysis"}
+                  </h4>
                   <p className="text-sm text-gray-600">
-                    Trend: <span className={`font-semibold ${
+                    {language === "sw-TZ" ? "Mwelekeo:" : "Trend:"} <span className={`font-semibold ${
                       hypertensionTrend.trend === 'improving' ? 'text-green-600' :
                       hypertensionTrend.trend === 'worsening' ? 'text-red-600' :
                       'text-blue-600'
@@ -426,7 +444,7 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
                     </span>
                     {Math.abs(hypertensionTrend.change) > 0 && (
                       <span className="ml-2">
-                        (Avg BP change: {hypertensionTrend.change > 0 ? '+' : ''}{hypertensionTrend.change.toFixed(1)} mmHg)
+                        ({language === "sw-TZ" ? "Mabadiliko ya BP:" : "Avg BP change:"} {hypertensionTrend.change > 0 ? '+' : ''}{hypertensionTrend.change.toFixed(1)} mmHg)
                       </span>
                     )}
                   </p>
@@ -436,9 +454,9 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
                   hypertensionTrend.trend === 'worsening' ? 'bg-red-100 text-red-800' :
                   'bg-blue-100 text-blue-800'
                 }`}>
-                  {hypertensionTrend.trend === 'improving' ? '✓ Improving' :
-                   hypertensionTrend.trend === 'worsening' ? '⚠ Worsening' :
-                   '➔ Stable'}
+                  {hypertensionTrend.trend === 'improving' ? '✓ ' + (language === "sw-TZ" ? "Inaboresha" : "Improving") :
+                   hypertensionTrend.trend === 'worsening' ? '⚠ ' + (language === "sw-TZ" ? "Inaovota" : "Worsening") :
+                   '➔ ' + (language === "sw-TZ" ? "Imeyakaa" : "Stable")}
                 </div>
               </div>
             </div>
@@ -446,15 +464,17 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
             <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-md font-semibold text-gray-900">Hypertension Trend Analysis</h4>
+                  <h4 className="text-md font-semibold text-gray-900">
+                    {language === "sw-TZ" ? "Uchambuzi wa Mienendo ya Shinikizo" : "Hypertension Trend Analysis"}
+                  </h4>
                   <p className="text-sm text-gray-600">
                     {bpChartData.length === 1 
-                      ? "Need at least 2 blood pressure readings for trend analysis."
-                      : "Insufficient BP data for trend analysis."}
+                      ? (language === "sw-TZ" ? "Hitaji kisomaji kimoja cha shinikizo cha damu kwa ajili ya uchambuzi wa mienendo." : "Need at least 2 blood pressure readings for trend analysis.")
+                      : (language === "sw-TZ" ? "Data ya BP si kibaya kwa ajili ya uchambuzi wa mienendo." : "Insufficient BP data for trend analysis.")}
                   </p>
                 </div>
                 <div className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                  📊 {bpChartData.length === 1 ? "1 Reading" : "Insufficient"}
+                  📊 {bpChartData.length === 1 ? "1 " + (language === "sw-TZ" ? "Kisomaji" : "Reading") : (language === "sw-TZ" ? "Si Kibaya" : "Insufficient")}
                 </div>
               </div>
             </div>
@@ -465,23 +485,27 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
                 {getRiskIcon(currentRiskLevel)}
-                <span className="text-sm font-medium">Current Risk Level</span>
+                <span className="text-sm font-medium">
+                  {language === "sw-TZ" ? "Kiwango cha Sasa cha Hatari" : "Current Risk Level"}
+                </span>
               </div>
               <span className="text-xs text-gray-600">
-                {latest?.parsedDate ? `As of ${latest.parsedDate.toLocaleDateString()}` : 'Latest reading'}
+                {latest?.parsedDate ? `${language === "sw-TZ" ? "Tangu" : "As of"} ${latest.parsedDate.toLocaleDateString()}` : (language === "sw-TZ" ? "Kisomaji kizima" : "Latest reading")}
               </span>
             </div>
-            <p className="text-lg font-semibold capitalize">{currentRiskLevel}</p>
-            <p className="text-xs mt-1 text-gray-700">Score: {currentRiskScore}/100</p>
+            <p className="text-lg font-semibold capitalize">{language === "sw-TZ" ? currentRiskLevel === "critical" ? "Hatari Kuu" : currentRiskLevel === "high" ? "Hatari Kikubwa" : currentRiskLevel === "moderate" ? "Hatari Kikubwa" : "Hatari Ndogo" : currentRiskLevel}</p>
+            <p className="text-xs mt-1 text-gray-700">{language === "sw-TZ" ? "Alama:" : "Score:"} {currentRiskScore}/100</p>
             {currentRiskScore === 0 && (
-              <p className="text-xs text-green-600 mt-1">✓ No significant risk factors detected</p>
+              <p className="text-xs text-green-600 mt-1">✓ {language === "sw-TZ" ? "Hakuna sababu za hatari kubwa zilizogunduliwa" : "No significant risk factors detected"}</p>
             )}
           </div>
         </div>
 
           {/* CHARTS SECTION */}
         <div className="shadow-lg bg-white w-full rounded-lg px-6 py-6">
-          <h4 className="text-lg font-semibold text-gray-900 mb-6">Health Data Trends</h4>
+          <h4 className="text-lg font-semibold text-gray-900 mb-6">
+            {language === "sw-TZ" ? "Mienendo ya Data ya Afya" : "Health Data Trends"}
+          </h4>
 
           {/* Blood Pressure Chart - Full Width, Above Heart Rate */}
           {bpChartData.length > 0 ? (
@@ -489,39 +513,47 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
                   <HeartPulse className="w-5 h-5 text-red-500" />
-                  <h5 className="font-medium text-gray-900">Blood Pressure Trends</h5>
+                  <h5 className="font-medium text-gray-900">
+                    {language === "sw-TZ" ? "Mienendo ya Shinikizo la Damu" : "Blood Pressure Trends"}
+                  </h5>
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span className="text-xs text-gray-600">Systolic</span>
+                  <span className="text-xs text-gray-600">
+                    {language === "sw-TZ" ? "Systolic" : "Systolic"}
+                  </span>
                   <div className="w-3 h-3 bg-blue-500 rounded-full ml-2"></div>
-                  <span className="text-xs text-gray-600">Diastolic</span>
+                  <span className="text-xs text-gray-600">
+                    {language === "sw-TZ" ? "Diastolic" : "Diastolic"}
+                  </span>
                 </div>
               </div>
 
               {/* Blood Pressure Information Panel */}
               <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-                <h6 className="text-sm font-semibold text-gray-800 mb-2">Blood Pressure Guidelines</h6>
+                <h6 className="text-sm font-semibold text-gray-800 mb-2">
+                  {language === "sw-TZ" ? "Miongozo ya Shinikizo la Damu" : "Blood Pressure Guidelines"}
+                </h6>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    <span>Normal: {"<"}120/{"<"}80</span>
+                    <span>{language === "sw-TZ" ? "Kawaida:" : "Normal:"} {"<"}120/{"<"}80</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
-                    <span>Elevated: 120-129/{"<"}80</span>
+                    <span>{language === "sw-TZ" ? "Imeongezeka:" : "Elevated:"} 120-129/{"<"}80</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
-                    <span>Stage 1: 130-139/80-89</span>
+                    <span>{language === "sw-TZ" ? "Kiwango 1:" : "Stage 1:"} 130-139/80-89</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
-                    <span>Stage 2: {"≥"}140/{"≥"}90</span>
+                    <span>{language === "sw-TZ" ? "Kiwango 2:" : "Stage 2:"} {"≥"}140/{"≥"}90</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
-                    <span>Crisis: {"≥"}180/{"≥"}120</span>
+                    <span>{language === "sw-TZ" ? "Krisi:" : "Crisis:"} {"≥"}180/{"≥"}120</span>
                   </div>
                 </div>
               </div>
@@ -601,22 +633,22 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
                 <div className="flex justify-center space-x-4 text-xs">
                   <div className="flex items-center">
                     <div className="w-3 h-3 bg-red-500 rounded-full mr-1"></div>
-                    <span>Systolic</span>
+                    <span>{language === "sw-TZ" ? "Systolic" : "Systolic"}</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-3 h-3 bg-blue-500 rounded-full mr-1"></div>
-                    <span>Diastolic</span>
+                    <span>{language === "sw-TZ" ? "Diastolic" : "Diastolic"}</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-10 h-1 border-t-2 border-yellow-500 mr-1" style={{borderStyle: 'dashed'}}></div>
-                    <span>Normal Threshold (120/80)</span>
+                    <span>{language === "sw-TZ" ? "Kiwango cha Kawaida (120/80)" : "Normal Threshold (120/80)"}</span>
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2 text-center">
-                  Showing {bpChartData.length} blood pressure reading{bpChartData.length !== 1 ? 's' : ''}
+                  {language === "sw-TZ" ? "Inaonyesha" : "Showing"} {bpChartData.length} {language === "sw-TZ" ? "kisomaji" : "blood pressure reading"}{bpChartData.length !== 1 ? 's' : ''} {language === "sw-TZ" ? "kizima" : ""}
                 </p>
                 <p className="text-xs text-gray-400 mt-1 text-center">
-                  Normal BP: {"<"}120/{"<"}80 | Elevated: 120-129/{"<"}80 | Stage 1: 130-139/80-89 | Stage 2: {"≥"}140/{"≥"}90 | Crisis: {"≥"}180/{"≥"}120
+                  {language === "sw-TZ" ? "BP ya Kawaida:" : "Normal BP:"} {"<"}120/{"<"}80 | {language === "sw-TZ" ? "Imeongezeka:" : "Elevated:"} 120-129/{"<"}80 | {language === "sw-TZ" ? "Kiwango 1:" : "Stage 1:"} 130-139/80-89 | {language === "sw-TZ" ? "Kiwango 2:" : "Stage 2:"} {"≥"}140/{"≥"}90 | {language === "sw-TZ" ? "Krisi:" : "Crisis:"} {"≥"}180/{"≥"}120
                 </p>
               </div>
             </div>
@@ -638,7 +670,9 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
             <div className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-4">
                 <Activity className="w-5 h-5 text-orange-500" />
-                <h5 className="font-medium text-gray-900">Heart Rate Trends</h5>
+                <h5 className="font-medium text-gray-900">
+                  {language === "sw-TZ" ? "Mienendo ya Mapigo ya Moyo" : "Heart Rate Trends"}
+                </h5>
               </div>
 
               <div className="h-64">
@@ -679,7 +713,7 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
                       dataKey="heartRate"
                       stroke="#ea580c"
                       strokeWidth={3}
-                      name="Heart Rate"
+                      name={language === "sw-TZ" ? "Mapigo ya Moyo" : "Heart Rate"}
                       dot={{ fill: '#ea580c', strokeWidth: 2, r: 5 }}
                       activeDot={{ r: 7, fill: '#ea580c' }}
                     />
@@ -687,7 +721,7 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
                 </ResponsiveContainer>
               </div>
               <p className="text-xs text-gray-500 mt-2 text-center">
-                Showing {hrChartData.length} heart rate reading{hrChartData.length !== 1 ? 's' : ''}
+                {language === "sw-TZ" ? "Inaonyesha" : "Showing"} {hrChartData.length} {language === "sw-TZ" ? "kisomaji" : "heart rate reading"}{hrChartData.length !== 1 ? 's' : ''} {language === "sw-TZ" ? "kizima" : ""}
               </p>
             </div>
           )}
@@ -697,7 +731,9 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
             <div className="mt-8 border border-gray-200 rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-4">
                 <Shield className="w-5 h-5 text-emerald-500" />
-                <h5 className="font-medium text-gray-900">Risk Level Over Time</h5>
+                <h5 className="font-medium text-gray-900">
+                  {language === "sw-TZ" ? "Kiwango cha Hatari Kupita Muda" : "Risk Level Over Time"}
+                </h5>
               </div>
               
               <div className="h-64">
@@ -716,7 +752,7 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
                       domain={[0, 100]}
                       fontSize={12}
                       stroke="#6b7280"
-                      label={{ value: 'Risk Score', angle: -90, position: 'insideLeft' }}
+                      label={{ value: language === "sw-TZ" ? 'Alama ya Hatari' : 'Risk Score', angle: -90, position: 'insideLeft' }}
                     />
                     <Tooltip 
                       labelFormatter={(value, payload) => {
@@ -724,8 +760,8 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
                         return data?.fullDate || `Date: ${value}`;
                       }}
                       formatter={(value, name) => {
-                        if (name === 'riskScore') return [`${value}/100`, 'Risk Score'];
-                        if (name === 'riskLevel') return [value, 'Risk Level'];
+                        if (name === 'riskScore') return [`${value}/100`, language === "sw-TZ" ? 'Alama ya Hatari' : 'Risk Score'];
+                        if (name === 'riskLevel') return [value, language === "sw-TZ" ? 'Kiwango cha Hatari' : 'Risk Level'];
                         return [value, name];
                       }}
                       contentStyle={{
@@ -741,7 +777,7 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
                       dataKey="riskScore" 
                       stroke="#8b5cf6" 
                       strokeWidth={2}
-                      name="Risk Score"
+                      name={language === "sw-TZ" ? "Alama ya Hatari" : "Risk Score"}
                       dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
                       activeDot={{ r: 6, fill: '#8b5cf6' }}
                     />
@@ -751,19 +787,19 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
               <div className="flex justify-center space-x-4 mt-2 text-xs">
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-green-500 rounded-full mr-1"></div>
-                  <span>Low (0-15)</span>
+                  <span>{language === "sw-TZ" ? "Ndogo (0-15)" : "Low (0-15)"}</span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-yellow-500 rounded-full mr-1"></div>
-                  <span>Moderate (16-30)</span>
+                  <span>{language === "sw-TZ" ? "Wastani (16-30)" : "Moderate (16-30)"}</span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-orange-500 rounded-full mr-1"></div>
-                  <span>High (31-45)</span>
+                  <span>{language === "sw-TZ" ? "Kubwa (31-45)" : "High (31-45)"}</span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-red-500 rounded-full mr-1"></div>
-                  <span>Critical (46+)</span>
+                  <span>{language === "sw-TZ" ? "Kuu (46+)" : "Critical (46+)"}</span>
                 </div>
               </div>
             </div>
@@ -774,14 +810,20 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
         <div className="shadow-lg bg-white w-full rounded-lg px-6 py-6">
           <div className="flex items-center space-x-3 mb-6">
             <Shield className="w-5 h-5 text-emerald-600" />
-            <h4 className="text-lg font-semibold text-gray-900">Risk Assessment Details</h4>
+            <h4 className="text-lg font-semibold text-gray-900">
+              {language === "sw-TZ" ? "Maelezo ya Tathmini ya Hatari" : "Risk Assessment Details"}
+            </h4>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="border border-gray-200 rounded-lg p-4">
-              <h5 className="text-sm font-semibold text-gray-800 mb-3">Current Risk Factors</h5>
+              <h5 className="text-sm font-semibold text-gray-800 mb-3">
+                {language === "sw-TZ" ? "Sababu za Hatari Sasa" : "Current Risk Factors"}
+              </h5>
               {currentRiskFactors.length === 0 ? (
-                <p className="text-sm text-gray-600">No major risk factors detected from latest reading.</p>
+                <p className="text-sm text-gray-600">
+                  {language === "sw-TZ" ? "Hakuna sababu kubwa za hatari zilizogunduliwa kutoka kisomaji kizima." : "No major risk factors detected from latest reading."}
+                </p>
               ) : (
                 <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
                   {currentRiskFactors.map((f, idx) => (
@@ -790,20 +832,22 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
                 </ul>
               )}
               <div className="mt-4">
-                <h6 className="text-xs font-semibold text-gray-700 mb-2">Historical Risk Summary</h6>
+                <h6 className="text-xs font-semibold text-gray-700 mb-2">
+                  {language === "sw-TZ" ? "Muhtasari wa Hatari wa Kale" : "Historical Risk Summary"}
+                </h6>
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span>Highest Risk Score:</span>
+                    <span>{language === "sw-TZ" ? "Alama ya Juu ya Hatari:" : "Highest Risk Score:"}</span>
                     <span className="font-medium">{Math.max(...historicalRiskData.map(r => r.score))}/100</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Average Risk Score:</span>
+                    <span>{language === "sw-TZ" ? "Alama ya Wastani ya Hatari:" : "Average Risk Score:"}</span>
                     <span className="font-medium">
                       {(historicalRiskData.reduce((sum, r) => sum + r.score, 0) / historicalRiskData.length).toFixed(1)}/100
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Total Readings:</span>
+                    <span>{language === "sw-TZ" ? "Jumla ya Kisomaji:" : "Total Readings:"}</span>
                     <span className="font-medium">{historicalRiskData.length}</span>
                   </div>
                 </div>
@@ -811,18 +855,22 @@ const HealthTrendsAndRiskTab: React.FC<HealthTrendsAndRiskTabProps> = ({
             </div>
 
             <div className="border border-gray-200 rounded-lg p-4 bg-gradient-to-br from-gray-50 to-gray-100">
-              <h5 className="text-sm font-semibold text-gray-800 mb-3">Suggested Next Steps</h5>
+              <h5 className="text-sm font-semibold text-gray-800 mb-3">
+                {language === "sw-TZ" ? "Hatua Zinazopendekezwa" : "Suggested Next Steps"}
+              </h5>
               <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
                 {recommendations.map((r, idx) => (
                   <li key={idx}>{r}</li>
                 ))}
               </ul>
               <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <h6 className="text-xs font-semibold text-blue-800 mb-1">Monitoring Recommendations</h6>
+                <h6 className="text-xs font-semibold text-blue-800 mb-1">
+                  {language === "sw-TZ" ? "Mapendekezo ya Kufuatilia" : "Monitoring Recommendations"}
+                </h6>
                 <p className="text-xs text-blue-700">
                   {currentRiskLevel === 'critical' || currentRiskLevel === 'high' 
-                    ? 'Consider daily monitoring until risk level improves.'
-                    : 'Continue with regular weekly monitoring.'}
+                    ? (language === "sw-TZ" ? "Fikiria kufuatilia kila siku mpaka kiwango cha hatari kiboreshwe." : "Consider daily monitoring until risk level improves.")
+                    : (language === "sw-TZ" ? "Endelea na kufuatilia kila wiki." : "Continue with regular weekly monitoring.")}
                 </p>
               </div>
             </div>

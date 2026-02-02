@@ -157,51 +157,51 @@ export default function DiabetesAlerts({ refreshToken, language = "en" }: Props)
     
     if (glucose < 70) return { 
       title: isSwahili ? "Sukari ya Chini" : "Low Blood Sugar", 
-      color: "bg-blue-50 border-blue-600", 
-      text: "text-blue-950", 
-      icon: <TriangleAlert className="text-blue-600" size={16} />
+      color: "bg-teal-50 border-teal-500", 
+      text: "text-teal-950", 
+      icon: <TriangleAlert className="text-teal-600" size={16} />
     };
     
     if (context === "Fasting") return glucose <= 125
       ? { 
         title: isSwahili ? "Kawaida (Njaa)" : "Normal Fasting", 
-        color: "bg-emerald-50 border-emerald-600", 
+        color: "bg-emerald-50 border-emerald-500", 
         text: "text-emerald-950", 
         icon: <CheckCircle className="text-emerald-600" size={16} />
       }
       : { 
         title: isSwahili ? "Juu (Njaa)" : "High Fasting", 
-        color: "bg-red-50 border-red-600", 
-        text: "text-red-950", 
-        icon: <TriangleAlert className="text-red-600" size={16} />
+        color: "bg-orange-50 border-orange-500", 
+        text: "text-orange-950", 
+        icon: <TriangleAlert className="text-orange-600" size={16} />
       };
     
     if (context === "Post-meal") return glucose <= 180
       ? { 
         title: isSwahili ? "Kawaida (Baada ya Kula)" : "Normal Post-meal", 
-        color: "bg-emerald-50 border-emerald-600", 
+        color: "bg-emerald-50 border-emerald-500", 
         text: "text-emerald-950", 
         icon: <CheckCircle className="text-emerald-600" size={16} />
       }
       : { 
         title: isSwahili ? "Juu (Baada ya Kula)" : "High Post-meal", 
-        color: "bg-red-50 border-red-600", 
-        text: "text-red-950", 
-        icon: <TriangleAlert className="text-red-600" size={16} />
+        color: "bg-orange-50 border-orange-500", 
+        text: "text-orange-950", 
+        icon: <TriangleAlert className="text-orange-600" size={16} />
       };
     
     return glucose <= 200
       ? { 
         title: isSwahili ? "Kawaida (Bila Mpango)" : "Normal Random", 
-        color: "bg-emerald-50 border-emerald-600", 
+        color: "bg-emerald-50 border-emerald-500", 
         text: "text-emerald-950", 
         icon: <CheckCircle className="text-emerald-600" size={16} />
       }
       : { 
         title: isSwahili ? "Juu (Bila Mpango)" : "High Random", 
-        color: "bg-red-50 border-red-600", 
-        text: "text-red-950", 
-        icon: <TriangleAlert className="text-red-600" size={16} />
+        color: "bg-orange-50 border-orange-500", 
+        text: "text-orange-950", 
+        icon: <TriangleAlert className="text-orange-600" size={16} />
       };
   }
 
@@ -211,15 +211,15 @@ export default function DiabetesAlerts({ refreshToken, language = "en" }: Props)
     if (systolic < 90 || diastolic < 60) {
       return {
         category: isSwahili ? "Shinikizo la Chini" : "Low BP",
-        color: "bg-blue-50 border-blue-600",
-        textColor: "text-blue-950",
-        icon: <TriangleAlert className="text-blue-600" size={16} />,
+        color: "bg-teal-50 border-teal-500",
+        textColor: "text-teal-950",
+        icon: <TriangleAlert className="text-teal-600" size={16} />,
         severity: "low"
       };
     } else if (systolic < 120 && diastolic < 80) {
       return {
         category: isSwahili ? "Kawaida" : "Normal",
-        color: "bg-emerald-50 border-emerald-600",
+        color: "bg-emerald-50 border-emerald-500",
         textColor: "text-emerald-950",
         icon: <CheckCircle className="text-emerald-600" size={16} />,
         severity: "normal"
@@ -227,15 +227,15 @@ export default function DiabetesAlerts({ refreshToken, language = "en" }: Props)
     } else if (systolic >= 120 && systolic < 130 && diastolic < 80) {
       return {
         category: isSwahili ? "Kiwango Cha Juu" : "Elevated",
-        color: "bg-yellow-50 border-yellow-600",
-        textColor: "text-yellow-950",
-        icon: <TriangleAlert className="text-yellow-600" size={16} />,
+        color: "bg-amber-50 border-amber-500",
+        textColor: "text-amber-950",
+        icon: <TriangleAlert className="text-amber-600" size={16} />,
         severity: "elevated"
       };
     } else if ((systolic >= 130 && systolic < 140) || (diastolic >= 80 && diastolic < 90)) {
       return {
         category: isSwahili ? "Hatua 1" : "Stage 1 HTN",
-        color: "bg-orange-50 border-orange-600",
+        color: "bg-orange-50 border-orange-500",
         textColor: "text-orange-950",
         icon: <TriangleAlert className="text-orange-600" size={16} />,
         severity: "stage1"
@@ -243,7 +243,7 @@ export default function DiabetesAlerts({ refreshToken, language = "en" }: Props)
     } else if ((systolic >= 140 && systolic < 180) || (diastolic >= 90 && diastolic < 120)) {
       return {
         category: isSwahili ? "Hatua 2" : "Stage 2 HTN",
-        color: "bg-red-50 border-red-600",
+        color: "bg-red-50 border-red-500",
         textColor: "text-red-950",
         icon: <TriangleAlert className="text-red-600" size={16} />,
         severity: "stage2"
@@ -251,31 +251,31 @@ export default function DiabetesAlerts({ refreshToken, language = "en" }: Props)
     } else {
       return {
         category: isSwahili ? "Mgongano wa Hatari" : "Hypertensive Crisis",
-        color: "bg-red-50 border-red-900",
+        color: "bg-red-50 border-red-700",
         textColor: "text-red-950",
-        icon: <TriangleAlert className="text-red-900" size={16} />,
+        icon: <TriangleAlert className="text-red-700" size={16} />,
         severity: "crisis"
       };
     }
   }
 
-  // Loading State
+  // Loading State - Emerald/Teal themed
   if (loading) return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-2 flex items-center justify-center">
-      <Loader2 className="w-4 h-4 text-cyan-600 animate-spin mr-1.5" />
-      <span className="text-sm text-gray-600">
+    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 shadow-sm rounded-lg border border-emerald-200 p-2 flex items-center justify-center">
+      <Loader2 className="w-4 h-4 text-emerald-600 animate-spin mr-1.5" />
+      <span className="text-sm text-emerald-800 font-medium">
         {language === "sw" ? "Inapakia arifa..." : "Loading alert..."}
       </span>
     </div>
   );
   
-  // Error State
+  // Error State - Teal themed
   if (error) return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-2">
+    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 shadow-sm rounded-lg border border-emerald-200 p-2">
       <div className="flex flex-col gap-2">
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-red-600 font-medium">{error}</p>
         <a href="/map" className="w-full">
-          <button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-2 py-1.5 rounded-md transition-all text-sm font-medium flex items-center justify-center gap-1.5">
+          <button className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-2 py-1.5 rounded-md transition-all text-sm font-medium flex items-center justify-center gap-1.5 shadow-md">
             <MapPin className="w-3.5 h-3.5" />
             {language === "sw" ? "Tafuta Vituo" : "Find Facilities"}
           </button>
@@ -284,17 +284,17 @@ export default function DiabetesAlerts({ refreshToken, language = "en" }: Props)
     </div>
   );
   
-  // No Data State
+  // No Data State - Emerald themed
   if (!statusData) return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-2">
+    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 shadow-sm rounded-lg border border-emerald-200 p-2">
       <div className="flex flex-col gap-2">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-emerald-800 font-medium">
           {language === "sw" 
             ? "Hakuna data ya sukari kwa leo. Ingiza viwango vyako." 
             : "No glucose data for today. Enter vitals."}
         </p>
         <a href="/map" className="w-full">
-          <button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-2 py-1.5 rounded-md transition-all text-sm font-medium flex items-center justify-center gap-1.5">
+          <button className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-2 py-1.5 rounded-md transition-all text-sm font-medium flex items-center justify-center gap-1.5 shadow-md">
             <MapPin className="w-3.5 h-3.5" />
             {language === "sw" ? "Tafuta Vituo" : "Find Facilities"}
           </button>
@@ -308,22 +308,22 @@ export default function DiabetesAlerts({ refreshToken, language = "en" }: Props)
     ? getBloodPressureStatus(statusData.systolic, statusData.diastolic)
     : null;
 
-  // For dual conditions, use white background with individual colored cards
+  // For dual conditions, use white background with gradient border
   // For single condition, use the condition's background color
   const containerClass = statusData.hasBothConditions 
-    ? "bg-white shadow-sm rounded-lg border border-gray-200 p-2"
-    : `${glucoseCategory.color} shadow-sm rounded-lg border-l-4 p-2`;
+    ? "bg-gradient-to-br from-white to-emerald-50 shadow-sm rounded-lg border border-emerald-200 p-2"
+    : `bg-gradient-to-br ${glucoseCategory.color.includes('bg-emerald') ? 'from-emerald-50 to-teal-50' : 'from-orange-50 to-amber-50'} shadow-sm rounded-lg border-l-4 p-2`;
 
   // Alert Display - Independent Color Coding
   return (
     <div className={containerClass}>
       {/* Dual Condition Header */}
       {statusData.hasBothConditions && (
-        <div className="mb-2 pb-2 border-b border-gray-200">
+        <div className="mb-2 pb-2 border-b border-emerald-200">
           <div className="flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-blue-600" />
-            <Heart className="w-3.5 h-3.5 text-red-600" />
-            <span className="text-xs font-bold text-gray-700">
+            <Activity className="w-3.5 h-3.5 text-teal-600" />
+            <Heart className="w-3.5 h-3.5 text-emerald-600" />
+            <span className="text-xs font-bold text-emerald-800">
               {language === "sw" 
                 ? "Tathmini ya Kisukari na Shinikizo la Juu" 
                 : "Diabetes & Hypertension Assessment"}
@@ -338,7 +338,7 @@ export default function DiabetesAlerts({ refreshToken, language = "en" }: Props)
           <div className="flex flex-col gap-1">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-1">
-                <Activity className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                <Activity className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
                 {glucoseCategory.icon}
                 <h3 className={`text-sm font-bold ${glucoseCategory.text} truncate`}>
                   {glucoseCategory.title}
@@ -351,7 +351,7 @@ export default function DiabetesAlerts({ refreshToken, language = "en" }: Props)
                     {language === "sw" ? "Sukari:" : "Glucose:"}
                   </span> {statusData.glucose} mg/dL
                 </span>
-                <span className={`px-1.5 py-0.5 rounded-full ${glucoseCategory.color} ${glucoseCategory.text} font-medium text-xs`}>
+                <span className={`px-1.5 py-0.5 rounded-full ${glucoseCategory.color.includes('bg-emerald') ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800'} font-medium text-xs`}>
                   {language === "sw" 
                     ? (statusData.context === "Fasting" ? "Njaa" : statusData.context === "Post-meal" ? "Baada ya Kula" : "Bila Mpango")
                     : statusData.context}
@@ -367,7 +367,7 @@ export default function DiabetesAlerts({ refreshToken, language = "en" }: Props)
             <div className="flex flex-col gap-1">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <Heart className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
+                  <Heart className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
                   {bpStatus.icon}
                   <h4 className={`text-sm font-bold ${bpStatus.textColor}`}>
                     {bpStatus.category}
@@ -387,7 +387,7 @@ export default function DiabetesAlerts({ refreshToken, language = "en" }: Props)
                   </span>
                   {statusData.heartRate && (
                     <span className="font-semibold">
-                      <span className="text-gray-700">
+                      <span className="text-emerald-800">
                         {language === "sw" ? "HR:" : "HR:"}
                       </span> {statusData.heartRate}
                     </span>
@@ -398,10 +398,10 @@ export default function DiabetesAlerts({ refreshToken, language = "en" }: Props)
           </div>
         )}
 
-        {/* Single Action Button */}
+        {/* Single Action Button - Emerald/Teal gradient */}
         <div className="pt-1">
           <a href="/map" className="w-full block">
-            <button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-2 py-1.5 rounded-md transition-all text-sm font-semibold flex items-center justify-center gap-1.5 shadow-sm">
+            <button className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-2 py-1.5 rounded-md transition-all text-sm font-semibold flex items-center justify-center gap-1.5 shadow-md">
               <MapPin className="w-3.5 h-3.5" />
               {language === "sw" ? "Tafuta Vituo" : "Find Facilities"}
             </button>
