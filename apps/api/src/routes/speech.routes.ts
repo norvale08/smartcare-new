@@ -88,7 +88,7 @@ router.post('/transcribe', upload.single('audio'), async (req: Request, res: Res
     // Get language from request body (sent as form field)
     const language = req.body.language || 'en-US';
     
-    console.log('📁 Received audio file:', {
+    console.log('Received audio file:', {
       originalname: req.file.originalname,
       mimetype: req.file.mimetype,
       size: req.file.size,
@@ -118,7 +118,7 @@ router.post('/transcribe', upload.single('audio'), async (req: Request, res: Res
       }
     );
 
-    console.log('✅ Python service response:', response.data);
+    console.log(' Python service response:', response.data);
 
     // Clean up uploaded file
     fs.unlinkSync(filePath);
@@ -160,7 +160,7 @@ router.post('/synthesize', express.json(), async (req: Request, res: Response) =
       });
     }
 
-    console.log('🔊 Text to speech request:', { text, language });
+    console.log(' Text to speech request:', { text, language });
 
     // Forward to Python service
     const response = await axios.post(
@@ -175,13 +175,13 @@ router.post('/synthesize', express.json(), async (req: Request, res: Response) =
       }
     );
 
-    console.log('✅ Synthesis response received');
+    console.log('Synthesis response received');
 
     // Stream the audio back to client (MP3 from gTTS)
     res.setHeader('Content-Type', 'audio/mpeg');
     response.data.pipe(res);
   } catch (error: any) {
-    console.error('❌ Synthesis error:', error);
+    console.error(' Synthesis error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to synthesize speech',

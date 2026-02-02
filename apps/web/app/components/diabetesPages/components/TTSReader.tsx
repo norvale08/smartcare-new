@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface TTSReaderProps {
-  text: string; // The text to read
+  text: string;
   language?: "en" | "sw";
   autoPlay?: boolean;
   showControls?: boolean;
@@ -19,144 +19,112 @@ const TTSReader: React.FC<TTSReaderProps> = ({
   onComplete,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-  const sentencesRef = useRef<string[]>([]);
-  const isReadingRef = useRef(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Split text into sentences
+  // Auto-play on mount if enabled
   useEffect(() => {
-    if (text) {
-      sentencesRef.current = text
-        .split(/(?<=[.!?])\s+/)
-        .filter((s: string) => s.trim().length > 0);
-      
-      if (autoPlay && sentencesRef.current.length > 0) {
-        setTimeout(() => startReading(), 500);
-      }
+    if (autoPlay && text) {
+      setTimeout(() => speak(), 500);
     }
+
+    // Cleanup on unmount
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        URL.revokeObjectURL(audioRef.current.src);
+      }
+    };
   }, [text, autoPlay]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopReading();
-    };
-  }, []);
+  // ✅ Speak COMPLETE text at once (no splitting)
+  const speak = async () => {
+    if (!text) return;
 
-  // Speak a single sentence using your existing TTS API
-  const speakSentence = async (sentence: string): Promise<void> => {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const synthesisLang = language === "sw" ? "sw" : "en";
-        
-        const response = await fetch(`${API_URL}/api/python-speech/synthesize`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: sentence, language: synthesisLang }),
-        });
-
-        if (!response.ok) {
-          reject(new Error("Synthesis failed"));
-          return;
-        }
-
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        currentAudioRef.current = audio;
-
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          currentAudioRef.current = null;
-          resolve();
-        };
-
-        audio.onerror = () => {
-          URL.revokeObjectURL(audioUrl);
-          currentAudioRef.current = null;
-          reject(new Error("Audio playback error"));
-        };
-
-        await audio.play();
-      } catch (error) {
-        reject(error);
-      }
-    });
-  };
-
-  // Start reading from current position
-  const startReading = async () => {
-    if (isReadingRef.current || !sentencesRef.current.length) return;
-    
-    isReadingRef.current = true;
-    setIsPlaying(true);
-    setIsPaused(false);
-    
     try {
-      for (let i = currentIndex; i < sentencesRef.current.length; i++) {
-        if (!isReadingRef.current) break;
-        
-        setCurrentIndex(i);
-        const sentence = sentencesRef.current[i];
-        if (sentence) {
-          await speakSentence(sentence);
-        }
-        
-        // Small pause between sentences
-        await new Promise(resolve => setTimeout(resolve, 400));
+      setIsLoading(true);
+
+      const synthesisLang = language === "sw" ? "sw" : "en";
+
+      // ✅ Send COMPLETE text in ONE request
+      const response = await fetch(`${API_URL}/api/python-speech/synthesize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          text: text, // ✅ Full text, not split into sentences
+          language: synthesisLang 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("TTS failed");
       }
-      
-      // Completed reading all sentences
-      if (isReadingRef.current) {
-        stopReading();
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      // Stop any existing audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        URL.revokeObjectURL(audioRef.current.src);
+      }
+
+      // Create and play new audio
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onloadeddata = () => {
+        setIsLoading(false);
+      };
+
+      audio.onplay = () => {
+        setIsPlaying(true);
+      };
+
+      audio.onpause = () => {
+        setIsPlaying(false);
+      };
+
+      audio.onended = () => {
+        setIsPlaying(false);
+        URL.revokeObjectURL(audioUrl);
         onComplete?.();
-      }
+      };
+
+      audio.onerror = () => {
+        setIsLoading(false);
+        setIsPlaying(false);
+        console.error("Audio playback error");
+      };
+
+      await audio.play();
     } catch (error) {
-      console.error("Error reading text:", error);
-      stopReading();
+      console.error("TTS error:", error);
+      setIsLoading(false);
+      setIsPlaying(false);
     }
   };
 
-  // Pause reading
-  const pauseReading = () => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
+  // Stop and reset
+  const stop = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsPlaying(false);
     }
-    isReadingRef.current = false;
-    setIsPaused(true);
-    setIsPlaying(false);
   };
 
-  // Resume reading
-  const resumeReading = () => {
-    setIsPaused(false);
-    startReading();
-  };
-
-  // Stop reading completely and reset
-  const stopReading = () => {
-    isReadingRef.current = false;
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-    setIsPlaying(false);
-    setIsPaused(false);
-    setCurrentIndex(0);
-  };
-
-  // Toggle play/pause
+  // Pause/Resume
   const togglePlayback = () => {
+    if (!audioRef.current) {
+      speak();
+      return;
+    }
+
     if (isPlaying) {
-      pauseReading();
-    } else if (isPaused) {
-      resumeReading();
+      audioRef.current.pause();
     } else {
-      startReading();
+      audioRef.current.play();
     }
   };
 
@@ -166,21 +134,21 @@ const TTSReader: React.FC<TTSReaderProps> = ({
 
   return (
     <div className="flex gap-3 items-center flex-wrap">
-      {/* Play/Pause/Resume Button */}
+      {/* Play/Pause Button */}
       <button
         onClick={togglePlayback}
-        disabled={!text}
+        disabled={!text || isLoading}
         className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
       >
-        {isPlaying ? (
+        {isLoading ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+            <span className="hidden sm:inline">Loading...</span>
+          </>
+        ) : isPlaying ? (
           <>
             <span className="text-lg">⏸️</span>
             <span className="hidden sm:inline">Pause</span>
-          </>
-        ) : isPaused ? (
-          <>
-            <span className="text-lg">▶️</span>
-            <span className="hidden sm:inline">Resume</span>
           </>
         ) : (
           <>
@@ -190,10 +158,10 @@ const TTSReader: React.FC<TTSReaderProps> = ({
         )}
       </button>
 
-      {/* Stop Button (only show when playing or paused) */}
-      {(isPlaying || isPaused) && (
+      {/* Stop Button (only show when playing) */}
+      {isPlaying && (
         <button
-          onClick={stopReading}
+          onClick={stop}
           className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-all shadow-md hover:shadow-lg"
         >
           <span className="text-lg">⏹️</span>
@@ -205,14 +173,7 @@ const TTSReader: React.FC<TTSReaderProps> = ({
       {isPlaying && (
         <div className="flex items-center gap-2 text-green-600 font-medium">
           <span className="text-lg animate-pulse">🔊</span>
-          <span className="hidden sm:inline">Reading...</span>
-        </div>
-      )}
-
-      {isPaused && (
-        <div className="flex items-center gap-2 text-yellow-600 font-medium">
-          <span className="text-lg">⏸️</span>
-          <span className="hidden sm:inline">Paused</span>
+          <span className="hidden sm:inline">Playing...</span>
         </div>
       )}
     </div>

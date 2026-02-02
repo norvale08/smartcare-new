@@ -9,6 +9,7 @@ from gtts import gTTS
 import io
 from functools import lru_cache
 import hashlib
+import threading
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -16,24 +17,57 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# NEW: Enable CORS
+# Enable CORS
 CORS(app, resources={
     r"/*": {
-        "origins": ["*"],  # Allow all origins for now, restrict later
+        "origins": ["*"],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }
 })
 
+# Global recognizer instance (reused for all requests)
+RECOGNIZER = sr.Recognizer()
+RECOGNIZER.energy_threshold = 300
+RECOGNIZER.dynamic_energy_threshold = True
+RECOGNIZER.pause_threshold = 0.8
+
 # Cache for TTS to avoid regenerating same text
 @lru_cache(maxsize=100)
-def generate_speech_cached(text, language):
-    """Cache speech synthesis for repeated text"""
-    tts = gTTS(text=text, lang=language, slow=False)
+def generate_speech_cached(text, language, slow=False, tld='com'):
+    """Cache speech synthesis for repeated text with regional variants"""
+    tts = gTTS(text=text, lang=language, slow=slow, tld=tld)
     audio_buffer = io.BytesIO()
     tts.write_to_fp(audio_buffer)
     audio_buffer.seek(0)
     return audio_buffer.read()
+
+# Warmup function to pre-load services
+def warmup_services():
+    """Pre-load speech recognition to avoid cold start"""
+    try:
+        logger.info(" Warming up speech services...")
+        
+        # Test speech recognition is ready
+        logger.info("  → Initializing speech recognizer...")
+        test_recognizer = sr.Recognizer()
+        
+        # Pre-load gTTS for both English and Swahili
+        logger.info("  → Pre-loading text-to-speech...")
+        dummy_tts_en = gTTS(text="service ready", lang="en", slow=False)
+        dummy_tts_sw = gTTS(text="huduma iko tayari", lang="sw", slow=False, tld='co.ke')
+        
+        logger.info("✓ Speech services warmed up and ready!")
+        
+    except Exception as e:
+        logger.error(f"⚠ Warmup failed: {e}")
+
+# Background warmup starter
+def start_warmup():
+    """Start warmup in background thread"""
+    warmup_thread = threading.Thread(target=warmup_services)
+    warmup_thread.daemon = True
+    warmup_thread.start()
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
@@ -58,36 +92,28 @@ def transcribe_audio():
 
         audio_data_bytes = audio_file.read()
         file_size = len(audio_data_bytes)
-        logger.info(f"📁 Received audio: {audio_file.filename}, {file_size} bytes, lang: {language}")
+        logger.info(f" Received audio: {audio_file.filename}, {file_size} bytes, lang: {language}")
 
         # Save to temporary file
         temp_audio_path = tempfile.mktemp(suffix='.wav')
         with open(temp_audio_path, 'wb') as f:
             f.write(audio_data_bytes)
 
-        # Initialize recognizer with optimized settings
-        recognizer = sr.Recognizer()
-        recognizer.energy_threshold = 300
-        recognizer.dynamic_energy_threshold = True
-        recognizer.pause_threshold = 0.8
-        
+        # Use global RECOGNIZER instead of creating new one
         with sr.AudioFile(temp_audio_path) as source:
-            # REMOVED: adjust_for_ambient_noise (saves ~0.5 seconds)
-            # This was adding unnecessary delay
-            
             logger.info("🎤 Recording audio data...")
-            audio_data = recognizer.record(source)
+            audio_data = RECOGNIZER.record(source)
             
-            logger.info(f"🤖 Transcribing with Google Speech Recognition...")
+            logger.info(f" Transcribing with Google Speech Recognition...")
             
             try:
                 # Use faster recognition without show_all flag
-                text = recognizer.recognize_google(
+                text = RECOGNIZER.recognize_google(
                     audio_data,
                     language=language
                 )
                 
-                logger.info(f"✅ Transcription successful: '{text}'")
+                logger.info(f"✓ Transcription successful: '{text}'")
                 
                 return jsonify({
                     'success': True,
@@ -96,14 +122,14 @@ def transcribe_audio():
                 })
                 
             except sr.UnknownValueError:
-                logger.warning("❌ Speech not understood")
+                logger.warning("⚠ Speech not understood")
                 return jsonify({
                     'success': False,
                     'error': 'No clear speech detected. Please speak clearly and try again.'
                 }), 400
                 
             except sr.RequestError as e:
-                logger.error(f"❌ Service error: {str(e)}")
+                logger.error(f" Service error: {str(e)}")
                 return jsonify({
                     'success': False,
                     'error': f'Speech recognition service error: {str(e)}'
@@ -116,14 +142,14 @@ def transcribe_audio():
         }), 400
         
     except sr.RequestError as e:
-        logger.error(f"❌ Service error: {str(e)}")
+        logger.error(f"Service error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Speech recognition service error: {str(e)}'
         }), 500
         
     except Exception as e:
-        logger.error(f"💥 Error: {str(e)}")
+        logger.error(f" Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Transcription failed: {str(e)}'
@@ -134,9 +160,9 @@ def transcribe_audio():
         if temp_audio_path and os.path.exists(temp_audio_path):
             try:
                 os.unlink(temp_audio_path)
-                logger.info("🧹 Cleaned up temp file")
+                logger.info("  Cleaned up temp file")
             except Exception as e:
-                logger.error(f"⚠️ Cleanup error: {str(e)}")
+                logger.error(f"⚠ Cleanup error: {str(e)}")
 
 @app.route('/synthesize', methods=['POST'])
 def synthesize_speech():
@@ -150,6 +176,7 @@ def synthesize_speech():
 
         text = data.get('text', '')
         language = data.get('language', 'en')
+        slow = data.get('slow', False)  # Option for slower, clearer speech
         
         if not text:
             return jsonify({
@@ -157,15 +184,27 @@ def synthesize_speech():
                 'error': 'No text provided for synthesis'
             }), 400
         
-        logger.info(f"🔊 Synthesizing: '{text[:50]}...' in {language}")
+        # Determine the best TLD (regional variant) for the language
+        # For Swahili, use Kenya domain for more authentic accent
+        if language == 'sw':
+            tld = 'co.ke'  # Kenya - better for Swahili
+            log_lang = 'Swahili (Kenya)'
+        elif language == 'en':
+            tld = 'com'  # Default English
+            log_lang = 'English (US)'
+        else:
+            tld = 'com'  # Fallback
+            log_lang = language
         
-        # Use cached synthesis for repeated text (major speed improvement)
-        audio_data = generate_speech_cached(text, language)
+        logger.info(f" Synthesizing: '{text[:50]}...' in {log_lang} (slow={slow})")
+        
+        # Use cached synthesis for repeated text
+        audio_data = generate_speech_cached(text, language, slow, tld)
         
         # Create new buffer from cached data
         audio_buffer = io.BytesIO(audio_data)
         
-        logger.info("✅ Speech synthesis successful")
+        logger.info("✓ Speech synthesis successful")
         
         return send_file(
             audio_buffer,
@@ -175,7 +214,7 @@ def synthesize_speech():
         )
         
     except Exception as e:
-        logger.error(f"❌ Synthesis error: {str(e)}")
+        logger.error(f" Synthesis error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Speech synthesis failed: {str(e)}'
@@ -186,36 +225,47 @@ def health_check():
     return jsonify({
         'service': 'speech-service',
         'status': 'healthy', 
-        'version': '2.0.0',
-        'environment': os.environ.get('FLASK_ENV', 'development'),  # NEW: Show environment
-        'features': ['speech-to-text', 'text-to-speech', 'tts-caching'],
+        'version': '2.2.0',
+        'environment': os.environ.get('FLASK_ENV', 'development'),
+        'features': ['speech-to-text', 'text-to-speech', 'tts-caching', 'service-warmup', 'regional-variants'],
         'optimizations': [
             'Removed ambient noise adjustment (-0.5s)',
             'TTS caching for repeated text',
-            'Optimized file I/O'
+            'Optimized file I/O',
+            'Global recognizer instance',
+            'Background service warmup',
+            'Regional voice variants'
         ],
         'supported_languages': {
             'english': 'en-US (transcription), en (synthesis)',
-            'swahili': 'sw (transcription & synthesis)'
+            'swahili': 'sw (transcription & synthesis with Kenya accent)'
+        },
+        'voice_options': {
+            'swahili': {
+                'regional_variant': 'Kenya (co.ke)',
+                'slow_speech': 'Available via slow parameter'
+            },
+            'english': {
+                'regional_variant': 'US (com)',
+                'slow_speech': 'Available via slow parameter'
+            }
         },
         'timestamp': datetime.now().isoformat()
     })
 
-# NEW: Root endpoint
 @app.route('/', methods=['GET'])
 def root():
     return jsonify({
         'service': 'SmartCare Speech Service',
         'status': 'running',
-        'version': '2.0.0',
+        'version': '2.2.0',
         'endpoints': {
             'health': '/health',
             'transcribe': '/transcribe (POST)',
-            'synthesize': '/synthesize (POST)'
+            'synthesize': '/synthesize (POST - supports language, slow, regional variants)'
         }
     })
 
-# UPDATED: Production-ready startup
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     environment = os.environ.get('FLASK_ENV', 'development')
@@ -226,7 +276,11 @@ if __name__ == '__main__':
     logger.info(f"Environment: {environment}")
     logger.info(f"Port: {port}")
     logger.info(f"Health: http://localhost:{port}/health")
+    logger.info(f"Swahili Voice: Kenya accent (co.ke)")
     logger.info("=" * 60)
+    
+    # Start warmup in background
+    start_warmup()
     
     # Use debug mode only in development
     debug_mode = environment == 'development'
