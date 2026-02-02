@@ -98,7 +98,7 @@ function DashboardPage() {
 
   const tabs = [
     { id: 'vitals', label: t.common.vitals, icon: Activity, color: 'emerald' },
-    { id: 'health-trends', label: 'Health Trends & Risk', icon: TrendingUp, color: 'teal' },
+    { id: 'health-trends', label: language === "sw-TZ" ? "Mienendo ya Afya & Tathmini ya Hatari" : "Health Trends & Risk", icon: TrendingUp, color: 'teal' },
     { id: 'doctor', label: t.common.doctor, icon: User, color: 'cyan' },
     { id: 'medicine', label: t.common.medicine, icon: Pill, color: 'blue' },
     { id: 'lifestyle', label: t.common.lifestyleAndDiet, icon: Utensils, color: 'green' },
