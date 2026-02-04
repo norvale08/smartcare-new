@@ -156,9 +156,51 @@ export class NotificationService {
             });
           }
 
-         
+
         } catch (error) {
           console.error('Error notifying doctors:', error);
+        }
+
+        // 3. Notify relatives (users who monitor this patient)
+        try {
+          // CRITICAL FIX: The patient's User ID is what relatives have stored in monitoredPatient
+          // userId parameter = patient's User ID from User collection
+          // This is what we need to query against monitoredPatient field
+          const patientUserId = userId; // This is already the correct patient User ID
+          
+          console.log(`🔍 Searching for relatives monitoring patient User ID: ${patientUserId}`);
+          
+          // Find all relatives who are monitoring this patient by their User ID
+          const relatives = await User.find({
+            role: 'relative',
+            monitoredPatient: patientUserId // Match against patient's User ID
+          });
+
+          console.log(`✅ Found ${relatives.length} relatives monitoring patient ${patientUserId}`);
+          
+          if (relatives.length > 0) {
+            console.log(`📋 Relative details:`, relatives.map(r => ({
+              id: r._id.toString(),
+              email: r.email,
+              monitoredPatient: r.monitoredPatient?.toString()
+            })));
+          }
+
+          for (const relative of relatives) {
+            console.log(`📤 Creating notification for relative ${relative._id} (${relative.email})`);
+            await this.createNotification({
+              userId: relative._id.toString(), // Relative's own User ID (where notification is stored)
+              ...alert,
+              patientId: patientUserId, // Patient's User ID (for querying/filtering)
+              patientName,
+              vitalId: vitalData._id?.toString(),
+              metadata: vitalData,
+            });
+            console.log(`✅ Notification created for relative ${relative._id}`);
+          }
+        } catch (error) {
+          console.error('❌ Error notifying relatives:', error);
+          console.error('❌ Error details:', error);
         }
       }
     }
