@@ -1,3 +1,4 @@
+//contact/page.tsx
 "use client"
 import React, { useState } from 'react'
 import {
@@ -34,7 +35,9 @@ const ContactPage = () => {
         }))
     }
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault() // Prevent default form submission
+        
         // Validate form
         if (!formData.name || !formData.email || !formData.message) {
             setSubmitStatus('error')
@@ -75,11 +78,18 @@ const ContactPage = () => {
 
             let data
             try {
-                data = await response.json()
-                console.log('Response data:', data)
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    data = await response.json()
+                    console.log('Response data:', data)
+                } else {
+                    const text = await response.text()
+                    console.error('Non-JSON response:', text)
+                    throw new Error('Server returned non-JSON response')
+                }
             } catch (parseError) {
                 console.error('Failed to parse response:', parseError)
-                throw new Error('Invalid server response')
+                throw new Error('Invalid server response. Please ensure the API server is running correctly.')
             }
 
             if (response.ok) {
@@ -97,7 +107,7 @@ const ContactPage = () => {
                     message: ''
                 })
             } else {
-                throw new Error(data.error || 'Failed to send message')
+                throw new Error(data?.error || data?.message || 'Failed to send message')
             }
 
         } catch (error) {
@@ -106,7 +116,7 @@ const ContactPage = () => {
             let errorMessage = 'Oops! Something went wrong while sending your message. '
 
             if (error instanceof TypeError && error.message.includes('fetch')) {
-                errorMessage += 'Unable to connect to the server. Please check if the API server is running.'
+                errorMessage += 'Unable to connect to the server. Please check your internet connection and ensure the API server is running.'
             } else if (error instanceof Error) {
                 errorMessage += error.message
             } else {
@@ -198,9 +208,8 @@ const ContactPage = () => {
                                 </div>
                                 <button
                                     type="submit"
-                                    onClick={handleSubmit}
                                     disabled={isSubmitting}
-                                    className="w-full flex justify-center items-center py-2.5 sm:py-3 px-4 border border-transparent rounded-full shadow-md text-sm sm:text-base font-medium text-white bg-gradient-to-r from-blue-950 to-emerald-600 hover:shadow-xl transition-all transform hover:-translate-y-0.5 sm:hover:-translate-y-1"
+                                    className="w-full flex justify-center items-center py-2.5 sm:py-3 px-4 border border-transparent rounded-full shadow-md text-sm sm:text-base font-medium text-white bg-gradient-to-r from-blue-950 to-emerald-600 hover:shadow-xl transition-all transform hover:-translate-y-0.5 sm:hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting ? (
                                         <>
