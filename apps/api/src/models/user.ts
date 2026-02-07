@@ -278,41 +278,14 @@ const userSchema = new Schema(
 );
 
 // Index for faster queries
-userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
-userSchema.index({ isApproved: 1 }); // ✅ Add for approval queries
+userSchema.index({ isApproved: 1 });
 userSchema.index({ assignedDoctor: 1 });
 userSchema.index({ 'assignedPatients': 1 });
-userSchema.index({ specialization: 1 }); // For doctor searches
-userSchema.index({ yearsOfExperience: -1 }); // For sorting by experience
-userSchema.index({ invitationStatus: 1 }); // ✅ Add for relative queries
-userSchema.index({ invitationExpires: 1 }); // ✅ Add for expiration checks
-
-// Virtual for full name if not set
-userSchema.virtual('displayName').get(function() {
-  if (this.fullName) return this.fullName;
-  if (this.firstName || this.lastName) {
-    return `${this.firstName || ''} ${this.lastName || ''}`.trim();
-  }
-  return this.email;
-});
-
-// Virtual for doctor's experience level
-userSchema.virtual('experienceLevel').get(function() {
-  if (!this.yearsOfExperience) return "Not specified";
-  if (this.yearsOfExperience < 3) return "Junior";
-  if (this.yearsOfExperience < 8) return "Mid-Level";
-  if (this.yearsOfExperience < 15) return "Senior";
-  return "Expert";
-});
-
-// Virtual for relative's invitation status
-userSchema.virtual('isInvitationValid').get(function() {
-  if (this.role !== 'relative') return false;
-  if (this.invitationStatus !== 'pending') return false;
-  if (!this.invitationExpires) return false;
-  return new Date() < this.invitationExpires;
-});
+userSchema.index({ specialization: 1 });
+userSchema.index({ yearsOfExperience: -1 });
+userSchema.index({ invitationStatus: 1 });
+userSchema.index({ invitationExpires: 1 });
 
 // Pre-save hook to ensure fullName is set
 userSchema.pre('save', function(next) {

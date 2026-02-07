@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@repo/ui';
 import { toast } from 'react-hot-toast';
@@ -8,7 +8,8 @@ import CustomToaster from '../components/ui/CustomToaster';
 import { FaHeartbeat, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import { Loader2, Mail, Shield, ArrowRight } from 'lucide-react';
 
-const ActivateAccount = () => {
+// Separate component that uses useSearchParams
+function ActivateAccountContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
@@ -225,6 +226,40 @@ const ActivateAccount = () => {
         </p>
       </div>
     </div>
+  );
+}
+
+// Loading fallback component
+function ActivateAccountLoading() {
+  return (
+    <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-emerald-50 p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-emerald-400 to-blue-950 p-6 text-white text-center">
+            <div className="flex items-center justify-center mb-3">
+              <FaHeartbeat className="text-3xl mr-2" />
+              <h1 className="text-2xl font-bold">SmartCare</h1>
+            </div>
+            <p className="text-sm opacity-90">Account Activation</p>
+          </div>
+          <div className="p-8">
+            <div className="text-center py-8">
+              <Loader2 className="w-12 h-12 animate-spin text-emerald-500 mx-auto mb-4" />
+              <p className="text-gray-600">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Main component with Suspense boundary
+const ActivateAccount = () => {
+  return (
+    <Suspense fallback={<ActivateAccountLoading />}>
+      <ActivateAccountContent />
+    </Suspense>
   );
 };
 
