@@ -1,3 +1,4 @@
+// realtives/dashboard/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -52,31 +53,21 @@ export default function RelativeDashboard() {
     isAlertDismissed
   } = useDismissedAlerts();
 
-  useEffect(() => {
-    if (vitals.length > 0 && patientData) {
-      const alerts = DashboardUtils.generateHealthAlerts(vitals, patientData);
-      setHealthAlerts(alerts);
-    }
-  }, [vitals, patientData]);
+  // Get patient identifier for API calls (same as caretaker logic)
+  const patientIdentifier = patientData?.id || patientData?.userId;
+  const patientUserIdForNotifications = patientData?.userId;
 
-  const filteredAlerts = healthAlerts.filter(alert => !isAlertDismissed(alert.id));
 
   const handleDismissAlert = (alertId: string) => {
     dismissAlert(alertId);
-    const dismissedAlert = healthAlerts.find(a => a.id === alertId);
-    if (dismissedAlert) {
-      setSuccess(`Alert dismissed: ${dismissedAlert.vital} alert`);
-      setTimeout(() => setSuccess(''), 3000);
-    }
+    setSuccess('Alert dismissed successfully');
+    setTimeout(() => setSuccess(''), 3000);
   };
 
   const handleDismissAllAlerts = () => {
-    const alertIds = filteredAlerts.map(alert => alert.id);
-    if (alertIds.length > 0) {
-      dismissAllAlerts(alertIds);
-      setSuccess('All alerts have been dismissed');
-      setTimeout(() => setSuccess(''), 3000);
-    }
+    // The HealthAlerts component will handle getting the list of alert IDs
+    setSuccess('All alerts have been dismissed');
+    setTimeout(() => setSuccess(''), 3000);
   };
 
   const chartData = DashboardUtils.prepareChartData(vitals, chartPeriod);
@@ -201,57 +192,39 @@ export default function RelativeDashboard() {
 
           <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
-          {filteredAlerts.length > 0 ? (
-            <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-red-900 flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5" />
-                    Critical Health Alerts ({filteredAlerts.length})
-                  </h3>
-                  <p className="text-sm text-red-700">
-                    {filteredAlerts.filter(a => a.severity === 'critical').length} critical condition alerts detected
-                  </p>
-                </div>
-                <button
-                  onClick={handleDismissAllAlerts}
-                  className="px-3 py-1.5 text-sm bg-white border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors font-medium"
-                >
-                  Dismiss All
-                </button>
+          {/* Alert Summary Banner */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                  Health Monitoring Status
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Real-time health alerts
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {dismissedAlerts.size > 0 && (
+                  <button
+                    onClick={clearDismissedAlerts}
+                    className="px-3 py-1.5 text-sm bg-blue-100 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                  >
+                    Show All Alerts ({dismissedAlerts.size} hidden)
+                  </button>
+                )}
               </div>
             </div>
-          ) : (
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    Health Monitoring Status
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {dismissedAlerts.size > 0
-                      ? `${dismissedAlerts.size} alerts currently hidden`
-                      : 'No critical alerts'}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  {dismissedAlerts.size > 0 && (
-                    <button
-                      onClick={clearDismissedAlerts}
-                      className="px-3 py-1.5 text-sm bg-blue-100 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                    >
-                      Show All Alerts
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
 
+          {/* Health Alerts Component - CRITICAL: Pass patient's USER ID, not profile ID */}
           <HealthAlerts
-            alerts={filteredAlerts}
+            alerts={[]}
             onDismissAlert={handleDismissAlert}
+            patientId={patientUserIdForNotifications} // Patient's User ID for notifications
+            dismissedAlertIds={dismissedAlerts}
           />
+
 
           <StatusMessages error={error} success={success} />
 
