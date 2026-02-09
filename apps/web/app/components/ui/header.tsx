@@ -37,7 +37,7 @@ const Header = () => {
 
       {/* Mobile Dropdown Menu */}
       {menuOpen && (
-        <nav className="flex flex-col md:hidden bg-slate-500 text-white px-4 py-2 space-y-2">
+        <nav className="flex flex-col md:hidden bg-blue-950 text-white px-4 py-2 space-y-2">
           <Link href="/" onClick={() => setMenuOpen(false)}>Home</Link>
           <Link href="/features" onClick={() => setMenuOpen(false)}>Features</Link>
           <Link href="/resources" onClick={() => setMenuOpen(false)}>Resources</Link>
