@@ -256,7 +256,7 @@ const Home = () => {
       <Header />
 
       {/* Hero Section with Video Background */}
-      <div className="relative text-white p-4 sm:p-6 md:p-8 lg:p-10 h-[300px] sm:h-[350px] md:h-[400px] lg:h-[450px] overflow-hidden">
+      <div className="relative text-white p-4 sm:p-6 md:p-8 min-h-[450px] sm:min-h-[400px] md:min-h-[450px] lg:min-h-[500px] overflow-hidden">
 
         <video
           autoPlay
@@ -289,7 +289,7 @@ const Home = () => {
                 Get Started
               </button>
             </Link>
-            <Link href="/login">
+            <Link href="/login" className="w-full sm:w-auto">
               <button className="bg-white text-blue-600 rounded-md px-4 py-2 sm:px-4 sm:py-2 md:px-5 md:py-2.5 hover:bg-gray-200 hover:scale-105 hover:shadow-lg transition-all duration-300 transform text-sm sm:text-base font-medium w-full sm:w-auto">
                 Login
               </button>
