@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
+import { Volume2, Pause, Square, Loader2 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -142,29 +143,29 @@ const TTSReader: React.FC<TTSReaderProps> = ({
       >
         {isLoading ? (
           <>
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+            <Loader2 className="h-4 w-4 animate-spin" />
             <span className="hidden sm:inline">Loading...</span>
           </>
         ) : isPlaying ? (
           <>
-            <span className="text-lg">⏸️</span>
+            <Pause className="h-4 w-4" />
             <span className="hidden sm:inline">Pause</span>
           </>
         ) : (
           <>
-            <span className="text-lg">🔊</span>
+            <Volume2 className="h-4 w-4" />
             <span className="hidden sm:inline">Listen</span>
           </>
         )}
       </button>
 
-      {/* Stop Button (only show when playing) */}
+      
       {isPlaying && (
         <button
           onClick={stop}
-          className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-all shadow-md hover:shadow-lg"
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition-all shadow-md hover:shadow-lg"
         >
-          <span className="text-lg">⏹️</span>
+          <Square className="h-4 w-4" />
           <span className="hidden sm:inline">Stop</span>
         </button>
       )}
@@ -172,7 +173,7 @@ const TTSReader: React.FC<TTSReaderProps> = ({
       {/* Status Indicator */}
       {isPlaying && (
         <div className="flex items-center gap-2 text-green-600 font-medium">
-          <span className="text-lg animate-pulse">🔊</span>
+          <Volume2 className="h-4 w-4 animate-pulse" />
           <span className="hidden sm:inline">Playing...</span>
         </div>
       )}

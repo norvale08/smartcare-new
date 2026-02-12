@@ -179,7 +179,7 @@ const DiabetesVitalsForm: React.FC<Props> = ({
   }, [contextValue, hasHypertension, hasBothConditions]);
 
  
-// 1️⃣ FIRST: handleFormSubmitWithAI (core submission logic with AI parameter)
+// 1️FIRST: handleFormSubmitWithAI (core submission logic with AI parameter)
 const handleFormSubmitWithAI = useCallback(async (data: diabetesType, aiRequested: boolean) => {
   setIsLoading(true);
   setSubmitSuccess(false);

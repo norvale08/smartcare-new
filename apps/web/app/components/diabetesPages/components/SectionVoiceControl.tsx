@@ -73,8 +73,8 @@ const SectionVoiceControl: React.FC<SectionVoiceControlProps> = ({
   const getButtonConfig = () => {
     if (isPaused) {
       return {
-        bgColor: 'bg-green-500 hover:bg-green-600',
-        ringColor: 'ring-green-300',
+        bgColor: 'bg-emerald-500 hover:bg-emerald-600',
+        ringColor: 'ring-emerald-300',
         icon: <Play size={16} />,
         text: languageValue === "sw" ? "Endelea" : "Resume",
         title: languageValue === "sw" ? "Endelea na sauti" : "Resume voice mode",
@@ -83,11 +83,10 @@ const SectionVoiceControl: React.FC<SectionVoiceControlProps> = ({
         animation: ''
       };
     } else {
-      // If this is the current section being read, use BRIGHT YELLOW with animation
       const isActiveSection = isCurrentSection;
       return {
-        bgColor: isActiveSection ? 'bg-yellow-400 hover:bg-yellow-500' : 'bg-yellow-500 hover:bg-yellow-600',
-        ringColor: isActiveSection ? 'ring-yellow-200' : 'ring-yellow-300',
+        bgColor: isActiveSection ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600',
+        ringColor: isActiveSection ? 'ring-cyan-400' : 'ring-blue-300',
         icon: <Pause size={16} />,
         text: languageValue === "sw" ? "Simamisha" : "Pause",
         title: languageValue === "sw" ? "Simamisha sauti kwa muda" : "Pause voice mode temporarily",
@@ -122,8 +121,8 @@ const SectionVoiceControl: React.FC<SectionVoiceControlProps> = ({
       </button>
 
       {/* Status indicator */}
-      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium border border-blue-200">
-        <div className={`w-2 h-2 rounded-full ${isPaused ? 'bg-gray-400' : 'bg-blue-500 animate-ping'}`} />
+      <div className="flex items-center gap-2 px-3 py-2 bg-cyan-50 text-cyan-800 rounded-lg text-xs font-medium border border-cyan-200">
+        <div className={`w-2 h-2 rounded-full ${isPaused ? 'bg-gray-400' : 'bg-emerald-500 animate-ping'}`} />
         <span className="font-semibold">
           {isPaused 
             ? (languageValue === "sw" ? "Imesimamishwa" : "Paused")
