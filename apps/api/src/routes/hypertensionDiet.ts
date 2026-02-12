@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import mongoose from "mongoose";
 import { verifyToken, AuthenticatedRequest } from "../middleware/verifyToken";
 import { generateDietRecommendations } from "../services/HypertensionAI";
 

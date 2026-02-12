@@ -112,8 +112,8 @@ function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
-      {/* Header - non-sticky, still with beautiful gradient */}
-      <div className="w-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 shadow-xl border-b border-emerald-600/20">
+      {/* Header - non-sticky, now with white background */}
+      <div className="w-full bg-white shadow-xl border-b border-gray-200">
         <Header 
           t={t}
           language={language}

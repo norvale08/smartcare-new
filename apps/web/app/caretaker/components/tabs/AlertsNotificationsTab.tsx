@@ -149,6 +149,11 @@ const AlertsNotificationsTab: React.FC<AlertsNotificationsTabProps> = ({
   };
 
   const getNotificationColor = (notification: Notification) => {
+    // If notification is read, use blue styling for the entire card
+    if (notification.read) {
+      return 'bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200 border-l-4 border-l-blue-500';
+    }
+
     // Special handling for hypertension alerts
     if (notification.type === 'hypertension_alert') {
       const bpColors = {

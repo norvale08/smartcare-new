@@ -2,7 +2,6 @@ import { Router, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 import { verifyToken, AuthenticatedRequest } from "../middleware/verifyToken";
 import { generateLifestyleRecommendations, updateLifestyle } from "../services/HypertensionAI"; 
-// Import from the correct service file
 
 const router = Router();
 

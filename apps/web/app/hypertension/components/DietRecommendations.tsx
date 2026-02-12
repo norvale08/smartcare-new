@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Utensils } from "lucide-react";
+import { Utensils, Coffee, Sun, Moon, Apple } from "lucide-react";
 import { useTranslation } from "../../../lib/hypertension/useTranslation";
 import TTSReader from "../../components/diabetesPages/components/TTSReader";
 
@@ -12,6 +12,10 @@ interface DietRecommendationsData {
   snacks: string;
   generalAdvice: string;
   calorieTarget?: number;
+  whyBreakfast?: string;
+  whyLunch?: string;
+  whyDinner?: string;
+  whySnacks?: string;
 }
 
 interface DietRecommendationsProps {
@@ -127,7 +131,7 @@ const DietRecommendations: React.FC<DietRecommendationsProps> = ({ dietData, loa
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-5 shadow-sm">
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-white rounded-lg shadow-sm">
-                  <span className="text-lg">🤖</span>
+                  <span className="text-lg"></span>
                 </div>
                 <div>
                   <h4 className="font-semibold text-emerald-900 mb-2">
@@ -149,52 +153,84 @@ const DietRecommendations: React.FC<DietRecommendationsProps> = ({ dietData, loa
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-amber-100 rounded-lg">
-                    <span className="text-amber-600 text-sm font-semibold">☀️</span>
+                    <Coffee className="text-amber-600" size={20} />
                   </div>
                   <h4 className="font-bold text-amber-800">
                     {language === "en-US" ? "Breakfast" : "Chakula cha Asubuhi"}
                   </h4>
                 </div>
-                <p className="text-amber-900 leading-relaxed">{dietData.breakfast}</p>
+                <p className="text-amber-900 leading-relaxed mb-3">{dietData.breakfast}</p>
+                {dietData.whyBreakfast && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-amber-800 text-sm font-medium mb-1">
+                      {language === "en-US" ? "Why this helps:" : "Kwa nini hii husaidia:"}
+                    </p>
+                    <p className="text-amber-700 text-sm">{dietData.whyBreakfast}</p>
+                  </div>
+                )}
               </div>
 
               {/* Lunch */}
               <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-emerald-100 rounded-lg">
-                    <span className="text-emerald-600 text-sm font-semibold">🌤️</span>
+                    <Sun className="text-emerald-600" size={20} />
                   </div>
                   <h4 className="font-bold text-emerald-800">
                     {language === "en-US" ? "Lunch" : "Chakula cha Mchana"}
                   </h4>
                 </div>
-                <p className="text-emerald-900 leading-relaxed">{dietData.lunch}</p>
+                <p className="text-emerald-900 leading-relaxed mb-3">{dietData.lunch}</p>
+                {dietData.whyLunch && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                    <p className="text-emerald-800 text-sm font-medium mb-1">
+                      {language === "en-US" ? "Why this helps:" : "Kwa nini hii husaidia:"}
+                    </p>
+                    <p className="text-emerald-700 text-sm">{dietData.whyLunch}</p>
+                  </div>
+                )}
               </div>
 
               {/* Dinner */}
               <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-indigo-100 rounded-lg">
-                    <span className="text-indigo-600 text-sm font-semibold">🌙</span>
+                    <Moon className="text-indigo-600" size={20} />
                   </div>
                   <h4 className="font-bold text-indigo-800">
                     {language === "en-US" ? "Dinner" : "Chakula cha Jioni"}
                   </h4>
                 </div>
-                <p className="text-indigo-900 leading-relaxed">{dietData.dinner}</p>
+                <p className="text-indigo-900 leading-relaxed mb-3">{dietData.dinner}</p>
+                {dietData.whyDinner && (
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                    <p className="text-indigo-800 text-sm font-medium mb-1">
+                      {language === "en-US" ? "Why this helps:" : "Kwa nini hii husaidia:"}
+                    </p>
+                    <p className="text-indigo-700 text-sm">{dietData.whyDinner}</p>
+                  </div>
+                )}
               </div>
 
               {/* Snacks */}
               <div className="bg-gradient-to-br from-rose-50 to-pink-50 border border-rose-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-rose-100 rounded-lg">
-                    <span className="text-rose-600 text-sm font-semibold">🍎</span>
+                    <Apple className="text-rose-600" size={20} />
                   </div>
                   <h4 className="font-bold text-rose-800">
                     {language === "en-US" ? "Snacks" : "Vitafunio"}
                   </h4>
                 </div>
-                <p className="text-rose-900 leading-relaxed">{dietData.snacks}</p>
+                <p className="text-rose-900 leading-relaxed mb-3">{dietData.snacks}</p>
+                {dietData.whySnacks && (
+                  <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+                    <p className="text-rose-800 text-sm font-medium mb-1">
+                      {language === "en-US" ? "Why this helps:" : "Kwa nini hii husaidia:"}
+                    </p>
+                    <p className="text-rose-700 text-sm">{dietData.whySnacks}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -203,7 +239,7 @@ const DietRecommendations: React.FC<DietRecommendationsProps> = ({ dietData, loa
               <div className="bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 rounded-xl p-5 shadow-sm">
                 <div className="flex items-start gap-3">
                   <div className="p-2 bg-sky-100 rounded-lg">
-                    <span className="text-sky-600 text-lg">💡</span>
+                    <span className="text-sky-600 text-lg"></span>
                   </div>
                   <div className="flex-1">
                     <h4 className="font-bold text-sky-800 mb-2">
@@ -221,7 +257,7 @@ const DietRecommendations: React.FC<DietRecommendationsProps> = ({ dietData, loa
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-emerald-100 rounded-lg">
-                      <span className="text-emerald-600 text-lg">🔥</span>
+                      <span className="text-emerald-600 text-lg"></span>
                     </div>
                     <div>
                       <h4 className="font-bold text-emerald-800">
