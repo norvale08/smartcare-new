@@ -405,16 +405,16 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
             <div className="relative profile-menu-container">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
+                className="focus:outline-none focus:ring-2 focus:ring-cyan-500 rounded-full"
               >
                 {userProfile.picture ? (
                   <img
                     src={userProfile.picture}
                     alt={`${userProfile.fullName}'s profile`}
-                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-blue-100 shadow-sm hover:border-blue-300 transition-colors"
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-cyan-200 shadow-sm hover:border-cyan-300 transition-colors"
                   />
                 ) : (
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-sm hover:from-blue-600 hover:to-cyan-600 transition-all">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 flex items-center justify-center shadow-sm hover:from-emerald-600 hover:to-cyan-600 transition-all">
                     <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                 )}
@@ -452,7 +452,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                     {userProfile.fullName}
                   </h1>
                   {healthConditions.length > 0 && (
-                    <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-medium rounded-full">
+                    <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-medium rounded-full">
                       {healthConditions[0]}
                     </span>
                   )}
@@ -470,13 +470,13 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                       {healthConditions.slice(0, 2).map((condition) => (
                         <span
                           key={condition}
-                          className="px-2 py-0.5 bg-emerald-100 text-blue-500 text-xs font-medium rounded-full"
+                          className="px-2 py-0.5 bg-cyan-50 text-blue-700 text-xs font-medium rounded-full"
                         >
                           {condition}
                         </span>
                       ))}
                       {healthConditions.length > 2 && (
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
                           +{healthConditions.length - 2}
                         </span>
                       )}
@@ -502,7 +502,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
             <select
               value={language}
               onChange={(e) => handleLanguageChange(e.target.value as "en" | "sw")}
-              className="appearance-none bg-gray-50 border border-gray-300 rounded-lg px-2 py-1.5 text-xs font-medium text-gray-700 hover:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-200 cursor-pointer"
+              className="appearance-none bg-gray-50 border border-gray-300 rounded-lg px-2 py-1.5 text-xs font-medium text-gray-700 hover:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-200 cursor-pointer"
             >
               <option value="en">EN</option>
               <option value="sw">SW</option>
@@ -533,8 +533,8 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
             <button
               onClick={() => setShowMessages(true)}
               className={`px-3 py-1.5 rounded-lg transition-all font-medium flex items-center space-x-1.5 border text-xs ${showMessages
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                : 'bg-white text-indigo-600 border-indigo-600 hover:bg-indigo-600 hover:text-white'
+                ? 'bg-cyan-600 text-white border-cyan-600 shadow-md'
+                : 'bg-white text-cyan-600 border-cyan-600 hover:bg-cyan-600 hover:text-white'
                 }`}
             >
               <MessageSquare className="w-3.5 h-3.5" />
@@ -569,7 +569,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                 </div>
                 <div>
                   <h2 className="text-xl sm:text-3xl font-bold">{currentLangContent.doctorManagement}</h2>
-                  <p className="text-blue-100 text-sm sm:text-lg mt-1">
+                  <p className="text-cyan-100 text-sm sm:text-lg mt-1">
                     {currentLangContent.doctorDescription}
                   </p>
                 </div>
@@ -606,7 +606,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                   </button>
                   <button
                     onClick={() => console.log("Add new doctor")}
-                    className="flex-1 sm:flex-none px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg sm:rounded-xl hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm sm:text-base"
+                    className="flex-1 sm:flex-none px-4 py-2 sm:px-6 sm:py-3 bg-emerald-500 text-white rounded-lg sm:rounded-xl hover:bg-emerald-600 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm sm:text-base"
                   >
                     <Plus className="w-4 h-4" />
                     <span>{currentLangContent.addDoctor}</span>
@@ -629,12 +629,12 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-200 bg-indigo-600 text-white">
+            <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-200 bg-cyan-600 text-white">
               <div className="flex items-center space-x-3">
                 <MessageSquare className="w-6 h-6" />
                 <div>
                   <h2 className="text-xl font-bold">{currentLangContent.familyChat}</h2>
-                  <p className="text-indigo-100 text-xs hidden sm:block">
+                  <p className="text-cyan-100 text-xs hidden sm:block">
                     {currentLangContent.familyDescription}
                   </p>
                 </div>
