@@ -13,7 +13,9 @@ import {
   User,
   PlusCircle,
   Pill,
-  Phone
+  Phone,
+  FileText,
+  Sparkles
 } from 'lucide-react';
 import { Patient, VitalSigns } from '../types';
 import CurrentVitalsTab from './tabs/CurrentVitalsTab';

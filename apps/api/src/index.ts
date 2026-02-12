@@ -235,8 +235,6 @@ app.use('/api/relative', relativePatientRouter);
 app.use('/api', sendEmailRouter);
 app.use('/api/activate', activateRouter);
 
-
-
 console.log('Routes registered');
 
 

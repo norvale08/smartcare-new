@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   HeartPulse, Users, Search, Phone, MessageSquare, Calendar,
   Stethoscope, AlertTriangle, CheckCircle, Clock, Filter, Activity, Pill, PlusCircle,
-  TrendingUp, Shield, Bell, ArrowLeft, X, User
+  TrendingUp, Shield, Bell, ArrowLeft, X, User, Sparkles
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button, Input, Card, CardHeader, CardContent, CardTitle } from "@repo/ui";
@@ -549,16 +549,16 @@ const CaretakerDashboard = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-4 space-y-2 bg-white/80 rounded-b-xl">
-                    {[
-                      { id: 'overview', label: 'Overview', icon: Users },
-                      { id: 'current-vitals', label: 'Current Vitals', icon: Activity },
-                      { id: 'health-trends', label: 'Health Trends', icon: TrendingUp },
-                      { id: 'risk-assessment', label: 'Risk Assessment', icon: Shield },
-                      { id: 'alerts', label: 'Alerts & Notifications', icon: Bell },
-                      { id: 'medications', label: 'Medications', icon: Pill },
-                      { id: 'appointments', label: 'Appointments', icon: Calendar },
-                      { id: 'messages', label: 'Messages', icon: MessageSquare },
-                    ].map((tab) => {
+    {[
+      { id: 'overview', label: 'Overview', icon: Users },
+      { id: 'current-vitals', label: 'Current Vitals', icon: Activity },
+      { id: 'health-trends', label: 'Health Trends', icon: TrendingUp },
+      { id: 'risk-assessment', label: 'Risk Assessment', icon: Shield },
+      { id: 'alerts', label: 'Alerts & Notifications', icon: Bell },
+      { id: 'medications', label: 'Medications', icon: Pill },
+      { id: 'appointments', label: 'Appointments', icon: Calendar },
+      { id: 'messages', label: 'Messages', icon: MessageSquare },
+    ].map((tab) => {
                       const Icon = tab.icon;
                       const isActive = activePatientTab === tab.id;
                       return (

@@ -214,9 +214,16 @@ const PatientAppointments: React.FC<PatientAppointmentsProps> = ({ patientId, la
     };
 
     const id = getUserInfo();
+    console.log('🔍 PatientAppointments component mounted with:', {
+      patientId,
+      userId: id,
+      language
+    });
+    
     if (id || patientId) {
       fetchAppointments(id || patientId);
-    } else if (!loading) {
+    } else {
+      console.log('⚠️ No patient ID available, not fetching appointments');
       setLoading(false);
     }
   }, [patientId, language]);
@@ -232,15 +239,25 @@ const PatientAppointments: React.FC<PatientAppointmentsProps> = ({ patientId, la
       }
 
       console.log('🔑 Using token for API request');
+      console.log('🔍 Patient ID from props:', patientId);
+      console.log('🔍 Target patient ID:', targetPatientId);
+      console.log('🔍 User ID from localStorage:', userId);
+
+      // Determine which patient ID to use
+      const finalPatientId = targetPatientId || patientId || userId;
+      console.log('🎯 Final patient ID to fetch:', finalPatientId);
+
+      if (!finalPatientId) {
+        throw new Error('No patient ID available to fetch appointments');
+      }
 
       // For patients, use patient-specific endpoints first to get only their appointments
-      // Try multiple endpoints in order
+      // Try multiple endpoints in order - use patient-specific endpoints that don't require auth middleware
       const endpoints = [
-        patientId ? `/api/appointments/patient/${patientId}` : null,
-        targetPatientId ? `/api/appointments/patient/${targetPatientId}` : null,
-        '/api/appointments/my-appointments',
-        '/api/appointments'
-      ].filter(Boolean) as string[];
+        `/api/appointments/patient/${finalPatientId}`, // Primary: patient-specific endpoint
+        '/api/appointments/my-appointments', // Fallback: authenticated endpoint
+        '/api/appointments' // Last resort: all appointments (should be filtered by frontend)
+      ];
 
       let response: Response | null = null;
       let result: any = null;
@@ -268,10 +285,17 @@ const PatientAppointments: React.FC<PatientAppointmentsProps> = ({ patientId, la
             if (result.success && (result.appointments || result.data)) {
               handleAppointmentsResponse(result);
               return; // Exit loop on success
+            } else if (Array.isArray(result)) {
+              // Handle case where API returns array directly
+              handleAppointmentsResponse({ success: true, appointments: result });
+              return;
             }
           } else if (response.status === 404) {
             console.log(`❌ Endpoint not found: ${endpoint}`);
             continue; // Try next endpoint
+          } else {
+            console.log(`❌ HTTP Error ${response.status} from ${endpoint}`);
+            continue;
           }
         } catch (endpointError) {
           console.error(`❌ Error with endpoint ${endpoint}:`, endpointError);
@@ -403,6 +427,23 @@ const PatientAppointments: React.FC<PatientAppointmentsProps> = ({ patientId, la
     }
   });
 
+  // Calculate counts for each filter type
+  const counts = {
+    all: appointments.length,
+    upcoming: appointments.filter(apt => {
+      if (!apt.scheduledDate) return false;
+      const now = new Date();
+      const appointmentDate = new Date(apt.scheduledDate);
+      return appointmentDate >= now && apt.status === 'scheduled';
+    }).length,
+    past: appointments.filter(apt => {
+      if (!apt.scheduledDate) return false;
+      const now = new Date();
+      const appointmentDate = new Date(apt.scheduledDate);
+      return appointmentDate < now || apt.status !== 'scheduled';
+    }).length
+  };
+
   // Debug logging
   useEffect(() => {
     console.log('📊 All appointments:', appointments);
@@ -456,7 +497,7 @@ const PatientAppointments: React.FC<PatientAppointmentsProps> = ({ patientId, la
             } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {filterType === 'all' ? t.all : filterType === 'upcoming' ? t.upcoming : t.past} 
-            ({filteredAppointments.length})
+            ({counts[filterType]})
           </button>
         ))}
       </div>
