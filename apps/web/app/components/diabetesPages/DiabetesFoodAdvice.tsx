@@ -144,7 +144,7 @@ const DiabeticFoodAdvice: React.FC<DiabeticFoodAdviceProps> = ({
       icon: Coffee, 
       color: "text-amber-600", 
       gradient: "bg-gradient-to-br from-amber-100 to-orange-100", 
-      image: "/images/breakfast.jpg" 
+      image: "/assets/breakfast.jpg" 
     },
     { 
       key: "lunch" as keyof Advice, 
@@ -152,7 +152,7 @@ const DiabeticFoodAdvice: React.FC<DiabeticFoodAdviceProps> = ({
       icon: Sun, 
       color: "text-green-600", 
       gradient: "bg-gradient-to-br from-green-100 to-emerald-100", 
-      image: "/images/lunch.jpg" 
+      image: "/assets/lunch.jpg" 
     },
     { 
       key: "supper" as keyof Advice, 
@@ -160,7 +160,7 @@ const DiabeticFoodAdvice: React.FC<DiabeticFoodAdviceProps> = ({
       icon: Moon, 
       color: "text-indigo-600", 
       gradient: "bg-gradient-to-br from-indigo-100 to-purple-100", 
-      image: "/images/dinner.jpg" 
+      image: "/assets/dinner.jpg" 
     }
   ];
 
