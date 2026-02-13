@@ -53,8 +53,11 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ patient }) => {
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
 
   useEffect(() => {
+    console.log('🔍 AppointmentsView component mounted with patient:', patient);
     if (patient) {
       fetchAppointments();
+    } else {
+      console.log('⚠️ No patient data available');
     }
   }, [patient]);
 
@@ -239,6 +242,21 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ patient }) => {
     return true; // 'all' filter
   });
 
+  // Calculate counts for each filter type
+  const counts = {
+    all: appointments.length,
+    upcoming: appointments.filter(apt => {
+      const now = new Date();
+      const appointmentDate = new Date(apt.scheduledDate);
+      return appointmentDate >= now && apt.status === 'scheduled';
+    }).length,
+    past: appointments.filter(apt => {
+      const now = new Date();
+      const appointmentDate = new Date(apt.scheduledDate);
+      return appointmentDate < now || apt.status !== 'scheduled';
+    }).length
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg border p-6">
@@ -296,9 +314,7 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ patient }) => {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              {filterType} ({filterType === 'all' ? appointments.length : 
-                           filterType === 'upcoming' ? appointments.filter(a => new Date(a.scheduledDate) >= new Date() && a.status === 'scheduled').length :
-                           appointments.filter(a => new Date(a.scheduledDate) < new Date() || a.status !== 'scheduled').length})
+              {filterType} ({counts[filterType]})
             </button>
           ))}
         </div>

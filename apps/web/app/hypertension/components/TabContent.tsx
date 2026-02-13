@@ -100,7 +100,7 @@ const TabContent: React.FC<TabContentProps> = ({
           </div>
           <div className={`${sectionCardClass} mt-6`}>
             <div className={sectionBodyClass}>
-              {patient && <PatientAppointments patientId={patient._id} />}
+              {patient && patient._id && <PatientAppointments patientId={patient._id} />}
             </div>
           </div>
           {/* <NearbyClinics /> */}

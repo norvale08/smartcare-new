@@ -2,6 +2,7 @@
 import express from "express";
 import Appointment, { IAppointment } from "../models/appointment";
 import { connectMongoDB } from "../lib/mongodb";
+import { verifyToken } from "../middleware/verifyToken";
 
 const router = express.Router();
 
@@ -358,6 +359,78 @@ router.get("/doctor/:doctorId/upcoming", async (req: express.Request, res: expre
     });
   } catch (err: any) {
     console.error("Get upcoming doctor appointments error:", err);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error", 
+      error: err.message 
+    });
+  }
+});
+
+// Get appointments for current user (patients)
+router.get("/my-appointments", verifyToken, async (req: express.Request, res: express.Response) => {
+  try {
+    // Get user from auth middleware (assuming it's set by auth middleware)
+    const user = (req as any).user;
+    console.log("=== MY APPOINTMENTS REQUEST ===");
+    console.log("User from auth:", user);
+    
+    if (!user) {
+      return res.status(401).json({ 
+        success: false,
+        message: "Authentication required" 
+      });
+    }
+
+    await connectMongoDB();
+
+    let appointments = [];
+    let count = 0;
+
+    // Check if user is a patient
+    if (user.role === 'patient' || user.userType === 'patient' || user.type === 'patient') {
+      console.log("🔍 Fetching appointments for patient:", user.id || user._id);
+      appointments = await Appointment.find({ patientId: user.id || user._id })
+        .populate('patientId', 'firstName lastName fullName email phoneNumber')
+        .populate('doctorId', 'firstName lastName fullName specialization')
+        .sort({ scheduledDate: -1 });
+      count = appointments.length;
+      console.log(`Found ${count} appointments for patient`);
+    } 
+    // Check if user is a doctor
+    else if (user.role === 'doctor' || user.userType === 'doctor' || user.type === 'doctor') {
+      console.log("👨‍⚕️ Fetching appointments for doctor:", user.id || user._id);
+      appointments = await Appointment.find({ doctorId: user.id || user._id })
+        .populate('patientId', 'firstName lastName fullName email phoneNumber condition')
+        .populate('doctorId', 'firstName lastName fullName specialization')
+        .sort({ scheduledDate: -1 });
+      count = appointments.length;
+      console.log(`Found ${count} appointments for doctor`);
+    } 
+    // Check if user is an admin
+    else if (user.role === 'admin' || user.userType === 'admin' || user.type === 'admin') {
+      console.log("👑 Fetching all appointments for admin");
+      appointments = await Appointment.find()
+        .populate('patientId', 'firstName lastName fullName email phoneNumber condition')
+        .populate('doctorId', 'firstName lastName fullName specialization hospital')
+        .sort({ scheduledDate: -1 });
+      count = appointments.length;
+      console.log(`Found ${count} total appointments for admin`);
+    } else {
+      console.log("❓ Unknown user role:", user.role || user.userType || user.type);
+      return res.status(403).json({ 
+        success: false,
+        message: "Access denied. Unknown user role." 
+      });
+    }
+
+    res.status(200).json({ 
+      success: true,
+      appointments,
+      count
+    });
+  } catch (err: any) {
+    console.error("Get my appointments error:", err);
     res.status(500).json({ 
       success: false,
       message: "Server error", 

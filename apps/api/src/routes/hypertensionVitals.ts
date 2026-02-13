@@ -33,10 +33,10 @@ router.post('/', verifyToken, async (req: AuthenticatedRequest, res: Response): 
 
     await vital.save();
     await NotificationService.checkVitalAlerts(
-  vital.toObject(), 
-  userId, 
-  userId // or patientId if you have it
-);
+      vital.toObject(), 
+      userId, 
+      userId // or patientId if you have it
+    );
 
     res.status(201).json({
       message: 'Vitals saved successfully',

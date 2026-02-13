@@ -43,10 +43,10 @@ const ExpiringMedicationsAlert: React.FC<ExpiringMedicationsAlertProps> = ({ onM
             <XCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
             <div className="flex-1">
               <h3 className="font-semibold text-red-900">
-                {data.categorized.expired} Medication{data.categorized.expired > 1 ? 's' : ''} Expired
+                {data.categorized.expired} Medication{data.categorized.expired > 1 ? 's' : ''} Completed
               </h3>
               <p className="text-sm text-red-700 mt-1">
-                Some prescriptions have expired. Click to view and renew if necessary.
+                Some prescriptions have been completed. Click to view and review.
               </p>
             </div>
           </div>
@@ -73,10 +73,10 @@ const ExpiringMedicationsAlert: React.FC<ExpiringMedicationsAlertProps> = ({ onM
             <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
             <div className="flex-1">
               <h3 className="font-semibold text-orange-900">
-                {data.categorized.expiringToday} Medication{data.categorized.expiringToday > 1 ? 's' : ''} Expiring Today
+                {data.categorized.expiringToday} Medication{data.categorized.expiringToday > 1 ? 's' : ''} Completed Today
               </h3>
               <p className="text-sm text-orange-700 mt-1">
-                These prescriptions expire today. Click to view and take immediate action.
+                These prescriptions have been completed today. Click to view and review.
               </p>
             </div>
           </div>
@@ -104,10 +104,10 @@ const ExpiringMedicationsAlert: React.FC<ExpiringMedicationsAlertProps> = ({ onM
             <Clock className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
             <div className="flex-1">
               <h3 className="font-semibold text-yellow-900">
-                {data.categorized.expiringIn3Days} Medication{data.categorized.expiringIn3Days > 1 ? 's' : ''} Expiring in 3 Days
+                {data.categorized.expiringIn3Days} Medication{data.categorized.expiringIn3Days > 1 ? 's' : ''} Completed in 3 Days
               </h3>
               <p className="text-sm text-yellow-700 mt-1">
-                These prescriptions will expire soon. Click to view and consider renewing them.
+                These prescriptions have been completed recently. Click to view and review.
               </p>
             </div>
           </div>
@@ -137,10 +137,10 @@ const ExpiringMedicationsAlert: React.FC<ExpiringMedicationsAlertProps> = ({ onM
             <Clock className="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
             <div className="flex-1">
               <h3 className="font-semibold text-blue-900">
-                {data.categorized.expiringIn7Days} Medication{data.categorized.expiringIn7Days > 1 ? 's' : ''} Expiring This Week
+                {data.categorized.expiringIn7Days} Medication{data.categorized.expiringIn7Days > 1 ? 's' : ''} Completed This Week
               </h3>
               <p className="text-sm text-blue-700 mt-1">
-                Plan ahead to renew these prescriptions. Click to view details.
+                These prescriptions have been completed this week. Click to view details.
               </p>
             </div>
           </div>
