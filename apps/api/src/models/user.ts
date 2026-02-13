@@ -45,6 +45,36 @@ const userSchema = new Schema(
       ref: "User", // Reference to admin who approved
       default: null,
     },
+    
+    // ✅ REJECTION FIELDS
+    isRejected: {
+      type: Boolean,
+      default: false,
+    },
+    rejectedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // Reference to admin who rejected
+      default: null,
+    },
+    rejectionReason: {
+      type: String,
+      default: null,
+    },
+    
+    // ✅ UNIQUE PATIENT ID (only for approved patients)
+    // IMPORTANT: This field should NOT exist for unapproved patients
+    // It is ONLY added when patient is approved
+    patientId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      // NO default value - field won't exist unless explicitly set
+    },
+    
     emailVerified: {
       type: Boolean,
       default: false,
@@ -280,12 +310,34 @@ const userSchema = new Schema(
 // Index for faster queries
 userSchema.index({ role: 1 });
 userSchema.index({ isApproved: 1 });
+userSchema.index({ isRejected: 1 });
+// ⚠️ patientId index removed from here - created as sparse unique in migration script
 userSchema.index({ assignedDoctor: 1 });
 userSchema.index({ 'assignedPatients': 1 });
 userSchema.index({ specialization: 1 });
 userSchema.index({ yearsOfExperience: -1 });
 userSchema.index({ invitationStatus: 1 });
 userSchema.index({ invitationExpires: 1 });
+
+// ✅ Helper function to generate unique patient ID
+async function generatePatientId(): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `PT${year}`;
+  
+  // Find the highest existing patient ID for this year
+  const lastPatient = await mongoose.model('User').findOne({
+    patientId: { $regex: `^${prefix}` }
+  }).sort({ patientId: -1 });
+  
+  let sequence = 1;
+  if (lastPatient && lastPatient.patientId) {
+    const lastSequence = parseInt(lastPatient.patientId.substring(prefix.length));
+    sequence = lastSequence + 1;
+  }
+  
+  // Format: PT2026-0001, PT2026-0002, etc.
+  return `${prefix}-${sequence.toString().padStart(4, '0')}`;
+}
 
 // Pre-save hook to ensure fullName is set
 userSchema.pre('save', function(next) {
@@ -313,6 +365,13 @@ userSchema.pre('save', function(next) {
   
   next();
 });
+
+// ✅ Static method to generate and assign patient ID
+userSchema.statics.generateAndAssignPatientId = async function(userId: string) {
+  const patientId = await generatePatientId();
+  await this.findByIdAndUpdate(userId, { patientId });
+  return patientId;
+};
 
 const User = models.User || model("User", userSchema);
 

@@ -11,10 +11,11 @@ const router = express.Router();
 // Apply admin authentication middleware to all routes
 router.use(authenticateAdmin);
 
-// ✅ APPROVAL ROUTES (NEW)
+// ✅ APPROVAL ROUTES
 router.get("/pending-approvals", approvalController.getPendingApprovals);
 router.post("/approve-patient/:patientId", approvalController.approvePatient);
-router.delete("/reject-patient/:patientId", approvalController.rejectPatient);
+router.delete("/reject-patient/:patientId", approvalController.rejectPatient); // DELETE method with body (Express supports this)
+router.get("/rejected-patients", approvalController.getRejectedPatients);
 router.get("/approval-statistics", approvalController.getApprovalStatistics);
 
 // Patient routes

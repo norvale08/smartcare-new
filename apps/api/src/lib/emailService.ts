@@ -183,11 +183,12 @@ class EmailService {
     });
   }
 
-  // ✅ NEW: Account approved with activation link email
+  // ✅ NEW: Account approved with activation link email (includes Patient ID)
   async sendAccountApprovedEmail(
     patientEmail: string,
     patientName: string,
-    approvalToken: string
+    approvalToken: string,
+    patientId: string
   ): Promise<boolean> {
     const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const activationLink = `${frontendBaseUrl}/activate-account?token=${approvalToken}&email=${encodeURIComponent(patientEmail)}`;
@@ -195,6 +196,7 @@ class EmailService {
     console.log('\n✅ Account Approved Email:');
     console.log('   Patient:', patientName);
     console.log('   Email:', patientEmail);
+    console.log('   Patient ID:', patientId);
     console.log('   Activation Link:', activationLink);
 
     const html = `
@@ -229,6 +231,14 @@ class EmailService {
             padding: 16px;
             margin: 20px 0;
             border-radius: 4px;
+          }
+          .patient-id-box {
+            background: #ede9fe;
+            border: 2px solid #8b5cf6;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+            text-align: center;
           }
           .link-text { 
             color: #6b7280; 
@@ -273,6 +283,14 @@ class EmailService {
               </p>
             </div>
             
+            <div class="patient-id-box">
+              <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Your Unique Patient ID</p>
+              <p style="margin: 0; font-size: 32px; font-weight: 700; color: #8b5cf6; letter-spacing: 1px;">${patientId}</p>
+              <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 13px;">
+                📋 Please save this ID - you'll need it for all medical records and appointments
+              </p>
+            </div>
+            
             <p>To complete your registration and access your account, please click the button below to activate your account:</p>
             
             <p style="text-align: center; margin: 30px 0;">
@@ -285,12 +303,12 @@ class EmailService {
             </div>
             
             <div class="warning">
-              <strong> Important:</strong> This activation link will expire in 7 days. 
+              <strong>⏰ Important:</strong> This activation link will expire in 7 days. 
               Please activate your account promptly to access SmartCare services.
             </div>
             
             <p style="background: #f0f9ff; padding: 15px; border-radius: 6px; border-left: 3px solid #0ea5e9;">
-              <strong> Security Note:</strong> This link is unique to your email address (${patientEmail}). 
+              <strong>🔒 Security Note:</strong> This link is unique to your email address (${patientEmail}). 
               Only you can use this link to activate your account.
             </p>
             
@@ -327,6 +345,9 @@ class EmailService {
 
       Great news! Your SmartCare account has been approved by our admin team.
 
+      YOUR UNIQUE PATIENT ID: ${patientId}
+      Please save this ID - you'll need it for all medical records and appointments.
+
       To complete your registration and access your account, please visit this link:
       ${activationLink}
 
@@ -350,6 +371,177 @@ class EmailService {
     return this.sendEmail({
       to: patientEmail,
       subject: '🎉 Your SmartCare Account is Approved - Activate Now!',
+      html,
+      text,
+    });
+  }
+
+  // ✅ NEW: Account rejected email with admin's custom reason
+  async sendAccountRejectedEmail(
+    patientEmail: string,
+    patientName: string,
+    rejectionReason: string,
+    adminName?: string
+  ): Promise<boolean> {
+    console.log('\n❌ Account Rejected Email:');
+    console.log('   Patient:', patientName);
+    console.log('   Email:', patientEmail);
+    console.log('   Rejection Reason:', rejectionReason);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { 
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
+            color: white; 
+            padding: 30px; 
+            text-align: center; 
+            border-radius: 8px 8px 0 0; 
+          }
+          .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; }
+          .rejection-box {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 16px;
+            margin: 20px 0;
+            border-radius: 4px;
+          }
+          .reason-box {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 6px;
+          }
+          .info-box {
+            background: #f0f9ff;
+            border-left: 4px solid #0ea5e9;
+            padding: 16px;
+            margin: 20px 0;
+            border-radius: 4px;
+          }
+          .footer { 
+            text-align: center; 
+            padding: 20px; 
+            color: #6b7280; 
+            font-size: 14px; 
+            background: #f3f4f6;
+            border-radius: 0 0 8px 8px;
+          }
+          .contact-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 16px;
+            margin: 20px 0;
+            border-radius: 4px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">🏥 SmartCare Healthcare</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.95; font-size: 16px;">Registration Status Update</p>
+          </div>
+          <div class="content">
+            <h2 style="color: #1f2937; margin-top: 0;">Registration Application Update</h2>
+            <p>Dear ${patientName},</p>
+            
+            <div class="rejection-box">
+              <p style="margin: 0; font-weight: 600; color: #dc2626;">
+                ❌ Application Status: Not Approved
+              </p>
+              <p style="margin: 10px 0 0 0; font-size: 14px; color: #7f1d1d;">
+                We regret to inform you that your SmartCare registration application has not been approved at this time.
+              </p>
+            </div>
+            
+            <div class="reason-box">
+              <h3 style="color: #1f2937; font-size: 16px; margin-top: 0;">📝 Reason for Decision:</h3>
+              <p style="margin: 10px 0; color: #374151; line-height: 1.8; white-space: pre-wrap;">${rejectionReason}</p>
+              ${adminName ? `<p style="margin: 15px 0 0 0; color: #6b7280; font-size: 13px; font-style: italic;">
+                - ${adminName}, Healthcare Administrator
+              </p>` : ''}
+            </div>
+            
+            <div class="info-box">
+              <h3 style="color: #0284c7; font-size: 16px; margin-top: 0;">What You Can Do:</h3>
+              <ul style="margin: 10px 0; padding-left: 20px; font-size: 14px;">
+                <li style="margin-bottom: 8px;">Review the reason provided above carefully</li>
+                <li style="margin-bottom: 8px;">Contact our support team if you need clarification</li>
+                <li style="margin-bottom: 8px;">If the issue can be resolved, you may reapply in the future</li>
+                <li>Ensure all required documentation is complete and accurate</li>
+              </ul>
+            </div>
+            
+            <div class="contact-box">
+              <p style="margin: 0; font-weight: 600;">
+                <span style="color: #f59e0b;">📞 Need Help?</span>
+              </p>
+              <p style="margin: 10px 0 0 0; font-size: 14px;">
+                If you have questions about this decision or would like to discuss your application, 
+                please contact our support team. We're here to help you understand the decision and explore your options.
+              </p>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px; margin-top: 25px;">
+              We appreciate your interest in SmartCare Healthcare System and wish you the best in your healthcare journey.
+            </p>
+            
+            <p style="margin-top: 30px;">
+              Sincerely,<br>
+              <strong>SmartCare Healthcare Team</strong>
+            </p>
+          </div>
+          <div class="footer">
+            <p style="margin: 0;">&copy; ${new Date().getFullYear()} SmartCare Healthcare. All rights reserved.</p>
+            <p style="margin: 5px 0 0 0; font-size: 12px;">
+              For support inquiries: support@smartcare.com | Phone: 1-800-SMART-CARE
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+      SmartCare Healthcare - Registration Application Update
+
+      Dear ${patientName},
+
+      APPLICATION STATUS: Not Approved
+
+      We regret to inform you that your SmartCare registration application has not been approved at this time.
+
+      REASON FOR DECISION:
+      ${rejectionReason}
+      ${adminName ? `\n- ${adminName}, Healthcare Administrator` : ''}
+
+      WHAT YOU CAN DO:
+      • Review the reason provided above carefully
+      • Contact our support team if you need clarification
+      • If the issue can be resolved, you may reapply in the future
+      • Ensure all required documentation is complete and accurate
+
+      NEED HELP?
+      If you have questions about this decision or would like to discuss your application, 
+      please contact our support team. We're here to help you understand the decision and explore your options.
+
+      We appreciate your interest in SmartCare Healthcare System and wish you the best in your healthcare journey.
+
+      Sincerely,
+      SmartCare Healthcare Team
+
+      For support: support@smartcare.com | Phone: 1-800-SMART-CARE
+    `;
+
+    return this.sendEmail({
+      to: patientEmail,
+      subject: '❌ SmartCare Registration Application - Decision Notice',
       html,
       text,
     });

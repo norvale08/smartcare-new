@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   HeartPulse, Users, Search, Phone, MessageSquare, Calendar,
   Stethoscope, AlertTriangle, CheckCircle, Clock, Filter, Activity, Pill, PlusCircle,
-  TrendingUp, Shield, Bell, ArrowLeft, X, User
+  TrendingUp, Shield, Bell, ArrowLeft, X, User, IdCard
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button, Input, Card, CardHeader, CardContent, CardTitle } from "@repo/ui";
@@ -22,6 +22,7 @@ import AssignedPatientsGrid from './components/AssignedPatientsGrid';
 // NEW: Import expiring medications components
 import ExpiringMedicationsAlert from './components/ExpiringMedicationsAlert';
 import ExpiringMedicationsDashboard from "./components/ExpiringMedicationDashboard";
+
 interface Patient {
   id: string;
   userId?: string;
@@ -39,6 +40,7 @@ interface Patient {
   status: "stable" | "warning" | "critical";
   phoneNumber?: string;
   email?: string;
+  patientId?: string; // ✅ ADDED: Patient ID field
   allergies?: Array<{
     allergyName: string;
     severity: string;
@@ -160,6 +162,8 @@ const CaretakerDashboard = () => {
 
       if (Array.isArray(data)) {
         patientsData = data;
+      } else if (data.assignedPatients) {
+        patientsData = data.assignedPatients;
       } else if (data.patients) {
         patientsData = data.patients;
       } else if (data.data) {
@@ -169,7 +173,7 @@ const CaretakerDashboard = () => {
       setPatients(patientsData);
 
     } catch (error: any) {
-      console.error("Failed to fetch assigned patients:", error);
+      console.error("❌ Failed to fetch assigned patients:", error);
       setError(error.message);
     } finally {
       setPatientsLoading(false);
@@ -642,6 +646,21 @@ const CaretakerDashboard = () => {
                               <h4 className="font-semibold text-gray-900 truncate">{patient.fullName}</h4>
                               {getStatusIcon(patient.status)}
                             </div>
+                            
+                            {/* ✅ PATIENT ID DISPLAY - ALWAYS VISIBLE */}
+                            <div className="flex items-center gap-1 mb-1">
+                              <IdCard className="w-3 h-3 text-emerald-600" />
+                              {patient.patientId ? (
+                                <span className="text-[10px] font-mono font-semibold text-emerald-700">
+                                  {patient.patientId}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-gray-400 italic">
+                                  Not Assigned
+                                </span>
+                              )}
+                            </div>
+                            
                             <div className="flex items-center justify-between text-gray-600">
                               <span className="truncate">{patient.age}y • {patient.gender}</span>
                               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${getConditionColor(patient.condition)}`}>
@@ -719,8 +738,23 @@ const CaretakerDashboard = () => {
                   <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center">
                     <User className="w-6 h-6 text-white" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h3 className="font-semibold text-gray-900">{selectedPatient.fullName}</h3>
+                    
+                    {/* ✅ PATIENT ID DISPLAY - ALWAYS VISIBLE */}
+                    <div className="flex items-center space-x-1 mt-0.5">
+                      <IdCard className="w-3 h-3 text-emerald-600" />
+                      {selectedPatient.patientId ? (
+                        <span className="text-xs font-mono font-semibold text-emerald-700">
+                          {selectedPatient.patientId}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">
+                          Not Assigned
+                        </span>
+                      )}
+                    </div>
+                    
                     <p className="text-xs text-gray-600">{selectedPatient.age}y • {selectedPatient.gender}</p>
                     <div className="flex items-center space-x-2 mt-1">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getConditionColor(selectedPatient.condition)}`}>
