@@ -17,7 +17,8 @@ import {
   Languages,
   LogOut,
   ChevronDown,
-  MessageSquare
+  MessageSquare,
+  IdCard
 } from "lucide-react";
 
 interface UserProfile {
@@ -38,6 +39,7 @@ interface UserProfile {
   allergies?: string;
   surgeries?: string;
   age?: number;
+  patientId?: string;
 }
 
 interface UserProfileHeaderProps {
@@ -283,6 +285,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
       relative: "Relative",
       familyChat: "Family Messaging",
       familyDescription: "Stay in touch with your relatives and caregivers",
+      patientId: "Patient ID"
     },
     sw: {
       profile: "Wasifu",
@@ -303,7 +306,8 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
       healthcareTeam: "Timu yako ya afya ni muhimu kwa huduma kamili",
       relative: "Jamaa",
       familyChat: "Ujumbe wa Familia",
-      familyDescription: "Wasiliana na jamaa na walezi wako"
+      familyDescription: "Wasiliana na jamaa na walezi wako",
+      patientId: "Nambari ya Mgonjwa"
     }
   };
 
@@ -457,6 +461,15 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                     </span>
                   )}
                 </div>
+                {/* Patient ID on mobile - below name */}
+                {userProfile.patientId && (
+                  <div className="flex items-center space-x-1 mt-0.5">
+                    <IdCard className="w-3 h-3 text-blue-600" />
+                    <span className="text-[10px] text-blue-600 font-medium">
+                      {userProfile.patientId}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Desktop Layout - COMPACT */}
@@ -465,6 +478,13 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                   <h1 className="text-base font-semibold text-gray-900">
                     {userProfile.fullName}
                   </h1>
+                  {/* Patient ID Badge */}
+                  {userProfile.patientId && (
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-mono font-semibold rounded-md flex items-center space-x-1 border border-blue-200">
+                      <IdCard className="w-3 h-3" />
+                      <span>{userProfile.patientId}</span>
+                    </span>
+                  )}
                   {healthConditions.length > 0 && (
                     <div className="flex space-x-1.5">
                       {healthConditions.slice(0, 2).map((condition) => (

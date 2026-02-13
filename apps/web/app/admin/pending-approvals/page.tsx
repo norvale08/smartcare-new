@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@repo/ui';
 import { toast } from 'react-hot-toast';
 import CustomToaster from '../../components/ui/CustomToaster';
-import { FaUserClock, FaCheckCircle, FaTimesCircle, FaEnvelope, FaPhone } from 'react-icons/fa';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { FaUserClock, FaCheckCircle, FaTimesCircle, FaEnvelope, FaPhone, FaIdCard } from 'react-icons/fa';
+import { Loader2, RefreshCw, Copy, Check } from 'lucide-react';
 
 interface PendingPatient {
   _id: string;
@@ -16,16 +16,31 @@ interface PendingPatient {
   createdAt: string;
 }
 
+interface ApprovalResult {
+  success: boolean;
+  message?: string;
+  emailSent?: boolean;
+  data?: {
+    patientId: string;
+    uniquePatientId: string;
+    email: string;
+    name: string;
+    approvedAt: string;
+  };
+}
+
 const PendingApprovalsPage = () => {
   const [pendingPatients, setPendingPatients] = useState<PendingPatient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [statistics, setStatistics] = useState({
     totalPatients: 0,
     approvedPatients: 0,
     pendingApprovals: 0,
     approvalRate: '0'
   });
+  const [lastApprovedPatientId, setLastApprovedPatientId] = useState<string | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -83,6 +98,17 @@ const PendingApprovalsPage = () => {
     fetchStatistics();
   }, []);
 
+  const copyToClipboard = async (text: string, patientId: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(patientId);
+      setTimeout(() => setCopiedId(null), 2000);
+      toast.success('Patient ID copied to clipboard!');
+    } catch (err) {
+      toast.error('Failed to copy Patient ID');
+    }
+  };
+
   const handleApprove = async (patientId: string, patientName: string) => {
     if (!confirm(`Are you sure you want to approve ${patientName}?`)) {
       return;
@@ -100,10 +126,48 @@ const PendingApprovalsPage = () => {
         },
       });
 
-      const result = await response.json();
+      const result: ApprovalResult = await response.json();
 
       if (result.success) {
-        toast.success(`${patientName} approved! Activation email sent.`);
+        const uniquePatientId = result.data?.uniquePatientId;
+        
+        // Store the approved patient ID for display
+        setLastApprovedPatientId(uniquePatientId || null);
+        
+        // Show success message with patient ID
+        if (uniquePatientId) {
+          toast.success(
+            (t) => (
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900">{patientName} approved!</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <FaIdCard className="text-purple-600" />
+                    <span className="text-sm font-mono text-purple-700">{uniquePatientId}</span>
+                    <button
+                      onClick={() => copyToClipboard(uniquePatientId, patientId)}
+                      className="text-purple-600 hover:text-purple-800 transition-colors"
+                    >
+                      {copiedId === patientId ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">Activation email sent</p>
+                </div>
+              </div>
+            ),
+            {
+              duration: 6000,
+              icon: '✅',
+            }
+          );
+        } else {
+          toast.success(`${patientName} approved! Activation email sent.`);
+        }
+        
         // Remove from pending list
         setPendingPatients(prev => prev.filter(p => p._id !== patientId));
         // Refresh statistics

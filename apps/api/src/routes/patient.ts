@@ -1,4 +1,4 @@
-// COMPLETE FIXED patient.ts router with proper ObjectId handling
+// COMPLETE FIXED patient.ts router with proper ObjectId handling and patientId
 
 import express from "express";
 import jwt from "jsonwebtoken";
@@ -60,8 +60,20 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
     // Try to get Patient document with ObjectId
     let patient = await Patient.findOne({ userId: userIdObj }).sort({ createdAt: -1 });
     
+    // ✅ ALWAYS fetch User to get patientId
+    const user = await User.findById(userIdObj);
+    
+    if (!user) {
+      console.log("❌ User not found");
+      return res.status(404).json({ 
+        success: false,
+        message: "User not found",
+        code: "USER_NOT_FOUND"
+      });
+    }
+
     if (patient) {
-      
+      console.log("✅ Returning Patient data with patientId:", user.patientId);
       return res.status(200).json({ 
         success: true,
         data: {
@@ -84,28 +96,17 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
           allergies: patient.allergies,
           surgeries: patient.surgeries,
           location: patient.location,
-          createdAt: patient.createdAt
+          createdAt: patient.createdAt,
+          patientId: user.patientId || null // ✅ ADD patientId from User
         }
       });
     }
 
-    // If no Patient document, try to get data from User
-    
-    const user = await User.findById(userIdObj);
-    
-    if (!user) {
-      
-      return res.status(404).json({ 
-        success: false,
-        message: "User not found",
-        code: "USER_NOT_FOUND"
-      });
-    }
-
+    // If no Patient document exists
 
     // Check if user has profile data
     if (!user.profileCompleted) {
-      
+      console.log("❌ Profile not completed");
       return res.status(404).json({ 
         success: false,
         message: "Profile not completed. Please complete your profile.",
@@ -113,7 +114,7 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
       });
     }
 
-   
+    console.log("✅ Returning User data with patientId:", user.patientId);
     
     // Return User data in Patient format
     return res.status(200).json({ 
@@ -138,7 +139,8 @@ router.get("/me", authenticateUser, async (req: any, res: any) => {
         allergies: user.allergies || "",
         surgeries: user.surgeries || "",
         location: null,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        patientId: user.patientId || null // ✅ ADD patientId from User
       },
       source: "user"
     });
@@ -194,7 +196,8 @@ router.get("/debug", authenticateUser, async (req: any, res: any) => {
           height: user.height,
           diabetes: user.diabetes,
           hypertension: user.hypertension,
-          cardiovascular: user.cardiovascular
+          cardiovascular: user.cardiovascular,
+          patientId: user.patientId // ✅ ADD patientId to debug
         } : null
       }
     });

@@ -19,10 +19,10 @@ const authenticateUser = (req: any, res: any, next: any) => {
     req.userEmail = decoded.email;
     req.userRole = decoded.role;
 
-    
+    console.log("✅ Authenticated user:", decoded.userId, "Role:", decoded.role);
     next();
   } catch (error) {
-    console.error(" Token verification failed:", error);
+    console.error("❌ Token verification failed:", error);
     return res.status(401).json({ message: "Invalid token" });
   }
 };
@@ -36,7 +36,8 @@ router.get("/pending-requests", authenticateUser, async (req: any, res: any) => 
       return res.status(403).json({ message: "Only doctors can access this endpoint" });
     }
 
-    
+    console.log("=== FETCHING PENDING REQUESTS ===");
+    console.log("Doctor ID:", doctorId);
 
     await connectMongoDB();
 
@@ -47,7 +48,7 @@ router.get("/pending-requests", authenticateUser, async (req: any, res: any) => 
       return res.status(404).json({ message: "Doctor not found" });
     }
 
-   
+    console.log("Doctor pendingRequests:", doctor.pendingRequests);
 
     // Get pending requests that have status 'pending'
     const pendingRequests = (doctor.pendingRequests || [])
@@ -60,15 +61,16 @@ router.get("/pending-requests", authenticateUser, async (req: any, res: any) => 
         status: request.status
       }));
 
-   
-    res.status(200).json({
+    console.log(`✅ Found ${pendingRequests.length} pending requests for doctor ${doctorId}`);
+
+    return res.status(200).json({
       success: true,
       pendingRequests: pendingRequests
     });
 
   } catch (error: any) {
     console.error('Error fetching pending requests:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       message: 'Server error', 
       error: error.message 
     });
@@ -89,7 +91,9 @@ router.post("/accept-request", authenticateUser, async (req: any, res: any) => {
       return res.status(400).json({ message: "Patient ID is required" });
     }
 
-   
+    console.log("=== ACCEPTING PATIENT REQUEST ===");
+    console.log("Doctor ID:", doctorId);
+    console.log("Patient ID:", patientId);
 
     await connectMongoDB();
 
@@ -149,8 +153,10 @@ router.post("/accept-request", authenticateUser, async (req: any, res: any) => {
 
     await patient.save();
 
-    
-    res.status(200).json({
+    console.log("✅ Successfully accepted patient request");
+    console.log(`Doctor ${doctorId} now has patient ${patientId} assigned`);
+
+    return res.status(200).json({
       success: true,
       message: "Patient request accepted successfully",
       doctor: {
@@ -166,7 +172,7 @@ router.post("/accept-request", authenticateUser, async (req: any, res: any) => {
 
   } catch (error: any) {
     console.error('Error accepting request:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       message: 'Server error', 
       error: error.message 
     });
@@ -187,6 +193,9 @@ router.post("/reject-request", authenticateUser, async (req: any, res: any) => {
       return res.status(400).json({ message: "Patient ID is required" });
     }
 
+    console.log("=== REJECTING PATIENT REQUEST ===");
+    console.log("Doctor ID:", doctorId);
+    console.log("Patient ID:", patientId);
 
     await connectMongoDB();
 
@@ -207,22 +216,23 @@ router.post("/reject-request", authenticateUser, async (req: any, res: any) => {
       await doctor.save();
     }
 
-  
-    res.status(200).json({
+    console.log("✅ Successfully rejected patient request");
+
+    return res.status(200).json({
       success: true,
       message: "Patient request rejected"
     });
 
   } catch (error: any) {
     console.error('Error rejecting request:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       message: 'Server error', 
       error: error.message 
     });
   }
 });
 
-// GET /api/doctor/assigned-patients - Get all assigned patients for this doctor
+// ✅ FIXED: GET /api/doctor/assigned-patients - Get all assigned patients for this doctor
 router.get("/assigned-patients", authenticateUser, async (req: any, res: any) => {
   try {
     const doctorId = req.userId;
@@ -231,20 +241,27 @@ router.get("/assigned-patients", authenticateUser, async (req: any, res: any) =>
       return res.status(403).json({ message: "Only doctors can access this endpoint" });
     }
 
+    console.log("=== FETCHING ASSIGNED PATIENTS ===");
+    console.log("Doctor ID:", doctorId);
+
     await connectMongoDB();
 
-    // Find the doctor and populate assigned patients
-    const doctor = await User.findById(doctorId).populate('assignedPatients');
+    // ✅ FIXED: Explicitly select fields including patientId and isApproved
+    const doctor = await User.findById(doctorId).populate({
+      path: 'assignedPatients',
+      select: 'firstName lastName fullName email phoneNumber dob gender diabetes hypertension cardiovascular lastVisit updatedAt patientId isApproved age'
+    });
 
     if (!doctor || doctor.role !== 'doctor') {
       return res.status(404).json({ message: "Doctor not found" });
     }
 
-    
+    console.log(`✅ Found doctor with ${doctor.assignedPatients?.length || 0} assigned patients`);
 
-    // Format assigned patients
+    // ✅ FIXED: Added userId, patientId, and isApproved to response
     const assignedPatients = (doctor.assignedPatients || []).map((patient: any) => ({
       id: patient._id.toString(),
+      userId: patient._id.toString(), // ✅ Added for consistency
       fullName: patient.fullName || `${patient.firstName} ${patient.lastName}`,
       age: patient.age || calculateAge(patient.dob),
       gender: patient.gender || 'Not specified',
@@ -252,16 +269,33 @@ router.get("/assigned-patients", authenticateUser, async (req: any, res: any) =>
       lastVisit: patient.lastVisit || patient.updatedAt || new Date().toISOString(),
       status: determinePatientStatus(patient),
       phoneNumber: patient.phoneNumber,
-      email: patient.email
+      email: patient.email,
+      patientId: patient.patientId || null, // ✅ CRITICAL: Added patientId
+      isApproved: patient.isApproved || false // ✅ Added approval status
     }));
 
+    // ✅ Added comprehensive debug logging
+    console.log(`✅ Returning ${assignedPatients.length} assigned patients`);
     
+    if (assignedPatients.length > 0) {
+      console.log('📋 Sample patient data:', {
+        fullName: assignedPatients[0].fullName,
+        patientId: assignedPatients[0].patientId,
+        email: assignedPatients[0].email,
+        isApproved: assignedPatients[0].isApproved
+      });
+      
+      // Log patientId for each patient
+      assignedPatients.forEach((p: any, index: number) => {
+        console.log(`  ${index + 1}. ${p.fullName} - patientId: ${p.patientId || 'NULL'}`);
+      });
+    }
 
-    res.status(200).json(assignedPatients);
+    return res.status(200).json(assignedPatients); // ✅ Added return
 
   } catch (error: any) {
-    console.error('Error fetching assigned patients:', error);
-    res.status(500).json({ 
+    console.error('❌ Error fetching assigned patients:', error);
+    return res.status(500).json({ 
       message: 'Server error', 
       error: error.message 
     });
@@ -292,9 +326,10 @@ function getPatientCondition(patient: any): "hypertension" | "diabetes" | "both"
   return "hypertension"; // default
 }
 
-
+// Helper function to determine patient status based on recent vitals
 function determinePatientStatus(patient: any): 'stable' | 'warning' | 'critical' {
-  
+  // This is a simplified status determination
+  // In production, you'd check recent vitals from the database
   return 'stable';
 }
 

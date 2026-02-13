@@ -53,6 +53,7 @@ router.get("/:id/pending-requests", async (req: express.Request, res: express.Re
  * GET /:id/assigned-patients
  * ==============================
  * Fetch all assigned patients for a given doctor.
+ * ✅ UPDATED: Now includes patientId from User model
  */
 router.get("/:id/assigned-patients", async (req: express.Request, res: express.Response) => {
   try {
@@ -60,7 +61,11 @@ router.get("/:id/assigned-patients", async (req: express.Request, res: express.R
 
     await connectMongoDB();
 
-    const doctor = await User.findById(id).populate("assignedPatients");
+    // ✅ UPDATED: Make sure to select patientId field when populating
+    const doctor = await User.findById(id).populate({
+      path: "assignedPatients",
+      select: "firstName lastName fullName email phoneNumber dob gender diabetes hypertension cardiovascular lastVisit patientId isApproved" // ✅ Added patientId
+    });
 
     if (!doctor) {
       return res.status(404).json({ message: "Doctor not found" });
@@ -70,18 +75,29 @@ router.get("/:id/assigned-patients", async (req: express.Request, res: express.R
       return res.status(400).json({ message: "User is not a doctor" });
     }
 
-    const assignedPatients = (doctor.assignedPatients || []).map((patient: any) => ({
-      id: patient._id.toString(),
-      userId: patient._id.toString(), 
-      fullName: patient.fullName || `${patient.firstName || ""} ${patient.lastName || ""}`.trim(),
-      age: patient.age || calculateAge(patient.dob),
-      gender: patient.gender,
-      condition: getPatientCondition(patient),
-      lastVisit: patient.lastVisit || new Date().toISOString(),
-      status: "stable",
-      phoneNumber: patient.phoneNumber,
-      email: patient.email,
-    }));
+    const assignedPatients = (doctor.assignedPatients || []).map((patient: any) => {
+      const patientData = {
+        id: patient._id.toString(),
+        userId: patient._id.toString(), 
+        fullName: patient.fullName || `${patient.firstName || ""} ${patient.lastName || ""}`.trim(),
+        age: patient.age || calculateAge(patient.dob),
+        gender: patient.gender,
+        condition: getPatientCondition(patient),
+        lastVisit: patient.lastVisit || new Date().toISOString(),
+        status: "stable",
+        phoneNumber: patient.phoneNumber,
+        email: patient.email,
+        patientId: patient.patientId || null, // ✅ ADDED: Include patientId from User model
+        isApproved: patient.isApproved || false, // ✅ ADDED: Also include approval status
+      };
+
+      // ✅ DEBUG LOG: Verify patientId is included
+      console.log(`📋 Patient: ${patientData.fullName} - patientId: ${patientData.patientId || 'NULL'}`);
+
+      return patientData;
+    });
+
+    console.log(`✅ Returning ${assignedPatients.length} assigned patients`);
 
     res.status(200).json({
       assignedPatients,

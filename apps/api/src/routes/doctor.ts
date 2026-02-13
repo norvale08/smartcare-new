@@ -84,8 +84,8 @@ router.post("/create", async (req: express.Request, res: express.Response) => {
       // Initialize arrays for patient management
       pendingRequests: [],
       assignedPatients: [],
-      profileCompleted: false, // Add this field
-      isFirstLogin: true // Add this field
+      profileCompleted: false,
+      isFirstLogin: true
     });
 
     console.log("Doctor created successfully:", doctor._id);
@@ -519,7 +519,7 @@ router.post("/test-gmail-connection", async (req: express.Request, res: express.
     }
 
     // Test direct email sending - use the SMTP_USER as recipient
-    const testEmail = process.env.SMTP_USER; // This is now guaranteed to be a string
+    const testEmail = process.env.SMTP_USER;
     const testToken = "test-token-" + Date.now();
     const testName = "Test Doctor";
 
@@ -672,14 +672,20 @@ function getPatientCondition(patient: any): "hypertension" | "diabetes" | "both"
   return "hypertension"; // default
 }
 
-// Get doctor's assigned patients
+// ✅ FIXED: Get doctor's assigned patients - NOW INCLUDES patientId
 router.get("/:id/assigned-patients", async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
     
     await connectMongoDB();
     
-    const doctor = await User.findById(id).populate('assignedPatients');
+    console.log('🔍 Fetching assigned patients for doctor:', id);
+    
+    // ✅ CRITICAL FIX: Explicitly select patientId field when populating
+    const doctor = await User.findById(id).populate({
+      path: 'assignedPatients',
+      select: 'firstName lastName fullName email phoneNumber dob gender diabetes hypertension cardiovascular lastVisit patientId isApproved'
+    });
     
     if (!doctor) {
       return res.status(404).json({ message: "Doctor not found" });
@@ -689,24 +695,38 @@ router.get("/:id/assigned-patients", async (req: express.Request, res: express.R
       return res.status(400).json({ message: "User is not a doctor" });
     }
     
-    const assignedPatients = (doctor.assignedPatients || []).map((patient: any) => ({
-      id: patient._id.toString(),
-      fullName: patient.fullName || `${patient.firstName} ${patient.lastName}`,
-      age: patient.age || calculateAge(patient.dob),
-      gender: patient.gender,
-      condition: getPatientCondition(patient),
-      lastVisit: patient.lastVisit || new Date().toISOString(),
-      status: 'stable',
-      phoneNumber: patient.phoneNumber,
-      email: patient.email
-    }));
+    console.log(`✅ Found doctor with ${doctor.assignedPatients?.length || 0} assigned patients`);
+    
+    const assignedPatients = (doctor.assignedPatients || []).map((patient: any) => {
+      const patientData = {
+        id: patient._id.toString(),
+        userId: patient._id.toString(),
+        fullName: patient.fullName || `${patient.firstName} ${patient.lastName}`,
+        age: patient.age || calculateAge(patient.dob),
+        gender: patient.gender || 'Not specified',
+        condition: getPatientCondition(patient),
+        lastVisit: patient.lastVisit || new Date().toISOString(),
+        status: 'stable',
+        phoneNumber: patient.phoneNumber,
+        email: patient.email,
+        patientId: patient.patientId || null, // ✅ CRITICAL: Include patientId from User model
+        isApproved: patient.isApproved || false,
+      };
+      
+      // ✅ Debug log to verify patientId is included
+      console.log(`📋 Patient: ${patientData.fullName} - patientId: ${patientData.patientId || 'NULL'}`);
+      
+      return patientData;
+    });
+    
+    console.log(`✅ Returning ${assignedPatients.length} patients to frontend`);
     
     res.status(200).json({ 
       assignedPatients,
       count: assignedPatients.length
     });
   } catch (err: any) {
-    console.error("Get assigned patients error:", err);
+    console.error("❌ Get assigned patients error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });

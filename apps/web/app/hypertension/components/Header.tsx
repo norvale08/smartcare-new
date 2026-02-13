@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react"; // Added useState import
-import { HeartPulse, Globe, LogOut } from "lucide-react";
+import React, { useState } from "react";
+import { HeartPulse, Globe, LogOut, IdCard } from "lucide-react";
 import { signOut } from "next-auth/react";
-import { useRouter } from "next/navigation"; // Added useRouter
+import { useRouter } from "next/navigation";
 import { Translations } from "../../../lib/hypertension/useTranslation";
 
 interface HeaderProps {
@@ -14,15 +14,17 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient }) => {
-  const [loggingOut, setLoggingOut] = useState(false); // Added loggingOut state
-  const router = useRouter(); // Added router
+  const [loggingOut, setLoggingOut] = useState(false);
+  const router = useRouter();
   
   const availableLanguages = [
     { code: "en-US", name: "English", nativeName: "English" },
     { code: "sw-TZ", name: "Swahili", nativeName: "Kiswahili" },
   ];
-  const userName = patient?.fullName || "Sarah ";
+  
+  const userName = patient?.fullName || "Sarah";
   const userInitials = userName.slice(0, 2).toUpperCase();
+  const patientId = patient?.patientId; // ✅ Extract patientId from patient data
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -66,13 +68,36 @@ const Header: React.FC<HeaderProps> = ({ t, language, onLanguageChange, patient 
           </div>
         </div>
         
+        {/* ✅ Patient ID Badge - only show if patientId exists */}
+        {patientId && (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg">
+            <IdCard className="text-white" size={16} />
+            <span className="text-sm font-mono font-semibold text-white">
+              {patientId}
+            </span>
+          </div>
+        )}
+        
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gray-100 border border-gray-300 rounded-full flex items-center justify-center">
             <span className="text-gray-800 font-semibold">{userInitials}</span>
           </div>
+
+          <div className="flex flex-col>
+            <span className="text-sm font-medium text-white">
+              {userName}
+            </span>
+            {/* ✅ Alternative: Show Patient ID below name on mobile/smaller screens */}
+            {patientId && (
+              <span className="text-xs font-mono text-white/80 sm:hidden">
+                {patientId}
+              </span>
+            )}
+          </div>
           <span className="text-sm font-medium text-gray-800">
             {userName}
           </span>
+
         </div>
 
         <button
