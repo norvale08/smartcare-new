@@ -69,8 +69,8 @@ const HeaderMedicationAlerts: React.FC<HeaderMedicationAlertsProps> = ({ onMedic
           <div className="flex items-center space-x-3">
             <AlertTriangle className="w-6 h-6 text-red-600" />
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Expiring Medications</h2>
-              <p className="text-sm text-gray-600">Detailed view of all expiring medications</p>
+              <h2 className="text-xl font-semibold text-gray-900">Completed Medications</h2>
+              <p className="text-sm text-gray-600">Detailed view of all completed medications</p>
             </div>
           </div>
           <button
@@ -87,7 +87,7 @@ const HeaderMedicationAlerts: React.FC<HeaderMedicationAlertsProps> = ({ onMedic
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-900">Expired</p>
+                  <p className="text-sm font-medium text-red-900">Completed</p>
                   <p className="text-2xl font-bold text-red-600">{expiredCount}</p>
                 </div>
                 <XCircle className="w-8 h-8 text-red-600" />
@@ -127,7 +127,7 @@ const HeaderMedicationAlerts: React.FC<HeaderMedicationAlertsProps> = ({ onMedic
 
           {/* Detailed List */}
           <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">All Expiring Medications</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">All Completed Medications</h3>
             <div className="space-y-3 max-h-60 overflow-y-auto">
               {data.medications.map((med) => {
                 const daysUntilExpiry = med.endDate 
@@ -208,7 +208,7 @@ const HeaderMedicationAlerts: React.FC<HeaderMedicationAlertsProps> = ({ onMedic
               Medication Alerts
             </p>
             <p className="text-xs text-red-700">
-              {totalUrgent > 0 ? `${totalUrgent} urgent` : `${weekCount} expiring soon`}
+              {totalUrgent > 0 ? `${totalUrgent} urgent` : `${weekCount} completed soon`}
             </p>
           </div>
         </div>
@@ -252,7 +252,7 @@ const HeaderMedicationAlerts: React.FC<HeaderMedicationAlertsProps> = ({ onMedic
                   <div className="flex items-center space-x-3">
                     <XCircle className="w-5 h-5 text-red-600" />
                     <div>
-                      <p className="font-medium text-red-900">Expired Medications</p>
+                      <p className="font-medium text-red-900">Completed Medications</p>
                       <p className="text-sm text-red-700">{expiredCount} medication{expiredCount > 1 ? 's' : ''}</p>
                     </div>
                   </div>
@@ -279,7 +279,7 @@ const HeaderMedicationAlerts: React.FC<HeaderMedicationAlertsProps> = ({ onMedic
                   <div className="flex items-center space-x-3">
                     <AlertTriangle className="w-5 h-5 text-orange-600" />
                     <div>
-                      <p className="font-medium text-orange-900">Expiring Today</p>
+                      <p className="font-medium text-orange-900">Completed Today</p>
                       <p className="text-sm text-orange-700">{todayCount} medication{todayCount > 1 ? 's' : ''}</p>
                     </div>
                   </div>
@@ -307,7 +307,7 @@ const HeaderMedicationAlerts: React.FC<HeaderMedicationAlertsProps> = ({ onMedic
                   <div className="flex items-center space-x-3">
                     <Clock className="w-5 h-5 text-yellow-600" />
                     <div>
-                      <p className="font-medium text-yellow-900">Expiring in 3 Days</p>
+                      <p className="font-medium text-yellow-900">Completing in 3 Days</p>
                       <p className="text-sm text-yellow-700">{soonCount} medication{soonCount > 1 ? 's' : ''}</p>
                     </div>
                   </div>
@@ -337,7 +337,7 @@ const HeaderMedicationAlerts: React.FC<HeaderMedicationAlertsProps> = ({ onMedic
                   <div className="flex items-center space-x-3">
                     <Clock className="w-5 h-5 text-blue-500" />
                     <div>
-                      <p className="font-medium text-blue-900">Expiring This Week</p>
+                      <p className="font-medium text-blue-900">Completing This Week</p>
                       <p className="text-sm text-blue-700">{weekCount} medication{weekCount > 1 ? 's' : ''}</p>
                     </div>
                   </div>
