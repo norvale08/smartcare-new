@@ -3,11 +3,9 @@
 import React, { useState, useEffect } from "react";
 import {
   HeartPulse, Users, Search, Phone, MessageSquare, Calendar,
-  Stethoscope, AlertTriangle, CheckCircle, Clock, Filter, Activity, Pill, PlusCircle,
+  Stethoscope, AlertTriangle, CheckCircle, Clock, Filter, Activity, Pill, PlusCircle,IdCard,
 
-  TrendingUp, Shield, Bell, ArrowLeft, X, User, IdCard
-
-  TrendingUp, Shield, Bell, ArrowLeft, X, User, Sparkl
+  TrendingUp, Shield, Bell, ArrowLeft, X, User, 
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button, Input, Card, CardHeader, CardContent, CardTitle } from "@repo/ui";
